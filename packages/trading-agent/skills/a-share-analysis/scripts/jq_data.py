@@ -6,6 +6,7 @@ get data from jqdatasdk or other sources
 """
 
 import copy
+import os
 import pickle
 import datetime
 import jqdatasdk as jq
@@ -29,7 +30,14 @@ def assert_auth(func):
     @wraps(func)
     def _wrapper(*args, **kwargs):
         if not jq.is_auth():
-            jq.auth('13758103948', 'DingPanBao2021')
+            username = os.environ.get("JQ_USERNAME")
+            password = os.environ.get("JQ_PASSWORD")
+            if not username or not password:
+                raise RuntimeError(
+                    "JoinQuant credentials not found. "
+                    "Set JQ_USERNAME and JQ_PASSWORD environment variables."
+                )
+            jq.auth(username, password)
         return func(*args, **kwargs)
     return _wrapper
 
