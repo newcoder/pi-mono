@@ -1,0 +1,50 @@
+{
+	"name": "@mariozechner/pi-trading-agent",
+	"version": "0.66.1",
+	"description": "LLM-assisted investment analysis agent with market data, screening, backtesting, and strategy tracking",
+	"type": "module",
+	"main": "./dist/index.js",
+	"types": "./dist/index.d.ts",
+	"bin": {
+		"trading-agent": "dist/main.js"
+	},
+	"files": [
+		"dist",
+		"README.md"
+	],
+	"scripts": {
+		"clean": "shx rm -rf dist",
+		"build": "tsgo -p tsconfig.build.json && shx chmod +x dist/main.js",
+		"dev": "tsgo -p tsconfig.build.json --watch --preserveWatchOutput",
+		"prepublishOnly": "npm run clean && npm run build"
+	},
+	"dependencies": {
+		"@mariozechner/pi-agent-core": "^0.66.1",
+		"@mariozechner/pi-ai": "^0.66.1",
+		"@mariozechner/pi-coding-agent": "^0.66.1",
+		"@mariozechner/pi-tui": "^0.66.1",
+		"@sinclair/typebox": "^0.34.49",
+		"chalk": "^5.4.1",
+		"node-schedule": "^2.1.1",
+		"sqlite3": "^6.0.1"
+	},
+	"devDependencies": {
+		"@types/node": "^24.3.0",
+		"@types/node-schedule": "^2.1.7",
+		"shx": "^0.4.0",
+		"typescript": "^5.7.3"
+	},
+	"keywords": [
+		"pi-package",
+		"trading",
+		"finance",
+		"agent",
+		"ai",
+		"llm"
+	],
+	"author": "",
+	"license": "MIT",
+	"engines": {
+		"node": ">=20.0.0"
+	}
+}
