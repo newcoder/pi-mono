@@ -3,12 +3,7 @@ import { tmpdir } from "node:os";
 import { join } from "node:path";
 import type { AgentTool } from "@mariozechner/pi-agent-core";
 import { Type } from "@sinclair/typebox";
-import { runPython } from "./_utils.js";
-
-const NL_SCREENER_DIR = join(
-	process.env.HOME || process.env.USERPROFILE || ".",
-	".agents/skills/nl-stock-screener/scripts",
-);
+import { resolveNLScreenerScript, runPython } from "./_utils.js";
 
 const advancedScreenParams = Type.Object({
 	scope: Type.Optional(
@@ -121,7 +116,7 @@ export const advancedScreenTool: AgentTool<typeof advancedScreenParams, Advanced
 
 			const timeoutMs = params.autoTune ? 120000 : 30000;
 			await runPython(
-				join(NL_SCREENER_DIR, "screen.py"),
+				resolveNLScreenerScript("screen.py"),
 				["--config", configPath, "--output", outputPath],
 				timeoutMs,
 			);

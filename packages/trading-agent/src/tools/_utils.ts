@@ -1,17 +1,48 @@
 import { spawn } from "node:child_process";
-import { join } from "node:path";
+import { existsSync } from "node:fs";
+import { dirname, join } from "node:path";
+import { fileURLToPath } from "node:url";
 
-export const SCRIPTS_DIR = join(
-	process.env.HOME || process.env.USERPROFILE || ".",
-	".agents/skills/a-share-analysis/scripts",
-);
+const __dirname = fileURLToPath(new URL(".", import.meta.url));
+
+const HOME = process.env.HOME || process.env.USERPROFILE || ".";
+
+// Bundled skills take priority over external ones
+const BUNDLED_A_SHARE_SCRIPTS = join(__dirname, "../../skills/a-share-analysis/scripts");
+const EXTERNAL_A_SHARE_SCRIPTS = join(HOME, ".agents/skills/a-share-analysis/scripts");
+
+const BUNDLED_NL_SCREENER_SCRIPTS = join(__dirname, "../../skills/nl-stock-screener/scripts");
+const EXTERNAL_NL_SCREENER_SCRIPTS = join(HOME, ".agents/skills/nl-stock-screener/scripts");
+
+/** Resolve script path: bundled takes priority over external. */
+export function resolveScriptPath(scriptName: string, bundledDir: string, externalDir: string): string {
+	const bundled = join(bundledDir, scriptName);
+	if (existsSync(bundled)) return bundled;
+	return join(externalDir, scriptName);
+}
+
+/** Resolve a-share script path (bundled优先). */
+export function resolveAShareScript(scriptName: string): string {
+	return resolveScriptPath(scriptName, BUNDLED_A_SHARE_SCRIPTS, EXTERNAL_A_SHARE_SCRIPTS);
+}
+
+/** Resolve nl-screener script path (bundled优先). */
+export function resolveNLScreenerScript(scriptName: string): string {
+	return resolveScriptPath(scriptName, BUNDLED_NL_SCREENER_SCRIPTS, EXTERNAL_NL_SCREENER_SCRIPTS);
+}
+
+// Legacy export for backward compatibility
+export const SCRIPTS_DIR = EXTERNAL_A_SHARE_SCRIPTS;
 
 const DEFAULT_TIMEOUT_MS = 30000;
 
 function runPythonCommand(cmd: string, script: string, args: string[], timeoutMs: number): Promise<string> {
 	return new Promise((resolve, reject) => {
-		const proc = spawn(cmd, [script, ...args], {
-			cwd: SCRIPTS_DIR,
+		// Resolve script path if not absolute (bundled takes priority)
+		const scriptPath = script.startsWith("/") || script.includes(":") ? script : resolveAShareScript(script);
+		const cwd = dirname(scriptPath);
+		const proc = spawn(cmd, [scriptPath, ...args], {
+			cwd,
 			stdio: ["ignore", "pipe", "pipe"],
 			env: { ...process.env, PYTHONIOENCODING: "utf-8" },
 		});

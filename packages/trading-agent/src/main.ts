@@ -6,7 +6,7 @@ import { streamSimple } from "@mariozechner/pi-ai";
 import { loadUserConfig } from "./config/user-config.js";
 import { loadModelRegistry, selectDefaultModel } from "./core/model-config.js";
 import { SessionMemory } from "./core/session-memory.js";
-import { discoverExternalSkillDirs, loadSkillFromFile, loadSystemPromptFromFile } from "./core/skill-loader.js";
+import { discoverAllSkillDirs, loadSkillFromFile, loadSystemPromptFromFile } from "./core/skill-loader.js";
 import { SkillRegistry } from "./core/skill-registry.js";
 import { TradingSession } from "./core/trading-session.js";
 import { createDataStore, DataSyncService, setDataStore, setDataSync } from "./data/index.js";
@@ -301,11 +301,11 @@ async function main() {
 	const memory = new SessionMemory();
 
 	// ─── Skill Registry ───────────────────────────────────────────
-	// All skills are loaded from ~/.agents/skills/<name>/SKILL.md.
-	// Built-in tools are always available; skills can optionally reference
-	// additional tools by name in their frontmatter to activate them.
+	// Skills are loaded from bundled (packages/trading-agent/skills/) first,
+	// then external (~/.agents/skills/). Bundled skills override external
+	// ones with the same name. Built-in tools are always available.
 	const skillRegistry = new SkillRegistry();
-	const skillDirs = discoverExternalSkillDirs();
+	const skillDirs = discoverAllSkillDirs();
 
 	// Always register built-in tools so they are available regardless of skills
 	skillRegistry.registerTools(Array.from(BUILTIN_TOOLS.values()));
@@ -339,7 +339,7 @@ async function main() {
 			skillRegistry.register({ ...skill, tools, routines });
 		}
 	} else {
-		console.log("[Skill] No external skills found in ~/.agents/skills/. All built-in tools are available.");
+		console.log("[Skill] No skills found in bundled or external dirs. All built-in tools are available.");
 	}
 
 	const basePrompt = loadSystemPromptFromFile();

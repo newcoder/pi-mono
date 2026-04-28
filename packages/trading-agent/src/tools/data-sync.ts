@@ -5,12 +5,7 @@ import type { AgentTool } from "@mariozechner/pi-agent-core";
 import { Type } from "@sinclair/typebox";
 import { loadUserConfig } from "../config/user-config.js";
 import { getDataSync } from "../data/index.js";
-import { runPython } from "./_utils.js";
-
-const A_SHARE_SCRIPTS_DIR = join(
-	process.env.HOME || process.env.USERPROFILE || ".",
-	".agents/skills/a-share-analysis/scripts",
-);
+import { resolveAShareScript, runPython } from "./_utils.js";
 
 // ── sync_kline tool ─────────────────────────────────────────────────────────
 
@@ -133,7 +128,7 @@ export const syncNewsTool: AgentTool<typeof syncNewsParams, { marketNews: string
 			const outputPath = join(tmpDir, "result.json");
 			try {
 				await runPython(
-					join(A_SHARE_SCRIPTS_DIR, "market_news_sync.py"),
+					resolveAShareScript("market_news_sync.py"),
 					["--sources", sources, "--limit", String(limit), "--output", outputPath],
 					120000,
 				);
@@ -164,7 +159,7 @@ export const syncNewsTool: AgentTool<typeof syncNewsParams, { marketNews: string
 						const outputPath = join(tmpDir, "result.json");
 						try {
 							await runPython(
-								join(A_SHARE_SCRIPTS_DIR, "news_sync.py"),
+								resolveAShareScript("news_sync.py"),
 								[
 									"--code",
 									item.code,
@@ -200,7 +195,7 @@ export const syncNewsTool: AgentTool<typeof syncNewsParams, { marketNews: string
 				const outputPath = join(tmpDir, "result.json");
 				try {
 					await runPython(
-						join(A_SHARE_SCRIPTS_DIR, "news_sync.py"),
+						resolveAShareScript("news_sync.py"),
 						["--batch", "--sources", sources, "--limit", String(limit), "--output", outputPath],
 						1800000,
 					);

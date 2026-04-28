@@ -6,9 +6,10 @@ import type { Skill, SkillFrontmatter } from "./skill.js";
 
 const EXTERNAL_SKILLS_DIR = join(process.env.HOME || process.env.USERPROFILE || ".", ".agents/skills");
 
-// Resolve prompts directory relative to this file's location
+// Resolve bundled skills directory relative to this file's location
 const __dirname = fileURLToPath(new URL(".", import.meta.url));
 const PROMPTS_DIR = join(__dirname, "../../prompts");
+const BUNDLED_SKILLS_DIR = join(__dirname, "../../skills");
 
 function parseFrontmatter<T extends Record<string, unknown>>(content: string): { frontmatter: T; body: string } {
 	const normalized = content.replace(/\r\n/g, "\n").replace(/\r/g, "\n");
@@ -103,9 +104,27 @@ export function discoverSkillDirs(rootDir: string): string[] {
 	return result;
 }
 
-/** Discover all external skill directories under ~/.agents/skills/. */
-export function discoverExternalSkillDirs(): string[] {
-	return discoverSkillDirs(EXTERNAL_SKILLS_DIR);
+/** Discover all skill directories: bundled first, then external.
+ *  Bundled skills (in package) override external skills with the same name.
+ */
+export function discoverAllSkillDirs(): string[] {
+	const externalDirs = discoverSkillDirs(EXTERNAL_SKILLS_DIR);
+	const bundledDirs = discoverSkillDirs(BUNDLED_SKILLS_DIR);
+
+	// Build a map of skill name -> directory, bundled takes priority
+	const skillMap = new Map<string, string>();
+
+	for (const dir of externalDirs) {
+		const name = basename(dir);
+		skillMap.set(name, dir);
+	}
+
+	for (const dir of bundledDirs) {
+		const name = basename(dir);
+		skillMap.set(name, dir); // override external
+	}
+
+	return Array.from(skillMap.values());
 }
 
 function buildFallbackSystemPrompt(): string {

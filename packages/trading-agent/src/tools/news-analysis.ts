@@ -3,12 +3,7 @@ import { tmpdir } from "node:os";
 import { join } from "node:path";
 import type { AgentTool } from "@mariozechner/pi-agent-core";
 import { Type } from "@sinclair/typebox";
-import { runPython } from "./_utils.js";
-
-const SCRIPTS_DIR = join(
-	process.env.HOME || process.env.USERPROFILE || ".",
-	".agents/skills/nl-stock-screener/scripts",
-);
+import { resolveNLScreenerScript, runPython } from "./_utils.js";
 
 // ── get_stock_news tool ─────────────────────────────────────────────────────
 
@@ -77,7 +72,7 @@ export const getStockNewsTool: AgentTool<typeof getStockNewsParams, unknown> = {
 				args.push("--event-types", params.eventTypes.join(","));
 			}
 
-			await runPython(join(SCRIPTS_DIR, "news_screening.py"), args, 30000);
+			await runPython(resolveNLScreenerScript("news_screening.py"), args, 30000);
 
 			const raw = readFileSync(outputPath, "utf-8");
 			let result: unknown;
@@ -200,7 +195,7 @@ export const screenByNewsTool: AgentTool<typeof screenByNewsParams, unknown> = {
 				args.push("--impact", params.impactLevel);
 			}
 
-			await runPython(join(SCRIPTS_DIR, "news_screening.py"), args, 30000);
+			await runPython(resolveNLScreenerScript("news_screening.py"), args, 30000);
 
 			const raw = readFileSync(outputPath, "utf-8");
 			let result: unknown;
@@ -378,7 +373,7 @@ export const getMarketNewsTool: AgentTool<typeof getMarketNewsParams, unknown> =
 				}
 			}
 
-			await runPython(join(SCRIPTS_DIR, "market_news_query.py"), args, 30000);
+			await runPython(resolveNLScreenerScript("market_news_query.py"), args, 30000);
 
 			const raw = readFileSync(outputPath, "utf-8");
 			let result: unknown;
