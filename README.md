@@ -50,6 +50,7 @@ I regularly publish my own `pi-mono` work sessions here:
 | **[@mariozechner/pi-tui](packages/tui)** | Terminal UI library with differential rendering |
 | **[@mariozechner/pi-web-ui](packages/web-ui)** | Web components for AI chat interfaces |
 | **[@mariozechner/pi-pods](packages/pods)** | CLI for managing vLLM deployments on GPU pods |
+| **[@mariozechner/pi-trading-agent](packages/trading-agent)** | LLM-assisted investment analysis agent with market data and backtesting |
 
 ## Contributing
 
