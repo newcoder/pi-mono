@@ -6,6 +6,7 @@ import { getMacroTool } from "../../tools/macro-data.js";
 import { getQuoteTool } from "../../tools/market-data.js";
 import { getMarketNewsTool } from "../../tools/news-analysis.js";
 import { getSectorRotationTool } from "../../tools/sector-rotation.js";
+import { analyzeSentimentTool } from "../../tools/sentiment.js";
 
 export async function preMarketRoutine(session: TradingSession, memory?: SessionMemory): Promise<void> {
 	const today = new Date().toISOString().slice(0, 10);
@@ -36,7 +37,16 @@ export async function preMarketRoutine(session: TradingSession, memory?: Session
 		console.error("[PreMarket] get_market_news failed:", e);
 	}
 
-	// 3. 获取板块轮动
+	// 3. 获取市场情绪
+	let sentimentText = "【市场情绪获取失败】";
+	try {
+		const sentimentResult = await analyzeSentimentTool.execute("premkt-sentiment", {});
+		sentimentText = (sentimentResult.content[0] as any).text;
+	} catch (e) {
+		console.error("[PreMarket] analyze_sentiment failed:", e);
+	}
+
+	// 4. 获取板块轮动
 	let sectorText = "【板块轮动获取失败】";
 	try {
 		const sectorResult = await getSectorRotationTool.execute("premkt-sector", {});
@@ -68,6 +78,7 @@ export async function preMarketRoutine(session: TradingSession, memory?: Session
 		date: today,
 		macro_data: macroText,
 		market_news: marketNewsText,
+		market_sentiment: sentimentText,
 		sector_rotation: sectorText,
 		watchlist_data: watchlistTexts.join("\n\n"),
 		memory_context: recentMemory || "无近期交易记忆",

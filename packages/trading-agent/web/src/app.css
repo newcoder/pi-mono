@@ -1,0 +1,54 @@
+/* Import pi-web-ui base styles (source, compiles with Tailwind) */
+@import "../../web-ui/src/app.css";
+
+/* Trading-specific theme colors */
+@theme {
+	--color-up: #ef4444;
+	--color-down: #22c55e;
+	--color-neutral: #9ca3af;
+}
+
+.trading-panel {
+	display: flex;
+	align-items: center;
+	gap: 1rem;
+	padding: 0.5rem 1rem;
+	border-bottom: 1px solid var(--border);
+	background-color: var(--card);
+	font-size: 0.875rem;
+}
+
+.index-quote {
+	display: flex;
+	align-items: center;
+	gap: 0.25rem;
+}
+
+.index-quote.up {
+	color: var(--color-up);
+}
+
+.index-quote.down {
+	color: var(--color-down);
+}
+
+.sentiment-bar {
+	display: flex;
+	align-items: center;
+	gap: 1rem;
+	padding: 0.25rem 1rem;
+	border-bottom: 1px solid var(--border);
+	background-color: var(--card);
+	font-size: 0.75rem;
+}
+
+.market-status {
+	display: flex;
+	align-items: center;
+	gap: 0.75rem;
+	padding: 0.25rem 1rem;
+	border-bottom: 1px solid var(--border);
+	background-color: var(--muted);
+	font-size: 0.75rem;
+	color: var(--muted-foreground);
+}

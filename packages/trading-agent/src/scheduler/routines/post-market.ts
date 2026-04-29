@@ -5,6 +5,7 @@ import type { TradingSession } from "../../core/trading-session.js";
 import { getQuoteTool } from "../../tools/market-data.js";
 import { getMarketNewsTool } from "../../tools/news-analysis.js";
 import { getSectorRotationTool } from "../../tools/sector-rotation.js";
+import { analyzeSentimentTool } from "../../tools/sentiment.js";
 
 export async function postMarketRoutine(session: TradingSession, memory?: SessionMemory): Promise<void> {
 	if (!memory) {
@@ -40,7 +41,16 @@ export async function postMarketRoutine(session: TradingSession, memory?: Sessio
 		}
 	}
 
-	// 3. 获取板块轮动
+	// 3. 获取市场情绪
+	let sentimentText = "【市场情绪获取失败】";
+	try {
+		const sentimentResult = await analyzeSentimentTool.execute("postmkt-sentiment", {});
+		sentimentText = (sentimentResult.content[0] as any).text;
+	} catch (e) {
+		console.error("[PostMarket] analyze_sentiment failed:", e);
+	}
+
+	// 4. 获取板块轮动
 	let sectorText = "【板块轮动获取失败】";
 	try {
 		const sectorResult = await getSectorRotationTool.execute("postmkt-sector", {});
@@ -49,7 +59,7 @@ export async function postMarketRoutine(session: TradingSession, memory?: Sessio
 		console.error("[PostMarket] get_sector_rotation failed:", e);
 	}
 
-	// 4. 获取市场宏观新闻（最近1天）
+	// 5. 获取市场宏观新闻（最近1天）
 	let marketNewsText = "【市场新闻获取失败】";
 	try {
 		const newsResult = await getMarketNewsTool.execute("postmkt-news", {
@@ -75,6 +85,7 @@ export async function postMarketRoutine(session: TradingSession, memory?: Sessio
 	const reflectionPrompt = renderTemplate(template, {
 		date: today,
 		watchlist_data: watchlistTexts.join("\n\n"),
+		market_sentiment: sentimentText,
 		sector_rotation: sectorText,
 		market_news: marketNewsText,
 		key_decisions: keyDecisionsText,

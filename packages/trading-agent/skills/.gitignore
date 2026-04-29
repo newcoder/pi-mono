@@ -1,0 +1,8 @@
+# Python
+tmp/
+__pycache__/
+*.pyc
+.cache/
+
+# Reports (generated)
+reports/

@@ -1,10 +1,14 @@
 import type { AgentEvent } from "@mariozechner/pi-agent-core";
 import type { Component } from "@mariozechner/pi-tui";
-import { Container, Input, Markdown, ProcessTerminal, Text, TUI } from "@mariozechner/pi-tui";
+import { Input, Markdown, ProcessTerminal, Text, TUI } from "@mariozechner/pi-tui";
 import chalk from "chalk";
 import type { TradingSession } from "../core/trading-session.js";
-import type { TradingMode } from "../core/types.js";
+import { CommandBar } from "./command-bar.js";
+import { IndexQuotesBar } from "./index-quotes-bar.js";
 import { tradingMarkdownTheme } from "./markdown-theme.js";
+import { MarketStatusBar } from "./market-status-bar.js";
+import { ScrollableContainer } from "./scrollable-container.js";
+import { SentimentBar } from "./sentiment-bar.js";
 
 type MessageRole = "user" | "assistant" | "system" | "tool";
 
@@ -15,16 +19,22 @@ interface ChatMessage {
 }
 
 const MAX_MESSAGES = 100;
+const INDEX_REFRESH_INTERVAL_MS = 60_000;
+const MARKET_STATUS_REFRESH_INTERVAL_MS = 30_000;
 
 export class TradingApp {
 	private tui: TUI;
-	private statusText: Text;
-	private messageContainer: Container;
+	private indexQuotesBar: IndexQuotesBar;
+	private sentimentBar: SentimentBar;
+	private marketStatusBar: MarketStatusBar;
+	private messageContainer: ScrollableContainer;
+	private commandBar: CommandBar;
 	private input: Input;
 	private streamingMsg: ChatMessage | undefined;
 	private messages: ChatMessage[] = [];
-	private statusTimer: NodeJS.Timeout | undefined;
+	private timers: NodeJS.Timeout[] = [];
 	private isShuttingDown = false;
+	private inputListenerCleanup: (() => void) | null = null;
 
 	constructor(
 		private session: TradingSession,
@@ -32,31 +42,70 @@ export class TradingApp {
 	) {
 		this.tui = new TUI(new ProcessTerminal());
 
-		// Status bar
-		this.statusText = new Text(this.buildStatusText(), 1, 0);
-		this.tui.addChild(this.statusText);
+		// ─── Top header bars ────────────────────────────────────────
+		this.indexQuotesBar = new IndexQuotesBar();
+		this.tui.addChild(this.indexQuotesBar);
 
-		// Message area
-		this.messageContainer = new Container();
+		this.sentimentBar = new SentimentBar();
+		this.tui.addChild(this.sentimentBar);
+
+		this.marketStatusBar = new MarketStatusBar();
+		this.marketStatusBar.setModelName(session.model?.id ?? "?");
+		this.tui.addChild(this.marketStatusBar);
+
+		// ─── Message area (scrollable) ──────────────────────────────
+		// Reserve 5 lines for header bars (3) + footer bars (2)
+		this.messageContainer = new ScrollableContainer(this.tui, 5);
 		this.tui.addChild(this.messageContainer);
 
-		// Input
+		// ─── Bottom bars ────────────────────────────────────────────
+		this.commandBar = new CommandBar();
+		this.tui.addChild(this.commandBar);
+
 		this.input = new Input();
 		this.input.onSubmit = (value) => this.handleSubmit(value);
 		this.tui.addChild(this.input);
 		this.tui.setFocus(this.input);
 
-		// Events
+		// ─── Events ─────────────────────────────────────────────────
 		session.on("agent_event", (ev: AgentEvent) => this.handleAgentEvent(ev));
-		session.on("trading_event", (ev: any) => {
-			if (ev.type === "mode_change") this.updateStatus(ev.mode);
+		session.on("trading_event", (ev: any) => this.handleTradingEvent(ev));
+
+		// ─── Global scroll keys ─────────────────────────────────────
+		// PageUp/PageDown scroll the message area since Input is single-line
+		this.inputListenerCleanup = this.tui.addInputListener((data) => {
+			if (data === "\x1b[5~") {
+				// PageUp
+				this.messageContainer.pageUp();
+				this.tui.requestRender();
+				return { consume: true };
+			}
+			if (data === "\x1b[6~") {
+				// PageDown
+				this.messageContainer.pageDown();
+				this.tui.requestRender();
+				return { consume: true };
+			}
+			return undefined;
 		});
 
-		// Status bar clock
-		this.statusTimer = setInterval(() => {
-			this.statusText.setText(this.buildStatusText());
-			this.tui.requestRender();
-		}, 30000);
+		// ─── Timers ─────────────────────────────────────────────────
+		// Refresh index quotes every 60s
+		this.timers.push(
+			setInterval(() => {
+				this.indexQuotesBar.refresh().then(() => this.tui.requestRender());
+			}, INDEX_REFRESH_INTERVAL_MS),
+		);
+
+		// Refresh market status countdown every 30s
+		this.timers.push(
+			setInterval(() => {
+				this.tui.requestRender();
+			}, MARKET_STATUS_REFRESH_INTERVAL_MS),
+		);
+
+		// Initial data fetch
+		this.indexQuotesBar.refresh().then(() => this.tui.requestRender());
 	}
 
 	async start(): Promise<void> {
@@ -94,14 +143,29 @@ export class TradingApp {
 		if (this.isShuttingDown) return;
 		this.isShuttingDown = true;
 
-		if (this.statusTimer) {
-			clearInterval(this.statusTimer);
-			this.statusTimer = undefined;
+		for (const timer of this.timers) {
+			clearInterval(timer);
+		}
+		this.timers = [];
+
+		if (this.inputListenerCleanup) {
+			this.inputListenerCleanup();
 		}
 
 		this.session.dispose();
 		this.tui.stop();
 		process.exit(0);
+	}
+
+	private handleTradingEvent(ev: any): void {
+		if (ev.type === "mode_change") {
+			this.marketStatusBar.setMode(ev.mode);
+			this.tui.requestRender();
+		}
+		if (ev.type === "sentiment_update" && ev.data) {
+			this.sentimentBar.update(ev.data);
+			this.tui.requestRender();
+		}
 	}
 
 	private handleAgentEvent(event: AgentEvent): void {
@@ -146,7 +210,7 @@ export class TradingApp {
 			}
 
 			case "agent_end": {
-				this.updateStatus(this.session.currentMode);
+				this.marketStatusBar.setMode(this.session.currentMode);
 				break;
 			}
 		}
@@ -157,6 +221,7 @@ export class TradingApp {
 		this.renderMessageComponent(msg);
 		this.messageContainer.addChild(msg.component);
 		this.messages.push(msg);
+		this.messageContainer.scrollToBottom();
 
 		// Trim old messages
 		while (this.messages.length > MAX_MESSAGES) {
@@ -182,13 +247,13 @@ export class TradingApp {
 		let prefix = "";
 		switch (msg.role) {
 			case "user":
-				prefix = chalk.cyan.bold("> ");
+				prefix = "> ";
 				break;
 			case "system":
-				prefix = chalk.yellow.dim("[!] ");
+				prefix = "[!] ";
 				break;
 			case "tool":
-				prefix = chalk.gray.dim("[T] ");
+				prefix = chalk.dim("[T] ");
 				break;
 			case "assistant":
 				prefix = "";
@@ -202,18 +267,6 @@ export class TradingApp {
 		} else {
 			msg.component = new Text(fullText, 1, 0);
 		}
-	}
-
-	private updateStatus(mode: TradingMode): void {
-		this.statusText.setText(this.buildStatusText(mode));
-		this.tui.requestRender();
-	}
-
-	private buildStatusText(mode?: TradingMode): string {
-		const m = mode || this.session.currentMode;
-		const now = new Date().toLocaleTimeString("zh-CN", { hour: "2-digit", minute: "2-digit" });
-		const modelName = this.session.model?.id ?? "?";
-		return chalk.dim(`${now} │ Analysis │ ${m} │ ${modelName}`);
 	}
 }
 

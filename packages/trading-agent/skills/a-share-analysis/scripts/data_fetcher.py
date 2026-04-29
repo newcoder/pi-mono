@@ -1125,7 +1125,7 @@ def get_index_constituents(index_name: str) -> list:
 def get_all_a_stocks() -> list:
     """获取全部A股代码"""
     try:
-        df = ak.stock_zh_a_spot_em()
+        df = ak.stock_zh_a_spot()
         if df is not None and not df.empty:
             return df['代码'].tolist()
         return []

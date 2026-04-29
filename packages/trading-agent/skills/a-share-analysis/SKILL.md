@@ -5,12 +5,22 @@ tools:
   - get_quote
   - get_fundamentals
   - get_kline
+  - get_macro
   - screen_stocks
+  - advanced_screen
   - compare_stocks
   - backtest_strategy
+  - manage_stock_pool
+  - get_sector_rotation
+  - get_concept_stocks
+  - list_concepts
+  - list_industries
+  - get_industry_stocks
+  - get_stock_industries
   - get_stock_news
   - screen_by_news
   - get_market_news
+  - analyze_sentiment
 ---
 
 # A-Share Analysis Skill

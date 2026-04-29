@@ -64,14 +64,14 @@ class StockScreener:
 
         try:
             if scope == "all":
-                df = ak.stock_zh_a_spot_em()
+                df = ak.stock_zh_a_spot()
             elif scope in INDEX_CODE_MAP:
                 df = self._get_index_stocks_data(INDEX_CODE_MAP[scope])
             elif scope.startswith("custom:") or custom_codes:
                 codes = custom_codes or scope.replace("custom:", "").split(",")
                 df = self._get_custom_stocks_data(codes)
             else:
-                df = ak.stock_zh_a_spot_em()
+                df = ak.stock_zh_a_spot()
 
             self.all_stocks_data = df
             print(f"已加载 {len(df)} 只股票数据")
@@ -84,7 +84,7 @@ class StockScreener:
     @retry_on_failure(max_retries=3, delay=2.0)
     def _get_all_stocks_realtime(self) -> pd.DataFrame:
         """获取全部A股实时数据（带重试）"""
-        return ak.stock_zh_a_spot_em()
+        return ak.stock_zh_a_spot()
 
     @retry_on_failure(max_retries=3, delay=2.0)
     def _get_index_constituents(self, index_code: str) -> list:

@@ -34,6 +34,9 @@ const DEFAULT_PRE_MARKET = `今天是 {{date}}。
 ## 市场宏观新闻（最近24小时）
 {{market_news}}
 
+## 市场情绪快照
+{{market_sentiment}}
+
 ## 板块轮动热力
 {{sector_rotation}}
 
@@ -68,6 +71,9 @@ const DEFAULT_POST_MARKET = `今天是 {{date}}。
 
 ## 今日板块轮动
 {{sector_rotation}}
+
+## 市场情绪快照
+{{market_sentiment}}
 
 ## 市场宏观新闻（最近24小时）
 {{market_news}}

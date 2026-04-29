@@ -1,5 +1,5 @@
 #!/usr/bin/env node
-import { join } from "node:path";
+import { join, resolve } from "node:path";
 import { createInterface } from "node:readline";
 import type { AgentTool } from "@mariozechner/pi-agent-core";
 import { streamSimple } from "@mariozechner/pi-ai";
@@ -13,6 +13,8 @@ import { createDataStore, DataSyncService, setDataStore, setDataSync } from "./d
 import { postMarketRoutine } from "./scheduler/routines/post-market.js";
 import { preMarketRoutine } from "./scheduler/routines/pre-market.js";
 import { TaskScheduler } from "./scheduler/task-scheduler.js";
+import { BackgroundSyncService } from "./server/background-sync.js";
+import { startServer } from "./server/index.js";
 import { advancedScreenTool } from "./tools/advanced-screening.js";
 import { backtestStrategyTool } from "./tools/backtest.js";
 import { compareStocksTool } from "./tools/compare-stocks.js";
@@ -24,25 +26,31 @@ import { getFundamentalsTool, getKlineTool, getQuoteTool } from "./tools/market-
 import { getMarketNewsTool, getStockNewsTool, screenByNewsTool } from "./tools/news-analysis.js";
 import { screenStocksTool } from "./tools/screening.js";
 import { getSectorRotationTool } from "./tools/sector-rotation.js";
+import { analyzeSentimentTool } from "./tools/sentiment.js";
 import { manageStockPoolTool } from "./tools/stock-pool.js";
 import { TradingApp } from "./ui/trading-app.js";
 
 let globalStore: ReturnType<typeof createDataStore> | null = null;
+let globalBgSync: BackgroundSyncService | null = null;
 
-function cleanupStore() {
+function cleanup() {
+	if (globalBgSync) {
+		globalBgSync.stop();
+		globalBgSync = null;
+	}
 	if (globalStore) {
 		globalStore.close();
 		globalStore = null;
 	}
 }
 
-process.on("exit", cleanupStore);
+process.on("exit", cleanup);
 process.on("SIGINT", () => {
-	cleanupStore();
+	cleanup();
 	process.exit(0);
 });
 process.on("SIGTERM", () => {
-	cleanupStore();
+	cleanup();
 	process.exit(0);
 });
 
@@ -241,6 +249,7 @@ const BUILTIN_TOOLS = new Map<string, AgentTool<any>>([
 	["get_stock_industries", getStockIndustriesTool],
 	["backtest_strategy", backtestStrategyTool],
 	["manage_stock_pool", manageStockPoolTool],
+	["analyze_sentiment", analyzeSentimentTool],
 	["get_stock_news", getStockNewsTool],
 	["screen_by_news", screenByNewsTool],
 	["get_market_news", getMarketNewsTool],
@@ -380,6 +389,24 @@ async function main() {
 			console.log(
 				`[${timestamp}] [ToolResult] ${toolCall.name} status=${status} preview=${preview}${text.length > 120 ? "..." : ""}`,
 			);
+
+			// Emit sentiment update event for TUI when analyze_sentiment succeeds
+			if (!isError && toolCall.name === "analyze_sentiment" && result.details) {
+				const d = result.details;
+				session.emit("trading_event", {
+					type: "sentiment_update",
+					data: {
+						advance: d.advance ?? 0,
+						decline: d.decline ?? 0,
+						flat: d.flat ?? 0,
+						limitUp: d.limit_up ?? 0,
+						limitDown: d.limit_down ?? 0,
+						northboundFlow: d.northbound_flow ?? 0,
+						sentimentIndex: d.sentiment_index ?? 50,
+					},
+				});
+			}
+
 			return Promise.resolve(undefined);
 		},
 	});
@@ -417,13 +444,96 @@ async function main() {
 		return false;
 	};
 
-	const useTui = !process.argv.includes("--repl");
+	// ─── Shared sentiment initialization ────────────────────────
+	async function initSentiment() {
+		try {
+			const sentimentResult = await analyzeSentimentTool.execute("init-sentiment", {});
+			if (sentimentResult.details) {
+				const d = sentimentResult.details;
+				session.emit("trading_event", {
+					type: "sentiment_update",
+					data: {
+						advance: d.advance ?? 0,
+						decline: d.decline ?? 0,
+						flat: d.flat ?? 0,
+						limitUp: d.limit_up ?? 0,
+						limitDown: d.limit_down ?? 0,
+						northboundFlow: d.northbound_flow ?? 0,
+						sentimentIndex: d.sentiment_index ?? 50,
+					},
+				});
+			}
+		} catch (_e) {
+			// Sentiment fetch failed on startup
+		}
+	}
 
-	if (useTui) {
-		const app = new TradingApp(session, manualTrigger);
-		await app.start();
-	} else {
+	// Start periodic sentiment refresh
+	const sentimentTimer = setInterval(
+		async () => {
+			try {
+				const result = await analyzeSentimentTool.execute("periodic-sentiment", {});
+				if (result.details) {
+					const d = result.details;
+					session.emit("trading_event", {
+						type: "sentiment_update",
+						data: {
+							advance: d.advance ?? 0,
+							decline: d.decline ?? 0,
+							flat: d.flat ?? 0,
+							limitUp: d.limit_up ?? 0,
+							limitDown: d.limit_down ?? 0,
+							northboundFlow: d.northbound_flow ?? 0,
+							sentimentIndex: d.sentiment_index ?? 50,
+						},
+					});
+				}
+			} catch (_e) {
+				// Ignore periodic refresh failures
+			}
+		},
+		5 * 60 * 1000,
+	);
+
+	// ─── Mode selection ─────────────────────────────────────────
+	const useWeb = process.argv.includes("--web");
+	const useRepl = process.argv.includes("--repl");
+
+	if (useWeb) {
+		await initSentiment();
+
+		const portIdx = process.argv.indexOf("--port");
+		const port = portIdx >= 0 ? Number(process.argv[portIdx + 1]) || 3000 : 3000;
+
+		const staticDirIdx = process.argv.indexOf("--static-dir");
+		const staticDir = staticDirIdx >= 0 ? resolve(process.argv[staticDirIdx + 1]) : undefined;
+
+		const bgSync = new BackgroundSyncService();
+		globalBgSync = bgSync;
+		bgSync.start();
+
+		const { httpServer } = startServer(session, { port, staticDir, bgSync });
+
+		httpServer.on("close", () => {
+			bgSync.stop();
+			clearInterval(sentimentTimer);
+			scheduler.stop();
+			session.dispose();
+		});
+	} else if (useRepl) {
 		await runRepl(session, scheduler, manualTrigger, tools);
+	} else {
+		const app = new TradingApp(session, manualTrigger);
+		await initSentiment();
+
+		// Clean up timer on exit
+		session.on("agent_event", (ev: any) => {
+			if (ev.type === "agent_end" && ev.reason === "shutdown") {
+				clearInterval(sentimentTimer);
+			}
+		});
+
+		await app.start();
 	}
 }
 
