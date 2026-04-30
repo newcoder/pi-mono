@@ -102,6 +102,10 @@ export class TradingApiClient extends EventTarget {
 		return this.httpGet(`/api/stock-pools/${poolId}`);
 	}
 
+	async deleteStockPool(poolId: number) {
+		return this.httpDelete(`/api/stock-pools/${poolId}`);
+	}
+
 	async getSectors() {
 		return this.httpGet("/api/sectors");
 	}
@@ -112,6 +116,12 @@ export class TradingApiClient extends EventTarget {
 
 	private async httpGet(path: string) {
 		const res = await fetch(`${API_BASE}${path}`);
+		if (!res.ok) throw new Error(`HTTP ${res.status}: ${res.statusText}`);
+		return res.json();
+	}
+
+	private async httpDelete(path: string) {
+		const res = await fetch(`${API_BASE}${path}`, { method: "DELETE" });
 		if (!res.ok) throw new Error(`HTTP ${res.status}: ${res.statusText}`);
 		return res.json();
 	}

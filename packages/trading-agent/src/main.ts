@@ -506,7 +506,10 @@ async function main() {
 		const port = portIdx >= 0 ? Number(process.argv[portIdx + 1]) || 3000 : 3000;
 
 		const staticDirIdx = process.argv.indexOf("--static-dir");
-		const staticDir = staticDirIdx >= 0 ? resolve(process.argv[staticDirIdx + 1]) : undefined;
+		const staticDir =
+			staticDirIdx >= 0
+				? resolve(process.argv[staticDirIdx + 1])
+				: resolve(import.meta.dirname || process.cwd(), "../web/dist");
 
 		const bgSync = new BackgroundSyncService();
 		globalBgSync = bgSync;

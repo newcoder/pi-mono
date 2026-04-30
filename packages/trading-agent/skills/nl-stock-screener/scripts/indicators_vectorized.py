@@ -119,7 +119,10 @@ def _bollinger_numba(closes: np.ndarray, period: int, std_dev: float):
 
 def _compute_one_stock(code: str, market: int, closes: np.ndarray,
                        needed_indicators: Set[str], indicator_params: Dict,
-                       volumes: np.ndarray = None) -> Dict:
+                       volumes: np.ndarray = None,
+                       opens: np.ndarray = None,
+                       highs: np.ndarray = None,
+                       lows: np.ndarray = None) -> Dict:
     """Compute all needed indicators for a single stock."""
     row = {"code": code, "market": market}
 
@@ -215,6 +218,90 @@ def _compute_one_stock(code: str, market: int, closes: np.ndarray,
                     row["bollinger_squeeze_signal"] = bool(is_squeezed and is_expanding and volume_surge)
                     row["bb_score"] = float(bb_score)
 
+    if "ma_trend" in needed_indicators:
+        ma_trend_params = indicator_params.get("ma_trend", {})
+        fast = ma_trend_params.get("fast", 5)
+        mid = ma_trend_params.get("mid", 10)
+        slow = ma_trend_params.get("slow", 20)
+        trend = ma_trend_params.get("trend", "bull")  # "bull" or "bear"
+        if len(closes) >= slow + 1:
+            ma_fast = np.convolve(closes, np.ones(fast) / fast, mode='valid')
+            ma_mid = np.convolve(closes, np.ones(mid) / mid, mode='valid')
+            ma_slow = np.convolve(closes, np.ones(slow) / slow, mode='valid')
+            if len(ma_fast) > 0 and len(ma_mid) > 0 and len(ma_slow) > 0:
+                if trend == "bull":
+                    row["ma_trend"] = bool(ma_fast[-1] > ma_mid[-1] > ma_slow[-1])
+                else:
+                    row["ma_trend"] = bool(ma_fast[-1] < ma_mid[-1] < ma_slow[-1])
+
+    if "bias" in needed_indicators:
+        bias_params = indicator_params.get("bias", {})
+        ma_period = bias_params.get("ma_period", 20)
+        if len(closes) >= ma_period:
+            ma = np.mean(closes[-ma_period:])
+            bias_val = (closes[-1] - ma) / ma * 100 if ma != 0 else 0
+            row[f"bias{ma_period}"] = float(bias_val)
+
+    if "volume_price" in needed_indicators:
+        vp_params = indicator_params.get("volume_price", {})
+        pattern = vp_params.get("pattern", "volume_surge")  # "volume_surge", "volume_shrink"
+        ma_period = vp_params.get("ma_period", 5)
+        ratio = vp_params.get("ratio", 1.5)
+        if volumes is not None and len(volumes) >= ma_period + 1:
+            recent_vol = volumes[-1]
+            ma_vol = np.mean(volumes[-(ma_period + 1):-1])
+            if pattern == "volume_surge":
+                row["volume_surge"] = bool(recent_vol > ma_vol * ratio)
+            elif pattern == "volume_shrink":
+                row["volume_shrink"] = bool(recent_vol < ma_vol / ratio)
+
+    if "macd_status" in needed_indicators:
+        macd_params = indicator_params.get("macd_status", {})
+        status = macd_params.get("status", "near_golden")
+        if len(closes) >= 27:
+            dif, dea, hist = _macd_numba(closes)
+            if len(dif) >= 2 and len(dea) >= 2:
+                if status == "near_golden":
+                    threshold = macd_params.get("threshold", 0.005)
+                    # DIF below DEA but very close (relative to DEA)
+                    dea_curr = dea[-1]
+                    if dea_curr != 0:
+                        dist = abs(dif[-1] - dea_curr) / abs(dea_curr)
+                        passed = dif[-1] < dea_curr and dist < threshold
+                    else:
+                        passed = dif[-1] < dea_curr and abs(dif[-1] - dea_curr) < threshold
+                    row["macd_near_golden"] = bool(passed)
+                elif status == "bullish_divergence":
+                    # Price makes lower low but MACD histogram converges (less negative)
+                    if len(closes) >= 5 and len(hist) >= 5:
+                        price_lower = closes[-1] < np.min(closes[-5:-1])
+                        hist_converge = hist[-1] > hist[-2] > hist[-3]  # histogram increasing (less negative)
+                        row["macd_bullish_divergence"] = bool(price_lower and hist_converge)
+
+    if "candlestick" in needed_indicators:
+        candle_params = indicator_params.get("candlestick", {})
+        pattern = candle_params.get("pattern", "hammer")
+        if opens is not None and highs is not None and lows is not None and len(closes) >= 3:
+            o, h, l, c = opens[-1], highs[-1], lows[-1], closes[-1]
+            body = abs(c - o)
+            lower_shadow = min(o, c) - l
+            upper_shadow = h - max(o, c)
+            total_range = h - l if h != l else 1e-9
+
+            if pattern == "hammer":
+                # Lower shadow >= 2x body, small upper shadow (bottom reversal signal)
+                passed = lower_shadow >= 2 * body and upper_shadow <= 0.1 * total_range
+                row["candlestick_hammer"] = bool(passed)
+            elif pattern == "bullish_engulfing" and len(closes) >= 2:
+                # Bullish engulfing: today bullish, yesterday bearish, today body covers yesterday body
+                prev_o, prev_c = opens[-2], closes[-2]
+                passed = c > o and prev_c < prev_o and o <= prev_c and c >= prev_o
+                row["candlestick_bullish_engulfing"] = bool(passed)
+            elif pattern == "doji":
+                # Doji: very small body relative to total range
+                passed = body <= 0.1 * total_range
+                row["candlestick_doji"] = bool(passed)
+
     return row
 
 
@@ -237,7 +324,16 @@ def compute_indicators_for_stocks(df: pd.DataFrame, needed_indicators: Set[str],
         volumes = None
         if "volume" in group.columns:
             volumes = group["volume"].dropna().values.astype(np.float64)
-        row = _compute_one_stock(code, market, closes, needed_indicators, params, volumes)
+        opens = None
+        if "open" in group.columns:
+            opens = group["open"].dropna().values.astype(np.float64)
+        highs = None
+        if "high" in group.columns:
+            highs = group["high"].dropna().values.astype(np.float64)
+        lows = None
+        if "low" in group.columns:
+            lows = group["low"].dropna().values.astype(np.float64)
+        row = _compute_one_stock(code, market, closes, needed_indicators, params, volumes, opens, highs, lows)
         rows.append(row)
 
     return pd.DataFrame(rows)

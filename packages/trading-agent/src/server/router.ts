@@ -41,7 +41,7 @@ export async function handleRequest(
 	try {
 		// CORS headers
 		res.setHeader("Access-Control-Allow-Origin", "*");
-		res.setHeader("Access-Control-Allow-Methods", "GET, POST, OPTIONS");
+		res.setHeader("Access-Control-Allow-Methods", "GET, POST, DELETE, OPTIONS");
 		res.setHeader("Access-Control-Allow-Headers", "Content-Type");
 
 		if (method === "OPTIONS") {
@@ -248,6 +248,18 @@ export async function handleRequest(
 			const pool = await store.getStockPoolById(poolId);
 			const items = await store.getStockPoolItems(poolId);
 			json(res, 200, { pool, items });
+			return;
+		}
+
+		if (path.startsWith("/api/stock-pools/") && method === "DELETE") {
+			const poolId = Number(path.slice("/api/stock-pools/".length));
+			if (Number.isNaN(poolId)) {
+				badRequest(res, "Invalid pool ID");
+				return;
+			}
+			const store = requireStore();
+			await store.deleteStockPool(poolId);
+			json(res, 200, { success: true });
 			return;
 		}
 

@@ -164,9 +164,13 @@ function renderWatchlist() {
 	for (const pool of state.stockPools) {
 		const isSelected = state.selectedPool?.id === pool.id;
 		html += `
-			<div class="cursor-pointer rounded px-2 py-1.5 text-sm hover:bg-muted transition-colors ${isSelected ? 'bg-muted font-medium' : ''}"
+			<div class="group cursor-pointer rounded px-2 py-1.5 text-sm hover:bg-muted transition-colors ${isSelected ? 'bg-muted font-medium' : ''}"
 			     data-pool-id="${pool.id}">
-				<div class="truncate">${escapeHtml(pool.name)}</div>
+				<div class="flex items-center justify-between">
+					<div class="truncate flex-1">${escapeHtml(pool.name)}</div>
+					<button class="delete-pool-btn opacity-0 group-hover:opacity-100 text-muted-foreground hover:text-red-500 transition-opacity px-1"
+					        data-delete-pool-id="${pool.id}" title="删除股票池">×</button>
+				</div>
 				<div class="text-xs text-muted-foreground">${pool.item_count} 只</div>
 			</div>
 		`;
@@ -194,9 +198,33 @@ function renderWatchlist() {
 
 	// Wire up click handlers
 	container.querySelectorAll("[data-pool-id]").forEach((el) => {
-		el.addEventListener("click", () => {
+		el.addEventListener("click", (e) => {
+			// Ignore clicks on delete button
+			if ((e.target as HTMLElement).closest(".delete-pool-btn")) return;
 			const poolId = Number((el as HTMLElement).dataset.poolId);
 			selectPool(poolId);
+		});
+	});
+	container.querySelectorAll("[data-delete-pool-id]").forEach((el) => {
+		el.addEventListener("click", async (e) => {
+			e.stopPropagation();
+			const poolId = Number((el as HTMLElement).dataset.deletePoolId);
+			const pool = state.stockPools.find((p) => p.id === poolId);
+			if (!pool) return;
+			if (!confirm(`确认删除股票池 "${pool.name}"？`)) return;
+			try {
+				await apiClient.deleteStockPool(poolId);
+				if (state.selectedPool?.id === poolId) {
+					state.selectedPool = null;
+					state.poolItems = [];
+					state.selectedStock = null;
+					state.stockQuote = null;
+				}
+				await fetchStockPools();
+				renderStockDetail();
+			} catch (err) {
+				alert("删除失败: " + (err as Error).message);
+			}
 		});
 	});
 	container.querySelectorAll("[data-stock-code]").forEach((el) => {
@@ -246,7 +274,26 @@ function renderStockDetail() {
 			<div class="flex justify-between"><span>PB</span><span>${q.pb != null ? q.pb.toFixed(2) : "-"}</span></div>
 			<div class="flex justify-between"><span>股息率</span><span>${q.dividend_yield ? q.dividend_yield.toFixed(2) + "%" : "-"}</span></div>
 		</div>
+		<div class="p-3 border-t border-border">
+			<button id="analyze-stock-btn" class="w-full bg-muted hover:bg-muted/80 text-foreground text-xs py-1.5 rounded transition-colors"
+			        data-stock-code="${q.code}" data-stock-name="${escapeHtml(q.name)}"
+			>分析此股票</button>
+		</div>
 	`;
+
+	// Wire up analyze button
+	const analyzeBtn = container.querySelector("#analyze-stock-btn") as HTMLButtonElement | null;
+	if (analyzeBtn) {
+		analyzeBtn.addEventListener("click", () => {
+			const code = analyzeBtn.dataset.stockCode;
+			const name = analyzeBtn.dataset.stockName;
+			if (code) {
+				const input = $("message-input") as HTMLInputElement;
+				input.value = `请对 ${code} ${name || ""} 进行综合分析，包括技术面、基本面和估值`;
+				input.focus();
+			}
+		});
+	}
 }
 
 // ─── Utilities ──────────────────────────────────────────────
@@ -359,6 +406,10 @@ function handleAgentEvent(ev: any) {
 		case "tool_execution_end": {
 			const resultText = ev.result?.content?.find((c: any) => c.type === "text")?.text || "";
 			state.messages.push({ role: "tool", content: resultText.slice(0, 200) });
+			// Auto-refresh stock pools when a new pool is created
+			if (ev.toolName === "manage_stock_pool" && resultText.includes("创建成功")) {
+				fetchStockPools();
+			}
 			break;
 		}
 		case "agent_end": {

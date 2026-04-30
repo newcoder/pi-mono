@@ -89,6 +89,45 @@ def get_stock_list(scope: str = "all") -> List[Dict]:
             codes = [c.strip() for c in scope.replace("custom:", "").split(",") if c.strip()]
             return [{"code": c, "name": "", "market": 1 if c.startswith("6") else 0} for c in codes]
 
+        # Industry scope: "industry:食品饮料I" or "industry:食品饮料"
+        if scope.startswith("industry:"):
+            industry_name = scope.replace("industry:", "").strip()
+            # Try exact match first, then fallback to LIKE prefix match across all levels
+            rows = conn.execute(
+                """SELECT s.code, s.name, s.market
+                   FROM stocks s
+                   JOIN stock_industries si ON s.code = si.code AND s.market = si.market
+                   JOIN industries i ON si.industry_code = i.industry_code AND si.standard = i.standard
+                   WHERE i.name = ?
+                   ORDER BY s.code""",
+                (industry_name,)
+            ).fetchall()
+            if not rows:
+                # Fallback: try LIKE prefix match (e.g., "通信设备" matches "通信设备II")
+                rows = conn.execute(
+                    """SELECT s.code, s.name, s.market
+                       FROM stocks s
+                       JOIN stock_industries si ON s.code = si.code AND s.market = si.market
+                       JOIN industries i ON si.industry_code = i.industry_code AND si.standard = i.standard
+                       WHERE i.name LIKE ? || '%'
+                       ORDER BY s.code""",
+                    (industry_name,)
+                ).fetchall()
+            return [{"code": r["code"], "name": r["name"], "market": r["market"]} for r in rows]
+
+        # Concept scope: "concept:石墨烯"
+        if scope.startswith("concept:"):
+            concept_name = scope.replace("concept:", "").strip()
+            rows = conn.execute(
+                """SELECT s.code, s.name, s.market
+                   FROM stocks s
+                   JOIN concept_stocks cs ON s.code = cs.code
+                   WHERE cs.concept = ?
+                   ORDER BY s.code""",
+                (concept_name,)
+            ).fetchall()
+            return [{"code": r["code"], "name": r["name"], "market": r["market"]} for r in rows]
+
         return []
     finally:
         conn.close()

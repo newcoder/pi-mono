@@ -32,14 +32,19 @@ PERIOD_DAYS = {
 
 
 def load_config(path: str) -> dict:
-    with open(path, "r", encoding="utf-8") as f:
+    with open(path, "r", encoding="utf-8-sig") as f:
         return json.load(f)
 
 
 # Quote-only fields (from quotes table)
-QUOTE_FIELDS = {"market_cap", "pe", "pb", "change_pct"}
+QUOTE_FIELDS = {
+    "market_cap", "pe", "pb", "change_pct",
+    "turnover", "volume", "latest",
+    "high_52w", "low_52w",
+    "total_cap", "float_cap",
+}
 
-# All fundamentals fields available for screening
+# All fundamentals fields available for screening (direct DB columns)
 FUNDAMENTALS_FIELDS = {
     "total_revenue", "operate_revenue", "operate_cost", "total_operate_cost",
     "operate_profit", "total_profit", "net_profit", "parent_net_profit",
@@ -50,6 +55,42 @@ FUNDAMENTALS_FIELDS = {
     "fixed_asset", "short_loan", "long_loan", "total_noncurrent_liab", "monetary_funds",
     "operate_cash_flow", "invest_cash_flow", "finance_cash_flow", "net_cash_increase",
     "construct_long_asset",
+}
+
+import math
+
+
+def clean_nan(obj):
+    """Recursively replace NaN/Inf values with None for JSON serialization."""
+    if isinstance(obj, dict):
+        return {k: clean_nan(v) for k, v in obj.items()}
+    if isinstance(obj, list):
+        return [clean_nan(v) for v in obj]
+    if isinstance(obj, float):
+        if math.isnan(obj) or math.isinf(obj):
+            return None
+    return obj
+
+
+# Computed fundamental fields (derived from DB columns at runtime)
+def _get_val(r, key, fallback_key=None):
+    """Get numeric value from dict, skipping NaN."""
+    v = r.get(key)
+    if v is not None and not (isinstance(v, float) and math.isnan(v)):
+        return v
+    if fallback_key:
+        return _get_val(r, fallback_key)
+    return None
+
+COMPUTED_FIELDS = {
+    "roe": lambda r: (
+        (_get_val(r, "parent_net_profit") / _get_val(r, "parent_equity", "total_equity") * 100)
+        if _get_val(r, "parent_equity", "total_equity") not in (None, 0) else None
+    ),
+    "gross_margin": lambda r: (
+        (_get_val(r, "operate_revenue") - _get_val(r, "operate_cost")) / _get_val(r, "operate_revenue") * 100
+        if _get_val(r, "operate_revenue") not in (None, 0) else None
+    ),
 }
 
 
@@ -78,7 +119,8 @@ def analyze_conditions(conditions: List[dict]) -> Tuple[set, set, set]:
 
 
 def check_fundamental_condition(row: Optional[pd.Series], condition: dict) -> tuple:
-    """Check a fundamental/quote condition on a DataFrame row."""
+    """Check a fundamental/quote condition on a DataFrame row.
+    Supports direct DB fields, quote fields, and computed fields (roe, gross_margin)."""
     field = condition["field"]
     operator = condition["operator"]
     value = condition["value"]
@@ -93,8 +135,13 @@ def check_fundamental_condition(row: Optional[pd.Series], condition: dict) -> tu
         "pb": "pb",
         "change_pct": "change_pct",
     }
-    db_field = field_map.get(field, field)
-    actual = row.get(db_field)
+
+    # Try computed fields first
+    if field in COMPUTED_FIELDS:
+        actual = COMPUTED_FIELDS[field](row.to_dict())
+    else:
+        db_field = field_map.get(field, field)
+        actual = row.get(db_field)
 
     if actual is None or pd.isna(actual):
         return False, f"{field}: missing", None
@@ -240,15 +287,29 @@ def run_screening_fast(config: dict) -> dict:
             df = df.rename(columns={"level_0": "code", "level_1": "market"})
             indicator_lookup[period] = df.set_index(["code", "market"]).to_dict("index")
 
+    # Parse scoring config if present
+    scoring = config.get("scoring")
+    scoring_weights = scoring.get("weights", {}) if scoring else {}
+    min_score = scoring.get("min_score", 0) if scoring else 0
+
+    def _is_scoring_condition(cond: dict) -> bool:
+        """Check if a condition is a scoring condition (not required)."""
+        if not scoring_weights:
+            return False
+        ind = cond.get("indicator") or cond.get("field", "")
+        return ind in scoring_weights
+
     for stock in stocks:
         code = stock["code"]
         market = stock["market"]
         key = (code, market)
         signals = {}
-        all_passed = True
+        all_required_passed = True
+        total_score = 0.0
 
         for cond in conditions:
             cond_type = cond.get("type")
+            is_scoring = _is_scoring_condition(cond)
 
             if cond_type == "technical":
                 indicator = cond["indicator"]
@@ -267,8 +328,6 @@ def run_screening_fast(config: dict) -> dict:
                         passed = cross == cross_type
                         detail = f"MA{fast}/MA{slow} cross: {cross or 'none'}"
                         signals[f"{period}_ma_cross"] = {"value": passed, "detail": detail, "raw": cross}
-                        if not passed:
-                            all_passed = False
 
                     elif indicator == "macd_cross":
                         cross_type = params.get("cross_type", "golden")
@@ -276,8 +335,6 @@ def run_screening_fast(config: dict) -> dict:
                         passed = cross == cross_type
                         detail = f"MACD cross: {cross or 'none'}"
                         signals[f"{period}_macd_cross"] = {"value": passed, "detail": detail, "raw": cross}
-                        if not passed:
-                            all_passed = False
 
                     elif indicator == "rsi":
                         period_rsi = params.get("period", 14)
@@ -291,8 +348,6 @@ def run_screening_fast(config: dict) -> dict:
                             passed = eval(f"{rsi_val} {operator} {value}")
                             detail = f"RSI{period_rsi}: {rsi_val:.2f}"
                         signals[f"{period}_rsi"] = {"value": passed, "detail": detail, "raw": rsi_val}
-                        if not passed:
-                            all_passed = False
 
                     elif indicator == "bollinger_squeeze":
                         bb_signal = inds_for_stock.get("bollinger_squeeze_signal")
@@ -318,30 +373,108 @@ def run_screening_fast(config: dict) -> dict:
                                 "bandwidth": bb_bandwidth,
                             }
                         }
+
+                    elif indicator == "ma_trend":
+                        trend = params.get("trend", "bull")
+                        trend_ok = inds_for_stock.get("ma_trend")
+                        if trend_ok is None or pd.isna(trend_ok):
+                            passed = False
+                            detail = "MA trend: insufficient data"
+                        else:
+                            passed = bool(trend_ok)
+                            detail = f"MA trend ({trend}): {passed}"
+                        signals[f"{period}_ma_trend"] = {"value": passed, "detail": detail, "raw": trend_ok}
+
+                    elif indicator == "bias":
+                        ma_period = params.get("ma_period", 20)
+                        operator = params.get("operator", ">")
+                        value = params.get("value", 15)
+                        bias_val = inds_for_stock.get(f"bias{ma_period}")
+                        if bias_val is None or pd.isna(bias_val):
+                            passed = False
+                            detail = f"BIAS{ma_period}: insufficient data"
+                        else:
+                            passed = eval(f"{bias_val} {operator} {value}")
+                            detail = f"BIAS{ma_period}: {bias_val:.2f}%"
+                        signals[f"{period}_bias"] = {"value": passed, "detail": detail, "raw": bias_val}
+
+                    elif indicator == "volume_price":
+                        pattern = params.get("pattern", "volume_surge")
+                        passed = bool(inds_for_stock.get(pattern))
+                        detail = f"Volume-Price ({pattern}): {passed}"
+                        signals[f"{period}_volume_price"] = {"value": passed, "detail": detail, "raw": inds_for_stock.get(pattern)}
+
+                    elif indicator == "macd_status":
+                        status = params.get("status", "near_golden")
+                        macd_signal = inds_for_stock.get(f"macd_{status}")
+                        if macd_signal is None or pd.isna(macd_signal):
+                            passed = False
+                            detail = f"MACD status ({status}): insufficient data"
+                        else:
+                            passed = bool(macd_signal)
+                            detail = f"MACD status ({status}): {passed}"
+                        signals[f"{period}_macd_status"] = {"value": passed, "detail": detail, "raw": macd_signal}
+
+                    elif indicator == "candlestick":
+                        pattern = params.get("pattern", "hammer")
+                        candle_signal = inds_for_stock.get(f"candlestick_{pattern}")
+                        if candle_signal is None or pd.isna(candle_signal):
+                            passed = False
+                            detail = f"Candlestick ({pattern}): insufficient data"
+                        else:
+                            passed = bool(candle_signal)
+                            detail = f"Candlestick ({pattern}): {passed}"
+                        signals[f"{period}_candlestick"] = {"value": passed, "detail": detail, "raw": candle_signal}
+
+                    else:
+                        passed = False
+                        detail = f"Unknown indicator: {indicator}"
+                        signals[f"{period}_{indicator}"] = {"value": passed, "detail": detail}
+
+                    # Apply scoring or required logic
+                    if is_scoring:
+                        if passed:
+                            weight = scoring_weights.get(indicator, 0)
+                            total_score += weight
+                    else:
                         if not passed:
-                            all_passed = False
+                            all_required_passed = False
 
             elif cond_type in ("fundamental", "quote"):
                 quote_row = quote_lookup.get(key)
                 if quote_row:
-                    # quote_row is a dict from to_dict
                     quote_series = pd.Series(quote_row)
                 else:
                     quote_series = None
                 passed, detail, value = check_fundamental_condition(quote_series, cond)
                 signals[cond["field"]] = {"value": passed, "detail": detail, "raw": value}
-                if not passed:
-                    all_passed = False
 
-        if all_passed:
-            # Compute composite score for ranking when target_count is set
-            score = 0.0
-            for period in indicator_lookup:
-                inds = indicator_lookup[period].get(key, {})
-                if "bb_score" in inds:
-                    score += inds["bb_score"]
+                if is_scoring:
+                    if passed:
+                        weight = scoring_weights.get(cond["field"], 0)
+                        total_score += weight
                 else:
-                    score += 1.0  # Base score for passing any condition
+                    if not passed:
+                        all_required_passed = False
+
+        # Determine if stock passes
+        passes = all_required_passed
+        if scoring_weights:
+            passes = passes and (total_score >= min_score)
+
+        if passes:
+            # Compute composite score for ranking when target_count is set
+            # Use weighted score if scoring mode, otherwise use indicator-derived score
+            if scoring_weights:
+                score = total_score
+            else:
+                score = 0.0
+                for period in indicator_lookup:
+                    inds = indicator_lookup[period].get(key, {})
+                    if "bb_score" in inds:
+                        score += inds["bb_score"]
+                    else:
+                        score += 1.0
             results.append({
                 "code": code,
                 "name": stock.get("name", ""),
@@ -367,7 +500,7 @@ def run_screening_fast(config: dict) -> dict:
     print(f"  Filtering applied in {t_filter:.2f}s")
     print(f"  Total: {total_time:.2f}s | Matched: {len(results)} / {total}")
 
-    return {
+    result = {
         "screen_time": datetime.now().isoformat(),
         "config": config,
         "total_checked": total,
@@ -381,6 +514,7 @@ def run_screening_fast(config: dict) -> dict:
             "total_sec": round(total_time, 3),
         }
     }
+    return clean_nan(result)
 
 
 # Tunable parameter definitions per indicator.
@@ -506,7 +640,7 @@ def main():
 
     result = run_screening(config)
 
-    result_json = json.dumps(result, ensure_ascii=False, indent=2, default=str)
+    result_json = json.dumps(result, ensure_ascii=False, indent=2, default=str, allow_nan=False)
 
     if output_path:
         with open(output_path, "w", encoding="utf-8") as f:

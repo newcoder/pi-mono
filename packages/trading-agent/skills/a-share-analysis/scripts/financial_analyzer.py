@@ -367,6 +367,293 @@ class FinancialAnalyzer:
 
         return result
 
+    def analyze_profit_attribution(self) -> Dict:
+        """
+        利润归因分析：拆解净利润变动的驱动因素.
+        优先对比同季度财报(YoY)，量化收入、成本、费用、减值对利润的影响.
+        """
+        result = {
+            "category": "利润归因分析",
+            "periods": [],
+            "comparison_type": "",
+            "profit_change": {},
+            "attribution": {},
+            "primary_drivers": [],
+            "assessment": "",
+        }
+
+        income = self.stock_data.get("financial_data", {}).get("income_statement", [])
+        if len(income) < 2:
+            return result
+
+        def _parse_period(row: dict) -> str:
+            d = row.get("REPORT_DATE", row.get("report_date", ""))
+            return str(d)[:10]
+
+        def _same_quarter(d1: str, d2: str) -> bool:
+            """Check if two dates are same quarter (MM-DD match)."""
+            return len(d1) >= 10 and len(d2) >= 10 and d1[5:10] == d2[5:10]
+
+        # Try to find YoY same-quarter comparison
+        curr = income[0]
+        curr_date = _parse_period(curr)
+        prev = None
+        comparison_type = "sequential"  # default
+
+        for row in income[1:]:
+            if _same_quarter(curr_date, _parse_period(row)):
+                prev = row
+                comparison_type = "yoy_same_quarter"
+                break
+
+        # Fallback to sequential if no same-quarter match
+        if prev is None:
+            prev = income[1]
+            prev_date = _parse_period(prev)
+            if not _same_quarter(curr_date, prev_date):
+                comparison_type = "sequential (caution: different periods)"
+
+        result["comparison_type"] = comparison_type
+
+        # 提取关键字段 (支持中英文键)
+        def _get(row: dict, keys: list) -> Optional[float]:
+            for k in keys:
+                v = row.get(k)
+                if v is not None:
+                    return self._safe_float(v)
+            return None
+
+        revenue_c = _get(curr, ["营业总收入", "TOTAL_OPERATE_INCOME", "营业收入", "OPERATE_INCOME"])
+        revenue_p = _get(prev, ["营业总收入", "TOTAL_OPERATE_INCOME", "营业收入", "OPERATE_INCOME"])
+        cost_c = _get(curr, ["营业总成本", "TOTAL_OPERATE_COST"])
+        cost_p = _get(prev, ["营业总成本", "TOTAL_OPERATE_COST"])
+        operate_cost_c = _get(curr, ["营业成本", "OPERATE_COST"])
+        operate_cost_p = _get(prev, ["营业成本", "OPERATE_COST"])
+        op_profit_c = _get(curr, ["营业利润", "OPERATE_PROFIT"])
+        op_profit_p = _get(prev, ["营业利润", "OPERATE_PROFIT"])
+        net_profit_c = _get(curr, ["净利润", "NETPROFIT"])
+        net_profit_p = _get(prev, ["净利润", "NETPROFIT"])
+        parent_profit_c = _get(curr, ["归母净利润", "PARENT_NETPROFIT"])
+        parent_profit_p = _get(prev, ["归母净利润", "PARENT_NETPROFIT"])
+
+        # 期间费用
+        sale_exp_c = _get(curr, ["销售费用", "sale_expense", "SALE_EXPENSE"])
+        sale_exp_p = _get(prev, ["销售费用", "sale_expense", "SALE_EXPENSE"])
+        manage_exp_c = _get(curr, ["管理费用", "manage_expense", "MANAGE_EXPENSE"])
+        manage_exp_p = _get(prev, ["管理费用", "manage_expense", "MANAGE_EXPENSE"])
+        research_exp_c = _get(curr, ["研发费用", "research_expense", "RESEARCH_EXPENSE"])
+        research_exp_p = _get(prev, ["研发费用", "research_expense", "RESEARCH_EXPENSE"])
+        finance_exp_c = _get(curr, ["财务费用", "finance_expense", "FINANCE_EXPENSE"])
+        finance_exp_p = _get(prev, ["财务费用", "finance_expense", "FINANCE_EXPENSE"])
+
+        # 减值损失 (合并各类减值)
+        impairment_c = _get(curr, ["资产减值损失", "信用减值损失", "资产减值损失(合计)"])
+        impairment_p = _get(prev, ["资产减值损失", "信用减值损失", "资产减值损失(合计)"])
+        if impairment_c is None:
+            impairment_c = _get(curr, ["impairment_loss", "IMP_AIRMENT_LOSS"])
+        if impairment_p is None:
+            impairment_p = _get(prev, ["impairment_loss", "IMP_AIRMENT_LOSS"])
+
+        result["periods"] = [
+            curr_date,
+            _parse_period(prev),
+        ]
+
+        # 利润变动
+        profit_change = None
+        profit_change_pct = None
+        if parent_profit_c is not None and parent_profit_p is not None and parent_profit_p != 0:
+            profit_change = parent_profit_c - parent_profit_p
+            profit_change_pct = round(profit_change / abs(parent_profit_p) * 100, 2)
+        elif net_profit_c is not None and net_profit_p is not None and net_profit_p != 0:
+            profit_change = net_profit_c - net_profit_p
+            profit_change_pct = round(profit_change / abs(net_profit_p) * 100, 2)
+
+        result["profit_change"] = {
+            "absolute_change": round(profit_change, 2) if profit_change is not None else None,
+            "change_pct": profit_change_pct,
+            "current_profit": parent_profit_c or net_profit_c,
+            "previous_profit": parent_profit_p or net_profit_p,
+        }
+
+        if profit_change is None:
+            return result
+
+        # 归因计算 (以营业利润为中间变量)
+        attribution = {}
+
+        # 1. 收入变动贡献
+        if revenue_c is not None and revenue_p is not None:
+            revenue_change = revenue_c - revenue_p
+            # 简化：收入变动的利润贡献 = 收入增量 × 上期毛利率
+            prev_gross_margin = 0.2  # default 20%
+            if operate_cost_p is not None and revenue_p and revenue_p != 0:
+                prev_gross_margin = (revenue_p - operate_cost_p) / revenue_p
+            elif cost_p is not None and revenue_p and revenue_p != 0:
+                prev_gross_margin = (revenue_p - cost_p) / revenue_p
+            revenue_contrib = revenue_change * prev_gross_margin
+            attribution["收入变动"] = round(revenue_contrib, 2)
+
+        # 2. 毛利率变动影响
+        if operate_cost_c is not None and operate_cost_p is not None and revenue_c and revenue_p:
+            gm_c = (revenue_c - operate_cost_c) / revenue_c if revenue_c != 0 else 0
+            gm_p = (revenue_p - operate_cost_p) / revenue_p if revenue_p != 0 else 0
+            gm_impact = revenue_c * (gm_c - gm_p)
+            attribution["毛利率变动"] = round(gm_impact, 2)
+
+        # 3. 期间费用变动 (费用增加为负贡献)
+        period_exp_contrib = 0
+        for label, c, p in [
+            ("销售费用", sale_exp_c, sale_exp_p),
+            ("管理费用", manage_exp_c, manage_exp_p),
+            ("研发费用", research_exp_c, research_exp_p),
+            ("财务费用", finance_exp_c, finance_exp_p),
+        ]:
+            if c is not None and p is not None:
+                delta = p - c  # 费用增加 → 负贡献
+                period_exp_contrib += delta
+                attribution[label] = round(delta, 2)
+        if period_exp_contrib != 0 and not any(k in attribution for k in ["销售费用", "管理费用", "研发费用", "财务费用"]):
+            attribution["期间费用合计"] = round(period_exp_contrib, 2)
+
+        # 4. 减值损失影响
+        if impairment_c is not None and impairment_p is not None:
+            # 减值增加为负贡献
+            impairment_impact = impairment_p - impairment_c
+            attribution["减值损失"] = round(impairment_impact, 2)
+
+        # 5. 营业外收支 (用净利润 - 营业利润近似)
+        if net_profit_c is not None and net_profit_p is not None and op_profit_c is not None and op_profit_p is not None:
+            non_op_c = net_profit_c - op_profit_c
+            non_op_p = net_profit_p - op_profit_p
+            attribution["营业外收支"] = round(non_op_c - non_op_p, 2)
+
+        result["attribution"] = attribution
+
+        # 找出主要驱动因素 (按影响绝对值排序)
+        sorted_drivers = sorted(
+            [(k, v) for k, v in attribution.items() if v is not None],
+            key=lambda x: abs(x[1]),
+            reverse=True,
+        )
+        result["primary_drivers"] = [
+            {"factor": k, "impact": v, "direction": "正向" if v > 0 else "负向"}
+            for k, v in sorted_drivers[:5]
+        ]
+
+        # 评估
+        if profit_change_pct is not None:
+            comp_note = f"[{comparison_type}] "
+            if profit_change_pct < -30:
+                assessment = f"{comp_note}净利润大幅下滑 ({profit_change_pct}%)，"
+            elif profit_change_pct < -10:
+                assessment = f"{comp_note}净利润明显下滑 ({profit_change_pct}%)，"
+            elif profit_change_pct < 0:
+                assessment = f"{comp_note}净利润小幅下滑 ({profit_change_pct}%)，"
+            elif profit_change_pct < 10:
+                assessment = f"{comp_note}净利润小幅增长 ({profit_change_pct}%)，"
+            elif profit_change_pct < 30:
+                assessment = f"{comp_note}净利润明显增长 ({profit_change_pct}%)，"
+            else:
+                assessment = f"{comp_note}净利润大幅增长 ({profit_change_pct}%)，"
+
+            # 补充主要原因
+            if sorted_drivers:
+                top_factor, top_impact = sorted_drivers[0]
+                direction = "正向" if top_impact > 0 else "负向"
+                assessment += f"主要受'{top_factor}'{direction}驱动(影响{top_impact:,.0f}万元)"
+            result["assessment"] = assessment
+
+        return result
+
+    def analyze_profit_quality(self) -> Dict:
+        """
+        利润质量分析：评估利润的现金含量、可持续性、一次性因素.
+        """
+        result = {
+            "category": "利润质量分析",
+            "metrics": {},
+            "warnings": [],
+            "assessment": "",
+        }
+
+        cash_flow = self.stock_data.get("financial_data", {}).get("cash_flow", [])
+        income = self.stock_data.get("financial_data", {}).get("income_statement", [])
+
+        if not cash_flow or not income:
+            return result
+
+        def _get(row: dict, keys: list) -> Optional[float]:
+            for k in keys:
+                v = row.get(k)
+                if v is not None:
+                    return self._safe_float(v)
+            return None
+
+        curr_cf = cash_flow[0]
+        curr_inc = income[0]
+
+        ocf = _get(curr_cf, ["经营活动产生的现金流量净额", "NETCASH_OPERATE", "operate_cash_flow"])
+        net_profit = _get(curr_inc, ["净利润", "NETPROFIT"])
+        parent_profit = _get(curr_inc, ["归母净利润", "PARENT_NETPROFIT"])
+        depre = _get(curr_cf, ["固定资产折旧、油气资产折耗、生产性生物资产折旧", "折旧"])
+        amort = _get(curr_cf, ["无形资产摊销", "摊销"])
+
+        profit = parent_profit or net_profit
+
+        # 经营现金流/净利润
+        if ocf is not None and profit and profit != 0:
+            ocf_ratio = round(ocf / profit, 2)
+            result["metrics"]["经营现金流/净利润"] = ocf_ratio
+            if ocf_ratio < 0.5:
+                result["warnings"].append(f"经营现金流覆盖净利润比例低 ({ocf_ratio})，盈利质量存疑")
+            elif ocf_ratio > 1.2:
+                result["metrics"]["现金含量"] = "高 - 现金流充裕"
+            else:
+                result["metrics"]["现金含量"] = "正常"
+
+        # 非现金支出占比 (折旧+摊销)
+        if depre is not None and profit and profit != 0:
+            non_cash = depre + (amort or 0)
+            non_cash_ratio = round(non_cash / profit, 2)
+            result["metrics"]["非现金支出/净利润"] = non_cash_ratio
+            if non_cash_ratio > 0.5:
+                result["warnings"].append("非现金支出占比较高，利润受折旧政策影响大")
+
+        # 利润可持续性评估
+        if len(income) >= 4:
+            profits = []
+            for inc in income[:4]:
+                p = _get(inc, ["归母净利润", "PARENT_NETPROFIT", "净利润", "NETPROFIT"])
+                if p is not None:
+                    profits.append(p)
+            if len(profits) >= 4:
+                # 检查是否出现大幅波动
+                max_p = max(profits)
+                min_p = min(profits)
+                if max_p != 0:
+                    volatility = (max_p - min_p) / abs(max_p)
+                    result["metrics"]["利润波动率"] = round(volatility, 2)
+                    if volatility > 1.0:
+                        result["warnings"].append("利润波动剧烈，可持续性较差")
+                    elif volatility > 0.5:
+                        result["warnings"].append("利润波动较大")
+
+                # 趋势判断
+                if profits[0] > profits[-1]:
+                    result["metrics"]["利润趋势"] = "上升"
+                elif profits[0] < profits[-1]:
+                    result["metrics"]["利润趋势"] = "下降"
+                else:
+                    result["metrics"]["利润趋势"] = "平稳"
+
+        if result["warnings"]:
+            result["assessment"] = "需关注 - " + "；".join(result["warnings"])
+        else:
+            result["assessment"] = "良好 - 利润质量正常，现金含量充足"
+
+        return result
+
     def generate_summary(self, level: str = "standard") -> Dict:
         """生成分析摘要"""
         summary = {
@@ -395,6 +682,8 @@ class FinancialAnalyzer:
             summary["growth"] = growth
             summary["dupont"] = self.analyze_dupont()
             summary["anomalies"] = anomalies
+            summary["profit_attribution"] = self.analyze_profit_attribution()
+            summary["profit_quality"] = self.analyze_profit_quality()
 
             if level == "deep":
                 summary["historical_indicators"] = self.stock_data.get('financial_indicators', [])
