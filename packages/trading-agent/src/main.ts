@@ -18,6 +18,11 @@ import { startServer } from "./server/index.js";
 import { advancedScreenTool } from "./tools/advanced-screening.js";
 import { backtestStrategyTool } from "./tools/backtest.js";
 import { compareStocksTool } from "./tools/compare-stocks.js";
+import {
+	analyzeConceptPersistenceTool,
+	findConceptLeadersTool,
+	verifyConceptStocksTool,
+} from "./tools/concept-analysis.js";
 import { getConceptStocksTool, listConceptsTool } from "./tools/concept-stocks.js";
 import { syncFundamentalsTool, syncKlineTool, syncNewsTool } from "./tools/data-sync.js";
 import { getIndustryStocksTool, getStockIndustriesTool, listIndustriesTool } from "./tools/industry-classification.js";
@@ -256,6 +261,9 @@ const BUILTIN_TOOLS = new Map<string, AgentTool<any>>([
 	["sync_kline", syncKlineTool],
 	["sync_fundamentals", syncFundamentalsTool],
 	["sync_news", syncNewsTool],
+	["verify_concept_stocks", verifyConceptStocksTool],
+	["find_concept_leaders", findConceptLeadersTool],
+	["analyze_concept_persistence", analyzeConceptPersistenceTool],
 ]);
 
 const BUILTIN_ROUTINES = new Map([

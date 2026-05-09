@@ -1,6 +1,18 @@
+#!/usr/bin/env python3
+"""
+Fetch real-time or latest-available stock quote.
+- Trading hours: live Eastmoney API
+- Non-trading hours: local SQLite (klines/quotes) fallback
+"""
 import argparse
 import json
-import requests
+import os
+import sqlite3
+import sys
+import io
+from datetime import datetime
+
+sys.stdout = io.TextIOWrapper(sys.stdout.buffer, encoding="utf-8")
 
 HEADERS = {
     "User-Agent": (
@@ -10,131 +22,159 @@ HEADERS = {
     "Referer": "https://quote.eastmoney.com/",
 }
 
+_DB_PATH = os.path.expanduser("~/.trading-agent/data/market.db")
 
-def get_stock_real_quote_eastmoney(stock_code: str, market: int = 1) -> dict:
-    """Fetch real-time stock quote from Eastmoney."""
-    secid = f"{market}.{stock_code}"
-    api_url = (
-        "https://push2.eastmoney.com/api/qt/stock/get"
-        "?ut=bd1d9ddb04089700cf9c27f6f7426281"
-        "&fltt=2&invt=2&volt=2"
-        "&fields=f43,f44,f45,f46,f47,f48,f49,f50,f51,f52,f57,f58,f60,f61,f116,f117,f162,f163,f164,f170,f171,f173,f177,f183,f184,f185,f186,f187,f188,f189,f190"
-        f"&secid={secid}&_="
+
+def _is_a_share_trading_hours() -> bool:
+    """Check if current time is within A-share trading hours (Mon-Fri 09:30-11:30, 13:00-15:00)."""
+    now = datetime.now()
+    if now.weekday() >= 5:
+        return False
+    hm = now.hour * 100 + now.minute
+    return (930 <= hm <= 1130) or (1300 <= hm <= 1500)
+
+
+def _query_local_db(sql: str, params: tuple = ()) -> list:
+    if not os.path.exists(_DB_PATH):
+        return []
+    try:
+        conn = sqlite3.connect(_DB_PATH)
+        conn.row_factory = sqlite3.Row
+        cur = conn.cursor()
+        cur.execute(sql, params)
+        rows = [dict(r) for r in cur.fetchall()]
+        conn.close()
+        return rows
+    except Exception:
+        return []
+
+
+def _get_quote_from_local(code: str, market: int) -> dict:
+    """Try quotes table first, then klines table."""
+    # 1. Try quotes table (latest snapshot)
+    rows = _query_local_db(
+        "SELECT * FROM quotes WHERE code = ? AND market = ? ORDER BY snapshot_date DESC LIMIT 1",
+        (code, market),
     )
-    r = requests.get(api_url, headers=HEADERS, timeout=20)
-    r.encoding = "utf-8"
-    data = r.json()
-    d = data.get("data", {})
+    if rows:
+        r = rows[0]
+        return {
+            "name": r.get("name"),
+            "code": code,
+            "latest": r.get("latest"),
+            "open": r.get("open"),
+            "high": r.get("high"),
+            "low": r.get("low"),
+            "prev_close": r.get("prev_close"),
+            "volume": r.get("volume"),
+            "turnover": r.get("turnover"),
+            "change_pct": r.get("change_pct"),
+            "pe": r.get("pe"),
+            "pb": r.get("pb"),
+            "total_cap": r.get("total_cap"),
+            "float_cap": r.get("float_cap"),
+            "high_52w": r.get("high_52w"),
+            "low_52w": r.get("low_52w"),
+            "_source": "local_quotes",
+            "_note": "Non-trading hours: using local DB snapshot",
+        }
 
-    return {
-        "name": d.get("f58"),
-        "code": d.get("f57") or stock_code,
-        "latest": d.get("f43"),
-        "open": d.get("f46"),
-        "high": d.get("f44"),
-        "low": d.get("f45"),
-        "prev_close": d.get("f60"),
-        "volume": d.get("f47"),
-        "turnover": d.get("f48"),
-        "change_pct": d.get("f170"),
-        "total_cap": d.get("f116"),
-        "float_cap": d.get("f117"),
-        "pe": d.get("f162"),
-        "52w_high": d.get("f51"),
-        "52w_low": d.get("f52"),
-        "_source": "eastmoney",
-        "raw": d,
-    }
+    # 2. Fallback to klines table (latest daily bar)
+    rows = _query_local_db(
+        "SELECT * FROM klines WHERE code = ? AND market = ? AND period = 'daily' AND adjust = 'bfq' ORDER BY date DESC LIMIT 1",
+        (code, market),
+    )
+    if rows:
+        r = rows[0]
+        close_p = r.get("close")
+        pre_close = r.get("pre_close")
+        change_pct = None
+        if close_p is not None and pre_close is not None and pre_close != 0:
+            change_pct = round((close_p - pre_close) / pre_close * 100, 4)
+        return {
+            "name": None,
+            "code": code,
+            "latest": close_p,
+            "open": r.get("open"),
+            "high": r.get("high"),
+            "low": r.get("low"),
+            "prev_close": pre_close,
+            "volume": r.get("volume"),
+            "turnover": r.get("turnover"),
+            "change_pct": change_pct,
+            "pe": None,
+            "pb": None,
+            "total_cap": None,
+            "float_cap": None,
+            "high_52w": None,
+            "low_52w": None,
+            "_source": "local_klines",
+            "_note": "Non-trading hours: using local klines data",
+        }
 
-
-def get_stock_real_quote_sina(stock_code: str, _market: int = 1) -> dict:
-    """Fetch real-time stock quote from Sina via akshare as fallback."""
-    import akshare as ak
-
-    df = ak.stock_zh_a_spot()
-    if df is None or df.empty:
-        raise RuntimeError("Sina spot data empty")
-
-    # Find code column
-    code_col = None
-    for col in df.columns:
-        if str(col) in ("代码", "code"):
-            code_col = col
-            break
-    if code_col is None:
-        code_col = df.columns[0]
-
-    # Sina codes have sh/sz prefix (e.g. sh600519)
-    prefix = "sh" if _market == 1 else "sz"
-    sina_code = prefix + stock_code
-    row = df[df[code_col].astype(str).str.strip() == sina_code]
-    if row.empty:
-        raise RuntimeError(f"Stock {stock_code} ({sina_code}) not found in Sina data")
-
-    r = row.iloc[0]
-
-    # Column mapping (Sina Chinese column names)
-    def get_col(candidates):
-        for c in df.columns:
-            if str(c) in candidates:
-                return c
-        return None
-
-    name_col = get_col(["名称", "name"])
-    latest_col = get_col(["最新价", "price", "latest"])
-    open_col = get_col(["今开", "open"])
-    high_col = get_col(["最高", "high"])
-    low_col = get_col(["最低", "low"])
-    prev_close_col = get_col(["昨收", "prev_close", "previous_close"])
-    volume_col = get_col(["成交量", "volume"])
-    turnover_col = get_col(["成交额", "turnover"])
-    change_pct_col = get_col(["涨跌幅", "change_pct"])
-
-    def to_float(val):
-        try:
-            return float(val)
-        except (ValueError, TypeError):
-            return None
-
-    return {
-        "name": str(r[name_col]) if name_col else None,
-        "code": stock_code,
-        "latest": to_float(r[latest_col]) if latest_col else None,
-        "open": to_float(r[open_col]) if open_col else None,
-        "high": to_float(r[high_col]) if high_col else None,
-        "low": to_float(r[low_col]) if low_col else None,
-        "prev_close": to_float(r[prev_close_col]) if prev_close_col else None,
-        "volume": to_float(r[volume_col]) if volume_col else None,
-        "turnover": to_float(r[turnover_col]) if turnover_col else None,
-        "change_pct": to_float(r[change_pct_col]) if change_pct_col else None,
-        "total_cap": None,
-        "float_cap": None,
-        "pe": None,
-        "52w_high": None,
-        "52w_low": None,
-        "_source": "sina",
-    }
+    return {"error": "No local data available"}
 
 
 def get_stock_real_quote(stock_code: str, market: int = 1) -> dict:
     """
-    Fetch real-time stock quote.
-    Tries Eastmoney first, falls back to Sina if Eastmoney fails.
+    Fetch stock quote.
+    Trading hours -> Eastmoney live API.
+    Non-trading hours -> local SQLite fallback (quotes/klines).
     """
+    is_trading = _is_a_share_trading_hours()
+
+    if not is_trading:
+        result = _get_quote_from_local(stock_code, market)
+        if "error" not in result:
+            return result
+        # If local also missing, fall through to network as last resort
+
+    # Trading hours (or local missing): Eastmoney API
     try:
-        return get_stock_real_quote_eastmoney(stock_code, market)
+        import requests
+        secid = f"{market}.{stock_code}"
+        api_url = (
+            "https://push2.eastmoney.com/api/qt/stock/get"
+            "?ut=bd1d9ddb04089700cf9c27f6f7426281"
+            "&fltt=2&invt=2&volt=2"
+            "&fields=f43,f44,f45,f46,f47,f48,f49,f50,f51,f52,f57,f58,f60,f61,f116,f117,f162,f163,f164,f170,f171,f173,f177,f183,f184,f185,f186,f187,f188,f189,f190"
+            f"&secid={secid}&_="
+        )
+        r = requests.get(api_url, headers=HEADERS, timeout=20)
+        r.encoding = "utf-8"
+        data = r.json()
+        d = data.get("data", {})
+        if d:
+            return {
+                "name": d.get("f58"),
+                "code": d.get("f57") or stock_code,
+                "latest": d.get("f43"),
+                "open": d.get("f46"),
+                "high": d.get("f44"),
+                "low": d.get("f45"),
+                "prev_close": d.get("f60"),
+                "volume": d.get("f47"),
+                "turnover": d.get("f48"),
+                "change_pct": d.get("f170"),
+                "total_cap": d.get("f116"),
+                "float_cap": d.get("f117"),
+                "pe": d.get("f162"),
+                "52w_high": d.get("f51"),
+                "52w_low": d.get("f52"),
+                "_source": "eastmoney",
+            }
     except Exception as e:
-        print(f"[warn] Eastmoney quote failed for {stock_code}: {e}", file=sys.stderr)
-        print(f"[info] Falling back to Sina source...", file=sys.stderr)
-        return get_stock_real_quote_sina(stock_code, market)
+        if not is_trading:
+            # Non-trading + network fail -> return local fallback error
+            return {"error": f"Non-trading hours, no local data: {e}"}
+        return {"error": str(e)}
+
+    # Should not reach here normally
+    return {"error": "Unable to fetch quote"}
 
 
 if __name__ == "__main__":
-    import sys
-    import io
-    sys.stdout = io.TextIOWrapper(sys.stdout.buffer, encoding="utf-8")
-
-    parser = argparse.ArgumentParser(description="Fetch real-time A-share quote")
+    parser = argparse.ArgumentParser(description="Fetch A-share quote (live or local fallback)")
     parser.add_argument("stock_code", help="6-digit stock code, e.g. 600875")
     parser.add_argument("--market", type=int, default=1, choices=[0, 1], help="1=Shanghai (default), 0=Shenzhen")
     args = parser.parse_args()

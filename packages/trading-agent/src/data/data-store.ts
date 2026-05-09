@@ -3,6 +3,7 @@ import { dirname, join } from "node:path";
 import sqlite3 from "sqlite3";
 import type {
 	AdjustFactorRow,
+	BusinessCompositionRow,
 	ConceptStockRow,
 	FundamentalsRow,
 	IndustryRow,
@@ -165,6 +166,23 @@ CREATE TABLE IF NOT EXISTS concept_stocks (
     updated_at TEXT,
     PRIMARY KEY (concept, code)
 );
+
+CREATE TABLE IF NOT EXISTS business_composition (
+    code TEXT NOT NULL,
+    report_date TEXT NOT NULL,
+    classify_type TEXT NOT NULL,
+    item_name TEXT NOT NULL,
+    revenue REAL,
+    revenue_ratio REAL,
+    profit REAL,
+    profit_ratio REAL,
+    gross_margin REAL,
+    updated_at TEXT,
+    PRIMARY KEY (code, report_date, classify_type, item_name)
+);
+
+CREATE INDEX IF NOT EXISTS idx_business_composition_code ON business_composition(code);
+CREATE INDEX IF NOT EXISTS idx_business_composition_date ON business_composition(report_date);
 
 CREATE TABLE IF NOT EXISTS industries (
     industry_code TEXT NOT NULL,
@@ -510,6 +528,40 @@ export class DataStore {
 		return rows.map((r) => r.concept);
 	}
 
+	// ─── Business Composition ───────────────────────────────────────
+
+	async saveBusinessComposition(items: BusinessCompositionRow[]): Promise<void> {
+		if (items.length === 0 || !this.db) return;
+		const now = new Date().toISOString();
+		const f = (v: number | null | undefined) => (v == null || Number.isNaN(v) ? "NULL" : String(v));
+		for (const item of items) {
+			const sql = `
+				INSERT OR REPLACE INTO business_composition
+				(code, report_date, classify_type, item_name, revenue, revenue_ratio, profit, profit_ratio, gross_margin, updated_at)
+				VALUES (${s(item.code)}, ${s(item.report_date)}, ${s(item.classify_type)}, ${s(item.item_name)},
+					${f(item.revenue)}, ${f(item.revenue_ratio)}, ${f(item.profit)}, ${f(item.profit_ratio)}, ${f(item.gross_margin)}, ${s(now)})
+			`;
+			await promisifyExec(this.db, sql);
+		}
+	}
+
+	async getBusinessComposition(code: string): Promise<BusinessCompositionRow[]> {
+		if (!this.db) return [];
+		return promisifyQuery(
+			this.db,
+			`SELECT * FROM business_composition WHERE code = ${s(code)} ORDER BY report_date DESC, classify_type, item_name`,
+		);
+	}
+
+	async getLatestBusinessCompositionDate(code: string): Promise<string | null> {
+		if (!this.db) return null;
+		const rows = await promisifyQuery(
+			this.db,
+			`SELECT MAX(report_date) as max_date FROM business_composition WHERE code = ${s(code)}`,
+		);
+		return rows[0]?.max_date ?? null;
+	}
+
 	// ─── Industries ─────────────────────────────────────────────────
 
 	async saveIndustries(items: IndustryRow[]): Promise<void> {
@@ -624,6 +676,7 @@ export class DataStore {
 			"fundamentals",
 			"sectors",
 			"concept_stocks",
+			"business_composition",
 			"macro",
 			"stock_pools",
 			"stock_pool_items",

@@ -14,6 +14,9 @@ const EXTERNAL_A_SHARE_SCRIPTS = join(HOME, ".agents/skills/a-share-analysis/scr
 const BUNDLED_NL_SCREENER_SCRIPTS = join(__dirname, "../../skills/nl-stock-screener/scripts");
 const EXTERNAL_NL_SCREENER_SCRIPTS = join(HOME, ".agents/skills/nl-stock-screener/scripts");
 
+const BUNDLED_CONCEPT_ANALYSIS_SCRIPTS = join(__dirname, "../../skills/concept-analysis/scripts");
+const EXTERNAL_CONCEPT_ANALYSIS_SCRIPTS = join(HOME, ".agents/skills/concept-analysis/scripts");
+
 /** Resolve script path: bundled takes priority over external. */
 export function resolveScriptPath(scriptName: string, bundledDir: string, externalDir: string): string {
 	const bundled = join(bundledDir, scriptName);
@@ -29,6 +32,11 @@ export function resolveAShareScript(scriptName: string): string {
 /** Resolve nl-screener script path (bundled优先). */
 export function resolveNLScreenerScript(scriptName: string): string {
 	return resolveScriptPath(scriptName, BUNDLED_NL_SCREENER_SCRIPTS, EXTERNAL_NL_SCREENER_SCRIPTS);
+}
+
+/** Resolve concept-analysis script path (bundled优先). */
+export function resolveConceptAnalysisScript(scriptName: string): string {
+	return resolveScriptPath(scriptName, BUNDLED_CONCEPT_ANALYSIS_SCRIPTS, EXTERNAL_CONCEPT_ANALYSIS_SCRIPTS);
 }
 
 // Legacy export for backward compatibility

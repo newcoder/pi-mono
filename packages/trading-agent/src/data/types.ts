@@ -182,3 +182,16 @@ export interface AdjustFactorRow {
 	hfq_factor: number | null;
 	updated_at?: string;
 }
+
+export interface BusinessCompositionRow {
+	code: string;
+	report_date: string;
+	classify_type: string;
+	item_name: string;
+	revenue?: number | null;
+	revenue_ratio?: number | null;
+	profit?: number | null;
+	profit_ratio?: number | null;
+	gross_margin?: number | null;
+	updated_at?: string;
+}

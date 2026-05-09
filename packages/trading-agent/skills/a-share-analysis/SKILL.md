@@ -1,26 +1,16 @@
 ---
 name: a-share-analysis
-description: A股价值投资分析工具，提供股票筛选、个股深度分析、行业对比和估值计算功能。优先使用 trading-agent 本地 SQLite 数据库（已同步的行情/财务/K线数据），缺失时 fallback 到东方财富 API 补全。适合低频交易的普通投资者。
+description: A股价值投资分析工具，提供股票筛选、个股三档分析（基本面/技术面/深度）、行业对比和估值计算功能。优先使用 trading-agent 本地 SQLite 数据库（已同步的行情/财务/K线数据），缺失时 fallback 到东方财富 API 补全。适合低频交易的普通投资者。
 tools:
   - get_quote
   - get_fundamentals
   - get_kline
-  - get_macro
   - screen_stocks
-  - advanced_screen
   - compare_stocks
   - backtest_strategy
-  - manage_stock_pool
-  - get_sector_rotation
-  - get_concept_stocks
-  - list_concepts
-  - list_industries
-  - get_industry_stocks
-  - get_stock_industries
   - get_stock_news
   - screen_by_news
   - get_market_news
-  - analyze_sentiment
 ---
 
 # A-Share Analysis Skill
@@ -173,10 +163,10 @@ python scripts/stock_screener.py \
 
 询问用户：
 1. 股票代码或名称
-2. 分析深度级别：
-   - **摘要级**：关键指标 + 投资结论（1页）
-   - **标准级**：财务分析 + 估值 + 行业对比 + 风险提示
-   - **深度级**：完整调研报告，包含历史数据追踪
+2. 分析深度级别（三档，参见 `templates/financial_analyst_prompt.txt`）：
+   - **基本面分析（档一）**：快速排雷 + 财务质量诊断 + 估值结论（5-10分钟）
+   - **技术面分析（档二）**：趋势/形态/指标 + 资金面 + 买卖时机（5-10分钟）
+   - **深度分析（档三）**：基本面 + 技术面 + 行业 + 估值 + 新闻全面融合（20-30分钟）
 
 ### Step 2: Fetch Stock Data
 
@@ -200,6 +190,11 @@ python scripts/data_fetcher.py \
 - `--output`: 输出文件
 
 > **提示**：`holder` 数据只能通过 akshare 网络获取。若只需行情和财务分析，本地数据库已足够。
+>
+> **三档分析对应数据类型**：
+> - 档一（基本面分析）：`--data-type financial` — 仅需要财务数据
+> - 档二（技术面分析）：`--data-type valuation` — 仅需要K线/估值数据
+> - 档三（深度分析）：`--data-type all` — 全部数据（含新闻）
 
 ### Step 3: Fetch News Data (新闻资讯)
 
@@ -233,7 +228,7 @@ python scripts/financial_analyzer.py \
 
 **参数说明：**
 - `--input`: 输入的股票数据文件
-- `--level`: 分析深度 (summary/standard/deep)
+- `--level`: 分析深度 (fundamental/technical/deep，对应三档分析的档一/档二/档三)
 - `--output`: 输出文件
 
 ### Step 5: Calculate Valuation
@@ -255,19 +250,33 @@ python scripts/valuation_calculator.py \
 - `--margin-of-safety`: 安全边际(%)
 - `--output`: 输出文件
 
-### Step 6: Generate Report
+### Step 6: Generate Report（一体化分析）
 
-读取分析结果，参考 `templates/analysis_framework.md` 模板生成中文分析报告。
+**⚠️ 性能要求：必须使用一体化脚本 `deep_analyzer.py`，一次调用完成全部分析计算，禁止使用多个独立的 Python 子进程分别计算技术指标、杜邦分析等。**
 
-该框架包含十大分析模块，**根据分析深度级别选择性使用**：
+```bash
+# 一体化：一次调用完成所有技术指标+基本面+估值计算 → 输出 Markdown 报告
+python scripts/deep_analyzer.py \
+    --input stock-data.json \
+    --level deep \
+    --output analysis_report.md
+```
 
-**摘要级**（1页）：模块一（基础信息）+ 模块三（基本面核心指标）+ 模块九（多空研判与投资建议）
+**参数说明**：
+- `--input`：data_fetcher.py 输出的 JSON 文件
+- `--level`：分析档位（`fundamental`/`technical`/`deep`）
+- `--output`：输出 Markdown 报告文件
 
-**标准级**（3-5页）：模块一 + 模块二（行业与竞争格局）+ 模块三（基本面完整分析）+ 模块四（机构观点）+ 模块八（技术面）+ 模块九
+**三档分析体系**（详见 `templates/financial_analyst_prompt.txt`）：
 
-**深度级**（完整报告）：全部十大模块，含模块五（一致性预期）、模块六（新闻资讯多空）、模块七（资金面）
+| 档位 | --level | 报告范围 | 适用场景 |
+|------|---------|----------|----------|
+| 🥇 档一 | `fundamental` | F1-F8：审计→资产负债表→利润表→现金流→排雷→杜邦→估值→结论 | 快速判断财务健康度 |
+| 🥈 档二 | `technical` | T1-T6：趋势→形态→指标→成交量→资金面→操作建议 | 判断买卖时机 |
+| 🥉 档三 | `deep` | D1-D11：基本面+技术面+行业格局+造假识别+新闻多空+估值+击球区 | 重大投资决策 |
 
-十大模块速览：
+**`analysis_framework.md` 十大模块参考**（深度分析时可按需裁剪）：
+
 1. **基础信息分析**：公司概况、近期股价表现
 2. **行业与竞争格局**：行业空间/景气度、竞争格局、护城河、市场份额
 3. **基本面分析**：财务五维分析（盈利/成长/营运/偿债/现金流）、估值分析

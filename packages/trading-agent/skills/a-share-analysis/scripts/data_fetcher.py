@@ -905,7 +905,50 @@ def _normalize_financial_data(result: dict) -> dict:
     # Compute YoY growth rates from statement data
     vertical = _compute_growth_rates(vertical, result)
 
+    # ── Standardize field names to English keys ──
+    INDICATOR_FIELD_MAP = {
+        "日期": "date",
+        "归母净利润": "net_profit_parent",
+        "营业总收入": "revenue",
+        "营业成本": "cost",
+        "营业利润": "operate_profit",
+        "利润总额": "total_profit",
+        "净利润": "net_profit",
+        "扣非净利润": "deducted_net_profit",
+        "基本每股收益": "eps",
+        "稀释每股收益": "diluted_eps",
+        "股东权益合计(净资产)": "total_equity",
+        "股东权益合计（净资产）": "total_equity",
+        "归母所有者权益": "parent_equity",
+        "资产总计": "total_assets",
+        "负债合计": "total_liabilities",
+        "总股本": "total_shares",
+        "商誉": "goodwill",
+        "货币资金": "monetary_funds",
+        "应收账款": "accounts_receivable",
+        "存货": "inventory",
+        "固定资产": "fixed_assets",
+        "短期借款": "short_loan",
+        "长期借款": "long_loan",
+        "经营现金流量净额": "operating_cf",
+        "投资现金流量净额": "investing_cf",
+        "筹资现金流量净额": "financing_cf",
+        "销售毛利率": "gross_margin",
+        "销售净利率": "net_margin",
+        "净资产收益率": "roe",
+        "总资产周转率": "asset_turnover",
+        "资产负债率": "debt_ratio",
+        "流动比率": "current_ratio",
+        "速动比率": "quick_ratio",
+        "权益乘数": "equity_multiplier",
+        "营业收入增长率": "revenue_growth",
+        "净利润增长率": "net_profit_growth",
+    }
     if vertical:
+        for row in vertical:
+            for cn_key, en_key in list(INDICATOR_FIELD_MAP.items()):
+                if cn_key in row:
+                    row[en_key] = row.pop(cn_key)
         result["financial_indicators"] = vertical
     return result
 
@@ -929,8 +972,80 @@ def _get_valuation_from_akshare(code: str) -> dict:
     }
 
 
+def _get_valuation_from_local_db(code: str) -> dict | None:
+    """从本地 quotes 表获取估值数据（零网络延迟）。
+    策略：多行中取最新价（latest），取第一行有 PE/PB 的估值数据。
+    """
+    try:
+        db_path = os.path.expanduser("~/.trading-agent/data/market.db")
+        if not os.path.exists(db_path):
+            return None
+        conn = sqlite3.connect(db_path)
+        cursor = conn.cursor()
+        cursor.execute(
+            "SELECT snapshot_date, pe, pb, total_cap, float_cap, high_52w, low_52w, latest "
+            "FROM quotes WHERE code=? ORDER BY snapshot_date DESC",
+            (code,)
+        )
+        rows = cursor.fetchall()
+        conn.close()
+        if not rows:
+            return None
+
+        # Strategy 1: Use the LATEST price from the most recent row
+        latest_price = rows[0][7]  # 'latest' from the newest snapshot_date
+
+        # Strategy 2: Use the most recent PE/PB/cap data (some rows may have only price)
+        pe = pb = total_cap = float_cap = h52 = l52 = None
+        for r in rows:
+            s_date, p, pb_v, cap, fcap, h, l, price = r
+            if p is not None and pe is None:
+                pe = p
+            if pb_v is not None and pb is None:
+                pb = pb_v
+            if cap is not None and total_cap is None:
+                total_cap = cap
+            if fcap is not None and float_cap is None:
+                float_cap = fcap
+            if h is not None and h52 is None:
+                h52 = h
+            if l is not None and l52 is None:
+                l52 = l
+            # Stop scanning once we have everything
+            if all(v is not None for v in [pe, pb, total_cap]):
+                break
+
+        if any(v is not None for v in [pe, pb, total_cap]):
+            return {
+                "latest": {
+                    "pe_ttm": pe,
+                    "pb": pb,
+                    "market_cap": total_cap,
+                    "float_cap": float_cap,
+                    "52w_high": h52,
+                    "52w_low": l52,
+                    "latest_price": latest_price,
+                    "total_shares": round(latest_price / pe, 0) if (pe and latest_price and pe > 0) else
+                                   round(total_cap / latest_price, 2) if (total_cap and latest_price and latest_price > 0) else None,
+                    "float_shares": round(latest_price / pb, 0) if (pb and latest_price and pb > 0) else
+                                     round(float_cap / latest_price, 2) if (float_cap and latest_price and latest_price > 0) else None,
+                },
+                "_source": "local_db",
+            }
+    except Exception:
+        pass
+    return None
+
+
 def get_valuation_data(code: str) -> dict:
-    """获取估值数据（Eastmoney 与 akshare 竞速，取先成功的结果）"""
+    """获取估值数据（本地优先 → Eastmoney → akshare fallback）。"""
+
+    # 1. Local DB first (instant)
+    local = _get_valuation_from_local_db(code)
+    if local:
+        return local
+
+    # 2. Fast Eastmoney API
     def _eastmoney_task():
         em = _get_eastmoney_quote(code)
         if "error" not in em:
@@ -947,6 +1062,7 @@ def get_valuation_data(code: str) -> dict:
             }
         return {"error": em.get("error", "unknown")}
 
+    # 3. Slow akshare fallback
     def _akshare_task():
         try:
             return _get_valuation_from_akshare(code)
@@ -1125,7 +1241,7 @@ def get_index_constituents(index_name: str) -> list:
 def get_all_a_stocks() -> list:
     """获取全部A股代码"""
     try:
-        df = ak.stock_zh_a_spot()
+        df = ak.stock_zh_a_spot_em()
         if df is not None and not df.empty:
             return df['代码'].tolist()
         return []
