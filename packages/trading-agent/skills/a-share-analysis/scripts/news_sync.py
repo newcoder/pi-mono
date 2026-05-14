@@ -108,7 +108,7 @@ def save_news(conn: sqlite3.Connection, news_list: List[Dict]) -> int:
         ]
     )
     conn.commit()
-    return len(to_insert)
+    return len(to_insert_items)
 
 
 def sync_stock_news(code: str, name: str = "", sources: List[str] = None,

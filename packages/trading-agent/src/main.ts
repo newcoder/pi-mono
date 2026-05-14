@@ -111,6 +111,17 @@ async function handleSyncCommands(): Promise<boolean> {
 		console.log(`Syncing fundamentals for ${code}...`);
 		const rows = await sync.syncFundamentals(code, market);
 		console.log(`Synced ${rows.length} fundamentals records.`);
+
+		// Recalculate fundamental indicators for this stock
+		console.log(`Recalculating indicators for ${code}...`);
+		try {
+			const { runJsonScript } = await import("./tools/_utils.js");
+			const result = await runJsonScript("calc_fundamental_indicators.py", ["--code", code], 60_000);
+			console.log(`Indicators recalculated: ${result.rows_inserted ?? "?"} rows`);
+		} catch (e) {
+			console.warn(`Indicator recalculation failed for ${code}:`, e);
+		}
+
 		store.close();
 		return true;
 	}

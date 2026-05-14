@@ -5,6 +5,7 @@ import type {
 	AdjustFactorRow,
 	BusinessCompositionRow,
 	ConceptStockRow,
+	FundamentalIndicatorsRow,
 	FundamentalsRow,
 	IndustryRow,
 	KlineFilter,
@@ -258,6 +259,45 @@ CREATE TABLE IF NOT EXISTS adjust_factors (
 );
 
 CREATE INDEX IF NOT EXISTS idx_adjust_factors_date ON adjust_factors(code, market, date);
+
+CREATE TABLE IF NOT EXISTS fundamental_indicators (
+    code TEXT NOT NULL,
+    market INTEGER NOT NULL,
+    report_date TEXT NOT NULL,
+    revenue_yoy REAL,
+    revenue_qoq REAL,
+    revenue_cagr_3y REAL,
+    revenue_cagr_5y REAL,
+    net_profit_yoy REAL,
+    net_profit_qoq REAL,
+    net_profit_cagr_3y REAL,
+    net_profit_cagr_5y REAL,
+    operate_cash_flow_yoy REAL,
+    operate_cash_flow_qoq REAL,
+    fcf REAL,
+    fcf_yoy REAL,
+    roe REAL,
+    roe_change REAL,
+    research_expense_yoy REAL,
+    research_expense_ratio REAL,
+    capex REAL,
+    capex_yoy REAL,
+    capex_ratio REAL,
+    debt_ratio REAL,
+    debt_ratio_change REAL,
+    current_ratio REAL,
+    quick_ratio REAL,
+    interest_coverage REAL,
+    cash_to_profit REAL,
+    cash_to_debt REAL,
+    equity_ratio REAL,
+    interest_bearing_debt_ratio REAL,
+    short_debt_ratio REAL,
+    updated_at TEXT,
+    PRIMARY KEY (code, market, report_date)
+);
+
+CREATE INDEX IF NOT EXISTS idx_fi_code_date ON fundamental_indicators(code, report_date);
 `;
 
 export class DataStore {
@@ -482,6 +522,48 @@ export class DataStore {
 		return rows[0] ?? null;
 	}
 
+	// ─── Fundamental Indicators ─────────────────────────────────────
+
+	async saveFundamentalIndicators(data: FundamentalIndicatorsRow): Promise<void> {
+		if (!this.db) return;
+		const f = (v: number | null | undefined) => (v == null || Number.isNaN(v) ? "NULL" : String(v));
+		const sql = `
+			INSERT OR REPLACE INTO fundamental_indicators
+			(code, market, report_date, revenue_yoy, revenue_qoq, revenue_cagr_3y, revenue_cagr_5y,
+			 net_profit_yoy, net_profit_qoq, net_profit_cagr_3y, net_profit_cagr_5y,
+			 operate_cash_flow_yoy, operate_cash_flow_qoq, fcf, fcf_yoy, roe, roe_change,
+			 research_expense_yoy, research_expense_ratio, capex, capex_yoy, capex_ratio,
+			 debt_ratio, debt_ratio_change, current_ratio, quick_ratio, interest_coverage,
+			 cash_to_profit, cash_to_debt, equity_ratio, interest_bearing_debt_ratio, short_debt_ratio, updated_at)
+			VALUES (${s(data.code)}, ${data.market}, ${s(data.report_date)},
+				${f(data.revenue_yoy)}, ${f(data.revenue_qoq)}, ${f(data.revenue_cagr_3y)}, ${f(data.revenue_cagr_5y)},
+				${f(data.net_profit_yoy)}, ${f(data.net_profit_qoq)}, ${f(data.net_profit_cagr_3y)}, ${f(data.net_profit_cagr_5y)},
+				${f(data.operate_cash_flow_yoy)}, ${f(data.operate_cash_flow_qoq)}, ${f(data.fcf)}, ${f(data.fcf_yoy)}, ${f(data.roe)}, ${f(data.roe_change)},
+				${f(data.research_expense_yoy)}, ${f(data.research_expense_ratio)}, ${f(data.capex)}, ${f(data.capex_yoy)}, ${f(data.capex_ratio)},
+				${f(data.debt_ratio)}, ${f(data.debt_ratio_change)}, ${f(data.current_ratio)}, ${f(data.quick_ratio)}, ${f(data.interest_coverage)},
+				${f(data.cash_to_profit)}, ${f(data.cash_to_debt)}, ${f(data.equity_ratio)}, ${f(data.interest_bearing_debt_ratio)}, ${f(data.short_debt_ratio)},
+				${s(data.updated_at ?? new Date().toISOString())})
+		`;
+		await promisifyExec(this.db, sql);
+	}
+
+	async getFundamentalIndicators(code: string, market: number): Promise<FundamentalIndicatorsRow[]> {
+		if (!this.db) return [];
+		return promisifyQuery(
+			this.db,
+			`SELECT * FROM fundamental_indicators WHERE code = ${s(code)} AND market = ${market} ORDER BY report_date DESC`,
+		);
+	}
+
+	async getLatestFundamentalIndicators(code: string, market: number): Promise<FundamentalIndicatorsRow | null> {
+		if (!this.db) return null;
+		const rows = await promisifyQuery(
+			this.db,
+			`SELECT * FROM fundamental_indicators WHERE code = ${s(code)} AND market = ${market} ORDER BY report_date DESC LIMIT 1`,
+		);
+		return rows[0] ?? null;
+	}
+
 	// ─── Sectors ────────────────────────────────────────────────────
 
 	async saveSectors(sectors: SectorRow[]): Promise<void> {
@@ -674,6 +756,7 @@ export class DataStore {
 			"klines",
 			"quotes",
 			"fundamentals",
+			"fundamental_indicators",
 			"sectors",
 			"concept_stocks",
 			"business_composition",

@@ -317,6 +317,60 @@ def validate_concepts() -> dict:
         conn.close()
 
 
+def validate_fundamental_indicators() -> dict:
+    """Validate fundamental_indicators table."""
+    conn = get_db()
+    try:
+        cur = conn.cursor()
+
+        # Check if table exists
+        cur.execute(
+            "SELECT name FROM sqlite_master WHERE type='table' AND name='fundamental_indicators'"
+        )
+        if not cur.fetchone():
+            return {
+                "status": "WARN",
+                "total_records": 0,
+                "stock_count": 0,
+                "max_report_date": None,
+                "message": "fundamental_indicators table does not exist",
+            }
+
+        cur.execute("SELECT COUNT(*) FROM fundamental_indicators")
+        total = cur.fetchone()[0]
+
+        cur.execute("SELECT COUNT(DISTINCT code) FROM fundamental_indicators")
+        stock_count = cur.fetchone()[0]
+
+        cur.execute("SELECT MAX(report_date) FROM fundamental_indicators")
+        max_date_row = cur.fetchone()
+        max_date = max_date_row[0] if max_date_row else None
+
+        # Compare with fundamentals latest date
+        cur.execute("SELECT MAX(report_date) FROM fundamentals")
+        fund_max_date = cur.fetchone()[0]
+
+        status = "PASS"
+        message = f"{total} records for {stock_count} stocks, latest report {max_date}"
+
+        if total == 0:
+            status = "WARN"
+            message = "No fundamental indicators data"
+        elif max_date != fund_max_date:
+            status = "WARN"
+            message = f"Indicators stale: max date {max_date}, fundamentals has {fund_max_date}"
+
+        return {
+            "status": status,
+            "total_records": total,
+            "stock_count": stock_count,
+            "max_report_date": max_date,
+            "message": message,
+        }
+    finally:
+        conn.close()
+
+
 def validate_news() -> dict:
     """Validate news tables."""
     conn = get_db()
@@ -378,6 +432,7 @@ def validate_all() -> dict:
         ("quotes", validate_quotes),
         ("klines", validate_klines),
         ("fundamentals", validate_fundamentals),
+        ("fundamental_indicators", validate_fundamental_indicators),
         ("industries", validate_industries),
         ("concepts", validate_concepts),
         ("news", validate_news),

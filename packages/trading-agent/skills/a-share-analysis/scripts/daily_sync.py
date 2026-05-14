@@ -808,7 +808,20 @@ def sync_fundamentals() -> dict:
     return {"synced": synced, "skipped": skipped, "failed": failed, "inserted": total_inserted}
 
 
-# ── Phase 5: Sync Industries ───────────────────────────────────────────────
+# ── Phase 5: Sync Indicators ───────────────────────────────────────────────
+
+@_phase("indicators")
+def sync_indicators() -> dict:
+    """Calculate fundamental indicators from fundamentals table."""
+    try:
+        import calc_fundamental_indicators
+        result = calc_fundamental_indicators.calc_all(get_db())
+        return {"detail": result}
+    except Exception as e:
+        raise RuntimeError(f"Indicators calculation failed: {e}")
+
+
+# ── Phase 6: Sync Industries ───────────────────────────────────────────────
 
 @_phase("industries")
 def sync_industries() -> dict:
@@ -901,6 +914,7 @@ def run_all_phases(phases: Optional[List[str]] = None):
         ("quotes", sync_quotes),
         ("klines", sync_klines),
         ("fundamentals", sync_fundamentals),
+        ("indicators", sync_indicators),
         ("industries", sync_industries),
         ("concepts", sync_concepts),
         ("stock_news", sync_stock_news),

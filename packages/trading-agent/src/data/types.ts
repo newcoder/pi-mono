@@ -195,3 +195,42 @@ export interface BusinessCompositionRow {
 	gross_margin?: number | null;
 	updated_at?: string;
 }
+
+export interface FundamentalIndicatorsRow {
+	code: string;
+	market: number;
+	report_date: string;
+	// Growth
+	revenue_yoy?: number | null;
+	revenue_qoq?: number | null;
+	revenue_cagr_3y?: number | null;
+	revenue_cagr_5y?: number | null;
+	net_profit_yoy?: number | null;
+	net_profit_qoq?: number | null;
+	net_profit_cagr_3y?: number | null;
+	net_profit_cagr_5y?: number | null;
+	operate_cash_flow_yoy?: number | null;
+	operate_cash_flow_qoq?: number | null;
+	fcf?: number | null;
+	fcf_yoy?: number | null;
+	roe?: number | null;
+	roe_change?: number | null;
+	research_expense_yoy?: number | null;
+	research_expense_ratio?: number | null;
+	capex?: number | null;
+	capex_yoy?: number | null;
+	capex_ratio?: number | null;
+	// Financial Health
+	debt_ratio?: number | null;
+	debt_ratio_change?: number | null;
+	current_ratio?: number | null;
+	quick_ratio?: number | null;
+	interest_coverage?: number | null;
+	cash_to_profit?: number | null;
+	cash_to_debt?: number | null;
+	equity_ratio?: number | null;
+	// Risk Control
+	interest_bearing_debt_ratio?: number | null;
+	short_debt_ratio?: number | null;
+	updated_at?: string;
+}

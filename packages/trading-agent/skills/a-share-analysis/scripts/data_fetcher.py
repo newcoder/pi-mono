@@ -167,12 +167,64 @@ def _get_financial_data_from_local_db(code: str) -> dict:
         }
         cash_flow.append(cf_row)
 
+    # Also fetch pre-calculated fundamental indicators
+    indicators = _get_indicators_from_local_db(code, market)
+
     return {
         "balance_sheet": balance_sheet,
         "income_statement": income_statement,
         "cash_flow": cash_flow,
+        "indicators": indicators,
         "_source": "local_db",
     }
+
+
+def _get_indicators_from_local_db(code: str, market: int) -> list:
+    """Fetch pre-calculated fundamental indicators from local DB."""
+    rows = _query_local_db(
+        """SELECT * FROM fundamental_indicators
+           WHERE code = ? AND market = ?
+           ORDER BY report_date DESC LIMIT 12""",
+        (code, market),
+    )
+    if not rows:
+        return []
+
+    result = []
+    for r in rows:
+        result.append({
+            "REPORT_DATE": r.get("report_date", ""),
+            "REVENUE_YOY": r.get("revenue_yoy"),
+            "REVENUE_QOQ": r.get("revenue_qoq"),
+            "REVENUE_CAGR_3Y": r.get("revenue_cagr_3y"),
+            "REVENUE_CAGR_5Y": r.get("revenue_cagr_5y"),
+            "NETPROFIT_YOY": r.get("net_profit_yoy"),
+            "NETPROFIT_QOQ": r.get("net_profit_qoq"),
+            "NETPROFIT_CAGR_3Y": r.get("net_profit_cagr_3y"),
+            "NETPROFIT_CAGR_5Y": r.get("net_profit_cagr_5y"),
+            "OCF_YOY": r.get("operate_cash_flow_yoy"),
+            "OCF_QOQ": r.get("operate_cash_flow_qoq"),
+            "FCF": r.get("fcf"),
+            "FCF_YOY": r.get("fcf_yoy"),
+            "ROE": r.get("roe"),
+            "ROE_CHANGE": r.get("roe_change"),
+            "RD_EXPENSE_YOY": r.get("research_expense_yoy"),
+            "RD_EXPENSE_RATIO": r.get("research_expense_ratio"),
+            "CAPEX": r.get("capex"),
+            "CAPEX_YOY": r.get("capex_yoy"),
+            "CAPEX_RATIO": r.get("capex_ratio"),
+            "DEBT_RATIO": r.get("debt_ratio"),
+            "DEBT_RATIO_CHANGE": r.get("debt_ratio_change"),
+            "CURRENT_RATIO": r.get("current_ratio"),
+            "QUICK_RATIO": r.get("quick_ratio"),
+            "INTEREST_COVERAGE": r.get("interest_coverage"),
+            "CASH_TO_PROFIT": r.get("cash_to_profit"),
+            "CASH_TO_DEBT": r.get("cash_to_debt"),
+            "EQUITY_RATIO": r.get("equity_ratio"),
+            "INTEREST_BEARING_DEBT_RATIO": r.get("interest_bearing_debt_ratio"),
+            "SHORT_DEBT_RATIO": r.get("short_debt_ratio"),
+        })
+    return result
 
 
 def _get_price_data_from_local_db(code: str, days: int = 60) -> dict:

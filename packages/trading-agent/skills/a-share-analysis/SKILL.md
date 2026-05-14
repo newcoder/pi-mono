@@ -26,10 +26,23 @@ tools:
 | **实时行情** | 本地 `quotes` 表 | 东方财富 API | PE/PB/市值/涨跌幅等 |
 | **K线/价格数据** | 本地 `klines` 表 | 东方财富 API | 支持 daily/week/month，含复权 |
 | **三大财务报表** | 本地 `fundamentals` 表 | 东方财富 F10 | 资产负债表、利润表、现金流量表 |
-| **财务指标** | 本地 `fundamentals` 表计算 | 东方财富 API | ROE、毛利率等 |
+| **财务指标** | 本地 `fundamental_indicators` 表 | 本地计算（无需网络） | YoY/QoQ/CAGR、ROE、现金流、偿债能力等 30+ 指标 |
+| **三大财务报表** | 本地 `fundamentals` 表 | 东方财富 F10 | 资产负债表、利润表、现金流量表 |
 | **股东/分红数据** | — | `akshare` | 十大股东、分红历史（仅网络） |
 
 本地数据库路径：`~/.trading-agent/data/market.db`
+
+### 预计算财务指标表（fundamental_indicators）
+
+`fundamentals` 表中的原始财务数据已通过 `calc_fundamental_indicators.py` 自动计算衍生指标，存入 `fundamental_indicators` 表。当基本面数据更新时，这些指标会自动重新计算。
+
+**包含的指标维度（30+ 项）：**
+- **成长性**：营收/净利润 YoY、QoQ、3年/5年 CAGR、经营现金流 YoY、FCF、FCF YoY、研发费用增速及占比、CAPEX 增速及占比
+- **盈利能力**：ROE、ROE 变动
+- **财务健康**：资产负债率及变动、流动比率、速动比率、利息保障倍数、现金利润比、现金债务比、权益比率
+- **风险控制**：有息负债率、短债占比
+
+**使用方式**：通过 `data_fetcher.py --data-type financial` 获取的数据中，`financial_data.indicators` 数组即为预计算指标，按 `REPORT_DATE` 降序排列。指标值为 `None` 表示该期数据无法计算（如历史不足、分母为零等）。
 
 返回的 JSON 中可通过 `_source` 字段查看具体数据来源（`local_db` 或 `eastmoney` 或 `akshare`）。
 
@@ -183,7 +196,7 @@ python scripts/data_fetcher.py \
 - `--data-type`: 数据类型 (basic/financial/valuation/holder/all)
   - `basic`: 基本信息（优先本地 quotes 表，fallback 东方财富 API）
   - `valuation`: 估值数据 + 价格/K线（优先本地 klines 表，fallback 东方财富 API）
-  - `financial`: 三大报表 + 财务指标（优先本地 fundamentals 表，fallback 东方财富 F10）
+  - `financial`: 三大报表 + 财务指标（优先本地 fundamentals + fundamental_indicators 表，fallback 东方财富 F10）
   - `holder`: 股东数据 + 分红数据（仅 akshare 网络，**可能较慢**）
   - `all`: 以上全部
 - `--years`: 获取多少年的历史数据

@@ -90,6 +90,7 @@ interface FundamentalsDetails {
 	market: string;
 	count?: number;
 	reports?: unknown[];
+	indicators?: unknown[];
 }
 
 interface KlineDetails {
@@ -167,7 +168,7 @@ function formatQuote(data: any): string {
 }
 
 function formatFundamentals(data: any): string {
-	const lines: string[] = [`【${data.stock_code} ${data.market} 财务数据】`];
+	const lines: string[] = [`【${data.stock_code} ${data.market} 财务数据》`];
 	for (const [name, section] of Object.entries<any>(data)) {
 		if (typeof section !== "object" || !section.data) continue;
 		lines.push(`\n${name} (${section.report_date ?? ""})`);
@@ -272,7 +273,13 @@ export const getQuoteTool: AgentTool<typeof getQuoteParams, QuoteDetails> = {
 	},
 };
 
-function formatFundamentalsHistory(rows: any[], code: string, market: string): string {
+function formatIndicatorValue(v: number | null): string {
+	if (v == null || Number.isNaN(v)) return "—";
+	if (Math.abs(v) >= 1) return `${v.toFixed(2)}`;
+	return `${(v * 100).toFixed(2)}%`;
+}
+
+function formatFundamentalsHistory(rows: any[], code: string, market: string, indicators?: any[]): string {
 	if (!rows || rows.length === 0) return "暂无财务数据";
 	const lines: string[] = [`【${code} ${market} 历史财务数据】共${rows.length}期`];
 
@@ -329,6 +336,41 @@ function formatFundamentalsHistory(rows: any[], code: string, market: string): s
 		}
 	}
 
+	// Show pre-calculated fundamental indicators if available
+	if (indicators && indicators.length > 0) {
+		lines.push(`\n【衍生财务指标】(最近${Math.min(indicators.length, 6)}期)`);
+		lines.push("期数        营收YoY   净利YoY   ROE      负债率   流动比   速动比   FCF(亿)  研发占比");
+		for (let i = 0; i < Math.min(indicators.length, 6); i++) {
+			const ind = indicators[i];
+			const revYoy = formatIndicatorValue(ind.revenue_yoy);
+			const profitYoy = formatIndicatorValue(ind.net_profit_yoy);
+			const roe = formatIndicatorValue(ind.roe);
+			const debt = formatIndicatorValue(ind.debt_ratio);
+			const current = ind.current_ratio != null ? ind.current_ratio.toFixed(2) : "—";
+			const quick = ind.quick_ratio != null ? ind.quick_ratio.toFixed(2) : "—";
+			const fcf = ind.fcf != null ? (ind.fcf / 1e8).toFixed(2) : "—";
+			const rdRatio = formatIndicatorValue(ind.research_expense_ratio);
+			lines.push(
+				`${ind.report_date} ${revYoy.padStart(8)} ${profitYoy.padStart(8)} ${roe.padStart(8)} ${debt.padStart(8)} ${current.padStart(8)} ${quick.padStart(8)} ${fcf.padStart(8)} ${rdRatio.padStart(8)}`,
+			);
+		}
+		// Show CAGR and risk metrics for latest period
+		const latestInd = indicators[0];
+		lines.push("\n【最新期风险与成长指标】");
+		lines.push(
+			`  营收3年CAGR: ${formatIndicatorValue(latestInd.revenue_cagr_3y)}  净利3年CAGR: ${formatIndicatorValue(latestInd.net_profit_cagr_3y)}`,
+		);
+		lines.push(
+			`  利息保障倍数: ${latestInd.interest_coverage != null ? latestInd.interest_coverage.toFixed(2) : "—"}  现金利润比: ${formatIndicatorValue(latestInd.cash_to_profit)}`,
+		);
+		lines.push(
+			`  有息负债率: ${formatIndicatorValue(latestInd.interest_bearing_debt_ratio)}  短债占比: ${formatIndicatorValue(latestInd.short_debt_ratio)}`,
+		);
+		lines.push(
+			`  现金债务比: ${latestInd.cash_to_debt != null ? latestInd.cash_to_debt.toFixed(2) : "—"}  权益比率: ${formatIndicatorValue(latestInd.equity_ratio)}`,
+		);
+	}
+
 	return lines.join("\n");
 }
 
@@ -351,7 +393,22 @@ export const getFundamentalsTool: AgentTool<typeof getFundamentalsParams, Fundam
 					// Filter by date range
 					const filtered = rows.filter((r) => r.report_date >= start && r.report_date <= end);
 					if (history) {
-						const text = formatFundamentalsHistory(filtered, params.code, market === 1 ? "SH" : "SZ");
+						// Also fetch pre-calculated indicators
+						let indicatorRows: any[] = [];
+						const store = getDataStore();
+						if (store) {
+							try {
+								indicatorRows = await store.getFundamentalIndicators(params.code, market);
+							} catch (e) {
+								console.warn("[get_fundamentals] Indicator fetch failed:", e);
+							}
+						}
+						const text = formatFundamentalsHistory(
+							filtered,
+							params.code,
+							market === 1 ? "SH" : "SZ",
+							indicatorRows,
+						);
 						return {
 							content: [{ type: "text", text }],
 							details: {
@@ -359,6 +416,7 @@ export const getFundamentalsTool: AgentTool<typeof getFundamentalsParams, Fundam
 								market: market === 1 ? "SH" : "SZ",
 								count: filtered.length,
 								reports: filtered,
+								indicators: indicatorRows,
 							},
 						};
 					}

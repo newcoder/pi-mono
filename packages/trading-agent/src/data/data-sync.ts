@@ -454,6 +454,14 @@ export class DataSyncService {
 		}
 
 		rows.sort((a, b) => b.report_date.localeCompare(a.report_date));
+
+		// Recalculate fundamental indicators for this stock
+		try {
+			await runJsonScript("calc_fundamental_indicators.py", ["--code", code], 60_000);
+		} catch (e) {
+			console.warn(`[syncFundamentals] Indicator recalculation failed for ${code}:`, e);
+		}
+
 		return rows;
 	}
 
@@ -514,6 +522,18 @@ export class DataSyncService {
 
 		const elapsed = ((Date.now() - startTime) / 1000).toFixed(1);
 		console.log(`[syncAllFundamentals] Done. Total ${totalSynced} rows synced in ${elapsed}s`);
+
+		// Recalculate fundamental indicators for all stocks
+		if (totalSynced > 0) {
+			console.log("[syncAllFundamentals] Recalculating fundamental indicators...");
+			try {
+				const result = await runJsonScript("calc_fundamental_indicators.py", ["--all"], 600_000);
+				console.log(`[syncAllFundamentals] Indicators recalculated: ${result.rows_inserted ?? "?"} rows`);
+			} catch (e) {
+				console.warn("[syncAllFundamentals] Indicator recalculation failed:", e);
+			}
+		}
+
 		return totalSynced;
 	}
 
