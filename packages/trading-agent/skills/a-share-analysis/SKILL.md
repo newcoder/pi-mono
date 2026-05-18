@@ -6,11 +6,13 @@ tools:
   - get_fundamentals
   - get_kline
   - screen_stocks
+  - iwencai_screen
   - compare_stocks
   - backtest_strategy
   - get_stock_news
   - screen_by_news
   - get_market_news
+  - refresh_calendar
 ---
 
 # A-Share Analysis Skill
@@ -165,6 +167,65 @@ python scripts/stock_screener.py \
 | 代码 | 名称 | PE | PB | ROE | 股息率 | 评分 |
 |------|------|----|----|-----|--------|------|
 | 600519 | 贵州茅台 | 25.3 | 8.5 | 30.2% | 2.1% | 85 |
+
+---
+
+## Workflow 1.5: iWencai Natural Language Screening (问财自然语言选股)
+
+当用户提出复杂的自然语言筛选条件时使用，例如：
+- "MACD金叉且成交量放大的股票"
+- "今日涨幅超5%的A股"
+- "主力资金净流入前20的板块"
+- "ROE大于15%且市盈率小于20的A股"
+
+### Step 1: Choose Query Mode
+
+**股票选股模式** (`mode: stock`)：
+```bash
+# 使用预设模板
+python scripts/iwencai_screener.py --preset 强势股 --limit 20
+
+# 自定义自然语言查询
+python scripts/iwencai_screener.py --query "MACD金叉且KDJ金叉" --limit 50
+
+# 获取所有结果（自动翻页）
+python scripts/iwencai_screener.py --preset 主力流入 --all
+```
+
+**板块查询模式** (`mode: plate`)：
+```bash
+# 查询热门行业板块
+python scripts/iwencai_screener.py --preset 热门行业 --mode plate --limit 15
+
+# 查询热门概念板块（过滤超大板块）
+python scripts/iwencai_screener.py --preset 热门概念 --mode plate --max-components 100 --limit 20
+
+# 自定义板块查询
+python scripts/iwencai_screener.py --query "今日涨幅前10的概念板块" --mode plate
+```
+
+**可用预设模板：**
+
+| 预设名 | 说明 | 模式 |
+|--------|------|------|
+| 涨停股 | 今日涨停的A股 | stock |
+| 强势股 | 今日涨幅超5%且成交量放大的A股 | stock |
+| 主力流入 | 今日主力净流入前20的A股 | stock |
+| MACD金叉 | MACD金叉且成交量放大的A股 | stock |
+| 低价股 | 股价低于10元且今日涨幅超3%的A股 | stock |
+| 次新股 | 上市不足一年且今日涨幅超5%的A股 | stock |
+| 高ROE | ROE大于15%且市盈率小于20的A股 | stock |
+| 破净股 | 市净率小于1的A股 | stock |
+| 热门行业 | 今日涨幅前10的行业板块 | plate |
+| 行业资金 | 今日主力净流入前10的行业板块 | plate |
+| 热门概念 | 今日涨幅前10的概念板块 | plate |
+| 概念资金 | 今日主力净流入前10的概念板块 | plate |
+
+### Step 2: Present Results
+
+iWencai 返回的结果包含股票代码、名称、最新价、涨跌幅、主力净流入等字段，直接以表格形式呈现。
+
+> **注意**: iWencai 需要 `IWENCAI_API_KEY` 环境变量。若未配置，工具会返回错误提示。
 
 ---
 
@@ -571,6 +632,55 @@ python scripts/valuation_calculator.py \
 2. **投资建议**：所有分析仅供参考，不构成投资建议
 3. **风险提示**：始终包含风险提示，特别是财务异常检测结果
 4. **对比分析**：单只股票分析时，自动包含行业均值对比
+
+---
+
+## Workflow 7: Investment Calendar (投资日历)
+
+用户询问未来市场事件、个股事件，或请求刷新投资日历时使用。
+
+### 事件类型
+
+| 类型 | 说明 | 数据来源 |
+|------|------|----------|
+| macro | 宏观数据发布、政策会议 | iWencai API + 硬编码 |
+| industry | 行业展会、购物节、用电高峰 | 硬编码季节性事件 |
+| conference | 科技展会（WWDC、CES、SNEC等） | 硬编码季节性事件 |
+| earnings | 业绩预告、财报披露 | iWencai API + akshare |
+| unlock | 限售解禁 | iWencai API + akshare |
+| stock | 个股公告、股东大会 | iWencai API |
+| other | 其他事件 | iWencai API |
+
+### 硬编码季节性事件
+
+包含以下固定时间事件（每年自动重复）：
+- **1月**: CES消费电子展
+- **2月**: MWC世界移动通信大会、中央一号文件
+- **3月**: 全国两会
+- **4月**: 中央政治局会议（季度部署）
+- **6月**: 苹果WWDC、Computex台北电脑展、SNEC光伏展、618购物节、OPEC+产量会议、迎峰度夏
+- **7月**: 中央政治局会议（半年度部署）
+- **11月**: 双11购物节
+- **12月**: 中央经济工作会议
+
+### 刷新投资日历
+
+```bash
+# 刷新市场整体事件
+{"scope": "market"}
+
+# 刷新特定股票事件
+{"scope": "stock", "code": "600519"}
+```
+
+### 使用场景
+
+- "未来两周有哪些重要事件？"
+- "6月份有什么行业展会？"
+- "刷新投资日历"
+- "查看贵州茅台近期有哪些事件"
+
+---
 
 ## Important Notes
 

@@ -38,6 +38,19 @@ interface PoolItem {
 	name: string;
 }
 
+interface CalendarEvent {
+	id?: number;
+	event_date: string;
+	title: string;
+	category: string;
+	description?: string | null;
+	code?: string | null;
+	market?: number | null;
+	affected_sectors?: string[] | null;
+	importance?: string;
+	source?: string | null;
+}
+
 // ─── State ──────────────────────────────────────────────────
 
 const state = {
@@ -53,6 +66,11 @@ const state = {
 	poolItems: [] as PoolItem[],
 	selectedStock: null as string | null,
 	stockQuote: null as any,
+	// Calendar state
+	calendarEvents: [] as CalendarEvent[],
+	calendarMonth: new Date(),
+	calendarSelectedDate: null as string | null,
+	calendarLoading: false,
 };
 
 // ─── DOM refs ───────────────────────────────────────────────
@@ -296,6 +314,212 @@ function renderStockDetail() {
 	}
 }
 
+// ─── Calendar Rendering ─────────────────────────────────────
+
+const CATEGORY_COLORS: Record<string, string> = {
+	macro: "bg-blue-500",
+	industry: "bg-green-500",
+	stock: "bg-purple-500",
+	earnings: "bg-orange-500",
+	conference: "bg-cyan-500",
+	unlock: "bg-red-500",
+	dividend: "bg-pink-500",
+	holder: "bg-yellow-500",
+	other: "bg-gray-500",
+};
+
+const CATEGORY_LABELS: Record<string, string> = {
+	macro: "宏观",
+	industry: "行业",
+	stock: "个股",
+	earnings: "财报",
+	conference: "会议",
+	unlock: "解禁",
+	dividend: "分红",
+	holder: "股东",
+	other: "其他",
+};
+
+function getMonthData(date: Date) {
+	const year = date.getFullYear();
+	const month = date.getMonth();
+	const firstDay = new Date(year, month, 1);
+	const lastDay = new Date(year, month + 1, 0);
+	const startOffset = firstDay.getDay(); // 0=Sunday
+	const daysInMonth = lastDay.getDate();
+	return { year, month, startOffset, daysInMonth };
+}
+
+function formatDateKey(year: number, month: number, day: number): string {
+	return `${year}-${String(month + 1).padStart(2, "0")}-${String(day).padStart(2, "0")}`;
+}
+
+function getEventsForDate(dateKey: string, events: CalendarEvent[]): CalendarEvent[] {
+	return events.filter((e) => e.event_date === dateKey);
+}
+
+function getMonthEvents(monthDate: Date, events: CalendarEvent[]): CalendarEvent[] {
+	const year = monthDate.getFullYear();
+	const month = monthDate.getMonth();
+	const monthPrefix = `${year}-${String(month + 1).padStart(2, "0")}`;
+
+	// Filter events for this month and deduplicate by (date, title)
+	const seen = new Set<string>();
+	const monthEvents = events
+		.filter((e) => {
+			if (!e.event_date.startsWith(monthPrefix)) return false;
+			const key = `${e.event_date}|${e.title}`;
+			if (seen.has(key)) return false;
+			seen.add(key);
+			return true;
+		})
+		.sort((a, b) => {
+			// Sort by date first, then by importance
+			if (a.event_date !== b.event_date) return a.event_date.localeCompare(b.event_date);
+			const impOrder = { high: 0, medium: 1, low: 2 };
+			return (impOrder[a.importance as keyof typeof impOrder] ?? 1) - (impOrder[b.importance as keyof typeof impOrder] ?? 1);
+		});
+
+	return monthEvents;
+}
+
+function renderCalendar() {
+	const container = $("calendar-panel");
+	if (!container) return;
+
+	const { year, month, startOffset, daysInMonth } = getMonthData(state.calendarMonth);
+	const monthNames = ["1月", "2月", "3月", "4月", "5月", "6月", "7月", "8月", "9月", "10月", "11月", "12月"];
+	const weekdayLabels = ["日", "一", "二", "三", "四", "五", "六"];
+
+	let html = `
+		<div class="flex items-center justify-between mb-2 px-1">
+			<button id="cal-prev" class="text-xs px-1.5 py-0.5 rounded hover:bg-muted transition-colors">&lt;</button>
+			<span class="text-sm font-medium">${year}年${monthNames[month]}</span>
+			<button id="cal-next" class="text-xs px-1.5 py-0.5 rounded hover:bg-muted transition-colors">&gt;</button>
+		</div>
+		<div class="grid grid-cols-7 gap-px mb-1">
+			${weekdayLabels.map((d) => `<div class="text-center text-[10px] text-muted-foreground py-0.5">${d}</div>`).join("")}
+		</div>
+		<div class="grid grid-cols-7 gap-px">
+	`;
+
+	// Empty cells before the first day
+	for (let i = 0; i < startOffset; i++) {
+		html += `<div class="calendar-day empty"></div>`;
+	}
+
+	const today = new Date();
+	const todayKey = formatDateKey(today.getFullYear(), today.getMonth(), today.getDate());
+
+	for (let day = 1; day <= daysInMonth; day++) {
+		const dateKey = formatDateKey(year, month, day);
+		const dayEvents = getEventsForDate(dateKey, state.calendarEvents);
+		const isToday = dateKey === todayKey;
+		const isSelected = dateKey === state.calendarSelectedDate;
+		const hasEvents = dayEvents.length > 0;
+
+		// Group events by category for dot colors
+		const categoryDots = hasEvents
+			? [...new Set(dayEvents.map((e) => e.category))]
+					.slice(0, 3)
+					.map((cat) => `<span class="calendar-dot ${CATEGORY_COLORS[cat] || "bg-gray-500"}"></span>`)
+					.join("")
+			: "";
+
+		html += `
+			<div class="calendar-day ${isToday ? "today" : ""} ${isSelected ? "selected" : ""} ${hasEvents ? "has-events" : ""}"
+			     data-date="${dateKey}">
+				<div class="calendar-day-num">${day}</div>
+				<div class="calendar-dots">${categoryDots}</div>
+			</div>
+		`;
+	}
+
+	html += `</div>`;
+
+	// Monthly event list (always visible)
+	const monthEvents = getMonthEvents(state.calendarMonth, state.calendarEvents);
+	if (monthEvents.length > 0) {
+		html += `<div class="mt-2 border-t border-border pt-2">`;
+		html += `<div class="text-[10px] text-muted-foreground mb-1 px-1 font-medium">本月重点关注</div>`;
+		for (const ev of monthEvents) {
+			const catLabel = CATEGORY_LABELS[ev.category] || ev.category;
+			const catColor = CATEGORY_COLORS[ev.category] || "bg-gray-500";
+			const dateLabel = ev.source === "seasonal" ? "预计" : ev.event_date.slice(5);
+			html += `
+				<div class="calendar-event-item px-1 py-0.5 rounded hover:bg-muted cursor-pointer transition-colors"
+				     data-event-id="${ev.id || ""}" data-event-title="${escapeHtml(ev.title)}" data-event-date="${ev.event_date}"
+				     data-event-category="${ev.category}">
+					<div class="flex items-center gap-1">
+						<span class="calendar-dot ${catColor}"></span>
+						<span class="text-[10px] text-muted-foreground min-w-[2.5rem]">${dateLabel}</span>
+						<span class="text-[11px] font-medium truncate flex-1">${escapeHtml(ev.title)}</span>
+					</div>
+					${ev.description ? `<div class="text-[10px] text-muted-foreground truncate pl-3">${escapeHtml(ev.description)}</div>` : ""}
+				</div>
+			`;
+		}
+		html += `</div>`;
+	}
+
+	// Loading indicator
+	if (state.calendarLoading) {
+		html += `<div class="mt-2 text-center text-[10px] text-muted-foreground">刷新中...</div>`;
+	}
+
+	container.innerHTML = html;
+
+	// Wire up click handlers
+	container.querySelectorAll(".calendar-day[data-date]").forEach((el) => {
+		el.addEventListener("click", () => {
+			const dateKey = (el as HTMLElement).dataset.date!;
+			state.calendarSelectedDate = state.calendarSelectedDate === dateKey ? null : dateKey;
+			renderCalendar();
+
+			// Scroll to and highlight the first event for the selected date
+			if (state.calendarSelectedDate) {
+				const targetEvent = container.querySelector(
+					`.calendar-event-item[data-event-date="${state.calendarSelectedDate}"]`,
+				);
+				if (targetEvent) {
+					targetEvent.classList.add("highlight");
+					targetEvent.scrollIntoView({ behavior: "smooth", block: "nearest" });
+					setTimeout(() => targetEvent.classList.remove("highlight"), 1500);
+				}
+			}
+		});
+	});
+
+	container.querySelectorAll(".calendar-event-item").forEach((el) => {
+		el.addEventListener("click", () => {
+			const title = (el as HTMLElement).dataset.eventTitle!;
+			const date = (el as HTMLElement).dataset.eventDate!;
+			const category = (el as HTMLElement).dataset.eventCategory!;
+			const input = $("message-input") as HTMLInputElement;
+			const catLabel = CATEGORY_LABELS[category] || category;
+			input.value = `请分析 ${date} 的${catLabel}事件："${title}"，评估其对A股市场的影响和投资机会`;
+			input.focus();
+		});
+	});
+
+	const prevBtn = container.querySelector("#cal-prev");
+	const nextBtn = container.querySelector("#cal-next");
+	if (prevBtn) {
+		prevBtn.addEventListener("click", (e) => {
+			e.stopPropagation();
+			state.calendarMonth = new Date(state.calendarMonth.getFullYear(), state.calendarMonth.getMonth() - 1, 1);
+			fetchCalendarForMonth();
+		});
+	}
+	if (nextBtn) {
+		nextBtn.addEventListener("click", (e) => {
+			e.stopPropagation();
+			state.calendarMonth = new Date(state.calendarMonth.getFullYear(), state.calendarMonth.getMonth() + 1, 1);
+			fetchCalendarForMonth();
+		});
+	}
+}
+
 // ─── Utilities ──────────────────────────────────────────────
 
 function escapeHtml(text: string): string {
@@ -339,6 +563,34 @@ async function fetchStockPools() {
 		renderWatchlist();
 	} catch (err) {
 		console.error("Failed to fetch stock pools:", err);
+	}
+}
+
+async function fetchCalendarForMonth() {
+	const year = state.calendarMonth.getFullYear();
+	const month = state.calendarMonth.getMonth();
+	const start = formatDateKey(year, month, 1);
+	const end = formatDateKey(year, month + 1, 0);
+	try {
+		state.calendarEvents = await apiClient.getCalendar(start, end);
+		renderCalendar();
+	} catch (err) {
+		console.error("Failed to fetch calendar:", err);
+	}
+}
+
+async function refreshCalendar() {
+	state.calendarLoading = true;
+	renderCalendar();
+	try {
+		const result = await apiClient.refreshCalendar();
+		console.log("[Calendar] Refreshed:", result);
+		await fetchCalendarForMonth();
+	} catch (err) {
+		console.error("Failed to refresh calendar:", err);
+	} finally {
+		state.calendarLoading = false;
+		renderCalendar();
 	}
 }
 
@@ -482,6 +734,14 @@ function setupInput() {
 			send();
 		}
 	});
+
+	// Calendar refresh button
+	const calRefreshBtn = document.getElementById("calendar-refresh-btn");
+	if (calRefreshBtn) {
+		calRefreshBtn.addEventListener("click", () => {
+			refreshCalendar();
+		});
+	}
 }
 
 // ─── App HTML ───────────────────────────────────────────────
@@ -515,7 +775,7 @@ function renderApp() {
 					<div id="stock-detail" class="hidden border-t border-border"></div>
 				</div>
 
-				<!-- Right: Chat area -->
+				<!-- Center: Chat area -->
 				<div class="flex-1 flex flex-col min-w-0">
 					<div id="message-list" class="flex-1 overflow-y-auto py-4"></div>
 					<div class="border-t border-border p-4">
@@ -535,6 +795,19 @@ function renderApp() {
 						</div>
 					</div>
 				</div>
+
+				<!-- Right sidebar: Calendar -->
+				<div class="w-64 border-l border-border flex flex-col bg-card">
+					<div class="flex items-center justify-between px-3 py-2 border-b border-border">
+						<span class="text-xs font-medium text-muted-foreground uppercase tracking-wider">投资日历</span>
+						<button id="calendar-refresh-btn" class="text-[10px] px-1.5 py-0.5 rounded hover:bg-muted transition-colors text-muted-foreground"
+						        title="刷新日历数据"
+						>
+							刷新
+						</button>
+					</div>
+					<div id="calendar-panel" class="flex-1 overflow-y-auto p-2"></div>
+				</div>
 			</div>
 		</div>
 	`;
@@ -548,6 +821,7 @@ function init() {
 	setupInput();
 	fetchIndices();
 	fetchStockPools();
+	fetchCalendarForMonth();
 
 	// Refresh indices every 60s
 	setInterval(fetchIndices, 60_000);

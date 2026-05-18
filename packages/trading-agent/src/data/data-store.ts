@@ -4,6 +4,7 @@ import sqlite3 from "sqlite3";
 import type {
 	AdjustFactorRow,
 	BusinessCompositionRow,
+	CalendarEventRow,
 	ConceptStockRow,
 	FundamentalIndicatorsRow,
 	FundamentalsRow,
@@ -298,6 +299,25 @@ CREATE TABLE IF NOT EXISTS fundamental_indicators (
 );
 
 CREATE INDEX IF NOT EXISTS idx_fi_code_date ON fundamental_indicators(code, report_date);
+
+CREATE TABLE IF NOT EXISTS calendar_events (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    event_date TEXT NOT NULL,
+    title TEXT NOT NULL,
+    category TEXT NOT NULL,
+    description TEXT,
+    code TEXT,
+    market INTEGER,
+    affected_sectors TEXT,
+    importance TEXT DEFAULT 'medium',
+    source TEXT,
+    updated_at TEXT DEFAULT CURRENT_TIMESTAMP,
+    UNIQUE(event_date, title, code)
+);
+
+CREATE INDEX IF NOT EXISTS idx_calendar_date ON calendar_events(event_date);
+CREATE INDEX IF NOT EXISTS idx_calendar_code ON calendar_events(code);
+CREATE INDEX IF NOT EXISTS idx_calendar_category ON calendar_events(category);
 `;
 
 export class DataStore {
@@ -763,6 +783,7 @@ export class DataStore {
 			"macro",
 			"stock_pools",
 			"stock_pool_items",
+			"calendar_events",
 		];
 		const result: Record<string, number> = {};
 		for (const t of tables) {
@@ -770,6 +791,80 @@ export class DataStore {
 			result[t] = rows[0]?.cnt ?? 0;
 		}
 		return result;
+	}
+
+	// ─── Calendar Events ────────────────────────────────────────────
+
+	async saveCalendarEvents(events: CalendarEventRow[]): Promise<void> {
+		if (events.length === 0 || !this.db) return;
+		const now = new Date().toISOString();
+
+		// Build a set of existing keys to avoid duplicates
+		const codeList = events.filter((e) => e.code).map((e) => s(e.code));
+		const existingKeys = new Set<string>();
+		if (codeList.length > 0) {
+			const dateList = [...new Set(events.map((e) => s(e.event_date)))].join(",");
+			const rows = await promisifyQuery(
+				this.db,
+				`SELECT event_date, title, code FROM calendar_events WHERE event_date IN (${dateList})`,
+			);
+			for (const r of rows) {
+				existingKeys.add(`${r.event_date}|${r.title}|${r.code ?? ""}`);
+			}
+		}
+
+		for (const ev of events) {
+			const key = `${ev.event_date}|${ev.title}|${ev.code ?? ""}`;
+			if (existingKeys.has(key)) continue;
+			existingKeys.add(key);
+
+			const sectors = ev.affected_sectors ? JSON.stringify(ev.affected_sectors) : null;
+			const sql = `
+				INSERT INTO calendar_events
+				(event_date, title, category, description, code, market, affected_sectors, importance, source, updated_at)
+				VALUES (${s(ev.event_date)}, ${s(ev.title)}, ${s(ev.category)}, ${s(ev.description)},
+					${s(ev.code)}, ${ev.market ?? "NULL"}, ${sectors ? s(sectors) : "NULL"},
+					${s(ev.importance ?? "medium")}, ${s(ev.source)}, ${s(now)})
+			`;
+			try {
+				await promisifyExec(this.db, sql);
+			} catch (err) {
+				// Ignore unique constraint violations
+				const msg = err instanceof Error ? err.message : String(err);
+				if (!msg.includes("UNIQUE constraint failed")) {
+					console.warn("[saveCalendarEvents] Insert failed:", msg);
+				}
+			}
+		}
+	}
+
+	async getCalendarEvents(startDate: string, endDate: string, code?: string): Promise<CalendarEventRow[]> {
+		if (!this.db) return [];
+		let sql = `SELECT * FROM calendar_events WHERE event_date >= ${s(startDate)} AND event_date <= ${s(endDate)}`;
+		if (code) {
+			sql += ` AND (code = ${s(code)} OR code IS NULL)`;
+		}
+		sql += ` ORDER BY event_date, importance DESC`;
+		const rows = await promisifyQuery(this.db, sql);
+		return rows.map((r) => ({
+			...r,
+			affected_sectors: r.affected_sectors ? JSON.parse(r.affected_sectors) : null,
+		})) as CalendarEventRow[];
+	}
+
+	async deleteCalendarEventsByCategory(category: string, startDate?: string): Promise<void> {
+		if (!this.db) return;
+		let sql = `DELETE FROM calendar_events WHERE category = ${s(category)}`;
+		if (startDate) {
+			sql += ` AND event_date >= ${s(startDate)}`;
+		}
+		await promisifyExec(this.db, sql);
+	}
+
+	async deleteCalendarEventsInRange(startDate: string, endDate: string): Promise<void> {
+		if (!this.db) return;
+		const sql = `DELETE FROM calendar_events WHERE event_date >= ${s(startDate)} AND event_date <= ${s(endDate)}`;
+		await promisifyExec(this.db, sql);
 	}
 
 	// ─── Stock Pools ────────────────────────────────────────────────

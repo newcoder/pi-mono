@@ -234,3 +234,17 @@ export interface FundamentalIndicatorsRow {
 	short_debt_ratio?: number | null;
 	updated_at?: string;
 }
+
+export interface CalendarEventRow {
+	id?: number;
+	event_date: string;
+	title: string;
+	category: "macro" | "industry" | "stock" | "earnings" | "conference" | "unlock" | "dividend" | "holder" | "other";
+	description?: string | null;
+	code?: string | null;
+	market?: number | null;
+	affected_sectors?: string[] | null;
+	importance?: "high" | "medium" | "low";
+	source?: string | null;
+	updated_at?: string;
+}

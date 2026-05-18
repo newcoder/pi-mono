@@ -322,6 +322,56 @@ export async function handleRequest(
 			return;
 		}
 
+		// Calendar events
+		if (path === "/api/calendar" && method === "GET") {
+			const query = parseQuery(url);
+			const startDate = query.start;
+			const endDate = query.end;
+			if (!startDate || !endDate) {
+				badRequest(res, "start and end date parameters required");
+				return;
+			}
+			const store = requireStore();
+			const events = await store.getCalendarEvents(startDate, endDate, query.code);
+			json(res, 200, events);
+			return;
+		}
+
+		if (path === "/api/calendar/refresh" && method === "POST") {
+			const store = requireStore();
+			let body = "";
+			for await (const chunk of req) {
+				body += chunk;
+			}
+			const bodyJson = body ? JSON.parse(body) : {};
+			const code = bodyJson.code;
+
+			// Run refresh in background via Python script
+			const args = code ? ["--refresh-stock", code] : ["--refresh-market"];
+			const since = bodyJson.since;
+			const until = bodyJson.until;
+			if (since) args.push("--since", since);
+			if (until) args.push("--until", until);
+
+			// Delete existing events in the target date range before refresh to avoid duplicates
+			const refreshStart = since || new Date(Date.now() - 30 * 86400000).toISOString().slice(0, 10);
+			const refreshEnd = until || new Date(Date.now() + 60 * 86400000).toISOString().slice(0, 10);
+			await store.deleteCalendarEventsInRange(refreshStart, refreshEnd);
+
+			const result = await runJsonScript("investment_calendar.py", args, 120_000);
+			if (result.success && result.events) {
+				await store.saveCalendarEvents(result.events);
+			}
+
+			json(res, 200, {
+				success: result.success ?? true,
+				count: result.count ?? 0,
+				start_date: result.start_date,
+				end_date: result.end_date,
+			});
+			return;
+		}
+
 		// On-demand sync trigger
 		if (path === "/api/sync" && method === "POST") {
 			if (!bgSync) {

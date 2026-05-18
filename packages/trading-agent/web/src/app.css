@@ -52,3 +52,67 @@
 	font-size: 0.75rem;
 	color: var(--muted-foreground);
 }
+
+/* ─── Calendar ─────────────────────────────────────────────── */
+
+.calendar-day {
+	display: flex;
+	flex-direction: column;
+	align-items: center;
+	justify-content: center;
+	min-height: 2rem;
+	padding: 0.125rem;
+	border-radius: 0.25rem;
+	cursor: pointer;
+	transition: background-color 0.15s;
+}
+
+.calendar-day:hover {
+	background-color: var(--muted);
+}
+
+.calendar-day.empty {
+	cursor: default;
+}
+
+.calendar-day.today {
+	background-color: var(--primary);
+	color: var(--primary-foreground);
+}
+
+.calendar-day.today .calendar-day-num {
+	font-weight: 600;
+}
+
+.calendar-day.selected {
+	outline: 2px solid var(--primary);
+	outline-offset: -2px;
+}
+
+.calendar-day-num {
+	font-size: 0.6875rem;
+	line-height: 1;
+}
+
+.calendar-dots {
+	display: flex;
+	gap: 0.125rem;
+	margin-top: 0.125rem;
+}
+
+.calendar-dot {
+	display: inline-block;
+	width: 0.25rem;
+	height: 0.25rem;
+	border-radius: 9999px;
+}
+
+.calendar-event-item {
+	margin-bottom: 0.125rem;
+}
+
+.calendar-event-item.highlight {
+	background-color: var(--primary);
+	color: var(--primary-foreground);
+	transition: background-color 0.3s ease;
+}

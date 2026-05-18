@@ -114,6 +114,20 @@ export class TradingApiClient extends EventTarget {
 		return this.httpGet("/api/macro");
 	}
 
+	async getCalendar(start: string, end: string, code?: string) {
+		const query = new URLSearchParams({ start, end });
+		if (code) query.set("code", code);
+		return this.httpGet(`/api/calendar?${query.toString()}`);
+	}
+
+	async refreshCalendar(code?: string, startDate?: string, endDate?: string) {
+		const body: Record<string, string> = {};
+		if (code) body.code = code;
+		if (startDate) body.since = startDate;
+		if (endDate) body.until = endDate;
+		return this.httpPost("/api/calendar/refresh", body);
+	}
+
 	private async httpGet(path: string) {
 		const res = await fetch(`${API_BASE}${path}`);
 		if (!res.ok) throw new Error(`HTTP ${res.status}: ${res.statusText}`);
@@ -122,6 +136,16 @@ export class TradingApiClient extends EventTarget {
 
 	private async httpDelete(path: string) {
 		const res = await fetch(`${API_BASE}${path}`, { method: "DELETE" });
+		if (!res.ok) throw new Error(`HTTP ${res.status}: ${res.statusText}`);
+		return res.json();
+	}
+
+	private async httpPost(path: string, body: unknown) {
+		const res = await fetch(`${API_BASE}${path}`, {
+			method: "POST",
+			headers: { "Content-Type": "application/json" },
+			body: JSON.stringify(body),
+		});
 		if (!res.ok) throw new Error(`HTTP ${res.status}: ${res.statusText}`);
 		return res.json();
 	}
