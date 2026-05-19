@@ -487,9 +487,19 @@ export class DataStore {
 		return rows[0] ?? null;
 	}
 
-	async getLatestQuotes(codes?: string[]): Promise<QuoteRow[]> {
+	async getLatestQuotes(codes?: string[], markets?: number[]): Promise<QuoteRow[]> {
 		if (!this.db) return [];
 		if (codes && codes.length > 0) {
+			// When markets are provided alongside codes, filter by (code, market) pairs
+			// to avoid collisions where the same code exists for different markets
+			// (e.g., 000001 is both 平安银行 market=0 and 上证指数 market=1)
+			if (markets && markets.length === codes.length) {
+				const conditions = codes.map((c, i) => `(code = ${s(c)} AND market = ${markets[i]})`).join(" OR ");
+				return promisifyQuery(
+					this.db,
+					`SELECT * FROM quotes WHERE (${conditions}) AND snapshot_date = (SELECT MAX(snapshot_date) FROM quotes)`,
+				);
+			}
 			const codeList = codes.map((c) => s(c)).join(", ");
 			return promisifyQuery(
 				this.db,

@@ -4,6 +4,7 @@ import { join, resolve } from "node:path";
 import { WebSocketServer } from "ws";
 import type { TradingSession } from "../core/trading-session.js";
 import type { BackgroundSyncService } from "./background-sync.js";
+import { MootdxDaemon } from "./mootdx-daemon.js";
 import { handleRequest } from "./router.js";
 import { setupWsHandler } from "./ws-handler.js";
 
@@ -60,9 +61,10 @@ export interface ServerOptions {
 export function startServer(
 	session: TradingSession,
 	options: ServerOptions = {},
-): { httpServer: ReturnType<typeof createServer>; wsServer: WebSocketServer } {
+): { httpServer: ReturnType<typeof createServer>; wsServer: WebSocketServer; mootdxDaemon: MootdxDaemon } {
 	const port = options.port || 3000;
 	const staticDir = options.staticDir ? resolve(options.staticDir) : undefined;
+	const mootdxDaemon = new MootdxDaemon();
 
 	const httpServer = createServer((req, res) => {
 		// Try static files first (if configured), then API routes
@@ -71,7 +73,7 @@ export function startServer(
 			if (served) return;
 		}
 
-		handleRequest(req, res, options.bgSync);
+		handleRequest(req, res, options.bgSync, mootdxDaemon);
 	});
 
 	const wsServer = new WebSocketServer({ server: httpServer });
@@ -85,9 +87,19 @@ export function startServer(
 		console.error("[WS] Server error:", err);
 	});
 
+	// Start mootdx daemon before listening, but don't block server startup on it
+	mootdxDaemon.start().catch((err) => {
+		console.warn("[Server] Mootdx daemon failed to start:", err);
+	});
+
 	httpServer.listen(port, () => {
 		console.log(`[Server] HTTP + WebSocket listening on http://localhost:${port}`);
 	});
 
-	return { httpServer, wsServer };
+	// Graceful shutdown
+	httpServer.on("close", () => {
+		mootdxDaemon.stop().catch(() => {});
+	});
+
+	return { httpServer, wsServer, mootdxDaemon };
 }

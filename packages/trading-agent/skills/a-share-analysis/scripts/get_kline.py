@@ -3,8 +3,6 @@ import json
 import sys
 import io
 
-sys.stdout = io.TextIOWrapper(sys.stdout.buffer, encoding="utf-8")
-
 import pandas as pd
 
 from jq_data import normalize_code, get_kline_data, get_kline_factors
@@ -96,6 +94,45 @@ def _df_to_factors(df):
     return factors
 
 
+def _mootdx_to_klines(df, stock_code: str, market: int, period: str, adjust: str):
+    """Convert mootdx kline DataFrame to standard kline dict format."""
+    klines = []
+    for _, row in df.iterrows():
+        date_val = row.get("date", "")
+        date_str = str(date_val)[:10] if date_val else ""
+        open_p = float(row["open"]) if pd.notna(row.get("open")) else None
+        close_p = float(row["close"]) if pd.notna(row.get("close")) else None
+        low_p = float(row["low"]) if pd.notna(row.get("low")) else None
+        high_p = float(row["high"]) if pd.notna(row.get("high")) else None
+        volume = float(row["volume"]) if pd.notna(row.get("volume")) else None
+        pre_close = float(row["pre_close"]) if pd.notna(row.get("pre_close")) else None
+
+        change_amount = None
+        change_pct = None
+        amplitude = None
+        if close_p is not None and pre_close is not None and pre_close != 0:
+            change_amount = round(close_p - pre_close, 4)
+            change_pct = round((close_p - pre_close) / pre_close * 100, 4)
+        if high_p is not None and low_p is not None and low_p != 0:
+            amplitude = round((high_p - low_p) / low_p * 100, 4)
+
+        klines.append({
+            "date": date_str,
+            "open": open_p,
+            "close": close_p,
+            "low": low_p,
+            "high": high_p,
+            "volume": volume,
+            "amount": None,
+            "amplitude": amplitude,
+            "change_pct": change_pct,
+            "change_amount": change_amount,
+            "turnover": None,
+            "pre_close": pre_close,
+        })
+    return klines
+
+
 def get_stock_kline(
     stock_code: str,
     market: int = 1,
@@ -105,14 +142,39 @@ def get_stock_kline(
     end_date: str = "20500101",
 ) -> dict:
     """
-    Fetch K-line (OHLCV) data from JoinQuant (jqdatasdk) via jq_data wrapper.
+    Fetch K-line (OHLCV) data.
+    Priority: mootdx (TCP direct) for bfq -> JoinQuant (jqdatasdk) for qfq/hfq or fallback.
 
     - period: 1m,5m,15m,30m,60m,120m,daily,week,month,quarter,year
     - adjust: bfq (不复权), qfq (前复权), hfq (后复权)
     - start_date / end_date: YYYYMMDD
     """
-    # normalize_code infers the exchange suffix from the code prefix,
-    # so the explicit market arg is kept only for CLI compatibility.
+    # 1. Primary: mootdx for bfq (TCP direct, ~77ms for daily)
+    # mootdx only supports unadjusted data; qfq/hfq need JoinQuant
+    if adjust == "bfq":
+        try:
+            from mootdx_data import get_kline as mootdx_kline
+            klines = mootdx_kline(
+                stock_code, market, period=period,
+                start=start_date, end=end_date
+            )
+            if klines:
+                return {
+                    "code": stock_code,
+                    "market": "SH" if market == 1 else "SZ",
+                    "period": period,
+                    "adjust": adjust,
+                    "start_date": start_date,
+                    "end_date": end_date,
+                    "count": len(klines),
+                    "klines": klines,
+                    "factors": [],
+                    "_source": "mootdx",
+                }
+        except Exception:
+            pass  # fallback to JoinQuant
+
+    # 2. Fallback: JoinQuant (supports all adjustment types)
     jq_code = normalize_code(stock_code)
     frequency = KLT_MAP.get(period, "daily")
     fq = FQT_MAP.get(adjust)
@@ -173,6 +235,10 @@ if __name__ == "__main__":
     parser.add_argument("--end", default="20500101", help="End date YYYYMMDD")
     args = parser.parse_args()
 
+    try:
+        sys.stdout = io.TextIOWrapper(sys.stdout.buffer, encoding="utf-8")
+    except ValueError:
+        pass
     result = get_stock_kline(
         args.stock_code,
         market=args.market,

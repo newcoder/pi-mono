@@ -17,6 +17,9 @@ const EXTERNAL_NL_SCREENER_SCRIPTS = join(HOME, ".agents/skills/nl-stock-screene
 const BUNDLED_CONCEPT_ANALYSIS_SCRIPTS = join(__dirname, "../../skills/concept-analysis/scripts");
 const EXTERNAL_CONCEPT_ANALYSIS_SCRIPTS = join(HOME, ".agents/skills/concept-analysis/scripts");
 
+const BUNDLED_A_STOCK_DATA_SCRIPTS = join(__dirname, "../../skills/a-stock-data/scripts");
+const EXTERNAL_A_STOCK_DATA_SCRIPTS = join(HOME, ".agents/skills/a-stock-data/scripts");
+
 /** Resolve script path: bundled takes priority over external. */
 export function resolveScriptPath(scriptName: string, bundledDir: string, externalDir: string): string {
 	const bundled = join(bundledDir, scriptName);
@@ -37,6 +40,11 @@ export function resolveNLScreenerScript(scriptName: string): string {
 /** Resolve concept-analysis script path (bundled优先). */
 export function resolveConceptAnalysisScript(scriptName: string): string {
 	return resolveScriptPath(scriptName, BUNDLED_CONCEPT_ANALYSIS_SCRIPTS, EXTERNAL_CONCEPT_ANALYSIS_SCRIPTS);
+}
+
+/** Resolve a-stock-data script path (bundled优先). */
+export function resolveAStockDataScript(scriptName: string): string {
+	return resolveScriptPath(scriptName, BUNDLED_A_STOCK_DATA_SCRIPTS, EXTERNAL_A_STOCK_DATA_SCRIPTS);
 }
 
 // Legacy export for backward compatibility
@@ -115,6 +123,17 @@ export async function runPython(script: string, args: string[], timeoutMs = DEFA
 
 export async function runJsonScript(script: string, args: string[], timeoutMs?: number): Promise<any> {
 	const stdout = await runPython(script, args, timeoutMs);
+	const start = stdout.search(/[[{]/);
+	if (start === -1) {
+		throw new Error(`No JSON found in script output: ${stdout.slice(0, 200)}`);
+	}
+	return JSON.parse(stdout.slice(start));
+}
+
+/** Run a Python script from the a-stock-data skill directory and parse JSON output. */
+export async function runAStockDataJsonScript(script: string, args: string[], timeoutMs?: number): Promise<any> {
+	const scriptPath = resolveAStockDataScript(script);
+	const stdout = await runPython(scriptPath, args, timeoutMs);
 	const start = stdout.search(/[[{]/);
 	if (start === -1) {
 		throw new Error(`No JSON found in script output: ${stdout.slice(0, 200)}`);

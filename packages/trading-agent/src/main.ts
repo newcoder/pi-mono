@@ -26,7 +26,7 @@ import {
 import { getConceptStocksTool, listConceptsTool } from "./tools/concept-stocks.js";
 import { syncFundamentalsTool, syncKlineTool, syncNewsTool } from "./tools/data-sync.js";
 import { getIndustryStocksTool, getStockIndustriesTool, listIndustriesTool } from "./tools/industry-classification.js";
-import { refreshCalendarTool } from "./tools/investment-calendar.js";
+import { analyzeCalendarImpactTool, refreshCalendarTool } from "./tools/investment-calendar.js";
 import { iwencaiScreenTool } from "./tools/iwencai-screening.js";
 import { getMacroTool } from "./tools/macro-data.js";
 import { getFundamentalsTool, getKlineTool, getQuoteTool } from "./tools/market-data.js";
@@ -276,6 +276,7 @@ const BUILTIN_TOOLS = new Map<string, AgentTool<any>>([
 	["sync_fundamentals", syncFundamentalsTool],
 	["sync_news", syncNewsTool],
 	["refresh_calendar", refreshCalendarTool],
+	["analyze_calendar_impact", analyzeCalendarImpactTool],
 	["verify_concept_stocks", verifyConceptStocksTool],
 	["find_concept_leaders", findConceptLeadersTool],
 	["analyze_concept_persistence", analyzeConceptPersistenceTool],

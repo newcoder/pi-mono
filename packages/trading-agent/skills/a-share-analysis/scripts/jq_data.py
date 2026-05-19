@@ -57,31 +57,41 @@ def login():
 def add_code_suffix(code):
     if code.find('.') > 0:
         return code
+    # Strip lowercase/uppercase market prefixes
+    if code.startswith(('sh', 'SH')):
+        code = code[2:]
+    elif code.startswith(('sz', 'SZ')):
+        code = code[2:]
+    elif code.startswith(('bj', 'BJ')):
+        code = code[2:]
     if code.startswith('60') or code.startswith('68'):
         code = code + '.SH'
     elif code.startswith('90'):
         code = code + '.SH'
-    elif code.startswith('SH'):
-        code = code[2:len(code)] + '.SH'
-    elif code.startswith('SZ'):
-        code = code[2:len(code)] + '.SZ'
+    elif code.startswith(('8', '4', '92')):
+        code = code + '.BJ'
     else:
         code = code + '.SZ'
     return code
 
 
-# 股票代码加上市场后缀
+# 股票代码加上市场后缀 (JoinQuant normalized format)
 def add_norm_suffix(code):
     if code.find('.') > 0:
         code = code.split('.')[0]
+    # Strip lowercase/uppercase market prefixes
+    if code.startswith(('sh', 'SH')):
+        code = code[2:]
+    elif code.startswith(('sz', 'SZ')):
+        code = code[2:]
+    elif code.startswith(('bj', 'BJ')):
+        code = code[2:]
     if code.startswith('60') or code.startswith('68'):
         code = code + '.XSHG'
     elif code.startswith('90'):
         code = code + '.XSHG'
-    elif code.startswith('SH'):
-        code = code[2:len(code)] + '.XSHG'
-    elif code.startswith('SZ'):
-        code = code[2:len(code)] + '.XSHE'
+    elif code.startswith(('8', '4', '92')):
+        code = code + '.BJSE'
     else:
         code = code + '.XSHE'
     return code

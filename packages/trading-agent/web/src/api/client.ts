@@ -114,6 +114,13 @@ export class TradingApiClient extends EventTarget {
 		return this.httpGet("/api/macro");
 	}
 
+	async getHotStocks(date?: string, limit?: number) {
+		const query = new URLSearchParams();
+		if (date) query.set("date", date);
+		if (limit) query.set("limit", String(limit));
+		return this.httpGet(`/api/hot-stocks?${query.toString()}`);
+	}
+
 	async getCalendar(start: string, end: string, code?: string) {
 		const query = new URLSearchParams({ start, end });
 		if (code) query.set("code", code);

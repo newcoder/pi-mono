@@ -90,11 +90,56 @@ def _fmt(v):
 
 def get_stock_fundamentals(stock_code: str, market: int = 1, history: bool = False, limit: int = 0) -> dict:
     """
-    Fetch fundamental data from Eastmoney F10.
+    Fetch fundamental data.
+    Priority: mootdx finance snapshot (TCP direct, ~15ms) for latest only ->
+              Eastmoney F10 HTTP for history or fallback.
+
     market: 1 = Shanghai, 0 = Shenzhen
     history: if True, fetch all available historical reports; if False, only the latest
     limit: max number of historical reports to fetch (0 = no limit)
     """
+    # 1. Primary: mootdx for latest single report (fast TCP direct)
+    if not history:
+        try:
+            from mootdx_data import get_finance_snapshot
+            snap = get_finance_snapshot(stock_code, market)
+            # Validate: reject if key fields are missing or all zeros
+            has_data = snap and (
+                (snap.get("net_profit") is not None and snap.get("net_profit") != 0)
+                or (snap.get("total_assets") is not None and snap.get("total_assets") != 0)
+                or (snap.get("revenue") is not None and snap.get("revenue") != 0)
+            )
+            if has_data:
+                return {
+                    "stock_code": stock_code,
+                    "market": "SH" if market == 1 else "SZ",
+                    "company_type": "",
+                    "利润表": {
+                        "report_date": snap.get("report_date", ""),
+                        "data": {
+                            "营业总收入": snap.get("revenue"),
+                            "营业收入": snap.get("revenue"),
+                            "净利润": snap.get("net_profit"),
+                            "归母净利润": snap.get("net_profit"),
+                            "基本每股收益": snap.get("eps"),
+                        },
+                    },
+                    "资产负债表": {
+                        "report_date": snap.get("report_date", ""),
+                        "data": {
+                            "资产总计": snap.get("total_assets"),
+                            "负债合计": snap.get("total_liabilities"),
+                            "所有者权益合计": snap.get("equity"),
+                            "归母所有者权益": snap.get("equity"),
+                        },
+                    },
+                    "现金流量表": {"error": "mootdx snapshot does not include cash flow"},
+                    "_source": "mootdx",
+                }
+        except Exception:
+            pass  # fallback to Eastmoney
+
+    # 2. Fallback: Eastmoney F10 HTTP API
     prefix = "sh" if market == 1 else "sz"
     symbol_lower = f"{prefix}{stock_code}"
     code_upper = f"{prefix.upper()}{stock_code}"

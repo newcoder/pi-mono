@@ -12,8 +12,6 @@ import sys
 import io
 from datetime import datetime
 
-sys.stdout = io.TextIOWrapper(sys.stdout.buffer, encoding="utf-8")
-
 HEADERS = {
     "User-Agent": (
         "Mozilla/5.0 (Windows NT 10.0; Win64; x64) "
@@ -118,18 +116,20 @@ def _get_quote_from_local(code: str, market: int) -> dict:
 def get_stock_real_quote(stock_code: str, market: int = 1) -> dict:
     """
     Fetch stock quote.
-    Trading hours -> Eastmoney live API.
-    Non-trading hours -> local SQLite fallback (quotes/klines).
+    Priority: mootdx (TCP direct) -> Eastmoney HTTP -> local SQLite fallback.
     """
     is_trading = _is_a_share_trading_hours()
 
-    if not is_trading:
-        result = _get_quote_from_local(stock_code, market)
-        if "error" not in result:
+    # 1. Primary: mootdx TCP direct (fast, ~15ms)
+    try:
+        from mootdx_data import get_quote
+        result = get_quote(stock_code, market)
+        if result:
             return result
-        # If local also missing, fall through to network as last resort
+    except Exception:
+        pass  # fallback to next source
 
-    # Trading hours (or local missing): Eastmoney API
+    # 2. Fallback: Eastmoney HTTP API
     try:
         import requests
         secid = f"{market}.{stock_code}"
@@ -169,11 +169,21 @@ def get_stock_real_quote(stock_code: str, market: int = 1) -> dict:
             return {"error": f"Non-trading hours, no local data: {e}"}
         return {"error": str(e)}
 
+    # 3. Last resort: local SQLite (non-trading hours)
+    if not is_trading:
+        result = _get_quote_from_local(stock_code, market)
+        if "error" not in result:
+            return result
+
     # Should not reach here normally
     return {"error": "Unable to fetch quote"}
 
 
 if __name__ == "__main__":
+    try:
+        sys.stdout = io.TextIOWrapper(sys.stdout.buffer, encoding="utf-8")
+    except ValueError:
+        pass
     parser = argparse.ArgumentParser(description="Fetch A-share quote (live or local fallback)")
     parser.add_argument("stock_code", help="6-digit stock code, e.g. 600875")
     parser.add_argument("--market", type=int, default=1, choices=[0, 1], help="1=Shanghai (default), 0=Shenzhen")

@@ -1,7 +1,8 @@
 import type { IncomingMessage, ServerResponse } from "node:http";
 import { requireStore, requireSync } from "../data/index.js";
-import { runJsonScript } from "../tools/_utils.js";
+import { runJsonScript, runAStockDataJsonScript } from "../tools/_utils.js";
 import type { BackgroundSyncService } from "./background-sync.js";
+import type { MootdxDaemon } from "./mootdx-daemon.js";
 
 function json(res: ServerResponse, status: number, data: unknown) {
 	res.writeHead(status, { "Content-Type": "application/json; charset=utf-8" });
@@ -33,6 +34,7 @@ export async function handleRequest(
 	req: IncomingMessage,
 	res: ServerResponse,
 	bgSync?: BackgroundSyncService,
+	mootdxDaemon?: MootdxDaemon,
 ): Promise<void> {
 	const url = req.url || "/";
 	const path = url.split("?")[0];
@@ -84,8 +86,13 @@ export async function handleRequest(
 			} catch (e) {
 				console.warn("[Indices] Real-time fetch failed, falling back to DB:", e);
 				// Fallback: use cached quotes from DB
+				// Pass market for each index to avoid code collisions
+				// (e.g., 000001 is both 平安银行 market=0 and 上证指数 market=1)
 				const codes = indices.map((i) => i.code);
-				quotes = await store.getLatestQuotes(codes);
+				const markets = indices.map((i) =>
+					i.code.startsWith("6") || ["000001", "000688", "000300", "000905"].includes(i.code) ? 1 : 0,
+				);
+				quotes = await store.getLatestQuotes(codes, markets);
 			}
 
 			// Ensure all requested indices are represented
@@ -142,9 +149,27 @@ export async function handleRequest(
 			const sync = requireSync();
 			const market = code.startsWith("6") ? 1 : 0;
 
-			let quote: any = (await store.getLatestQuotes([code]))[0] || null;
+			let quote: any = null;
 
-			// If no cached quote, try real-time fetch
+			// 1. Try mootdx (TCP direct) first — fastest and most reliable
+			if (mootdxDaemon) {
+				try {
+					const mootdxResult = await mootdxDaemon.request("quote", { code, market }, 15000);
+					if (mootdxResult && mootdxResult.latest != null) {
+						quote = mootdxResult;
+						console.log(`[Quote] mootdx hit for ${code}: ${mootdxResult._source}`);
+					}
+				} catch (e) {
+					console.warn(`[Quote] mootdx failed for ${code}, falling back:`, e);
+				}
+			}
+
+			// 2. Fallback: DB cache
+			if (!quote) {
+				quote = (await store.getLatestQuotes([code], [market]))[0] || null;
+			}
+
+			// 3. Fallback: HTTP real-time fetch
 			if (!quote) {
 				try {
 					quote = await sync.getQuoteWithCache(code, market);
@@ -153,7 +178,7 @@ export async function handleRequest(
 				}
 			}
 
-			// After-hours fallback: use last kline close
+			// 4. After-hours fallback: use last kline close
 			if (!quote) {
 				try {
 					const klines = await store.getKlines({ code, market, period: "daily", adjust: "bfq", limit: 1 });
@@ -271,14 +296,37 @@ export async function handleRequest(
 				badRequest(res, "code parameter required");
 				return;
 			}
-			const store = requireStore();
-			const klines = await store.getKlines({
-				code,
-				market: code.startsWith("6") ? 1 : 0,
-				period: (query.period as any) || "daily",
-				adjust: (query.adjust as any) || "bfq",
-				limit: query.limit ? Number(query.limit) : 100,
-			});
+			const market = code.startsWith("6") ? 1 : 0;
+			const period = (query.period as any) || "daily";
+			const limit = query.limit ? Number(query.limit) : 100;
+
+			let klines: any[] = [];
+
+			// 1. Try mootdx (TCP direct) first
+			if (mootdxDaemon) {
+				try {
+					const mootdxResult = await mootdxDaemon.request("klines", { code, market, period, limit }, 20000);
+					if (Array.isArray(mootdxResult) && mootdxResult.length > 0) {
+						klines = mootdxResult;
+						console.log(`[Klines] mootdx hit for ${code}: ${mootdxResult.length} bars`);
+					}
+				} catch (e) {
+					console.warn(`[Klines] mootdx failed for ${code}, falling back to DB:`, e);
+				}
+			}
+
+			// 2. Fallback: DB cache
+			if (klines.length === 0) {
+				const store = requireStore();
+				klines = await store.getKlines({
+					code,
+					market,
+					period,
+					adjust: (query.adjust as any) || "bfq",
+					limit,
+				});
+			}
+
 			json(res, 200, klines);
 			return;
 		}
@@ -290,9 +338,28 @@ export async function handleRequest(
 				badRequest(res, "Stock code required");
 				return;
 			}
-			const store = requireStore();
 			const market = code.startsWith("6") ? 1 : 0;
-			const fundamentals = await store.getFundamentals(code, market);
+			let fundamentals: any = null;
+
+			// 1. Try mootdx (TCP direct) first
+			if (mootdxDaemon) {
+				try {
+					const mootdxResult = await mootdxDaemon.request("finance", { code, market }, 15000);
+					if (mootdxResult && mootdxResult.eps != null) {
+						fundamentals = mootdxResult;
+						console.log(`[Fundamentals] mootdx hit for ${code}: ${mootdxResult._source}`);
+					}
+				} catch (e) {
+					console.warn(`[Fundamentals] mootdx failed for ${code}, falling back to DB:`, e);
+				}
+			}
+
+			// 2. Fallback: DB cache
+			if (!fundamentals) {
+				const store = requireStore();
+				fundamentals = await store.getFundamentals(code, market);
+			}
+
 			json(res, 200, fundamentals);
 			return;
 		}
@@ -319,6 +386,22 @@ export async function handleRequest(
 			const store = requireStore();
 			const macro = await store.getLatestMacro();
 			json(res, 200, macro);
+			return;
+		}
+
+		// Hot stocks (同花顺热点强势股)
+		if (path === "/api/hot-stocks" && method === "GET") {
+			const query = parseQuery(url);
+			const args: string[] = [];
+			if (query.date) args.push("--date", query.date);
+			if (query.limit) args.push("--limit", query.limit);
+			try {
+				const result = await runAStockDataJsonScript("get_hot_stocks.py", args, 30000);
+				json(res, 200, result);
+			} catch (e) {
+				console.warn("[HotStocks] Fetch failed:", e);
+				json(res, 500, { error: "Failed to fetch hot stocks", details: String(e) });
+			}
 			return;
 		}
 
