@@ -134,6 +134,23 @@ let klineChart: any = null;
 let candleSeries: any = null;
 let volumeSeries: any = null;
 
+// ─── Time helpers ───────────────────────────────────────────
+
+/** Convert 'YYYY-MM-DD HH:MM:SS' (Beijing Time) to UTC timestamp (seconds) for lightweight-charts */
+function toUTCTimestamp(dateStr: string): number {
+	const [datePart, timePart] = dateStr.split(" ");
+	const [year, month, day] = datePart.split("-").map(Number);
+	const [hour, minute, second] = (timePart || "00:00:00").split(":").map(Number);
+	// A-share market data is in Beijing Time (UTC+8)
+	// Convert to UTC timestamp by subtracting 8 hours
+	return Math.floor(Date.UTC(year, month - 1, day, hour - 8, minute, second) / 1000);
+}
+
+/** Get today's date string YYYY-MM-DD */
+function getTodayStr(): string {
+	return new Date().toISOString().slice(0, 10);
+}
+
 // ─── Real-time polling ──────────────────────────────────────
 
 let intradayPollTimer: number | null = null;
@@ -180,27 +197,30 @@ async function pollIntradayData(code: string) {
 		const data = await apiClient.getKlines(code, { period: "1m", limit: 5 });
 		if (!data || data.length === 0) return;
 
-		// Merge new data into state
+		const today = getTodayStr();
+		// Merge new data into state, filter to today only
 		const existingMap = new Map(state.selectedIntraday.map((k) => [k.date, k]));
 		for (const k of data) {
-			existingMap.set(k.date, {
-				date: k.date,
-				open: k.open,
-				high: k.high,
-				low: k.low,
-				close: k.close,
-				volume: k.volume,
-			});
+			if (typeof k.date === "string" && k.date.startsWith(today)) {
+				existingMap.set(k.date, {
+					date: k.date,
+					open: k.open,
+					high: k.high,
+					low: k.low,
+					close: k.close,
+					volume: k.volume,
+				});
+			}
 		}
 		// Sort by date and keep last 240 bars
 		state.selectedIntraday = Array.from(existingMap.values())
 			.sort((a, b) => a.date.localeCompare(b.date))
 			.slice(-240);
 
-		// Update chart incrementally
+		// Update chart incrementally with UTC timestamps
 		if (intradaySeries) {
 			for (const k of state.selectedIntraday) {
-				intradaySeries.update({ time: k.date, value: k.close });
+				intradaySeries.update({ time: toUTCTimestamp(k.date), value: k.close });
 			}
 		}
 	} catch (err) {
@@ -670,7 +690,7 @@ function renderIntradayChart() {
 	if (!intradaySeries) return;
 
 	const data = state.selectedIntraday.map((k) => ({
-		time: k.date as string,
+		time: toUTCTimestamp(k.date),
 		value: k.close,
 	}));
 	intradaySeries.setData(data);
@@ -735,14 +755,18 @@ async function loadKlineData(code: string, period: "daily" | "week" | "month") {
 async function loadIntradayData(code: string) {
 	try {
 		const data = await apiClient.getKlines(code, { period: "1m", limit: 240 });
-		state.selectedIntraday = data.map((k: any) => ({
-			date: k.date,
-			open: k.open,
-			high: k.high,
-			low: k.low,
-			close: k.close,
-			volume: k.volume,
-		}));
+		const today = getTodayStr();
+		// Filter to today's data only for intraday chart
+		state.selectedIntraday = data
+			.filter((k: any) => typeof k.date === "string" && k.date.startsWith(today))
+			.map((k: any) => ({
+				date: k.date,
+				open: k.open,
+				high: k.high,
+				low: k.low,
+				close: k.close,
+				volume: k.volume,
+			}));
 		renderIntradayChart();
 	} catch (err) {
 		console.error("Failed to fetch intraday:", err);
@@ -1195,14 +1219,17 @@ async function selectSymbol(code: string, type: "stock" | "index" = "stock") {
 	}
 
 	if (intradayResult.status === "fulfilled") {
-		state.selectedIntraday = intradayResult.value.map((k: any) => ({
-			date: k.date,
-			open: k.open,
-			high: k.high,
-			low: k.low,
-			close: k.close,
-			volume: k.volume,
-		}));
+		const today = getTodayStr();
+		state.selectedIntraday = intradayResult.value
+			.filter((k: any) => typeof k.date === "string" && k.date.startsWith(today))
+			.map((k: any) => ({
+				date: k.date,
+				open: k.open,
+				high: k.high,
+				low: k.low,
+				close: k.close,
+				volume: k.volume,
+			}));
 	} else {
 		console.error("Failed to fetch intraday:", intradayResult.reason);
 	}
