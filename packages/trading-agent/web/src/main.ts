@@ -134,6 +134,80 @@ let klineChart: any = null;
 let candleSeries: any = null;
 let volumeSeries: any = null;
 
+// ─── Real-time polling ──────────────────────────────────────
+
+let intradayPollTimer: number | null = null;
+const INTRADAY_POLL_INTERVAL = 30000; // 30 seconds
+
+/** Check if current time is within A-share trading hours */
+function isTradingTime(): boolean {
+	const now = new Date();
+	const day = now.getDay();
+	// Monday to Friday only
+	if (day === 0 || day === 6) return false;
+
+	const hours = now.getHours();
+	const minutes = now.getMinutes();
+	const time = hours * 60 + minutes;
+
+	// Morning session: 9:30 - 11:30
+	// Afternoon session: 13:00 - 15:00
+	return (time >= 570 && time <= 690) || (time >= 780 && time <= 900);
+}
+
+function stopIntradayPolling() {
+	if (intradayPollTimer) {
+		clearInterval(intradayPollTimer);
+		intradayPollTimer = null;
+	}
+}
+
+function startIntradayPolling(code: string) {
+	stopIntradayPolling();
+	if (!isTradingTime()) return;
+
+	intradayPollTimer = window.setInterval(() => {
+		if (!isTradingTime() || state.selectedSymbol !== code) {
+			stopIntradayPolling();
+			return;
+		}
+		pollIntradayData(code);
+	}, INTRADAY_POLL_INTERVAL);
+}
+
+async function pollIntradayData(code: string) {
+	try {
+		const data = await apiClient.getKlines(code, { period: "1m", limit: 5 });
+		if (!data || data.length === 0) return;
+
+		// Merge new data into state
+		const existingMap = new Map(state.selectedIntraday.map((k) => [k.date, k]));
+		for (const k of data) {
+			existingMap.set(k.date, {
+				date: k.date,
+				open: k.open,
+				high: k.high,
+				low: k.low,
+				close: k.close,
+				volume: k.volume,
+			});
+		}
+		// Sort by date and keep last 240 bars
+		state.selectedIntraday = Array.from(existingMap.values())
+			.sort((a, b) => a.date.localeCompare(b.date))
+			.slice(-240);
+
+		// Update chart incrementally
+		if (intradaySeries) {
+			for (const k of state.selectedIntraday) {
+				intradaySeries.update({ time: k.date, value: k.close });
+			}
+		}
+	} catch (err) {
+		console.warn("[Intraday Poll] Failed to fetch:", err);
+	}
+}
+
 // ─── DOM refs ───────────────────────────────────────────────
 
 function $(id: string) {
@@ -145,6 +219,7 @@ function $(id: string) {
 // ─── Chart helpers ──────────────────────────────────────────
 
 function disposeCharts() {
+	stopIntradayPolling();
 	if (intradayChart) {
 		intradayChart.remove();
 		intradayChart = null;
@@ -1079,7 +1154,7 @@ async function selectPool(poolId: number) {
 }
 
 async function selectSymbol(code: string, type: "stock" | "index" = "stock") {
-	// Dispose old charts before re-rendering
+	// Dispose old charts and stop polling before re-rendering
 	disposeCharts();
 
 	state.selectedSymbol = code;
@@ -1133,6 +1208,9 @@ async function selectSymbol(code: string, type: "stock" | "index" = "stock") {
 	}
 
 	renderStockChartPanel();
+
+	// Start real-time polling for intraday data during trading hours
+	startIntradayPolling(code);
 }
 
 function handleAgentEvent(ev: any) {
