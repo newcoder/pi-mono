@@ -1,6 +1,6 @@
 import type { IncomingMessage, ServerResponse } from "node:http";
 import { requireStore, requireSync } from "../data/index.js";
-import { runJsonScript, runAStockDataJsonScript } from "../tools/_utils.js";
+import { runAStockDataJsonScript, runJsonScript } from "../tools/_utils.js";
 import type { BackgroundSyncService } from "./background-sync.js";
 import type { MootdxDaemon } from "./mootdx-daemon.js";
 
@@ -240,6 +240,11 @@ export async function handleRequest(
 		if (path === "/api/stocks" && method === "GET") {
 			const query = parseQuery(url);
 			const store = requireStore();
+			if (query.search) {
+				const stocks = await store.searchStocks(query.search, Number(query.limit) || 10);
+				json(res, 200, stocks);
+				return;
+			}
 			if (query.industry) {
 				const stocks = await store.getStocksByIndustry(query.industry);
 				json(res, 200, stocks);
@@ -251,7 +256,7 @@ export async function handleRequest(
 				return;
 			}
 			const stocks = await store.getAllStocks();
-			json(res, 200, stocks.slice(0, 500));
+			json(res, 200, query.all === "1" ? stocks : stocks.slice(0, 500));
 			return;
 		}
 
@@ -272,6 +277,29 @@ export async function handleRequest(
 			const store = requireStore();
 			const pool = await store.getStockPoolById(poolId);
 			const items = await store.getStockPoolItems(poolId);
+			// Enrich missing names from stocks table (canonical source), fallback to quotes
+			const itemsNeedingNames = items.filter((i) => !i.name);
+			if (itemsNeedingNames.length > 0) {
+				for (const item of itemsNeedingNames) {
+					const stock = await store.getStock(item.code);
+					if (stock?.name) {
+						item.name = stock.name;
+					}
+				}
+				// Fallback: any still missing, try latest quotes
+				const stillNeeding = items.filter((i) => !i.name);
+				if (stillNeeding.length > 0) {
+					const codes = stillNeeding.map((i) => i.code);
+					const markets = stillNeeding.map((i) => i.market);
+					const quotes = await store.getLatestQuotes(codes, markets);
+					const nameMap = new Map(quotes.map((q) => [`${q.code}:${q.market}`, q.name]));
+					for (const item of stillNeeding) {
+						if (!item.name) {
+							item.name = nameMap.get(`${item.code}:${item.market}`) || null;
+						}
+					}
+				}
+			}
 			json(res, 200, { pool, items });
 			return;
 		}
@@ -284,6 +312,35 @@ export async function handleRequest(
 			}
 			const store = requireStore();
 			await store.deleteStockPool(poolId);
+			json(res, 200, { success: true });
+			return;
+		}
+
+		if (path.startsWith("/api/stock-pools/") && path.endsWith("/items") && method === "POST") {
+			const poolId = Number(path.slice("/api/stock-pools/".length, -"/items".length));
+			if (Number.isNaN(poolId)) {
+				badRequest(res, "Invalid pool ID");
+				return;
+			}
+			let body = "";
+			for await (const chunk of req) {
+				body += chunk;
+			}
+			const bodyJson = body ? JSON.parse(body) : {};
+			const items = bodyJson.items;
+			if (!Array.isArray(items) || items.length === 0) {
+				badRequest(res, "items array required");
+				return;
+			}
+			const store = requireStore();
+			await store.addToStockPool(
+				poolId,
+				items.map((item: any) => ({
+					code: String(item.code),
+					market: Number(item.market),
+					name: item.name ? String(item.name) : undefined,
+				})),
+			);
 			json(res, 200, { success: true });
 			return;
 		}
@@ -405,6 +462,24 @@ export async function handleRequest(
 			return;
 		}
 
+		// News (a-stock-data news fetcher)
+		if (path === "/api/news" && method === "GET") {
+			const query = parseQuery(url);
+			const code = query.code || "";
+			const sources = query.sources || "eastmoney_stock,cls_telegraph,eastmoney_global";
+			const limit = query.limit || "20";
+			const args: string[] = ["--sources", sources, "--limit", limit];
+			if (code) args.push("--code", code);
+			try {
+				const result = await runAStockDataJsonScript("news_fetcher.py", args, 30000);
+				json(res, 200, result);
+			} catch (e) {
+				console.warn("[News] Fetch failed:", e);
+				json(res, 500, { error: "Failed to fetch news", details: String(e) });
+			}
+			return;
+		}
+
 		// Calendar events
 		if (path === "/api/calendar" && method === "GET") {
 			const query = parseQuery(url);
@@ -452,6 +527,46 @@ export async function handleRequest(
 				start_date: result.start_date,
 				end_date: result.end_date,
 			});
+			return;
+		}
+
+		// Stock lookup via iwencai (fallback when local search has no results)
+		if (path === "/api/stock-lookup" && method === "POST") {
+			let body = "";
+			for await (const chunk of req) {
+				body += chunk;
+			}
+			const bodyJson = body ? JSON.parse(body) : {};
+			const query = bodyJson.query?.trim();
+			if (!query) {
+				badRequest(res, "query is required");
+				return;
+			}
+
+			try {
+				const result = await runJsonScript("iwencai_screener.py", ["--query", query, "--limit", "5"], 30000);
+				if (!result.success) {
+					json(res, 200, { success: false, error: result.error || "Lookup failed" });
+					return;
+				}
+
+				// Extract stock codes and names from iwencai response
+				const stocks: Array<{ code: string; name: string; market: number }> = [];
+				for (const item of result.results || []) {
+					const code = item.股票代码 || item.代码 || item.stock_code || "";
+					const name = item.股票简称 || item.名称 || item.stock_name || "";
+					if (!code || !name) continue;
+					// Normalize code: remove market prefix if present (e.g., "SH600519" -> "600519")
+					const normalizedCode = code.replace(/^(SH|SZ|BJ)/i, "");
+					const market = normalizedCode.startsWith("6") ? 1 : 0;
+					stocks.push({ code: normalizedCode, name, market });
+				}
+
+				json(res, 200, { success: true, query, results: stocks.slice(0, 5) });
+			} catch (err) {
+				console.error("[StockLookup] iwencai failed:", err);
+				json(res, 200, { success: false, error: "Lookup service unavailable", results: [] });
+			}
 			return;
 		}
 

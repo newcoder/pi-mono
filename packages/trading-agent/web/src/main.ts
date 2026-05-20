@@ -1,6 +1,7 @@
 import "@mariozechner/mini-lit/dist/ThemeToggle.js";
 import { apiClient } from "./api/client.js";
 import { createChart, CandlestickSeries, HistogramSeries, AreaSeries } from "lightweight-charts";
+import { pinyin } from "pinyin-pro";
 
 // ─── Types ──────────────────────────────────────────────────
 
@@ -102,6 +103,7 @@ const state = {
 	// Chart panel state (replaces selectedStock/stockQuote)
 	selectedSymbol: null as string | null,
 	selectedType: "stock" as "stock" | "index",
+	selectedName: null as string | null,
 	selectedQuote: null as any,
 	selectedKlines: [] as KlineData[],
 	selectedIntraday: [] as KlineData[],
@@ -118,12 +120,31 @@ const state = {
 	hotStocksDate: "" as string,
 	hotStocksLoading: false,
 	hotStocksCollapsed: false,
+	// News state
+	newsItems: [] as Array<{
+		title: string;
+		content: string;
+		time: string;
+		source: string;
+		url: string;
+		source_type: string;
+	}>,
+	newsLoading: false,
+	newsCollapsed: false,
 	// Mobile drawer state
 	mobileLeftOpen: false,
 	mobileRightOpen: false,
 	// Tool log state
 	toolLogs: [] as ToolLog[],
 	nextToolLogId: 0,
+	// Search state
+	searchQuery: "",
+	searchResults: [] as Array<{ code: string; name: string; market: number }>,
+	searchHighlightedIndex: -1,
+	searchDropdownOpen: false,
+	recentPoolId: null as number | null,
+	allStocks: [] as Array<{ code: string; name: string; market: number }>,
+	allStocksLoaded: false,
 };
 
 // ─── Chart instances ────────────────────────────────────────
@@ -136,14 +157,13 @@ let volumeSeries: any = null;
 
 // ─── Time helpers ───────────────────────────────────────────
 
-/** Convert 'YYYY-MM-DD HH:MM:SS' (Beijing Time) to UTC timestamp (seconds) for lightweight-charts */
-function toUTCTimestamp(dateStr: string): number {
+/** Convert 'YYYY-MM-DD HH:MM:SS' to local timestamp (seconds) for lightweight-charts.
+ *  Preserves wall-clock time so A-share 09:30 displays as 09:30 regardless of browser timezone. */
+function toLocalTimestamp(dateStr: string): number {
 	const [datePart, timePart] = dateStr.split(" ");
 	const [year, month, day] = datePart.split("-").map(Number);
 	const [hour, minute, second] = (timePart || "00:00:00").split(":").map(Number);
-	// A-share market data is in Beijing Time (UTC+8)
-	// Convert to UTC timestamp by subtracting 8 hours
-	return Math.floor(Date.UTC(year, month - 1, day, hour - 8, minute, second) / 1000);
+	return Math.floor(new Date(year, month - 1, day, hour, minute, second).getTime() / 1000);
 }
 
 /** Get today's date string YYYY-MM-DD */
@@ -220,7 +240,7 @@ async function pollIntradayData(code: string) {
 		// Update chart incrementally with UTC timestamps
 		if (intradaySeries) {
 			for (const k of state.selectedIntraday) {
-				intradaySeries.update({ time: toUTCTimestamp(k.date), value: k.close });
+				intradaySeries.update({ time: toLocalTimestamp(k.date), value: k.close });
 			}
 		}
 	} catch (err) {
@@ -274,6 +294,11 @@ function initIntradayChart(container: HTMLElement) {
 			borderColor: "rgba(0,0,0,0.05)",
 			timeVisible: true,
 			secondsVisible: false,
+				// @ts-ignore
+				tickMarkFormatter: (time: number) => {
+					const d = new Date(time * 1000);
+					return String(d.getHours()).padStart(2, "0") + ":" + String(d.getMinutes()).padStart(2, "0");
+				},
 		},
 		autoSize: true,
 	});
@@ -310,6 +335,12 @@ function initKlineChart(container: HTMLElement) {
 		timeScale: {
 			borderColor: "rgba(0,0,0,0.05)",
 			barSpacing: 6,
+				// @ts-ignore
+				tickMarkFormatter: (time: number | string) => {
+					if (typeof time == "string") return time;
+					const d = new Date(time * 1000);
+					return d.getFullYear() + "-" + String(d.getMonth() + 1).padStart(2, "0") + "-" + String(d.getDate()).padStart(2, "0");
+				},
 		},
 		autoSize: true,
 	});
@@ -357,7 +388,8 @@ function renderIndices() {
 	container.querySelectorAll("[data-index-code]").forEach((el) => {
 		el.addEventListener("click", () => {
 			const code = (el as HTMLElement).dataset.indexCode!;
-			selectSymbol(code, "index");
+				const name = (el as HTMLElement).dataset.indexName;
+			selectSymbol(code, "index", name);
 		});
 	});
 }
@@ -399,19 +431,6 @@ function renderSentiment() {
 		<span class="sentiment-stat">跌停${s.limitDown}</span>
 		<span class="sentiment-stat">北向 ${nbSign}${s.northboundFlow}亿</span>
 	`;
-}
-
-function renderMarketStatus() {
-	const container = $("market-status");
-	const badge = container.querySelector(".market-status-badge");
-	if (badge) {
-		badge.textContent = state.marketPhase;
-		badge.classList.remove("open", "closed", "pre");
-		const phase = state.marketPhase;
-		if (phase.includes("盘前") || phase.includes("竞价")) badge.classList.add("pre");
-		else if (phase.includes("开盘") || phase.includes("交易中")) badge.classList.add("open");
-		else badge.classList.add("closed");
-	}
 }
 
 function buildMessageHTML(msg: ChatMessage): string {
@@ -468,25 +487,6 @@ function renderMessages() {
 	}
 }
 
-function renderConnectionStatus() {
-	const container = $("connection-status");
-	const dot = container.querySelector(".connection-dot");
-	const text = container.querySelector("span:last-child");
-	if (state.connected) {
-		if (dot) {
-			dot.classList.remove("connecting");
-			dot.classList.add("connected");
-		}
-		if (text) text.textContent = "已连接";
-	} else {
-		if (dot) {
-			dot.classList.remove("connected");
-			dot.classList.add("connecting");
-		}
-		if (text) text.textContent = "连接中...";
-	}
-}
-
 function renderWatchlist() {
 	const container = $("watchlist-panel");
 	if (state.stockPools.length === 0) {
@@ -514,7 +514,7 @@ function renderWatchlist() {
 		for (const item of state.poolItems) {
 			const isSelected = state.selectedSymbol === item.code;
 			html += `
-				<div class="stock-item ${isSelected ? 'active' : ''}" data-stock-code="${item.code}">
+				<div class="stock-item ${isSelected ? 'active' : ''}" data-stock-code="${item.code}" data-stock-name="${escapeHtml(item.name)}">
 					<span class="stock-item-code">${item.code}</span>
 					<span class="stock-item-name">${escapeHtml(item.name)}</span>
 				</div>
@@ -546,6 +546,7 @@ function renderWatchlist() {
 					state.selectedPool = null;
 					state.poolItems = [];
 					state.selectedSymbol = null;
+					state.selectedName = null;
 					state.selectedQuote = null;
 					state.selectedKlines = [];
 					state.selectedIntraday = [];
@@ -560,7 +561,8 @@ function renderWatchlist() {
 	container.querySelectorAll("[data-stock-code]").forEach((el) => {
 		el.addEventListener("click", () => {
 			const code = (el as HTMLElement).dataset.stockCode!;
-			selectSymbol(code, "stock");
+				const name = (el as HTMLElement).dataset.stockName;
+				selectSymbol(code, "stock", name);
 		});
 	});
 }
@@ -580,7 +582,7 @@ function renderStockChartPanel() {
 	const q = state.selectedQuote;
 	const code = state.selectedSymbol;
 	const type = state.selectedType;
-	const name = q?.name || code;
+	const name = state.selectedName || q?.name || code;
 	const changeClass = q?.change_pct > 0 ? "text-up" : q?.change_pct < 0 ? "text-down" : "text-neutral";
 	const sign = q?.change_pct >= 0 ? "+" : "";
 	const price = q?.price ?? q?.latest ?? "-";
@@ -690,7 +692,7 @@ function renderIntradayChart() {
 	if (!intradaySeries) return;
 
 	const data = state.selectedIntraday.map((k) => ({
-		time: toUTCTimestamp(k.date),
+		time: toLocalTimestamp(k.date),
 		value: k.close,
 	}));
 	intradaySeries.setData(data);
@@ -728,12 +730,23 @@ function renderKlineChart() {
 	candleSeries.setData(candleData);
 	volumeSeries.setData(volumeData);
 	if (klineChart) {
-		klineChart.timeScale().fitContent();
+		// Show last 6 months by default instead of all data
+		const total = candleData.length;
+		const barsFor6Months =
+			state.selectedPeriod === "month" ? 6 :
+			state.selectedPeriod === "week" ? 26 :
+			130; // daily: ~6 months of trading days
+		const fromIndex = Math.max(0, total - barsFor6Months);
+		if (total > 1 && fromIndex < total - 1) {
+			klineChart.timeScale().setVisibleLogicalRange({ from: fromIndex, to: total - 1 });
+		} else {
+			klineChart.timeScale().fitContent();
+		}
 	}
 }
 
 async function loadKlineData(code: string, period: "daily" | "week" | "month") {
-	const limit = period === "daily" ? 100 : period === "week" ? 60 : 24;
+	const limit = 10000;
 	try {
 		const klines = await apiClient.getKlines(code, { period, limit });
 		state.selectedKlines = klines.map((k: any) => ({
@@ -1066,9 +1079,77 @@ function renderHotStocks() {
 	container.querySelectorAll(".hot-stock-item").forEach((el) => {
 		el.addEventListener("click", () => {
 			const code = (el as HTMLElement).dataset.stockCode!;
-			selectSymbol(code, "stock");
+				const name = (el as HTMLElement).dataset.stockName;
+			selectSymbol(code, "stock", name);
 		});
 	});
+}
+
+// ─── News Rendering ─────────────────────────────────────────
+
+function renderNews() {
+	const container = $("news-panel");
+	if (!container) return;
+
+	if (state.newsLoading) {
+		container.innerHTML = `<div class="empty-state"><span class="loading-spinner"></span></div>`;
+		return;
+	}
+
+	if (state.newsItems.length === 0) {
+		container.innerHTML = `<div class="empty-state"><div class="empty-state-icon">📰</div><div>暂无新闻数据</div></div>`;
+		return;
+	}
+
+	let html = "";
+	for (const item of state.newsItems.slice(0, 20)) {
+		const sourceClass = item.source_type === "eastmoney_stock" ? "news-source-stock" :
+			item.source_type === "cls_telegraph" ? "news-source-cls" : "news-source-global";
+		html += `
+			<div class="news-item" data-url="${escapeHtml(item.url)}" title="${escapeHtml(item.title)}"
+				 style="cursor:${item.url ? 'pointer' : 'default'};">
+				<div class="news-item-header">
+					<span class="news-source ${sourceClass}">${escapeHtml(item.source)}</span>
+					<span class="news-time">${escapeHtml(item.time.slice(5, 16))}</span>
+				</div>
+				<div class="news-title">${escapeHtml(item.title)}</div>
+				${item.content ? `<div class="news-content">${escapeHtml(item.content.slice(0, 120))}${item.content.length > 120 ? "..." : ""}</div>` : ""}
+			</div>
+		`;
+	}
+	container.innerHTML = html;
+
+	// Wire up click handlers for items with URLs
+	container.querySelectorAll(".news-item").forEach((el) => {
+		const url = (el as HTMLElement).dataset.url;
+		if (url) {
+			el.addEventListener("click", () => {
+				window.open(url, "_blank", "noopener,noreferrer");
+			});
+		}
+	});
+}
+
+async function fetchNewsForStock(code?: string) {
+	state.newsLoading = true;
+	renderNews();
+	try {
+		const sources = code
+			? "eastmoney_stock,cls_telegraph,eastmoney_global"
+			: "cls_telegraph,eastmoney_global";
+		const result = await apiClient.getNews(code || "", sources, 15);
+		if (result.success) {
+			state.newsItems = result.items || [];
+		} else {
+			state.newsItems = [];
+		}
+	} catch (e) {
+		console.warn("[News] Fetch failed:", e);
+		state.newsItems = [];
+	} finally {
+		state.newsLoading = false;
+		renderNews();
+	}
 }
 
 // ─── Utilities ──────────────────────────────────────────────
@@ -1111,6 +1192,10 @@ async function fetchIndices() {
 async function fetchStockPools() {
 	try {
 		state.stockPools = await apiClient.getStockPools();
+		const recentPool = state.stockPools.find((p) => p.name === "最近访问");
+		if (recentPool) {
+			state.recentPoolId = recentPool.id;
+		}
 		renderWatchlist();
 	} catch (err) {
 		console.error("Failed to fetch stock pools:", err);
@@ -1177,12 +1262,13 @@ async function selectPool(poolId: number) {
 	}
 }
 
-async function selectSymbol(code: string, type: "stock" | "index" = "stock") {
+async function selectSymbol(code: string, type: "stock" | "index" = "stock", knownName?: string) {
 	// Dispose old charts and stop polling before re-rendering
 	disposeCharts();
 
 	state.selectedSymbol = code;
 	state.selectedType = type;
+	state.selectedName = knownName || null;
 	state.selectedQuote = null;
 	state.selectedKlines = [];
 	state.selectedIntraday = [];
@@ -1195,12 +1281,18 @@ async function selectSymbol(code: string, type: "stock" | "index" = "stock") {
 	// Fetch quote, klines, and intraday in parallel
 	const [quoteResult, klinesResult, intradayResult] = await Promise.allSettled([
 		apiClient.getQuote(code),
-		apiClient.getKlines(code, { period: state.selectedPeriod, limit: state.selectedPeriod === "daily" ? 100 : state.selectedPeriod === "week" ? 60 : 24 }),
+		apiClient.getKlines(code, { period: state.selectedPeriod, limit: 10000 }),
 		apiClient.getKlines(code, { period: "1m", limit: 240 }),
 	]);
 
+	// Fetch news in background (fire-and-forget)
+	if (type === "stock") {
+		fetchNewsForStock(code);
+	}
+
 	if (quoteResult.status === "fulfilled") {
 		state.selectedQuote = quoteResult.value;
+		state.selectedName = state.selectedName || quoteResult.value?.name || null;
 	} else {
 		console.error("Failed to fetch quote:", quoteResult.reason);
 	}
@@ -1235,6 +1327,15 @@ async function selectSymbol(code: string, type: "stock" | "index" = "stock") {
 	}
 
 	renderStockChartPanel();
+
+	// Add to recent pool (fire-and-forget) - use knownName if provided, else from quote
+	if (type === "stock") {
+		const name = knownName || (quoteResult.status === "fulfilled" ? quoteResult.value?.name : null);
+		if (name) {
+			const market = code.startsWith("6") ? 1 : 0;
+			addToRecentPool(code, name, market).catch((err) => console.error("[RecentPool] add failed:", err));
+		}
+	}
 
 	// Start real-time polling for intraday data during trading hours
 	startIntradayPolling(code);
@@ -1338,7 +1439,6 @@ function handleTradingEvent(ev: any) {
 	}
 	if (ev.type === "mode_change") {
 		state.marketPhase = ev.mode;
-		renderMarketStatus();
 	}
 }
 
@@ -1347,13 +1447,11 @@ function handleTradingEvent(ev: any) {
 function setupWebSocket() {
 	apiClient.addEventListener("connected", () => {
 		state.connected = true;
-		renderConnectionStatus();
 		apiClient.getState();
 	});
 
 	apiClient.addEventListener("disconnected", () => {
 		state.connected = false;
-		renderConnectionStatus();
 	});
 
 	apiClient.addEventListener("agent_event", (e: any) => {
@@ -1367,7 +1465,6 @@ function setupWebSocket() {
 	apiClient.addEventListener("state", (e: any) => {
 		const s = e.detail.state;
 		if (s.mode) state.marketPhase = s.mode;
-		renderMarketStatus();
 	});
 
 	apiClient.connect();
@@ -1421,8 +1518,21 @@ function setupInput() {
 			state.calendarCollapsed = !state.calendarCollapsed;
 			const chevron = calendarToggle.querySelector(".collapsible-chevron");
 			const content = document.getElementById("calendar-content");
+			const wrapper = document.getElementById("calendar-panel-wrapper");
 			if (chevron) chevron.classList.toggle("collapsed", state.calendarCollapsed);
 			if (content) content.classList.toggle("collapsed", state.calendarCollapsed);
+			if (wrapper) wrapper.classList.toggle("collapsed", state.calendarCollapsed);
+		});
+	}
+
+	const newsToggle = document.getElementById("news-toggle");
+	if (newsToggle) {
+		newsToggle.addEventListener("click", () => {
+			state.newsCollapsed = !state.newsCollapsed;
+			const chevron = newsToggle.querySelector(".collapsible-chevron");
+			const content = document.getElementById("news-content");
+			if (chevron) chevron.classList.toggle("collapsed", state.newsCollapsed);
+			if (content) content.classList.toggle("collapsed", state.newsCollapsed);
 		});
 	}
 }
@@ -1484,6 +1594,232 @@ function setupMobileDrawers() {
 	});
 }
 
+// ─── Search ─────────────────────────────────────────────────
+
+let searchDebounceTimer: number | null = null;
+
+async function loadAllStocks() {
+	try {
+		const stocks = await apiClient.getAllStocks();
+		state.allStocks = stocks.map((s: any) => ({ code: s.code, name: s.name, market: s.market }));
+		state.allStocksLoaded = true;
+		console.log(`[Search] Loaded ${state.allStocks.length} stocks`);
+	} catch (err) {
+		console.error("Failed to load all stocks:", err);
+	}
+}
+
+function matchesSearch(stock: { code: string; name: string }, query: string): boolean {
+	const q = query.toLowerCase().trim();
+	if (!q) return false;
+	if (stock.code.includes(q)) return true;
+	if (stock.name.toLowerCase().includes(q)) return true;
+	try {
+		const py = pinyin(stock.name, { toneType: "none", type: "string" }).toLowerCase().replace(/\s/g, "");
+		if (py.includes(q)) return true;
+		const pyFirst = pinyin(stock.name, { toneType: "none", pattern: "first", type: "string" }).toLowerCase().replace(/\s/g, "");
+		if (pyFirst.includes(q)) return true;
+	} catch {
+		// pinyin-pro may fail on some characters
+	}
+	return false;
+}
+
+function performSearch(query: string) {
+	if (!query.trim() || !state.allStocksLoaded) {
+		state.searchResults = [];
+		state.searchHighlightedIndex = -1;
+		state.searchDropdownOpen = false;
+		renderSearchDropdown();
+		return;
+	}
+	const q = query.trim().toLowerCase();
+	const filtered = state.allStocks
+		.filter((s) => matchesSearch(s, q))
+		.slice(0, 10);
+	state.searchResults = filtered;
+	state.searchHighlightedIndex = filtered.length > 0 ? 0 : -1;
+	state.searchDropdownOpen = filtered.length > 0;
+	renderSearchDropdown();
+}
+
+function renderSearchDropdown() {
+	const dropdown = $("search-dropdown");
+	if (!dropdown) return;
+	if (!state.searchDropdownOpen || state.searchResults.length === 0) {
+		dropdown.classList.add("hidden");
+		dropdown.innerHTML = "";
+		return;
+	}
+	dropdown.classList.remove("hidden");
+	dropdown.innerHTML = state.searchResults
+		.map((stock, idx) => {
+			const isHighlighted = idx === state.searchHighlightedIndex;
+			return `<div class="search-dropdown-item ${isHighlighted ? "highlighted" : ""}" data-index="${idx}" data-code="${stock.code}" data-name="${escapeHtml(stock.name)}" data-market="${stock.market}">
+				<span class="search-item-code">${escapeHtml(stock.code)}</span>
+				<span class="search-item-name">${escapeHtml(stock.name)}</span>
+			</div>`;
+		})
+		.join("");
+
+	// Click handlers
+	dropdown.querySelectorAll(".search-dropdown-item").forEach((el) => {
+		el.addEventListener("click", () => {
+			const code = (el as HTMLElement).dataset.code!;
+			const name = (el as HTMLElement).dataset.name!;
+			const market = Number((el as HTMLElement).dataset.market!);
+			selectSearchResult(code, name, market);
+		});
+	});
+}
+
+async function selectSearchResult(code: string, name: string, market: number) {
+	// Close dropdown and clear input
+	state.searchDropdownOpen = false;
+	state.searchResults = [];
+	state.searchHighlightedIndex = -1;
+	renderSearchDropdown();
+	const input = $("stock-search-input") as HTMLInputElement;
+	if (input) input.value = "";
+
+	// Select the stock (shows chart) - pass knownName so recent pool works even if quote fails
+	selectSymbol(code, "stock", name);
+}
+
+async function addToRecentPool(code: string, name: string, market: number) {
+	// Ensure we have the recent pool ID
+	if (!state.recentPoolId) {
+		const recentPool = state.stockPools.find((p) => p.name === "最近访问");
+		if (recentPool) {
+			state.recentPoolId = recentPool.id;
+		} else {
+			// Try fetching pools fresh
+			try {
+				const pools = await apiClient.getStockPools();
+				state.stockPools = pools;
+				const freshRecent = pools.find((p: any) => p.name === "最近访问");
+				if (freshRecent) {
+					state.recentPoolId = freshRecent.id;
+				} else {
+					console.warn("[RecentPool] '最近访问' pool not found");
+					return;
+				}
+			} catch {
+				return;
+			}
+		}
+	}
+	try {
+		await apiClient.addToStockPool(state.recentPoolId, [{ code, market, name }]);
+		console.log(`[RecentPool] Added ${code} ${name}`);
+		// Update the item_count for the recent pool in state
+		const pool = state.stockPools.find((p) => p.id === state.recentPoolId);
+		if (pool) {
+			pool.item_count += 1;
+		}
+		renderWatchlist();
+		// Refresh pool items if the recent pool is currently selected
+		if (state.selectedPool?.id === state.recentPoolId) {
+			const result = await apiClient.getStockPool(state.recentPoolId);
+			state.poolItems = result.items.map((s: any) => ({ code: s.code, name: s.name }));
+			renderWatchlist();
+		}
+	} catch (err) {
+		console.error("Failed to add to recent pool:", err);
+	}
+}
+
+function setupSearch() {
+	const input = $("stock-search-input") as HTMLInputElement;
+	const dropdown = $("search-dropdown");
+	if (!input || !dropdown) return;
+
+	input.addEventListener("input", () => {
+		const query = input.value;
+		state.searchQuery = query;
+		if (searchDebounceTimer) {
+			clearTimeout(searchDebounceTimer);
+		}
+		searchDebounceTimer = window.setTimeout(() => {
+			performSearch(query);
+		}, 200);
+	});
+
+	input.addEventListener("keydown", (e) => {
+		if (e.key === "ArrowDown") {
+			if (!state.searchDropdownOpen || state.searchResults.length === 0) return;
+			e.preventDefault();
+			state.searchHighlightedIndex = (state.searchHighlightedIndex + 1) % state.searchResults.length;
+			renderSearchDropdown();
+		} else if (e.key === "ArrowUp") {
+			if (!state.searchDropdownOpen || state.searchResults.length === 0) return;
+			e.preventDefault();
+			state.searchHighlightedIndex = (state.searchHighlightedIndex - 1 + state.searchResults.length) % state.searchResults.length;
+			renderSearchDropdown();
+		} else if (e.key === "Enter") {
+			e.preventDefault();
+			const query = input.value.trim();
+			if (!query) return;
+			// If dropdown is open with a highlighted result, select it
+			if (state.searchDropdownOpen && state.searchResults.length > 0 && state.searchHighlightedIndex >= 0) {
+				const selected = state.searchResults[state.searchHighlightedIndex];
+				if (selected) {
+					selectSearchResult(selected.code, selected.name, selected.market);
+					return;
+				}
+			}
+			// Search cache and select first match, or fallback to iwencai
+			if (state.allStocksLoaded) {
+				const matches = state.allStocks.filter((s) => matchesSearch(s, query));
+				if (matches.length > 0) {
+					selectSearchResult(matches[0].code, matches[0].name, matches[0].market);
+				} else {
+					// Fallback: ask iwencai to find the stock
+					lookupStockViaIwencai(query);
+				}
+			} else {
+				// Cache not loaded yet, try iwencai directly
+				lookupStockViaIwencai(query);
+			}
+		} else if (e.key === "Escape") {
+			state.searchDropdownOpen = false;
+			renderSearchDropdown();
+		}
+	});
+
+	// Close dropdown when clicking outside
+	document.addEventListener("click", (e) => {
+		if (!input.contains(e.target as Node) && !dropdown.contains(e.target as Node)) {
+			state.searchDropdownOpen = false;
+			renderSearchDropdown();
+		}
+	});
+
+	// Focus input opens dropdown if there are results
+	input.addEventListener("focus", () => {
+		if (state.searchResults.length > 0) {
+			state.searchDropdownOpen = true;
+			renderSearchDropdown();
+		}
+	});
+}
+
+/** Fallback: query iwencai to find stock by natural language */
+async function lookupStockViaIwencai(query: string) {
+	try {
+		console.log(`[Search] Falling back to iwencai for: ${query}`);
+		const result = await apiClient.lookupStock(query);
+		if (result.success && result.results && result.results.length > 0) {
+			const stock = result.results[0];
+			selectSearchResult(stock.code, stock.name, stock.market);
+		} else {
+			console.warn("[Search] iwencai found no results for:", query);
+		}
+	} catch (err) {
+		console.error("[Search] iwencai lookup failed:", err);
+	}
+}
+
 // ─── App HTML ───────────────────────────────────────────────
 
 function renderApp() {
@@ -1521,13 +1857,13 @@ function renderApp() {
 				<span class="text-muted-foreground">市场情绪: 加载中...</span>
 			</div>
 
-			<!-- Market status -->
-			<div id="market-status" class="market-status-bar">
-				<span class="market-status-badge closed" id="market-phase">休市</span>
-				<span class="connection-badge" id="connection-status">
-					<span class="connection-dot connecting"></span>
-					<span>连接中...</span>
-				</span>
+			<!-- Search bar -->
+			<div class="search-bar">
+				<span class="search-bar-label">RESEARCH</span>
+				<div class="search-input-wrapper">
+					<input type="text" id="stock-search-input" placeholder="搜索股票 (代码/名称/拼音)" autocomplete="off" />
+					<div id="search-dropdown" class="search-dropdown hidden"></div>
+				</div>
 			</div>
 
 			<!-- Main content: sidebar + chat + calendar -->
@@ -1614,6 +1950,19 @@ function renderApp() {
 						</div>
 					</div>
 
+					<!-- News Panel -->
+					<div class="collapsible-panel" id="news-panel-wrapper">
+						<div class="collapsible-header" id="news-toggle">
+							<span class="collapsible-title">📰 财经新闻</span>
+							<svg class="collapsible-chevron ${state.newsCollapsed ? 'collapsed' : ''}" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+								<polyline points="18 15 12 9 6 15"></polyline>
+							</svg>
+						</div>
+						<div class="collapsible-content ${state.newsCollapsed ? 'collapsed' : ''}" id="news-content">
+							<div id="news-panel" class="news-panel"></div>
+						</div>
+					</div>
+
 					<button id="mobile-right-close" class="mobile-toggle mobile-panel-close" aria-label="关闭">
 						<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
 							<line x1="18" y1="6" x2="6" y2="18"></line>
@@ -1633,10 +1982,13 @@ function init() {
 	setupWebSocket();
 	setupInput();
 	setupMobileDrawers();
+	setupSearch();
 	fetchIndices();
 	fetchStockPools();
+	loadAllStocks();
 	fetchCalendarForMonth();
 	fetchHotStocks();
+	fetchNewsForStock(); // Load market-wide news on init
 
 	// Refresh indices every 60s
 	setInterval(fetchIndices, 60_000);

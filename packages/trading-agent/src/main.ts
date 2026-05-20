@@ -9,7 +9,7 @@ import { SessionMemory } from "./core/session-memory.js";
 import { discoverAllSkillDirs, loadSkillFromFile, loadSystemPromptFromFile } from "./core/skill-loader.js";
 import { SkillRegistry } from "./core/skill-registry.js";
 import { TradingSession } from "./core/trading-session.js";
-import { createDataStore, DataSyncService, setDataStore, setDataSync } from "./data/index.js";
+import { createDataStore, DataSyncService, setDataStore, setDataSync, requireStore } from "./data/index.js";
 import { postMarketRoutine } from "./scheduler/routines/post-market.js";
 import { preMarketRoutine } from "./scheduler/routines/pre-market.js";
 import { TaskScheduler } from "./scheduler/task-scheduler.js";
@@ -524,7 +524,8 @@ async function main() {
 	const useRepl = process.argv.includes("--repl");
 
 	if (useWeb) {
-		await initSentiment();
+		// Start sentiment fetch in background (don't block server startup)
+		initSentiment().catch(() => {});
 
 		const portIdx = process.argv.indexOf("--port");
 		const port = portIdx >= 0 ? Number(process.argv[portIdx + 1]) || 3000 : 3000;
@@ -538,6 +539,18 @@ async function main() {
 		const bgSync = new BackgroundSyncService();
 		globalBgSync = bgSync;
 		bgSync.start();
+
+		// Ensure "最近访问" stock pool exists
+		try {
+			const store = requireStore();
+			const recentPool = await store.getStockPoolByName("最近访问");
+			if (!recentPool) {
+				await store.createStockPool("最近访问", "自动记录最近查看的股票");
+				console.log("[RecentPool] Created '最近访问' stock pool");
+			}
+		} catch (e) {
+			console.warn("[RecentPool] Failed to ensure recent pool exists:", e);
+		}
 
 		const { httpServer } = startServer(session, { port, staticDir, bgSync });
 

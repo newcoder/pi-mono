@@ -387,6 +387,16 @@ export class DataStore {
 		return rows.map((r) => ({ ...r, concepts: r.concepts ? JSON.parse(r.concepts) : undefined }));
 	}
 
+	async searchStocks(query: string, limit = 10): Promise<StockRow[]> {
+		if (!this.db || !query) return [];
+		const q = s(query);
+		const rows = await promisifyQuery(
+			this.db,
+			`SELECT * FROM stocks WHERE code LIKE ${q} || '%' OR name LIKE '%' || ${q} || '%' ORDER BY code LIMIT ${limit}`,
+		);
+		return rows.map((r) => ({ ...r, concepts: r.concepts ? JSON.parse(r.concepts) : undefined }));
+	}
+
 	// ─── Klines ─────────────────────────────────────────────────────
 
 	async saveKlines(klines: KlineRow[]): Promise<void> {

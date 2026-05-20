@@ -106,6 +106,22 @@ export class TradingApiClient extends EventTarget {
 		return this.httpDelete(`/api/stock-pools/${poolId}`);
 	}
 
+	async addToStockPool(poolId: number, items: Array<{ code: string; market: number; name?: string }>) {
+		return this.httpPost(`/api/stock-pools/${poolId}/items`, { items });
+	}
+
+	async getAllStocks() {
+		return this.httpGet("/api/stocks?all=1");
+	}
+
+	async searchStocks(query: string, limit = 10) {
+		return this.httpGet(`/api/stocks?search=${encodeURIComponent(query)}&limit=${limit}`);
+	}
+
+	async lookupStock(query: string) {
+		return this.httpPost("/api/stock-lookup", { query });
+	}
+
 	async getSectors() {
 		return this.httpGet("/api/sectors");
 	}
@@ -119,6 +135,14 @@ export class TradingApiClient extends EventTarget {
 		if (date) query.set("date", date);
 		if (limit) query.set("limit", String(limit));
 		return this.httpGet(`/api/hot-stocks?${query.toString()}`);
+	}
+
+	async getNews(code?: string, sources?: string, limit?: number) {
+		const query = new URLSearchParams();
+		if (code) query.set("code", code);
+		if (sources) query.set("sources", sources);
+		if (limit) query.set("limit", String(limit));
+		return this.httpGet(`/api/news?${query.toString()}`);
 	}
 
 	async getCalendar(start: string, end: string, code?: string) {
