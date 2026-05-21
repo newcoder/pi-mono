@@ -9,7 +9,7 @@ import { SessionMemory } from "./core/session-memory.js";
 import { discoverAllSkillDirs, loadSkillFromFile, loadSystemPromptFromFile } from "./core/skill-loader.js";
 import { SkillRegistry } from "./core/skill-registry.js";
 import { TradingSession } from "./core/trading-session.js";
-import { createDataStore, DataSyncService, setDataStore, setDataSync, requireStore } from "./data/index.js";
+import { createDataStore, DataSyncService, requireStore, setDataStore, setDataSync } from "./data/index.js";
 import { postMarketRoutine } from "./scheduler/routines/post-market.js";
 import { preMarketRoutine } from "./scheduler/routines/pre-market.js";
 import { TaskScheduler } from "./scheduler/task-scheduler.js";
@@ -427,6 +427,8 @@ async function main() {
 						limitDown: d.limit_down ?? 0,
 						northboundFlow: d.northbound_flow ?? 0,
 						sentimentIndex: d.sentiment_index ?? 50,
+						topSectors: d.top_sectors ?? [],
+						bottomSectors: d.bottom_sectors ?? [],
 					},
 				});
 			}
@@ -484,6 +486,8 @@ async function main() {
 						limitDown: d.limit_down ?? 0,
 						northboundFlow: d.northbound_flow ?? 0,
 						sentimentIndex: d.sentiment_index ?? 50,
+						topSectors: d.top_sectors ?? [],
+						bottomSectors: d.bottom_sectors ?? [],
 					},
 				});
 			}
@@ -509,6 +513,8 @@ async function main() {
 							limitDown: d.limit_down ?? 0,
 							northboundFlow: d.northbound_flow ?? 0,
 							sentimentIndex: d.sentiment_index ?? 50,
+							topSectors: d.top_sectors ?? [],
+							bottomSectors: d.bottom_sectors ?? [],
 						},
 					});
 				}

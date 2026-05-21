@@ -18,6 +18,15 @@ interface IndexQuote {
 	change_pct: number;
 }
 
+interface SectorData {
+	name: string;
+	change_pct: number;
+	up_count: number;
+	down_count: number;
+	leader: string;
+	leader_change: number;
+}
+
 interface SentimentData {
 	advance: number;
 	decline: number;
@@ -26,6 +35,8 @@ interface SentimentData {
 	limitDown: number;
 	northboundFlow: number;
 	sentimentIndex: number;
+	topSectors?: SectorData[];
+	bottomSectors?: SectorData[];
 }
 
 interface StockPool {
@@ -415,6 +426,14 @@ function renderSentiment() {
 		pct >= 20 ? "偏空" :
 		"强烈偏空";
 	const nbSign = s.northboundFlow >= 0 ? "+" : "";
+	const topSectors = s.topSectors?.slice(0, 3) || [];
+	const bottomSectors = s.bottomSectors?.slice(0, 3) || [];
+	const sectorsHTML = (topSectors.length > 0 || bottomSectors.length > 0)
+		? `<span class="sentiment-sectors">
+			${topSectors.map((sec) => `<span class="sector-tag sector-up">${sec.name} +${sec.change_pct}%</span>`).join("")}
+			${bottomSectors.map((sec) => `<span class="sector-tag sector-down">${sec.name} ${sec.change_pct}%</span>`).join("")}
+		</span>`
+		: "";
 	container.innerHTML = `
 		<span class="sentiment-stat">情绪 ${pct}</span>
 		<div class="sentiment-progress">
@@ -430,6 +449,7 @@ function renderSentiment() {
 		<span class="sentiment-stat">涨停${s.limitUp}</span>
 		<span class="sentiment-stat">跌停${s.limitDown}</span>
 		<span class="sentiment-stat">北向 ${nbSign}${s.northboundFlow}亿</span>
+		${sectorsHTML}
 	`;
 }
 

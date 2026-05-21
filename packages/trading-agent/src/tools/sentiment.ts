@@ -7,6 +7,15 @@ const sentimentParams = Type.Object({
 	detail: Type.Optional(Type.Boolean({ description: "是否输出板块涨跌分布", default: false })),
 });
 
+interface SectorData {
+	name: string;
+	change_pct: number;
+	up_count: number;
+	down_count: number;
+	leader: string;
+	leader_change: number;
+}
+
 interface SentimentData {
 	date: string;
 	trading_date: string;
@@ -18,6 +27,8 @@ interface SentimentData {
 	limit_down: number;
 	northbound_flow: number;
 	sentiment_index: number;
+	top_sectors?: SectorData[];
+	bottom_sectors?: SectorData[];
 	note?: string;
 }
 
@@ -47,6 +58,13 @@ function formatSentiment(data: SentimentData): string {
 	lines.push(`北向资金  净流入 ${nbSign}${data.northbound_flow} 亿`);
 	const bar = renderProgressBar(data.sentiment_index);
 	lines.push(`情绪指数  ${data.sentiment_index}/100 [${bar}] ${sentimentLabel(data.sentiment_index)}`);
+	if (data.top_sectors && data.top_sectors.length > 0) {
+		lines.push("");
+		lines.push(`最强板块  ${data.top_sectors.map((s) => `${s.name}(+${s.change_pct}%)`).join(", ")}`);
+	}
+	if (data.bottom_sectors && data.bottom_sectors.length > 0) {
+		lines.push(`最弱板块  ${data.bottom_sectors.map((s) => `${s.name}(${s.change_pct}%)`).join(", ")}`);
+	}
 	return lines.join("\n");
 }
 
