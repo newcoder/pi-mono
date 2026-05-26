@@ -27,18 +27,6 @@ interface SectorData {
 	leader_change: number;
 }
 
-interface SentimentData {
-	advance: number;
-	decline: number;
-	flat: number;
-	limitUp: number;
-	limitDown: number;
-	northboundFlow: number;
-	sentimentIndex: number;
-	topSectors?: SectorData[];
-	bottomSectors?: SectorData[];
-}
-
 interface StockPool {
 	id: number;
 	name: string;
@@ -73,21 +61,6 @@ interface ToolLog {
 	timestamp: number;
 }
 
-interface HotStock {
-	code: string;
-	name: string;
-	reason: string;
-	date: string;
-	market: number;
-	price: number;
-	change_pct: number;
-	turnover_pct: number;
-	amount_wan: number;
-	pe_ttm: number;
-	pb: number;
-	mcap_yi: number;
-}
-
 interface KlineData {
 	date: string;
 	open: number;
@@ -104,7 +77,6 @@ const state = {
 	messages: [] as ChatMessage[],
 	indices: [] as IndexQuote[],
 	indicesLoaded: false,
-	sentiment: null as SentimentData | null,
 	marketPhase: "closed" as string,
 	connected: false,
 	isStreaming: false,
@@ -126,11 +98,6 @@ const state = {
 	calendarSelectedDate: null as string | null,
 	calendarLoading: false,
 	calendarCollapsed: false,
-	// Hot stocks state
-	hotStocks: [] as HotStock[],
-	hotStocksDate: "" as string,
-	hotStocksLoading: false,
-	hotStocksCollapsed: false,
 	// News state
 	newsItems: [] as Array<{
 		title: string;
@@ -148,6 +115,9 @@ const state = {
 	// Tool log state
 	toolLogs: [] as ToolLog[],
 	nextToolLogId: 0,
+	toolLogCollapsed: false,
+	// File attachments
+	attachedFiles: [] as Array<{ name: string; content: string; mimeType: string }>,
 	// Search state
 	searchQuery: "",
 	searchResults: [] as Array<{ code: string; name: string; market: number }>,
@@ -265,6 +235,24 @@ function $(id: string) {
 	const el = document.getElementById(id);
 	if (!el) throw new Error(`Element not found: #${id}`);
 	return el;
+}
+
+function readFileAsText(file: File): Promise<string> {
+	return new Promise((resolve, reject) => {
+		const reader = new FileReader();
+		reader.onload = () => resolve(String(reader.result));
+		reader.onerror = reject;
+		reader.readAsText(file);
+	});
+}
+
+function readFileAsDataURL(file: File): Promise<string> {
+	return new Promise((resolve, reject) => {
+		const reader = new FileReader();
+		reader.onload = () => resolve(String(reader.result));
+		reader.onerror = reject;
+		reader.readAsDataURL(file);
+	});
 }
 
 // ─── Chart helpers ──────────────────────────────────────────
@@ -405,59 +393,22 @@ function renderIndices() {
 	});
 }
 
-function renderSentiment() {
-	const container = $("sentiment-bar");
-	if (!state.sentiment) {
-		container.innerHTML = `<span class="text-muted-foreground">市场情绪: 加载中...</span>`;
-		return;
-	}
-	const s = state.sentiment;
-	const pct = Math.round(s.sentimentIndex);
-	const fillColor =
-		pct >= 80 ? "linear-gradient(90deg, #22c55e, #16a34a)" :
-		pct >= 60 ? "linear-gradient(90deg, #4ade80, #22c55e)" :
-		pct >= 40 ? "linear-gradient(90deg, #eab308, #ca8a04)" :
-		pct >= 20 ? "linear-gradient(90deg, #f97316, #ea580c)" :
-		"linear-gradient(90deg, #ef4444, #dc2626)";
-	const label =
-		pct >= 80 ? "强烈偏多" :
-		pct >= 60 ? "偏多" :
-		pct >= 40 ? "中性" :
-		pct >= 20 ? "偏空" :
-		"强烈偏空";
-	const nbSign = s.northboundFlow >= 0 ? "+" : "";
-	const topSectors = s.topSectors?.slice(0, 3) || [];
-	const bottomSectors = s.bottomSectors?.slice(0, 3) || [];
-	const sectorsHTML = (topSectors.length > 0 || bottomSectors.length > 0)
-		? `<span class="sentiment-sectors">
-			${topSectors.map((sec) => `<span class="sector-tag sector-up">${sec.name} +${sec.change_pct}%</span>`).join("")}
-			${bottomSectors.map((sec) => `<span class="sector-tag sector-down">${sec.name} ${sec.change_pct}%</span>`).join("")}
-		</span>`
-		: "";
-	container.innerHTML = `
-		<span class="sentiment-stat">情绪 ${pct}</span>
-		<div class="sentiment-progress">
-			<div class="sentiment-progress-fill" style="width: ${pct}%; background: ${fillColor}"></div>
-		</div>
-		<span class="sentiment-label">${label}</span>
-		<span class="sentiment-stat">
-			<span class="sentiment-stat-dot" style="background: var(--color-up)"></span>涨${s.advance}
-		</span>
-		<span class="sentiment-stat">
-			<span class="sentiment-stat-dot" style="background: var(--color-down)"></span>跌${s.decline}
-		</span>
-		<span class="sentiment-stat">涨停${s.limitUp}</span>
-		<span class="sentiment-stat">跌停${s.limitDown}</span>
-		<span class="sentiment-stat">北向 ${nbSign}${s.northboundFlow}亿</span>
-		${sectorsHTML}
-	`;
+
+function buildAttachmentHTML(files: Array<{ name: string; mimeType: string }>): string {
+	if (!files || files.length === 0) return "";
+	const items = files.map((f) => {
+		const icon = f.mimeType.startsWith("image/") ? "🖼️" : "📄";
+		return `<span class="attachment-tag">${icon} ${escapeHtml(f.name)}</span>`;
+	}).join("");
+	return `<div class="message-attachments">${items}</div>`;
 }
 
 function buildMessageHTML(msg: ChatMessage): string {
 	if (msg.role === "user") {
+		const attachments = (msg as any).attachments ? buildAttachmentHTML((msg as any).attachments) : "";
 		return `<div class="message-wrapper user">
 			<div class="message-avatar user">你</div>
-			<div class="message-bubble user">${escapeHtml(msg.content)}</div>
+			<div class="message-bubble user">${attachments}${escapeHtml(msg.content)}</div>
 		</div>`;
 	}
 	if (msg.role === "assistant") {
@@ -508,16 +459,20 @@ function renderMessages() {
 }
 
 function renderWatchlist() {
-	const container = $("watchlist-panel");
+	const poolListEl = $("pool-list");
+	const poolItemsEl = $("pool-items");
+
 	if (state.stockPools.length === 0) {
-		container.innerHTML = `<div class="empty-state"><div class="empty-state-icon">📋</div><div>暂无股票池</div></div>`;
+		poolListEl.innerHTML = `<div class="empty-state"><div class="empty-state-icon">📋</div><div>暂无股票池</div></div>`;
+		poolItemsEl.innerHTML = "";
 		return;
 	}
 
-	let html = ``;
+	// Render pool cards into left column
+	let poolsHtml = ``;
 	for (const pool of state.stockPools) {
 		const isSelected = state.selectedPool?.id === pool.id;
-		html += `
+		poolsHtml += `
 			<div class="pool-card ${isSelected ? 'active' : ''}" data-pool-id="${pool.id}">
 				<div class="pool-card-header">
 					<div class="pool-name">${escapeHtml(pool.name)}</div>
@@ -527,33 +482,34 @@ function renderWatchlist() {
 			</div>
 		`;
 	}
+	poolListEl.innerHTML = poolsHtml;
 
-	// Pool items
+	// Render pool items into right column
 	if (state.selectedPool && state.poolItems.length > 0) {
-		html += `<div class="pool-items-header">${escapeHtml(state.selectedPool.name)}</div>`;
+		let itemsHtml = `<div class="pool-items-header">${escapeHtml(state.selectedPool.name)}</div>`;
 		for (const item of state.poolItems) {
 			const isSelected = state.selectedSymbol === item.code;
-			html += `
+			itemsHtml += `
 				<div class="stock-item ${isSelected ? 'active' : ''}" data-stock-code="${item.code}" data-stock-name="${escapeHtml(item.name)}">
 					<span class="stock-item-code">${item.code}</span>
 					<span class="stock-item-name">${escapeHtml(item.name)}</span>
 				</div>
 			`;
 		}
+		poolItemsEl.innerHTML = itemsHtml;
+	} else {
+		poolItemsEl.innerHTML = `<div class="empty-state"><div class="empty-state-icon">📂</div><div>选择股票池查看个股</div></div>`;
 	}
 
-	container.innerHTML = html;
-
-	// Wire up click handlers
-	container.querySelectorAll("[data-pool-id]").forEach((el) => {
+	// Wire up pool card click handlers
+	poolListEl.querySelectorAll("[data-pool-id]").forEach((el) => {
 		el.addEventListener("click", (e) => {
-			// Ignore clicks on delete button
 			if ((e.target as HTMLElement).closest(".pool-delete-btn")) return;
 			const poolId = Number((el as HTMLElement).dataset.poolId);
 			selectPool(poolId);
 		});
 	});
-	container.querySelectorAll("[data-delete-pool-id]").forEach((el) => {
+	poolListEl.querySelectorAll("[data-delete-pool-id]").forEach((el) => {
 		el.addEventListener("click", async (e) => {
 			e.stopPropagation();
 			const poolId = Number((el as HTMLElement).dataset.deletePoolId);
@@ -578,11 +534,13 @@ function renderWatchlist() {
 			}
 		});
 	});
-	container.querySelectorAll("[data-stock-code]").forEach((el) => {
+
+	// Wire up stock item click handlers
+	poolItemsEl.querySelectorAll("[data-stock-code]").forEach((el) => {
 		el.addEventListener("click", () => {
 			const code = (el as HTMLElement).dataset.stockCode!;
-				const name = (el as HTMLElement).dataset.stockName;
-				selectSymbol(code, "stock", name);
+			const name = (el as HTMLElement).dataset.stockName;
+			selectSymbol(code, "stock", name);
 		});
 	});
 }
@@ -1053,58 +1011,6 @@ function renderCalendar() {
 
 // ─── Hot Stocks Rendering ───────────────────────────────────
 
-function renderHotStocks() {
-	const container = $("hot-stocks-list");
-	if (!container) return;
-
-	if (state.hotStocksLoading) {
-		container.innerHTML = `<div class="empty-state"><span class="loading-spinner"></span></div>`;
-		return;
-	}
-
-	if (state.hotStocks.length === 0) {
-		container.innerHTML = `<div class="empty-state"><div class="empty-state-icon">📈</div><div>暂无强势股数据</div></div>`;
-		return;
-	}
-
-	let html = `<div class="hot-stocks-date">${escapeHtml(state.hotStocksDate)} 同花顺热点</div>`;
-	for (const stock of state.hotStocks) {
-		const changeClass = stock.change_pct > 0 ? "text-up" : stock.change_pct < 0 ? "text-down" : "text-neutral";
-		const sign = stock.change_pct >= 0 ? "+" : "";
-		const reasons = stock.reason
-			.split(/[+、,，;；]/)
-			.filter((r) => r.trim())
-			.map((r) => `<span class="hot-stock-tag">${escapeHtml(r.trim())}</span>`)
-			.join("");
-
-		html += `
-			<div class="hot-stock-item" data-stock-code="${stock.code}" data-stock-name="${escapeHtml(stock.name)}">
-				<div class="hot-stock-header">
-					<span class="hot-stock-name">${escapeHtml(stock.name)}</span>
-					<span class="hot-stock-code">${stock.code}</span>
-					<span class="hot-stock-change ${changeClass}">${sign}${stock.change_pct.toFixed(2)}%</span>
-				</div>
-				<div class="hot-stock-tags">${reasons}</div>
-				<div class="hot-stock-metrics">
-					<span>价格 ${stock.price.toFixed(2)}</span>
-					<span>换手 ${stock.turnover_pct.toFixed(1)}%</span>
-					<span>市值 ${(stock.mcap_yi).toFixed(1)}亿</span>
-				</div>
-			</div>
-		`;
-	}
-	container.innerHTML = html;
-
-	// Wire up click handlers
-	container.querySelectorAll(".hot-stock-item").forEach((el) => {
-		el.addEventListener("click", () => {
-			const code = (el as HTMLElement).dataset.stockCode!;
-				const name = (el as HTMLElement).dataset.stockName;
-			selectSymbol(code, "stock", name);
-		});
-	});
-}
-
 // ─── News Rendering ─────────────────────────────────────────
 
 function renderNews() {
@@ -1247,22 +1153,6 @@ async function refreshCalendar() {
 	} finally {
 		state.calendarLoading = false;
 		renderCalendar();
-	}
-}
-
-async function fetchHotStocks() {
-	try {
-		state.hotStocksLoading = true;
-		renderHotStocks();
-		const result = await apiClient.getHotStocks(undefined, 50);
-		state.hotStocks = result.rows || [];
-		state.hotStocksDate = result.date || "";
-		state.hotStocksLoading = false;
-		renderHotStocks();
-	} catch (err) {
-		console.error("Failed to fetch hot stocks:", err);
-		state.hotStocksLoading = false;
-		renderHotStocks();
 	}
 }
 
@@ -1453,10 +1343,6 @@ function handleAgentEvent(ev: any) {
 }
 
 function handleTradingEvent(ev: any) {
-	if (ev.type === "sentiment_update" && ev.data) {
-		state.sentiment = ev.data;
-		renderSentiment();
-	}
 	if (ev.type === "mode_change") {
 		state.marketPhase = ev.mode;
 	}
@@ -1493,14 +1379,73 @@ function setupWebSocket() {
 function setupInput() {
 	const input = $("message-input") as HTMLInputElement;
 	const sendBtn = $("send-btn");
+	const attachBtn = $("attach-btn");
+	const fileInput = $("file-input") as HTMLInputElement;
+	const attachmentPreview = $("attachment-preview");
+
+	const updateAttachmentPreview = () => {
+		if (state.attachedFiles.length === 0) {
+			attachmentPreview.innerHTML = "";
+			attachmentPreview.classList.add("hidden");
+			return;
+		}
+		attachmentPreview.classList.remove("hidden");
+		attachmentPreview.innerHTML = state.attachedFiles.map((f, i) => {
+			const icon = f.mimeType.startsWith("image/") ? "🖼️" : "📄";
+			return `<span class="attachment-chip">${icon} ${escapeHtml(f.name)}<button class="attachment-remove" data-index="${i}" title="移除">×</button></span>`;
+		}).join("");
+
+		// Wire up remove buttons
+		attachmentPreview.querySelectorAll(".attachment-remove").forEach((btn) => {
+			btn.addEventListener("click", (e) => {
+				e.stopPropagation();
+				const idx = Number((btn as HTMLElement).dataset.index);
+				state.attachedFiles.splice(idx, 1);
+				updateAttachmentPreview();
+			});
+		});
+	};
+
+	attachBtn.addEventListener("click", () => {
+		fileInput.click();
+	});
+
+	fileInput.addEventListener("change", async () => {
+		const files = fileInput.files;
+		if (!files) return;
+
+		for (const file of Array.from(files)) {
+			try {
+				let content: string;
+				if (file.type.startsWith("image/")) {
+					content = await readFileAsDataURL(file);
+				} else {
+					content = await readFileAsText(file);
+				}
+				state.attachedFiles.push({
+					name: file.name,
+					content,
+					mimeType: file.type || "application/octet-stream",
+				});
+			} catch (err) {
+				console.error("[File] Failed to read:", file.name, err);
+			}
+		}
+		updateAttachmentPreview();
+		fileInput.value = "";
+	});
 
 	const send = () => {
 		const text = input.value.trim();
-		if (!text || state.isStreaming) return;
-		state.messages.push({ role: "user", content: text });
+		if ((!text && state.attachedFiles.length === 0) || state.isStreaming) return;
+
+		const attachments = state.attachedFiles.slice();
+		state.messages.push({ role: "user", content: text || "(file)", attachments: attachments.map((a) => ({ name: a.name, mimeType: a.mimeType })) } as any);
 		renderMessages();
-		apiClient.prompt(text);
+		apiClient.prompt(text, attachments);
 		input.value = "";
+		state.attachedFiles = [];
+		updateAttachmentPreview();
 	};
 
 	sendBtn.addEventListener("click", send);
@@ -1521,17 +1466,6 @@ function setupInput() {
 	}
 
 	// Collapsible panel toggles
-	const hotStocksToggle = document.getElementById("hot-stocks-toggle");
-	if (hotStocksToggle) {
-		hotStocksToggle.addEventListener("click", () => {
-			state.hotStocksCollapsed = !state.hotStocksCollapsed;
-			const chevron = hotStocksToggle.querySelector(".collapsible-chevron");
-			const content = document.getElementById("hot-stocks-content");
-			if (chevron) chevron.classList.toggle("collapsed", state.hotStocksCollapsed);
-			if (content) content.classList.toggle("collapsed", state.hotStocksCollapsed);
-		});
-	}
-
 	const calendarToggle = document.getElementById("calendar-toggle");
 	if (calendarToggle) {
 		calendarToggle.addEventListener("click", () => {
@@ -1553,6 +1487,155 @@ function setupInput() {
 			const content = document.getElementById("news-content");
 			if (chevron) chevron.classList.toggle("collapsed", state.newsCollapsed);
 			if (content) content.classList.toggle("collapsed", state.newsCollapsed);
+		});
+	}
+
+	// Tool log toggle
+	const toolLogToggle = document.getElementById("tool-log-toggle");
+	const toolLogPanel = document.getElementById("tool-log-panel");
+	if (toolLogToggle && toolLogPanel) {
+		toolLogToggle.addEventListener("click", () => {
+			state.toolLogCollapsed = !state.toolLogCollapsed;
+			toolLogPanel.classList.toggle("collapsed", state.toolLogCollapsed);
+			toolLogToggle.title = state.toolLogCollapsed ? "展开" : "收起";
+		});
+	}
+
+	// Settings button
+	const settingsBtn = document.getElementById("settings-btn");
+	if (settingsBtn) {
+		settingsBtn.addEventListener("click", () => {
+			openSettingsModal();
+		});
+	}
+}
+
+// ─── Settings Modal ─────────────────────────────────────────
+
+interface ModelConfigData {
+	providers: Array<{
+		id: string;
+		models: Array<{
+			id: string;
+			name: string;
+			provider: string;
+			api: string;
+			baseUrl?: string;
+			reasoning?: boolean;
+			contextWindow?: number;
+			maxTokens?: number;
+		}>;
+	}>;
+	available: string[];
+	currentModel?: { provider: string; modelId: string };
+}
+
+let modelConfigData: ModelConfigData | null = null;
+
+async function openSettingsModal() {
+	const modal = document.getElementById("settings-modal");
+	if (!modal) return;
+
+	// Load model config if not already loaded
+	if (!modelConfigData) {
+		try {
+			modelConfigData = await apiClient.getModelConfig();
+		} catch (err) {
+			console.error("[Settings] Failed to load model config:", err);
+		}
+	}
+
+	const current = modelConfigData?.currentModel;
+	populateProviderSelect(current?.provider, current?.modelId);
+	modal.classList.remove("hidden");
+}
+
+function closeSettingsModal() {
+	const modal = document.getElementById("settings-modal");
+	if (modal) modal.classList.add("hidden");
+}
+
+function populateProviderSelect(currentProvider?: string, currentModelId?: string) {
+	const providerSelect = document.getElementById("settings-provider") as HTMLSelectElement;
+	const modelSelect = document.getElementById("settings-model") as HTMLSelectElement;
+	if (!providerSelect || !modelSelect || !modelConfigData) return;
+
+	providerSelect.innerHTML = '<option value="">选择提供商</option>' +
+		modelConfigData.providers.map((p) => `<option value="${p.id}" ${p.id === currentProvider ? 'selected' : ''}>${p.id}</option>`).join("");
+
+	if (currentProvider) {
+		const provider = modelConfigData.providers.find((p) => p.id === currentProvider);
+		if (provider) {
+			modelSelect.innerHTML = '<option value="">选择模型</option>' +
+				provider.models.map((m) => `<option value="${m.id}" ${m.id === currentModelId ? 'selected' : ''}>${m.name || m.id}</option>`).join("");
+		} else {
+			modelSelect.innerHTML = '<option value="">先选择提供商</option>';
+		}
+	} else {
+		modelSelect.innerHTML = '<option value="">先选择提供商</option>';
+	}
+}
+
+function handleProviderChange() {
+	const providerSelect = document.getElementById("settings-provider") as HTMLSelectElement;
+	const modelSelect = document.getElementById("settings-model") as HTMLSelectElement;
+	if (!providerSelect || !modelSelect || !modelConfigData) return;
+
+	const provider = modelConfigData.providers.find((p) => p.id === providerSelect.value);
+	if (provider) {
+		modelSelect.innerHTML = '<option value="">选择模型</option>' +
+			provider.models.map((m) => `<option value="${m.id}">${m.name || m.id}</option>`).join("");
+	} else {
+		modelSelect.innerHTML = '<option value="">先选择提供商</option>';
+	}
+}
+
+function setupSettingsModal() {
+	const modal = document.getElementById("settings-modal");
+	const closeBtn = document.getElementById("settings-close");
+	const cancelBtn = document.getElementById("settings-cancel");
+	const saveBtn = document.getElementById("settings-save");
+	const providerSelect = document.getElementById("settings-provider") as HTMLSelectElement;
+
+	if (closeBtn) closeBtn.addEventListener("click", closeSettingsModal);
+	if (cancelBtn) cancelBtn.addEventListener("click", closeSettingsModal);
+	if (modal) {
+		modal.addEventListener("click", (e) => {
+			if (e.target === modal) closeSettingsModal();
+		});
+	}
+	if (providerSelect) {
+		providerSelect.addEventListener("change", handleProviderChange);
+	}
+
+	if (saveBtn) {
+		saveBtn.addEventListener("click", async () => {
+			const providerSelect = document.getElementById("settings-provider") as HTMLSelectElement;
+			const modelSelect = document.getElementById("settings-model") as HTMLSelectElement;
+			const apiKeyInput = document.getElementById("settings-api-key") as HTMLInputElement;
+			const baseUrlInput = document.getElementById("settings-base-url") as HTMLInputElement;
+
+			const provider = providerSelect.value;
+			const modelId = modelSelect.value;
+			if (!provider || !modelId) {
+				alert("请选择提供商和模型");
+				return;
+			}
+
+			try {
+				await apiClient.updateModelConfig({
+					provider,
+					modelId,
+					apiKey: apiKeyInput.value || undefined,
+					baseUrl: baseUrlInput.value || undefined,
+				});
+				closeSettingsModal();
+				// Reload page to apply new model config
+				window.location.reload();
+			} catch (err) {
+				console.error("[Settings] Failed to save:", err);
+				alert("保存失败: " + (err instanceof Error ? err.message : String(err)));
+			}
 		});
 	}
 }
@@ -1872,12 +1955,7 @@ function renderApp() {
 				</button>
 			</div>
 
-			<!-- Sentiment bar -->
-			<div id="sentiment-bar" class="sentiment-bar">
-				<span class="text-muted-foreground">市场情绪: 加载中...</span>
-			</div>
-
-			<!-- Search bar -->
+				<!-- Search bar -->
 			<div class="search-bar">
 				<span class="search-bar-label">RESEARCH</span>
 				<div class="search-input-wrapper">
@@ -1902,7 +1980,10 @@ function renderApp() {
 							</svg>
 						</button>
 					</div>
-					<div id="watchlist-panel" class="sidebar-content"></div>
+					<div id="watchlist-panel" class="sidebar-content">
+						<div id="pool-list" class="pool-list"></div>
+						<div id="pool-items" class="pool-items"></div>
+					</div>
 				</div>
 
 				<!-- Center: Chat area -->
@@ -1910,9 +1991,35 @@ function renderApp() {
 					<div class="chat-main">
 						<!-- Stock Chart Panel -->
 						<div id="stock-chart-panel" class="stock-chart-panel hidden"></div>
-						<div id="message-list" class="message-list"></div>
+						<div class="chat-output-wrapper">
+							<div id="message-list" class="message-list"></div>
+								<div id="tool-log-panel" class="tool-log-panel">
+									<div class="tool-log-panel-header">
+										<span>工具调用</span>
+										<button id="tool-log-toggle" class="tool-log-toggle-btn" title="收起">
+											<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+												<polyline points="15 18 9 12 15 6"></polyline>
+											</svg>
+										</button>
+									</div>
+									<div id="tool-log-list" class="tool-log-list"></div>
+								</div>
+							</div>
 						<div class="chat-input-area">
+							<div id="attachment-preview" class="attachment-preview hidden"></div>
 							<div class="chat-input-wrapper">
+								<button id="settings-btn" class="chat-settings-btn" aria-label="设置" title="模型配置">
+									<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+										<circle cx="12" cy="12" r="3"></circle>
+										<path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"></path>
+									</svg>
+								</button>
+								<button id="attach-btn" class="chat-attach-btn" aria-label="附件" title="上传文件">
+									<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+										<path d="M21.44 11.05l-9.19 9.19a6 6 0 0 1-8.49-8.49l9.19-9.19a4 4 0 0 1 5.66 5.66l-9.2 9.19a2 2 0 0 1-2.83-2.83l8.49-8.48"></path>
+									</svg>
+								</button>
+								<input type="file" id="file-input" style="position:absolute;opacity:0;width:0;height:0;" multiple accept=".txt,.csv,.json,.md,.py,.ts,.js,.html,.css,.xml,.yaml,.yml,image/*" />
 								<input
 									id="message-input"
 									type="text"
@@ -1928,27 +2035,46 @@ function renderApp() {
 							</div>
 						</div>
 					</div>
-					<div id="tool-log-panel" class="tool-log-panel">
-						<div class="tool-log-panel-header">工具调用</div>
-						<div id="tool-log-list" class="tool-log-list"></div>
+				</div>
+
+				<!-- Settings Modal -->
+				<div id="settings-modal" class="modal-overlay hidden">
+					<div class="modal-content">
+						<div class="modal-header">
+							<h3>模型配置</h3>
+							<button id="settings-close" class="modal-close" title="关闭">&times;</button>
+						</div>
+						<div class="modal-body">
+							<div class="form-group">
+								<label for="settings-provider">提供商</label>
+								<select id="settings-provider" class="form-select">
+									<option value="">加载中...</option>
+								</select>
+							</div>
+							<div class="form-group">
+								<label for="settings-model">模型</label>
+								<select id="settings-model" class="form-select">
+									<option value="">先选择提供商</option>
+								</select>
+							</div>
+							<div class="form-group">
+								<label for="settings-api-key">API Key</label>
+								<input type="password" id="settings-api-key" class="form-input" placeholder="输入 API Key (可选)" />
+							</div>
+							<div class="form-group">
+								<label for="settings-base-url">Base URL</label>
+								<input type="text" id="settings-base-url" class="form-input" placeholder="输入 Base URL (可选)" />
+							</div>
+							<div class="form-actions">
+								<button id="settings-save" class="btn-primary">保存</button>
+								<button id="settings-cancel" class="btn-secondary">取消</button>
+							</div>
+						</div>
 					</div>
 				</div>
 
 				<!-- Right sidebar: Hot Stocks + Calendar -->
 				<div id="right-sidebar" class="calendar-sidebar">
-					<!-- Hot Stocks Panel -->
-					<div class="collapsible-panel" id="hot-stocks-panel">
-						<div class="collapsible-header" id="hot-stocks-toggle">
-							<span class="collapsible-title">📈 强势股</span>
-							<svg class="collapsible-chevron ${state.hotStocksCollapsed ? 'collapsed' : ''}" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-								<polyline points="18 15 12 9 6 15"></polyline>
-							</svg>
-						</div>
-						<div class="collapsible-content ${state.hotStocksCollapsed ? 'collapsed' : ''}" id="hot-stocks-content">
-							<div id="hot-stocks-list" class="hot-stocks-list"></div>
-						</div>
-					</div>
-
 					<!-- Calendar Panel -->
 					<div class="collapsible-panel" id="calendar-panel-wrapper">
 						<div class="collapsible-header" id="calendar-toggle">
@@ -2001,13 +2127,13 @@ function init() {
 	renderApp();
 	setupWebSocket();
 	setupInput();
+	setupSettingsModal();
 	setupMobileDrawers();
 	setupSearch();
 	fetchIndices();
 	fetchStockPools();
 	loadAllStocks();
 	fetchCalendarForMonth();
-	fetchHotStocks();
 	fetchNewsForStock(); // Load market-wide news on init
 
 	// Refresh indices every 60s

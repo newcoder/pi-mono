@@ -1,6 +1,7 @@
 import { existsSync, readFileSync, statSync } from "node:fs";
 import { createServer, type IncomingMessage, type ServerResponse } from "node:http";
 import { join, resolve } from "node:path";
+import type { ModelRegistry } from "@mariozechner/pi-coding-agent";
 import { WebSocketServer } from "ws";
 import type { TradingSession } from "../core/trading-session.js";
 import type { BackgroundSyncService } from "./background-sync.js";
@@ -56,6 +57,7 @@ export interface ServerOptions {
 	port?: number;
 	staticDir?: string;
 	bgSync?: BackgroundSyncService;
+	modelRegistry?: ModelRegistry;
 }
 
 export function startServer(
@@ -73,7 +75,7 @@ export function startServer(
 			if (served) return;
 		}
 
-		handleRequest(req, res, options.bgSync, mootdxDaemon);
+		handleRequest(req, res, session, options.bgSync, mootdxDaemon, options.modelRegistry);
 	});
 
 	const wsServer = new WebSocketServer({ server: httpServer });

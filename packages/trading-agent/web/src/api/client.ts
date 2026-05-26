@@ -54,8 +54,12 @@ export class TradingApiClient extends EventTarget {
 		this.ws = null;
 	}
 
-	prompt(message: string) {
-		this.send({ type: "prompt", message });
+	prompt(message: string, attachments?: Array<{ name: string; content: string; mimeType: string }>) {
+		const payload: Record<string, unknown> = { type: "prompt", message };
+		if (attachments && attachments.length > 0) {
+			payload.attachments = attachments;
+		}
+		this.send(payload);
 	}
 
 	getState() {
@@ -157,6 +161,14 @@ export class TradingApiClient extends EventTarget {
 		if (startDate) body.since = startDate;
 		if (endDate) body.until = endDate;
 		return this.httpPost("/api/calendar/refresh", body);
+	}
+
+	async getModelConfig() {
+		return this.httpGet("/api/model-config");
+	}
+
+	async updateModelConfig(config: { provider: string; modelId: string; apiKey?: string; baseUrl?: string }) {
+		return this.httpPost("/api/model-config", config);
 	}
 
 	private async httpGet(path: string) {

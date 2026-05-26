@@ -12,5 +12,6 @@ export interface TradingSessionConfig {
 export type TradingEvent =
 	| AgentEvent
 	| { type: "mode_change"; mode: TradingMode }
+	| { type: "model_change"; model: TradingSessionConfig["model"] }
 	| { type: "routine_start"; name: string }
 	| { type: "routine_end"; name: string; summary: string };

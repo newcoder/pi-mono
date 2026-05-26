@@ -1,4 +1,9 @@
+import { readFileSync, writeFileSync } from "node:fs";
 import type { IncomingMessage, ServerResponse } from "node:http";
+import { homedir } from "node:os";
+import { join } from "node:path";
+import type { ModelRegistry } from "@mariozechner/pi-coding-agent";
+import type { TradingSession } from "../core/trading-session.js";
 import { requireStore, requireSync } from "../data/index.js";
 import { runAStockDataJsonScript, runJsonScript } from "../tools/_utils.js";
 import type { BackgroundSyncService } from "./background-sync.js";
@@ -33,8 +38,10 @@ function parseQuery(url: string): Record<string, string> {
 export async function handleRequest(
 	req: IncomingMessage,
 	res: ServerResponse,
+	session?: TradingSession,
 	bgSync?: BackgroundSyncService,
 	mootdxDaemon?: MootdxDaemon,
+	modelRegistry?: ModelRegistry,
 ): Promise<void> {
 	const url = req.url || "/";
 	const path = url.split("?")[0];
@@ -586,6 +593,96 @@ export async function handleRequest(
 					console.warn("[BackgroundSync] On-demand sync failed:", e);
 				});
 			json(res, 202, { status: "accepted", message: "Sync started in background" });
+			return;
+		}
+
+		// Model configuration endpoints
+		if (path === "/api/model-config" && method === "GET") {
+			if (!modelRegistry) {
+				json(res, 503, { error: "Model registry not available" });
+				return;
+			}
+			const allModels = modelRegistry.getAll();
+			const availableModels = modelRegistry.getAvailable();
+			const providers = [...new Set(allModels.map((m) => m.provider))];
+			json(res, 200, {
+				providers: providers.map((p) => ({
+					id: p,
+					models: allModels
+						.filter((m) => m.provider === p)
+						.map((m) => ({
+							id: m.id,
+							name: m.name,
+							provider: m.provider,
+							api: m.api,
+							baseUrl: m.baseUrl,
+							reasoning: m.reasoning,
+							contextWindow: m.contextWindow,
+							maxTokens: m.maxTokens,
+						})),
+				})),
+				available: availableModels.map((m) => `${m.provider}/${m.id}`),
+				currentModel: session ? { provider: session.model.provider, modelId: session.model.id } : undefined,
+			});
+			return;
+		}
+
+		if (path === "/api/model-config" && method === "POST") {
+			if (!modelRegistry) {
+				json(res, 503, { error: "Model registry not available" });
+				return;
+			}
+			let body = "";
+			for await (const chunk of req) {
+				body += chunk;
+			}
+			const config = body ? JSON.parse(body) : {};
+			const { provider, modelId, apiKey, baseUrl } = config;
+			if (!provider || !modelId) {
+				badRequest(res, "provider and modelId are required");
+				return;
+			}
+
+			// Update auth.json with API key if provided
+			if (apiKey) {
+				modelRegistry.authStorage.set(provider, { type: "api_key", key: apiKey });
+			}
+
+			// Update models.json with baseUrl if provided
+			if (baseUrl) {
+				const agentDir = join(homedir(), ".pi", "agent");
+				const modelsJsonPath = join(agentDir, "models.json");
+				let modelsConfig: { providers: Record<string, { baseUrl?: string; apiKey?: string }> } = { providers: {} };
+				try {
+					const content = readFileSync(modelsJsonPath, "utf-8");
+					modelsConfig = JSON.parse(content);
+				} catch {
+					// File doesn't exist or is invalid, start fresh
+				}
+				if (!modelsConfig.providers) modelsConfig.providers = {};
+				if (!modelsConfig.providers[provider]) modelsConfig.providers[provider] = {};
+				modelsConfig.providers[provider].baseUrl = baseUrl;
+				if (apiKey) modelsConfig.providers[provider].apiKey = apiKey;
+				writeFileSync(modelsJsonPath, JSON.stringify(modelsConfig, null, 2), "utf-8");
+			}
+
+			// Refresh registry to pick up changes
+			modelRegistry.refresh();
+
+			// Switch model in the active session if available
+			if (session) {
+				const newModel = modelRegistry.find(provider, modelId);
+				if (newModel) {
+					try {
+						session.switchModel(newModel);
+						console.log(`[ModelConfig] Switched to ${provider}/${modelId}`);
+					} catch (err) {
+						console.warn(`[ModelConfig] Failed to switch model:`, err);
+					}
+				}
+			}
+
+			json(res, 200, { success: true });
 			return;
 		}
 
