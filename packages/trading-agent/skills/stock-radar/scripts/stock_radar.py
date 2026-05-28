@@ -54,6 +54,16 @@ EVENT_SCORES = {
     "增持计划": 2, "增持完毕": 1,
 }
 
+# 扫描范围（universe）对应的 iwencai query
+UNIVERSE_QUERIES = {
+    "all": None,           # 全市场，不限制
+    "zz1000": "中证1000成分股",
+    "zz500": "中证500成分股",
+    "hs300": "沪深300成分股",
+    "cyb": "创业板成分股",
+    "kcb": "科创板成分股",
+}
+
 NEWS_SENTIMENT_POSITIVE = {
     "利好", "上涨", "涨停", "突破", "超预期", "订单饱满", "业绩暴增",
     "获批", "中标", "签约", "合作", "扩张", "并购", "重组", "创新高",
@@ -367,6 +377,26 @@ def fetch_all_stocks() -> List[Dict[str, str]]:
     return []
 
 
+def fetch_universe_stocks(universe: str) -> List[Dict[str, str]]:
+    """获取指定范围（universe）的股票列表。all=全市场，其他通过iwencai查询成分股。"""
+    if universe == "all" or universe not in UNIVERSE_QUERIES:
+        return fetch_all_stocks()
+
+    query = UNIVERSE_QUERIES[universe]
+    logger.info(f"获取扫描范围: {universe} (iwencai: {query})...")
+    result = _iwencai_query2data(query, limit="1500")
+    stocks = []
+    for row in result.get("datas", []):
+        code = _extract_code(row)
+        if not code:
+            continue
+        name = row.get("股票简称", row.get("名称", ""))
+        market = 1 if code.startswith(("6", "9")) else 0
+        stocks.append({"code": code, "name": name, "market": market})
+    logger.info(f"  -> {universe} 成分股: {len(stocks)} 只")
+    return stocks
+
+
 def _extract_code(row: dict) -> Optional[str]:
     for key in ["股票代码", "代码"]:
         val = str(row.get(key, ""))
@@ -493,6 +523,103 @@ def fetch_major_contracts() -> List[Dict]:
     return events
 
 
+def fetch_buybacks() -> List[Dict]:
+    """回购"""
+    logger.info("获取回购...")
+    result = _iwencai_query2data("近期回购", limit="300")
+    events = []
+    for row in result.get("datas", []):
+        code = _extract_code(row)
+        if not code:
+            continue
+        desc = _build_clean_description(row, ["最新价", "最新涨跌幅"])
+        events.append({
+            "code": code, "name": row.get("股票简称", ""),
+            "type": "回购", "date": str(row.get("公告日期", row.get("日期", "")))[:10],
+            "description": desc, "score": EVENT_SCORES["回购"], "category": "buyback",
+        })
+    logger.info(f"  -> {len(events)} 条")
+    return events
+
+
+def fetch_equity_incentive() -> List[Dict]:
+    """股权激励"""
+    logger.info("获取股权激励...")
+    result = _iwencai_query2data("近期股权激励", limit="300")
+    events = []
+    for row in result.get("datas", []):
+        code = _extract_code(row)
+        if not code:
+            continue
+        desc = _build_clean_description(row, ["最新价", "最新涨跌幅"])
+        events.append({
+            "code": code, "name": row.get("股票简称", ""),
+            "type": "股权激励", "date": str(row.get("公告日期", row.get("日期", "")))[:10],
+            "description": desc, "score": EVENT_SCORES["股权激励"], "category": "incentive",
+        })
+    logger.info(f"  -> {len(events)} 条")
+    return events
+
+
+def fetch_institutional_research() -> List[Dict]:
+    """机构调研"""
+    logger.info("获取机构调研...")
+    result = _iwencai_query2data("近期机构调研", limit="500")
+    events = []
+    for row in result.get("datas", []):
+        code = _extract_code(row)
+        if not code:
+            continue
+        desc = _build_clean_description(row, ["最新价", "最新涨跌幅"])
+        events.append({
+            "code": code, "name": row.get("股票简称", ""),
+            "type": "机构调研", "date": str(row.get("调研日期", row.get("日期", "")))[:10],
+            "description": desc, "score": EVENT_SCORES["机构调研"], "category": "research",
+        })
+    logger.info(f"  -> {len(events)} 条")
+    return events
+
+
+def fetch_shareholder_changes() -> List[Dict]:
+    """大股东增减持（与高管增减持互补）"""
+    logger.info("获取大股东增减持...")
+    result = _iwencai_query2data("近期大股东增减持", limit="300")
+    events = []
+    for row in result.get("datas", []):
+        code = _extract_code(row)
+        if not code:
+            continue
+        change_type = row.get("变动类型", "")
+        score = EVENT_SCORES.get("大股东增持" if "增持" in change_type else "大股东减持", 0)
+        events.append({
+            "code": code, "name": row.get("股票简称", ""),
+            "type": f"大股东{change_type}", "date": str(row.get("变动日期", ""))[:10],
+            "description": f"{row.get('变动人', '')} {change_type} {row.get('变动股数', '')}股",
+            "score": score, "category": "shareholder_change",
+        })
+    logger.info(f"  -> {len(events)} 条")
+    return events
+
+
+def fetch_reduction_plans() -> List[Dict]:
+    """减持计划（预披露）"""
+    logger.info("获取减持计划...")
+    result = _iwencai_query2data("近期减持计划", limit="300")
+    events = []
+    for row in result.get("datas", []):
+        code = _extract_code(row)
+        if not code:
+            continue
+        desc = _build_clean_description(row, ["最新价", "最新涨跌幅"])
+        events.append({
+            "code": code, "name": row.get("股票简称", ""),
+            "type": "减持计划", "date": str(row.get("公告日期", row.get("日期", "")))[:10],
+            "description": desc, "score": EVENT_SCORES["减持计划"], "category": "reduction_plan",
+        })
+    logger.info(f"  -> {len(events)} 条")
+    return events
+
+
 # ---------------------------------------------------------------------------
 # 新闻分析
 # ---------------------------------------------------------------------------
@@ -554,30 +681,63 @@ def extract_stocks_from_news(articles: List[Dict], stocks: List[Dict] = None) ->
 # ---------------------------------------------------------------------------
 
 def build_radar(stocks: List[Dict], events: List[Dict], stock_news: Dict[str, List[Dict]]) -> Dict[str, Dict]:
+    """事件驱动雷达构建：只处理有事件或新闻的股票，不再遍历全市场。
+    如果 stocks 不是全市场（有universe限制），则只保留在universe范围内的股票。"""
     radar = {}
-    # 构建代码->名称映射（优先用股票列表，再用事件数据补充）
+    # 构建代码->名称映射（优先用universe列表，再用事件/新闻数据补充）
     stock_map = {s["code"]: s["name"] for s in stocks}
+    # universe 代码集合（用于范围过滤）
+    universe_codes = {s["code"] for s in stocks}
+    is_limited_universe = len(universe_codes) < 1000  # 全市场通常5000+，指数成分股才几百~几千
+
+    # 收集所有"有动静"的股票代码（来自事件 + 新闻）
+    active_codes = set()
     for ev in events:
         code = ev["code"]
+        # 如果有限定universe，过滤掉不在范围内的
+        if is_limited_universe and code not in universe_codes:
+            continue
+        active_codes.add(code)
         if code not in stock_map and ev.get("name"):
             stock_map[code] = ev["name"]
+    for code in stock_news.keys():
+        if is_limited_universe and code not in universe_codes:
+            continue
+        active_codes.add(code)
 
-    for s in stocks:
-        radar[s["code"]] = {"code": s["code"], "name": s["name"], "score": 0, "event_count": 0, "news_count": 0, "events": [], "news": []}
+    logger.info(f"事件驱动: 共 {len(active_codes)} 只股票有事件/新闻（跳过无动静股票）")
+
+    # 只为有事件/新闻的股票创建条目
+    for code in active_codes:
+        radar[code] = {
+            "code": code, "name": stock_map.get(code, ""),
+            "score": 0, "event_count": 0, "news_count": 0,
+            "events": [], "news": [],
+        }
+
+    # 填充事件
     for ev in events:
         code = ev["code"]
         if code not in radar:
-            radar[code] = {"code": code, "name": stock_map.get(code, ""), "score": 0, "event_count": 0, "news_count": 0, "events": [], "news": []}
+            continue
         radar[code]["score"] += ev["score"]
         radar[code]["event_count"] += 1
-        radar[code]["events"].append({"type": ev["type"], "date": ev.get("date", ""), "description": ev.get("description", ""), "score": ev["score"], "category": ev.get("category", "")})
+        radar[code]["events"].append({
+            "type": ev["type"], "date": ev.get("date", ""),
+            "description": ev.get("description", ""),
+            "score": ev["score"], "category": ev.get("category", ""),
+        })
+
+    # 填充新闻
     for code, news_list in stock_news.items():
         if code not in radar:
-            radar[code] = {"code": code, "name": stock_map.get(code, ""), "score": 0, "event_count": 0, "news_count": 0, "events": [], "news": []}
+            continue
         for n in news_list:
             radar[code]["score"] += n["score"]
             radar[code]["news_count"] += 1
             radar[code]["news"].append(n)
+
+    # 计算方向
     for data in radar.values():
         s = data["score"]
         if s >= 3:
@@ -594,7 +754,8 @@ def build_radar(stocks: List[Dict], events: List[Dict], stock_news: Dict[str, Li
 
 
 def filter_active_radar(radar: Dict[str, Dict], min_score_abs: float = 0.5) -> Dict[str, Dict]:
-    return {k: v for k, v in radar.items() if abs(v["score"]) >= min_score_abs or v["event_count"] > 0}
+    """过滤：只保留分数达到阈值或有结构化事件的股票（纯新闻0分也保留，因为已被事件驱动筛选过）。"""
+    return {k: v for k, v in radar.items() if abs(v["score"]) >= min_score_abs or v["event_count"] > 0 or v["news_count"] > 0}
 
 
 # ---------------------------------------------------------------------------
@@ -670,14 +831,14 @@ def generate_markdown_report(radar: Dict[str, Dict], top_n: int = 30) -> str:
         if r["events"]:
             lines.append("**事件**:")
             for ev in r["events"]:
-                emoji = "🟢" if ev["score"] > 0 else ("🔴" if ev["score"] < 0 else "⚪")
-                lines.append(f"- {emoji} [{ev['date']}] {ev['type']} (评分: {ev['score']:+d}) — {ev['description']}")
+                marker = "[+]" if ev["score"] > 0 else ("[-]" if ev["score"] < 0 else "[ ]")
+                lines.append(f"- {marker} [{ev['date']}] {ev['type']} (评分: {ev['score']:+d}) -- {ev['description']}")
             lines.append("")
         if r["news"]:
             lines.append("**新闻**:")
             for n in r["news"][:5]:
-                emoji = "📈" if n["sentiment"] == "positive" else ("📉" if n["sentiment"] == "negative" else "➖")
-                lines.append(f"- {emoji} [{n['date']}] {n['source']} | {n['title'][:60]}... (评分: {n['score']:+.1f})")
+                marker = "[+]" if n["sentiment"] == "positive" else ("[-]" if n["sentiment"] == "negative" else "[~]")
+                lines.append(f"- {marker} [{n['date']}] {n['source']} | {n['title'][:60]}... (评分: {n['score']:+.1f})")
             lines.append("")
 
     lines.append("## 风险榜 TOP{}\n".format(top_n))
@@ -692,14 +853,14 @@ def generate_markdown_report(radar: Dict[str, Dict], top_n: int = 30) -> str:
         if r["events"]:
             lines.append("**事件**:")
             for ev in r["events"]:
-                emoji = "🟢" if ev["score"] > 0 else ("🔴" if ev["score"] < 0 else "⚪")
-                lines.append(f"- {emoji} [{ev['date']}] {ev['type']} (评分: {ev['score']:+d}) — {ev['description']}")
+                marker = "[+]" if ev["score"] > 0 else ("[-]" if ev["score"] < 0 else "[ ]")
+                lines.append(f"- {marker} [{ev['date']}] {ev['type']} (评分: {ev['score']:+d}) -- {ev['description']}")
             lines.append("")
         if r["news"]:
             lines.append("**新闻**:")
             for n in r["news"][:5]:
-                emoji = "📈" if n["sentiment"] == "positive" else ("📉" if n["sentiment"] == "negative" else "➖")
-                lines.append(f"- {emoji} [{n['date']}] {n['source']} | {n['title'][:60]}... (评分: {n['score']:+.1f})")
+                marker = "[+]" if n["sentiment"] == "positive" else ("[-]" if n["sentiment"] == "negative" else "[~]")
+                lines.append(f"- {marker} [{n['date']}] {n['source']} | {n['title'][:60]}... (评分: {n['score']:+.1f})")
             lines.append("")
 
     lines.append("---\n")
@@ -813,18 +974,19 @@ def _dedup_articles(articles: List[Dict]) -> List[Dict]:
 
 def main():
     parser = argparse.ArgumentParser(
-        description="A股个股机会风险雷达 - 混合数据源（iwencai+东财+财联社）",
+        description="A股个股机会风险雷达 V3 - 事件驱动（iwencai+东财+财联社）",
         formatter_class=argparse.RawDescriptionHelpFormatter,
         epilog="""
 示例:
-  %(prog)s                           # 默认扫描（全量）
+  %(prog)s                           # 默认扫描（事件驱动，全市场）
+  %(prog)s --universe zz1000         # 只扫描中证1000成分股
   %(prog)s --incremental             # 增量模式（加载缓存+只采当天）
   %(prog)s --top 50 --format md      # 输出前50名，Markdown
   %(prog)s --output radar.json       # 保存JSON
   %(prog)s --enrich 30               # 对TOP30补充个股新闻
 
 环境变量:
-  IWENCAI_API_KEY    iwencai API密钥（仅事件数据需要）
+  IWENCAI_API_KEY    iwencai API密钥（事件数据需要）
         """
     )
     parser.add_argument("--top", type=int, default=30, help="机会/风险榜各显示多少只 (默认: 30)")
@@ -835,14 +997,18 @@ def main():
     parser.add_argument("--incremental", action="store_true", help="增量模式：加载历史缓存，只获取当天新数据")
     parser.add_argument("--no-cache", action="store_true", help="不保存缓存（增量模式时仍读取已有缓存）")
     parser.add_argument("--debug", action="store_true", help="调试模式")
+    parser.add_argument("--universe", choices=list(UNIVERSE_QUERIES.keys()), default="all",
+                        help="扫描范围: all=全市场, zz1000=中证1000, zz500=中证500, hs300=沪深300, cyb=创业板, kcb=科创板 (默认: all)")
 
     args = parser.parse_args()
     if args.debug:
         logging.getLogger().setLevel(logging.DEBUG)
 
     try:
-        # 1. 股票列表
-        stocks = fetch_all_stocks()
+        # 1. 获取扫描范围股票列表（用于名称映射和范围过滤）
+        logger.info("=" * 50)
+        logger.info(f"扫描范围: {args.universe}")
+        stocks = fetch_universe_stocks(args.universe)
         if not stocks:
             print("错误: 无法获取股票列表", file=sys.stderr)
             sys.exit(1)
@@ -861,11 +1027,11 @@ def main():
         all_articles = _dedup_articles(all_articles)
         logger.info(f"免费新闻总计: {len(all_articles)} 条")
 
-        # 3. 从新闻提取个股
+        # 3. 从新闻提取个股（事件驱动：只保留新闻里提到的股票）
         stock_news = extract_stocks_from_news(all_articles, stocks=stocks)
         logger.info(f"新闻涉及个股: {len(stock_news)} 只")
 
-        # 4. iwencai事件数据（仅5个query2data调用）
+        # 4. iwencai事件数据（扩展为10个query2data调用，覆盖更多事件类型）
         logger.info("=" * 50)
         logger.info("开始采集iwencai事件数据...")
         all_events = []
@@ -879,6 +1045,11 @@ def main():
             all_events.extend(fetch_unlocks())
             all_events.extend(fetch_private_placement())
             all_events.extend(fetch_major_contracts())
+            all_events.extend(fetch_buybacks())
+            all_events.extend(fetch_equity_incentive())
+            all_events.extend(fetch_institutional_research())
+            all_events.extend(fetch_shareholder_changes())
+            all_events.extend(fetch_reduction_plans())
             all_events = _dedup_events(all_events)
             logger.info(f"事件总数(含缓存): {len(all_events)}")
         else:
@@ -889,9 +1060,9 @@ def main():
             _save_daily_cache(all_events, all_articles[-200:] if len(all_articles) > 200 else all_articles)
             _cleanup_old_cache(days=CACHE_DAYS)
 
-        # 5. 构建雷达
+        # 5. 事件驱动构建雷达（只处理有事件/新闻的股票）
         logger.info("=" * 50)
-        logger.info("构建个股雷达...")
+        logger.info("构建个股雷达（事件驱动）...")
         radar = build_radar(stocks, all_events, stock_news)
         radar = filter_active_radar(radar, min_score_abs=args.min_score)
         logger.info(f"活跃雷达个股: {len(radar)} 只")

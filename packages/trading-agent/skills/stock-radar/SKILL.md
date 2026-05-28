@@ -1,26 +1,42 @@
 ---
 name: stock-radar
-description: A股个股机会风险雷达，扫描全市场股票，分析最近两周新闻和未来两周事件对个股的影响，输出机会榜和风险榜排名。
-version: 1.0.0
+description: A股个股机会风险雷达 V3（事件驱动），扫描有事件/新闻动静的股票，分析利好利空，输出机会榜和风险榜。支持全市场或指定指数成分股扫描。
+version: 3.0.0
+tools:
+  - scan_stock_radar
 ---
 
-# 个股机会风险雷达
+# 个股机会风险雷达 V3
 
 ## 技能概述
 
-扫描A股全市场股票（5000+只），综合分析**最近两周新闻事件**和**未来两周将要发生的事件**，识别可能对股价产生重大影响的个股，输出机会榜和风险榜。
+**事件驱动架构**：不再遍历全市场5000+只股票，而是从多个渠道（iwencai事件查询 + 财联社/东财新闻）找出**"最近有动静"的股票**，只分析这些有事件/公告/新闻的个股，大幅提高效率。
 
-### 覆盖事件类型
+### 覆盖事件类型（10类 iwencai 查询）
 
 | 事件类型 | 数据来源 | 评分 |
 |----------|----------|------|
 | 高管增持/减持 | iwencai query2data | +3 / -3 |
+| 大股东增持/减持 | iwencai query2data | +2 / -3 |
+| 减持计划 | iwencai query2data | -2 |
 | 业绩预告（预增/预亏） | iwencai query2data | +3 / -3 |
 | 限售解禁 | iwencai query2data | -2 |
 | 定向增发 | iwencai query2data | -1 |
 | 重大合同/中标 | iwencai query2data | +2 |
+| 回购 | iwencai query2data | +2 |
+| 股权激励 | iwencai query2data | +1 |
+| 机构调研 | iwencai query2data | +1 |
 | 全市场新闻（利好/利空） | 财联社 + 东财全球资讯 | 按情感分析打分 |
 | 个股新闻补充 | 东财个股新闻（TOP股） | 按情感分析打分 |
+
+### 扫描范围
+
+- `all` — 全市场（默认）
+- `zz1000` — 中证1000成分股
+- `zz500` — 中证500成分股
+- `hs300` — 沪深300成分股
+- `cyb` — 创业板成分股
+- `kcb` — 科创板成分股
 
 ### 评分规则
 
@@ -50,8 +66,11 @@ version: 1.0.0
 ### 命令行
 
 ```bash
-# 默认扫描（Markdown输出到控制台）
+# 默认扫描（事件驱动，全市场，Markdown输出到控制台）
 python scripts/stock_radar.py
+
+# 只扫描中证1000成分股
+python scripts/stock_radar.py --universe zz1000
 
 # 增量模式（加载历史缓存+只采当天数据，适合每日定时运行）
 python scripts/stock_radar.py --incremental --output radar.md
@@ -73,6 +92,7 @@ python scripts/stock_radar.py --min-score 0.3
 
 | 参数 | 说明 | 默认值 |
 |------|------|--------|
+| `--universe` | 扫描范围：all/zz1000/zz500/hs300/cyb/kcb | all |
 | `--top` | 机会/风险榜各显示多少只 | 30 |
 | `--format` | 输出格式：json / markdown / md | markdown |
 | `--output` | 输出文件路径 | stdout |

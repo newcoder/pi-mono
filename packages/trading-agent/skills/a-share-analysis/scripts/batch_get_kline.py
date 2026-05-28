@@ -10,16 +10,33 @@ import pandas as pd
 warnings.filterwarnings('ignore')
 sys.stdout = io.TextIOWrapper(sys.stdout.buffer, encoding="utf-8")
 
-from jq_data import normalize_code, fetch
+# mootdx primary (TCP direct, no auth)
+try:
+    from mootdx_data import get_kline as mootdx_kline
+except ImportError:
+    mootdx_kline = None
 
-# Map our adjust codes to jq fq param
-FQT_MAP = {
-    "bfq": None,
-    "qfq": "pre",
-    "hfq": "post",
+# akshare fallback
+try:
+    import akshare as ak
+except ImportError:
+    ak = None
+
+# Map our adjust codes to akshare param
+AK_ADJUST_MAP = {
+    "bfq": "",
+    "qfq": "qfq",
+    "hfq": "hfq",
 }
 
-# Map our period codes to jq frequency
+# Map our adjust codes for argparse choices
+FQT_MAP = {
+    "bfq": "bfq",
+    "qfq": "qfq",
+    "hfq": "hfq",
+}
+
+# Map our period codes to mootdx/akshare frequency
 FREQ_MAP = {
     "1m": "1m",
     "5m": "5m",
@@ -107,83 +124,89 @@ def batch_get_kline(stock_codes, start_date, end_date, period="daily", adjust="b
     Fetch K-line for multiple stocks in one call.
     stock_codes: list of dicts with {code, market}
     Returns: list of kline dicts with code, market, date, open, close, etc.
+
+    Uses mootdx (TCP direct) for bfq data, akshare for qfq/hfq.
+    No JoinQuant dependency.
     """
-    # Build jq security codes
-    jq_codes = []
-    code_map = {}  # jq_code -> (code, market)
-    for item in stock_codes:
-        code = item["code"]
-        market = item.get("market", 0)
-        jq_code = normalize_code(code)
-        jq_codes.append(jq_code)
-        code_map[jq_code] = (code, market)
-
-    frequency = FREQ_MAP.get(period, "daily")
-    fq = FQT_MAP.get(adjust)
     needs_resample = period in ('week', 'month', 'quarter', 'year')
+    all_klines = []
 
-    df = fetch(jq_codes, start_date=start_date, end_date=end_date,
-               frequency=frequency, fq=fq)
+    # Primary: mootdx for bfq (TCP direct, fastest)
+    if mootdx_kline is not None:
+        for item in stock_codes:
+            try:
+                mk = mootdx_kline(
+                    item["code"], item.get("market", 0),
+                    period=period, adjust="bfq",
+                    start=start_date, end=end_date,
+                )
+                if mk:
+                    for k in mk:
+                        all_klines.append({
+                            "code": k["code"],
+                            "market": k["market"],
+                            "date": k["date"],
+                            "open": k["open"],
+                            "close": k["close"],
+                            "low": k["low"],
+                            "high": k["high"],
+                            "volume": k["volume"],
+                            "amount": k.get("turnover"),
+                            "pre_close": k.get("pre_close"),
+                            "change_amount": k.get("change_amount"),
+                            "change_pct": k.get("change_pct"),
+                            "amplitude": k.get("amplitude"),
+                        })
+            except Exception as mx_err:
+                print(json.dumps({"_mootdx_error": str(mx_err), "code": item["code"]}, ensure_ascii=False), file=sys.stderr)
 
-    if df is None or len(df) == 0:
-        return []
+    # Fallback: akshare for qfq/hfq or if mootdx failed
+    if len(all_klines) == 0 or adjust != "bfq":
+        if ak is not None:
+            ak_start = f"{start_date[:4]}-{start_date[4:6]}-{start_date[6:8]}" if len(start_date) == 8 else start_date
+            ak_end = f"{end_date[:4]}-{end_date[4:6]}-{end_date[6:8]}" if len(end_date) == 8 else end_date
+            ak_adjust = AK_ADJUST_MAP.get(adjust, "")
+            for item in stock_codes:
+                code = item["code"]
+                market = item.get("market", 0)
+                try:
+                    df = ak.stock_zh_a_hist(symbol=code, period="daily", start_date=ak_start, end_date=ak_end, adjust=ak_adjust)
+                    if df is not None and not df.empty:
+                        for _, row in df.iterrows():
+                            dt = str(row.get("日期", ""))
+                            open_p = float(row["开盘"]) if pd.notna(row.get("开盘")) else None
+                            close_p = float(row["收盘"]) if pd.notna(row.get("收盘")) else None
+                            low_p = float(row["最低"]) if pd.notna(row.get("最低")) else None
+                            high_p = float(row["最高"]) if pd.notna(row.get("最高")) else None
+                            volume = float(row["成交量"]) if pd.notna(row.get("成交量")) else None
+                            money = float(row["成交额"]) if pd.notna(row.get("成交额")) else None
+                            change_pct = float(row["涨跌幅"]) if pd.notna(row.get("涨跌幅")) else None
+                            change_amount = float(row["涨跌额"]) if pd.notna(row.get("涨跌额")) else None
+                            amplitude = float(row["振幅"]) if pd.notna(row.get("振幅")) else None
+                            all_klines.append({
+                                "code": code,
+                                "market": market,
+                                "date": dt,
+                                "open": open_p,
+                                "close": close_p,
+                                "low": low_p,
+                                "high": high_p,
+                                "volume": volume,
+                                "amount": money,
+                                "amplitude": amplitude,
+                                "change_pct": change_pct,
+                                "change_amount": change_amount,
+                                "turnover": None,
+                                "pre_close": None,
+                            })
+                except Exception as ak_err:
+                    print(json.dumps({"_akshare_error": str(ak_err), "code": code}, ensure_ascii=False), file=sys.stderr)
 
-    df = _normalize_df(df)
-
-    if needs_resample:
-        df = _resample_df(df, period)
-
-    klines = []
-    for _, row in df.iterrows():
-        jq_code = row.get('code')
-        if pd.isna(jq_code):
-            continue
-        code, market = code_map.get(jq_code, (str(jq_code).split('.')[0], 0))
-
-        time_val = row.get('time') if 'time' in row else row.get('date')
-        date_str = str(time_val) if not pd.isna(time_val) else None
-        if date_str and ' ' in date_str:
-            date_str = date_str.split(' ')[0]
-
-        open_p = float(row['open']) if pd.notna(row.get('open')) else None
-        close_p = float(row['close']) if pd.notna(row.get('close')) else None
-        low_p = float(row['low']) if pd.notna(row.get('low')) else None
-        high_p = float(row['high']) if pd.notna(row.get('high')) else None
-        volume = float(row['volume']) if pd.notna(row.get('volume')) else None
-        money = float(row['money']) if pd.notna(row.get('money')) else None
-        pre_close = float(row['pre_close']) if pd.notna(row.get('pre_close')) else None
-
-        # Calculate derived fields
-        change_amount = None
-        change_pct = None
-        amplitude = None
-        if close_p is not None and pre_close is not None and pre_close != 0:
-            change_amount = round(close_p - pre_close, 4)
-            change_pct = round((close_p - pre_close) / pre_close * 100, 4)
-            if high_p is not None and low_p is not None:
-                amplitude = round((high_p - low_p) / pre_close * 100, 4)
-
-        klines.append({
-            "code": code,
-            "market": market,
-            "date": date_str,
-            "open": open_p,
-            "close": close_p,
-            "low": low_p,
-            "high": high_p,
-            "volume": volume,
-            "amount": money,
-            "pre_close": pre_close,
-            "change_amount": change_amount,
-            "change_pct": change_pct,
-            "amplitude": amplitude,
-        })
-
-    return klines
+    return all_klines
 
 
 def main():
-    parser = argparse.ArgumentParser(description="Batch fetch A-share K-line from JoinQuant")
+    parser = argparse.ArgumentParser(description="Batch fetch A-share K-line (mootdx/akshare, no JoinQuant)")
     parser.add_argument("--codes", required=True, help="Comma-separated 6-digit stock codes")
     parser.add_argument("--markets", default="", help="Comma-separated markets (1=SH,0=SZ), same order as codes")
     parser.add_argument("--start", default="20240101", help="Start date YYYYMMDD")

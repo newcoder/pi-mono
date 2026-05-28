@@ -31,10 +31,12 @@ import { iwencaiScreenTool } from "./tools/iwencai-screening.js";
 import { getMacroTool } from "./tools/macro-data.js";
 import { getFundamentalsTool, getKlineTool, getQuoteTool } from "./tools/market-data.js";
 import { getMarketNewsTool, getStockNewsTool, screenByNewsTool } from "./tools/news-analysis.js";
+import { saveHotStocksAsPoolTool } from "./tools/save-hot-stocks-as-pool.js";
 import { screenStocksTool } from "./tools/screening.js";
 import { getSectorRotationTool } from "./tools/sector-rotation.js";
 import { analyzeSentimentTool } from "./tools/sentiment.js";
 import { manageStockPoolTool } from "./tools/stock-pool.js";
+import { scanStockRadarTool } from "./tools/stock-radar.js";
 import { TradingApp } from "./ui/trading-app.js";
 
 let globalStore: ReturnType<typeof createDataStore> | null = null;
@@ -163,7 +165,7 @@ async function handleSyncCommands(): Promise<boolean> {
 
 	// --sync-all-concepts
 	if (args.includes("--sync-all-concepts")) {
-		console.log("Syncing all concepts via JoinQuant...");
+		console.log("Syncing all concepts via Eastmoney/akshare...");
 		const count = await sync.syncAllConcepts();
 		console.log(`Synced ${count} concepts.`);
 		store.close();
@@ -172,7 +174,7 @@ async function handleSyncCommands(): Promise<boolean> {
 
 	// --sync-industries
 	if (args.includes("--sync-industries")) {
-		console.log("Syncing industry classifications via JoinQuant...");
+		console.log("Syncing industry classifications via Eastmoney/akshare...");
 		const result = await sync.syncIndustries();
 		console.log(
 			`Synced ${result.standards} standards, ${result.industries} industries, ${result.mappings} mappings.`,
@@ -268,6 +270,7 @@ const BUILTIN_TOOLS = new Map<string, AgentTool<any>>([
 	["get_stock_industries", getStockIndustriesTool],
 	["backtest_strategy", backtestStrategyTool],
 	["manage_stock_pool", manageStockPoolTool],
+	["save_hot_stocks_as_pool", saveHotStocksAsPoolTool],
 	["analyze_sentiment", analyzeSentimentTool],
 	["get_stock_news", getStockNewsTool],
 	["screen_by_news", screenByNewsTool],
@@ -280,6 +283,7 @@ const BUILTIN_TOOLS = new Map<string, AgentTool<any>>([
 	["verify_concept_stocks", verifyConceptStocksTool],
 	["find_concept_leaders", findConceptLeadersTool],
 	["analyze_concept_persistence", analyzeConceptPersistenceTool],
+	["scan_stock_radar", scanStockRadarTool],
 ]);
 
 const BUILTIN_ROUTINES = new Map([
@@ -323,14 +327,25 @@ async function main() {
 		console.warn("Warning: failed to load models.json:", error);
 	}
 
-	const model = selectDefaultModel(modelRegistry);
+	const config = loadUserConfig();
+
+	// Prefer user-configured model, fallback to default selection
+	let model = config.model ? modelRegistry.find(config.model.provider, config.model.modelId) : undefined;
+	if (model && !modelRegistry.hasConfiguredAuth(model)) {
+		console.warn(
+			`[Model] User-configured model ${config.model!.provider}/${config.model!.modelId} has no auth, falling back`,
+		);
+		model = undefined;
+	}
+	if (!model) {
+		model = selectDefaultModel(modelRegistry);
+	}
 	if (!model) {
 		console.error("No models with configured auth found.");
 		console.error("Please add a provider to ~/.pi/agent/models.json with a valid apiKey.");
 		process.exit(1);
 	}
-
-	const config = loadUserConfig();
+	console.log(`[Model] Using ${model.provider}/${model.id}`);
 	const memory = new SessionMemory();
 
 	// ─── Skill Registry ───────────────────────────────────────────
@@ -558,7 +573,7 @@ async function main() {
 			console.warn("[RecentPool] Failed to ensure recent pool exists:", e);
 		}
 
-		const { httpServer } = startServer(session, { port, staticDir, bgSync });
+		const { httpServer } = startServer(session, { port, staticDir, bgSync, modelRegistry });
 
 		httpServer.on("close", () => {
 			bgSync.stop();

@@ -20,6 +20,9 @@ const EXTERNAL_CONCEPT_ANALYSIS_SCRIPTS = join(HOME, ".agents/skills/concept-ana
 const BUNDLED_A_STOCK_DATA_SCRIPTS = join(__dirname, "../../skills/a-stock-data/scripts");
 const EXTERNAL_A_STOCK_DATA_SCRIPTS = join(HOME, ".agents/skills/a-stock-data/scripts");
 
+const BUNDLED_STOCK_RADAR_SCRIPTS = join(__dirname, "../../skills/stock-radar/scripts");
+const EXTERNAL_STOCK_RADAR_SCRIPTS = join(HOME, ".agents/skills/stock-radar/scripts");
+
 /** Resolve script path: bundled takes priority over external. */
 export function resolveScriptPath(scriptName: string, bundledDir: string, externalDir: string): string {
 	const bundled = join(bundledDir, scriptName);
@@ -45,6 +48,11 @@ export function resolveConceptAnalysisScript(scriptName: string): string {
 /** Resolve a-stock-data script path (bundled优先). */
 export function resolveAStockDataScript(scriptName: string): string {
 	return resolveScriptPath(scriptName, BUNDLED_A_STOCK_DATA_SCRIPTS, EXTERNAL_A_STOCK_DATA_SCRIPTS);
+}
+
+/** Resolve stock-radar script path (bundled优先). */
+export function resolveStockRadarScript(scriptName: string): string {
+	return resolveScriptPath(scriptName, BUNDLED_STOCK_RADAR_SCRIPTS, EXTERNAL_STOCK_RADAR_SCRIPTS);
 }
 
 // Legacy export for backward compatibility
