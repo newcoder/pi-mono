@@ -129,6 +129,57 @@ export async function runPython(script: string, args: string[], timeoutMs = DEFA
 	throw lastError ?? new Error(`No Python interpreter found. Tried: ${commands.join(", ")}`);
 }
 
+/** Run a Python script with a specific interpreter and working directory.
+ *  Used for calling external toolchains like tq_tool with their own venv.
+ */
+export async function runPythonCustom(
+	pythonPath: string,
+	scriptPath: string,
+	args: string[],
+	cwd: string,
+	timeoutMs = DEFAULT_TIMEOUT_MS,
+): Promise<string> {
+	return new Promise((resolve, reject) => {
+		const proc = spawn(pythonPath, [scriptPath, ...args], {
+			cwd,
+			stdio: ["ignore", "pipe", "pipe"],
+			env: { ...process.env, PYTHONIOENCODING: "utf-8" },
+		});
+		let stdout = "";
+		let stderr = "";
+		let timedOut = false;
+
+		const timer = setTimeout(() => {
+			timedOut = true;
+			proc.kill("SIGTERM");
+			setTimeout(() => proc.kill("SIGKILL"), 5000);
+			reject(new Error(`Python script timed out after ${timeoutMs}ms: ${scriptPath}`));
+		}, timeoutMs);
+
+		proc.stdout.setEncoding("utf-8");
+		proc.stderr.setEncoding("utf-8");
+		proc.stdout.on("data", (d) => {
+			stdout += d;
+		});
+		proc.stderr.on("data", (d) => {
+			stderr += d;
+		});
+		proc.on("error", (err) => {
+			clearTimeout(timer);
+			reject(err);
+		});
+		proc.on("close", (code) => {
+			clearTimeout(timer);
+			if (timedOut) return;
+			if (code !== 0) {
+				reject(new Error(stderr.trim() || `Python script exited with code ${code}`));
+			} else {
+				resolve(stdout.trim());
+			}
+		});
+	});
+}
+
 export async function runJsonScript(script: string, args: string[], timeoutMs?: number): Promise<any> {
 	const stdout = await runPython(script, args, timeoutMs);
 	const start = stdout.search(/[[{]/);

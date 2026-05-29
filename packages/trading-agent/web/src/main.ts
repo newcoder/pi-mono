@@ -475,7 +475,7 @@ function renderWatchlist() {
 		poolsHtml += `
 			<div class="pool-card ${isSelected ? 'active' : ''}" data-pool-id="${pool.id}">
 				<div class="pool-card-header">
-					<div class="pool-name">${escapeHtml(pool.name)}</div>
+					<div class="pool-name"><span class="pool-id">[${pool.id}]</span> ${escapeHtml(pool.name)}</div>
 					<button class="pool-delete-btn" data-delete-pool-id="${pool.id}" title="删除股票池">×</button>
 				</div>
 				<div class="pool-count">${pool.item_count} 只</div>

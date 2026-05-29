@@ -30,6 +30,7 @@ import { analyzeCalendarImpactTool, refreshCalendarTool } from "./tools/investme
 import { iwencaiScreenTool } from "./tools/iwencai-screening.js";
 import { getMacroTool } from "./tools/macro-data.js";
 import { getFundamentalsTool, getKlineTool, getQuoteTool } from "./tools/market-data.js";
+import { predictStockRankingTool } from "./tools/ml-prediction.js";
 import { getMarketNewsTool, getStockNewsTool, screenByNewsTool } from "./tools/news-analysis.js";
 import { saveHotStocksAsPoolTool } from "./tools/save-hot-stocks-as-pool.js";
 import { screenStocksTool } from "./tools/screening.js";
@@ -284,6 +285,7 @@ const BUILTIN_TOOLS = new Map<string, AgentTool<any>>([
 	["find_concept_leaders", findConceptLeadersTool],
 	["analyze_concept_persistence", analyzeConceptPersistenceTool],
 	["scan_stock_radar", scanStockRadarTool],
+	["predict_stock_ranking", predictStockRankingTool],
 ]);
 
 const BUILTIN_ROUTINES = new Map([

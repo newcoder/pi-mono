@@ -128,7 +128,7 @@ export class TradingSession extends EventEmitter {
 					}
 				}
 				if (textParts.length > 0) {
-					promptText = textParts.join("\n\n") + (promptText ? "\n\n" + promptText : "");
+					promptText = textParts.join("\n\n") + (promptText ? `\n\n${promptText}` : "");
 				}
 			}
 

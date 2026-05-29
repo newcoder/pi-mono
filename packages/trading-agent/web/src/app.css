@@ -302,6 +302,14 @@
 	white-space: nowrap;
 }
 
+.pool-id {
+	font-size: 0.6875rem;
+	font-weight: 400;
+	color: var(--muted-foreground);
+	margin-right: 0.25rem;
+	font-family: ui-monospace, monospace;
+}
+
 .pool-card.active .pool-name {
 	color: var(--primary);
 	font-weight: 600;
