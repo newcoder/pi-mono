@@ -70,10 +70,10 @@ function formatPredictions(data: PredictionResult, topN: number): string {
 const predictStockRankingParams = Type.Object({
 	model: Type.Union(
 		[
-			Type.Literal("de", { description: "DoubleEnsemble 模型（基于 Qlib）" }),
-			Type.Literal("lgb", { description: "LightGBM 生产模型" }),
+			Type.Literal("de", { description: "DoubleEnsemble 模型（基于 Qlib），已支持" }),
+			Type.Literal("lgb", { description: "LightGBM 生产模型（暂未支持）" }),
 		],
-		{ description: "预测模型选择" },
+		{ description: "预测模型选择（当前仅 de 可用）" },
 	),
 	pool_name: Type.Optional(
 		Type.String({
@@ -88,11 +88,24 @@ export const predictStockRankingTool: AgentTool<typeof predictStockRankingParams
 	name: "predict_stock_ranking",
 	label: "ML股价预测排序",
 	description:
-		"使用机器学习模型（DoubleEnsemble 或 LightGBM）对股票池的最新交易日进行股价预测，按预测概率排序返回Top-N股票。支持自定义股票池（通过 pool_name 引用 trading-agent 中的股票池），不指定则使用模型默认股池。DE模型基于Qlib框架，LGB为独立LightGBM生产模型。",
+		"使用 DoubleEnsemble (DE) 机器学习模型对股票池的最新交易日进行股价预测，按预测概率排序返回 Top-N 股票。支持自定义股票池（通过 pool_name 引用 trading-agent 中的股票池），不指定则使用模型默认股池（中证800+中证1000）。LightGBM (LGB) 模型暂未支持。",
 	parameters: predictStockRankingParams,
 	execute: async (_id, params) => {
 		const model = params.model;
 		const topN = params.top_n ?? 50;
+
+		// LGB 模型暂未支持
+		if (model === "lgb") {
+			return {
+				content: [
+					{
+						type: "text",
+						text: "LightGBM (LGB) 模型暂未支持，当前仅支持 DoubleEnsemble (DE) 模型。请使用 --model de 重新调用。",
+					},
+				],
+				details: emptyResult(model, "LGB model not yet supported"),
+			};
+		}
 
 		let symbolsArg: string | undefined;
 
@@ -128,7 +141,8 @@ export const predictStockRankingTool: AgentTool<typeof predictStockRankingParams
 		}
 
 		// ── Run prediction ───────────────────────────────────────────────
-		const scriptPath = `${TQ_TOOL_DIR}\\predict_api.py`;
+		// predict_api.py moved into stock_ml/scripts/ in the updated tq_tool layout
+		const scriptPath = `${TQ_TOOL_DIR}\\stock_ml\\scripts\\predict_api.py`;
 		const pyArgs: string[] = ["--model", model, "--top-n", String(topN)];
 		if (symbolsArg) {
 			pyArgs.push("--symbols", symbolsArg);
@@ -140,10 +154,14 @@ export const predictStockRankingTool: AgentTool<typeof predictStockRankingParams
 		console.log(
 			`[predict_stock_ranking] 启动 ${model} 预测 (top_n=${topN}, pool=${params.pool_name || "default"})...`,
 		);
+		console.log(`[predict_stock_ranking] python=${PYTHON_EXE}, script=${scriptPath}, cwd=${TQ_TOOL_DIR}`);
+		console.log(`[predict_stock_ranking] args=${pyArgs.join(" ")}`);
 		const startTime = Date.now();
 
 		try {
-			const stdout = await runPythonCustom(PYTHON_EXE, scriptPath, pyArgs, TQ_TOOL_DIR, 300_000);
+			// DE 模型跑 1800 只股票约 3~4 分钟，给足 10 分钟余量防止超时
+			const timeoutMs = model === "de" ? 600_000 : 300_000;
+			const stdout = await runPythonCustom(PYTHON_EXE, scriptPath, pyArgs, TQ_TOOL_DIR, timeoutMs);
 
 			const data: PredictionResult = JSON.parse(stdout);
 

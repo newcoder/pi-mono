@@ -116,7 +116,10 @@ const scanStockRadarParams = Type.Object({
 				Type.Literal("cyb"),
 				Type.Literal("kcb"),
 			],
-			{ description: "扫描范围：all=全市场, zz1000=中证1000, zz500=中证500, hs300=沪深300, cyb=创业板, kcb=科创板", default: "all" },
+			{
+				description: "扫描范围：all=全市场, zz1000=中证1000, zz500=中证500, hs300=沪深300, cyb=创业板, kcb=科创板",
+				default: "all",
+			},
 		),
 	),
 	top: Type.Optional(Type.Number({ description: "机会/风险榜各显示多少只", default: 30 })),

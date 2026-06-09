@@ -1,4 +1,5 @@
 import type { Component } from "@mariozechner/pi-tui";
+import { truncateToWidth } from "@mariozechner/pi-tui";
 import chalk from "chalk";
 
 export type MarketPhase = "before-open" | "call-auction" | "morning" | "lunch" | "afternoon" | "after-close" | "closed";
@@ -139,7 +140,7 @@ export class MarketStatusBar implements Component {
 		const right = chalk.dim(` │ ${modeStr} │ ${modelStr}`);
 
 		const line = `${left}${mid}${right}`;
-		return [line.slice(0, width)];
+		return [truncateToWidth(line, width)];
 	}
 
 	handleInput?(_data: string): void {

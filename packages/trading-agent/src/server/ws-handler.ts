@@ -36,11 +36,14 @@ export function setupWsHandler(ws: WebSocket, session: TradingSession) {
 			switch (msg.type) {
 				case "prompt": {
 					const message = String(msg.message || "");
-					if (!message) {
-						ws.send(JSON.stringify({ type: "error", message: "message is required" }));
+					const attachments = msg.attachments as
+						| Array<{ name: string; content: string; mimeType: string }>
+						| undefined;
+					if (!message && (!attachments || attachments.length === 0)) {
+						ws.send(JSON.stringify({ type: "error", message: "message or attachments are required" }));
 						return;
 					}
-					await session.prompt(message);
+					await session.prompt(message, { attachments });
 					break;
 				}
 				case "get_state": {

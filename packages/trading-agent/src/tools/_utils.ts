@@ -140,6 +140,8 @@ export async function runPythonCustom(
 	timeoutMs = DEFAULT_TIMEOUT_MS,
 ): Promise<string> {
 	return new Promise((resolve, reject) => {
+		const fullCmd = `${pythonPath} ${scriptPath} ${args.join(" ")}`;
+		console.log(`[runPythonCustom] Spawn: ${fullCmd}\n  cwd=${cwd}`);
 		const proc = spawn(pythonPath, [scriptPath, ...args], {
 			cwd,
 			stdio: ["ignore", "pipe", "pipe"],
@@ -166,11 +168,13 @@ export async function runPythonCustom(
 		});
 		proc.on("error", (err) => {
 			clearTimeout(timer);
+			console.error(`[runPythonCustom] Process error: ${err.message}`);
 			reject(err);
 		});
 		proc.on("close", (code) => {
 			clearTimeout(timer);
 			if (timedOut) return;
+			console.log(`[runPythonCustom] Exit code: ${code}, stderr: ${stderr.trim() || "(empty)"}`);
 			if (code !== 0) {
 				reject(new Error(stderr.trim() || `Python script exited with code ${code}`));
 			} else {

@@ -28,7 +28,7 @@ const defaultModelPerProvider: Record<KnownProvider, string> = {
 	opencode: "claude-opus-4-6",
 	"opencode-go": "kimi-k2.5",
 	"kimi-coding": "kimi-k2-thinking",
-	deepseek: "deepseek-chat-v3-0324",
+	deepseek: "deepseek-v4-flash",
 	fireworks: "accounts/fireworks/models/llama4-maverick-instruct-basic",
 	"cloudflare-workers-ai": "@cf/meta/llama-3.3-70b-instruct-fp8-fast",
 };

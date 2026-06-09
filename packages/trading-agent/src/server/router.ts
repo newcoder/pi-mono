@@ -5,6 +5,7 @@ import { join } from "node:path";
 import type { ModelRegistry } from "@mariozechner/pi-coding-agent";
 import type { TradingSession } from "../core/trading-session.js";
 import { requireStore, requireSync } from "../data/index.js";
+import { predictStockRankingTool } from "../tools/ml-prediction.js";
 import { runAStockDataJsonScript, runJsonScript } from "../tools/_utils.js";
 import type { BackgroundSyncService } from "./background-sync.js";
 import type { MootdxDaemon } from "./mootdx-daemon.js";
@@ -272,6 +273,24 @@ export async function handleRequest(
 			const store = requireStore();
 			const pools = await store.getStockPools();
 			json(res, 200, pools);
+			return;
+		}
+
+		if (path === "/api/stock-pools" && method === "POST") {
+			let body = "";
+			for await (const chunk of req) {
+				body += chunk;
+			}
+			const bodyJson = body ? JSON.parse(body) : {};
+			const name = bodyJson.name?.trim();
+			const description = bodyJson.description?.trim() || "";
+			if (!name) {
+				badRequest(res, "name is required");
+				return;
+			}
+			const store = requireStore();
+			const poolId = await store.createStockPool(name, description);
+			json(res, 200, { id: poolId, name, description });
 			return;
 		}
 
@@ -683,6 +702,48 @@ export async function handleRequest(
 			}
 
 			json(res, 200, { success: true });
+			return;
+		}
+
+		// ML Stock Prediction
+		if (path === "/api/predict" && method === "POST") {
+			let body = "";
+			for await (const chunk of req) {
+				body += chunk;
+			}
+			const bodyJson = body ? JSON.parse(body) : {};
+			const model = bodyJson.model || "de";
+			const topN = bodyJson.top_n ?? 50;
+			const poolName = bodyJson.pool_name || undefined;
+
+			if (model !== "de" && model !== "lgb") {
+				badRequest(res, "model must be 'de' or 'lgb'");
+				return;
+			}
+
+			console.log(`[API/Predict] Starting ${model} prediction (top_n=${topN}, pool=${poolName || "default"})...`);
+			const startTime = Date.now();
+			try {
+				const result = await predictStockRankingTool.execute(`api-predict-${Date.now()}`, {
+					model,
+					top_n: topN,
+					pool_name: poolName,
+				});
+				const elapsed = Date.now() - startTime;
+				console.log(`[API/Predict] Prediction complete in ${elapsed}ms`);
+				const firstContent = result.content?.[0];
+				const formattedText = firstContent && "text" in firstContent ? firstContent.text : "";
+				json(res, 200, {
+					success: !result.details?.error,
+					elapsed_ms: elapsed,
+					result: result.details,
+					formatted: formattedText,
+				});
+			} catch (err) {
+				const message = err instanceof Error ? err.message : String(err);
+				console.error(`[API/Predict] Prediction failed: ${message}`);
+				json(res, 500, { error: message });
+			}
 			return;
 		}
 

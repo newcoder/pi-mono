@@ -13,6 +13,7 @@ export interface UserConfig {
 	postMarketSchedule: string;
 	timezone: string;
 	preMarketPrompt: string;
+	model?: { provider: string; modelId: string };
 }
 
 const CONFIG_DIR = join(process.env.HOME || process.env.USERPROFILE || ".", ".trading-agent");
@@ -38,6 +39,13 @@ export function loadUserConfig(): UserConfig {
 	} catch {
 		return DEFAULT_CONFIG;
 	}
+}
+
+export function saveUserConfig(config: Partial<UserConfig>): void {
+	if (!existsSync(CONFIG_DIR)) mkdirSync(CONFIG_DIR, { recursive: true });
+	const existing = loadUserConfig();
+	const merged = { ...existing, ...config };
+	writeFileSync(CONFIG_PATH, JSON.stringify(merged, null, 2), "utf-8");
 }
 
 export function getConfigDir(): string {

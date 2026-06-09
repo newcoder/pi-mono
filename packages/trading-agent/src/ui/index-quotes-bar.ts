@@ -1,4 +1,5 @@
 import type { Component } from "@mariozechner/pi-tui";
+import { truncateToWidth } from "@mariozechner/pi-tui";
 import chalk from "chalk";
 import { resolveAShareScript, runJsonScript } from "../tools/_utils.js";
 
@@ -35,7 +36,7 @@ export class IndexQuotesBar implements Component {
 
 	render(width: number): string[] {
 		if (this.quotes.length === 0) {
-			return [chalk.gray("  指数行情: 加载中...".slice(0, width))];
+			return [truncateToWidth(chalk.gray("  指数行情: 加载中..."), width)];
 		}
 
 		const segments: string[] = [];
@@ -47,7 +48,7 @@ export class IndexQuotesBar implements Component {
 		}
 
 		const line = `  ${segments.join("  ")}`;
-		return [line.slice(0, width)];
+		return [truncateToWidth(line, width)];
 	}
 
 	handleInput?(_data: string): void {
