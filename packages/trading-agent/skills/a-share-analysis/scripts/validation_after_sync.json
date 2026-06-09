@@ -1,0 +1,58 @@
+{
+  "validation_time": "2026-05-06T20:04:38.185432",
+  "db_path": "C:\\Users\\Administrator/.trading-agent/data/market.db",
+  "stocks": {
+    "status": "PASS",
+    "count": 5501,
+    "missing_name": 0,
+    "markets": 2,
+    "message": "5501 stocks"
+  },
+  "quotes": {
+    "status": "PASS",
+    "today_count": 5501,
+    "today_stocks": 5501,
+    "max_date": "2026-05-06",
+    "message": "5501 quotes for 2026-05-06, 5501 distinct stocks"
+  },
+  "klines": {
+    "status": "PASS",
+    "max_date": "2026-05-06",
+    "stock_count": 5501,
+    "latest_stocks": 5501,
+    "total_rows": 7566847,
+    "message": "5501 stocks, latest date 2026-05-06, 5501 stocks up-to-date"
+  },
+  "fundamentals": {
+    "status": "WARN",
+    "total_records": 64457,
+    "stock_count": 5207,
+    "max_report_date": "2026-03-31",
+    "latest_count": 2540,
+    "message": "Latest report 2026-03-31 only has 2540 records (expected 4000+)"
+  },
+  "industries": {
+    "status": "PASS",
+    "industry_count": 1210,
+    "standards": 6,
+    "mapping_count": 31162,
+    "stock_count": 5205,
+    "message": "1210 industries (6 standards), 31162 mappings for 5205 stocks"
+  },
+  "concepts": {
+    "status": "PASS",
+    "concept_count": 379,
+    "mapping_count": 53932,
+    "stock_count": 5225,
+    "message": "379 concepts, 53932 mappings for 5225 stocks"
+  },
+  "news": {
+    "status": "PASS",
+    "stock_news_total": 4178,
+    "stock_news_today": 0,
+    "market_news_total": 29,
+    "market_news_today": 0,
+    "message": "stock_news: 4178 total (0 today), market_news: 29 total (0 today)"
+  },
+  "overall_status": "WARN"
+}

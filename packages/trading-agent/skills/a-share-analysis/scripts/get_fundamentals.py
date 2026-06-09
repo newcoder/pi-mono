@@ -1,5 +1,6 @@
 import argparse
 import json
+import time
 import requests
 from bs4 import BeautifulSoup
 from concurrent.futures import ThreadPoolExecutor, as_completed
@@ -32,16 +33,31 @@ def _create_session():
 _SESSION = _create_session()
 
 
-def _get_company_type(symbol_lower: str) -> str:
+def _get_company_type(symbol_lower: str) -> str | None:
     url = "https://emweb.securities.eastmoney.com/PC_HSF10/NewFinanceAnalysis/Index"
     params = {"type": "web", "code": symbol_lower}
-    r = _SESSION.get(url, params=params, headers=HEADERS, timeout=30)
-    r.encoding = "utf-8"
-    soup = BeautifulSoup(r.text, features="lxml")
-    ctype_input = soup.find(attrs={"id": "hidctype"})
-    if ctype_input and ctype_input.get("value"):
-        return ctype_input["value"]
-    raise ValueError("Could not find companyType on Eastmoney F10 page.")
+
+    for attempt in range(3):
+        r = _SESSION.get(url, params=params, headers=HEADERS, timeout=30)
+        r.encoding = "utf-8"
+        soup = BeautifulSoup(r.text, features="lxml")
+        ctype_input = soup.find(attrs={"id": "hidctype"})
+        if ctype_input and ctype_input.get("value"):
+            return ctype_input["value"]
+
+        # Distinguish rate-limit "no data" page from genuinely missing data
+        title = soup.find("title")
+        is_no_data_page = title and "无F10资料" in title.get_text()
+        if is_no_data_page and attempt < 2:
+            # Rate limited or transient failure — wait and retry with backoff
+            time.sleep(1.5 * (attempt + 1))
+            continue
+
+        # Either not a rate-limit page (genuinely missing) or last attempt failed
+        break
+
+    # Return None to signal genuinely missing F10 data (e.g. delisted stocks / indices)
+    return None
 
 
 def _get_report_dates(endpoint: str, company_type: str, code: str) -> list:
@@ -145,6 +161,17 @@ def get_stock_fundamentals(stock_code: str, market: int = 1, history: bool = Fal
     code_upper = f"{prefix.upper()}{stock_code}"
 
     company_type = _get_company_type(symbol_lower)
+    if company_type is None:
+        # Stock has no F10 data (delisted, index, or invalid code)
+        return {
+            "stock_code": stock_code,
+            "market": "SH" if market == 1 else "SZ",
+            "company_type": None,
+            "_no_f10_data": True,
+            "利润表": {"reports": [], "count": 0},
+            "资产负债表": {"reports": [], "count": 0},
+            "现金流量表": {"reports": [], "count": 0},
+        }
 
     statements = {
         "利润表": {

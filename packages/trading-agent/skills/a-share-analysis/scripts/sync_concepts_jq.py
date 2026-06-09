@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
 """
-通过聚宽(jqdatasdk)同步概念股数据到本地SQLite数据库
+同步概念股数据到本地SQLite数据库
+优先: 东方财富HTTP API -> akshare fallback (不再依赖JoinQuant)
 用法: python sync_concepts_jq.py [--concept <概念名称>] [--all]
 """
 
@@ -11,26 +12,33 @@ import sqlite3
 import sys
 import time
 
-import jqdatasdk as jq
+import requests
+
+_HEADERS = {
+    "User-Agent": (
+        "Mozilla/5.0 (Windows NT 10.0; Win64; x64) "
+        "AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36"
+    ),
+    "Referer": "https://quote.eastmoney.com/",
+}
+_FETCH_TIMEOUT = 15
+
 
 def _log(msg):
     """Log to stderr so stdout stays clean for JSON output."""
     print(msg, file=sys.stderr)
 
-def _ensure_auth():
-    if not jq.is_auth():
-        jq.auth('13758103948', 'DingPanBao2021')
 
 def _get_db_path():
     return os.path.expanduser("~/.trading-agent/data/market.db")
 
-def _norm_to_6digit(code):
-    """Convert '000001.XSHE' to '000001'"""
-    return code.split('.')[0]
 
 def _get_market_from_code(code):
-    """1=SH, 0=SZ"""
-    return 1 if code.startswith(('60', '68', '90')) else 0
+    """1=SH, 0=SZ, 2=BJ"""
+    if code.startswith(("8", "4", "92")):
+        return 2
+    return 1 if code.startswith(("60", "68", "90")) else 0
+
 
 def _save_concept_stocks(db_path, concept_name, stocks):
     """Save concept stocks to SQLite."""
@@ -41,71 +49,247 @@ def _save_concept_stocks(db_path, concept_name, stocks):
     # Delete old data for this concept
     cur.execute("DELETE FROM concept_stocks WHERE concept = ?", (concept_name,))
 
-    for stock_code in stocks:
-        code_6d = _norm_to_6digit(stock_code)
+    for stock in stocks:
+        code = stock.get("code", "")
+        name = stock.get("name")
         cur.execute(
             "INSERT OR REPLACE INTO concept_stocks (concept, code, name, updated_at) VALUES (?, ?, ?, ?)",
-            (concept_name, code_6d, None, now)
+            (concept_name, code, name, now)
         )
 
     conn.commit()
     conn.close()
     return len(stocks)
 
+
+# ─── Eastmoney API helpers ──────────────────────────────────────────────────
+
+def _fetch_eastmoney_concept_list():
+    """Fetch all concept blocks from Eastmoney."""
+    url = "https://push2.eastmoney.com/api/qt/clist/get"
+    all_concepts = []
+    page = 1
+    while True:
+        params = {
+            "pn": str(page),
+            "pz": "100",
+            "po": "1",
+            "np": "1",
+            "fltt": "2",
+            "invt": "2",
+            "fid": "f12",
+            "fs": "m:90+t:2",
+            "fields": "f12,f13,f14",
+        }
+        try:
+            r = requests.get(url, params=params, headers=_HEADERS, timeout=_FETCH_TIMEOUT)
+            data = r.json()
+            diff = data.get("data", {}).get("diff", [])
+            if not diff:
+                break
+            for item in diff:
+                code = item.get("f12", "")
+                name = item.get("f14", "")
+                if code and name:
+                    all_concepts.append({"code": code, "name": name})
+            total = data.get("data", {}).get("total", 0)
+            if page * 100 >= total:
+                break
+            page += 1
+            time.sleep(0.1)
+        except Exception as e:
+            _log(f"Error fetching concept list page {page}: {e}")
+            break
+    return all_concepts
+
+
+def _fetch_eastmoney_concept_stocks(concept_code):
+    """Fetch all stocks in a concept block from Eastmoney."""
+    url = "https://push2.eastmoney.com/api/qt/clist/get"
+    all_stocks = []
+    page = 1
+    while True:
+        params = {
+            "pn": str(page),
+            "pz": "100",
+            "po": "1",
+            "np": "1",
+            "fltt": "2",
+            "invt": "2",
+            "fid": "f12",
+            "fs": f"b:{concept_code}",
+            "fields": "f12,f14",
+        }
+        try:
+            r = requests.get(url, params=params, headers=_HEADERS, timeout=_FETCH_TIMEOUT)
+            data = r.json()
+            diff = data.get("data", {}).get("diff", [])
+            if not diff:
+                break
+            for item in diff:
+                code = item.get("f12", "")
+                name = item.get("f14", "")
+                if code:
+                    all_stocks.append({"code": code, "name": name})
+            total = data.get("data", {}).get("total", 0)
+            if page * 100 >= total:
+                break
+            page += 1
+            time.sleep(0.05)
+        except Exception as e:
+            _log(f"Error fetching concept stocks for {concept_code}: {e}")
+            break
+    return all_stocks
+
+
+# ─── akshare fallback helpers ───────────────────────────────────────────────
+
+def _fetch_akshare_concept_list():
+    """Fetch all concept blocks from akshare."""
+    import akshare as ak
+    df = ak.stock_board_concept_name_em()
+    concepts = []
+    for _, row in df.iterrows():
+        code = str(row.get("板块代码", "")).strip()
+        name = str(row.get("板块名称", "")).strip()
+        if code and name:
+            concepts.append({"code": code, "name": name})
+    return concepts
+
+
+def _fetch_akshare_concept_stocks(concept_code):
+    """Fetch all stocks in a concept block from akshare."""
+    import akshare as ak
+    df = ak.stock_board_concept_cons_em(symbol=concept_code)
+    stocks = []
+    for _, row in df.iterrows():
+        code = str(row.get("代码", "")).strip()
+        name = str(row.get("名称", "")).strip()
+        # akshare returns code with market suffix like "688017.SH"
+        code = code.split('.')[0]
+        if code:
+            stocks.append({"code": code, "name": name})
+    return stocks
+
+
+# ─── Public API ─────────────────────────────────────────────────────────────
+
 def sync_single_concept(concept_name):
     """Sync a single concept by name."""
-    _ensure_auth()
     db_path = _get_db_path()
 
-    # Search concept by name
-    concepts = jq.get_concepts()
-    matched = concepts[concepts['name'] == concept_name]
-    if len(matched) == 0:
-        # Try partial match
-        matched = concepts[concepts['name'].str.contains(concept_name, na=False)]
+    # Step 1: Search for concept by name
+    concepts = None
+    try:
+        concepts = _fetch_eastmoney_concept_list()
+    except Exception as e:
+        _log(f"Eastmoney concept list failed: {e}")
+        try:
+            concepts = _fetch_akshare_concept_list()
+            _log(f"Fallback to akshare concept list: {len(concepts)} concepts")
+        except Exception as e2:
+            _log(f"akshare fallback also failed: {e2}")
+            print(json.dumps({"error": f"All sources failed: {e2}"}, ensure_ascii=False))
+            return 0
 
-    if len(matched) == 0:
+    matched = [c for c in concepts if c["name"] == concept_name]
+    if not matched:
+        matched = [c for c in concepts if concept_name in c["name"]]
+
+    if not matched:
         print(json.dumps({"error": f"Concept '{concept_name}' not found"}, ensure_ascii=False))
         return 0
 
-    concept_code = matched.index[0]
-    actual_name = matched.iloc[0]['name']
+    concept = matched[0]
+    actual_name = concept["name"]
+    concept_code = concept["code"]
 
-    stocks = jq.get_concept_stocks(concept_code)
+    # Step 2: Fetch stocks
+    stocks = []
+    try:
+        stocks = _fetch_eastmoney_concept_stocks(concept_code)
+    except Exception as e:
+        _log(f"Eastmoney concept stocks failed: {e}")
+        try:
+            stocks = _fetch_akshare_concept_stocks(concept_code)
+        except Exception as e2:
+            _log(f"akshare fallback also failed: {e2}")
+
     count = _save_concept_stocks(db_path, actual_name, stocks)
     print(json.dumps({"concept": actual_name, "count": count}, ensure_ascii=False))
     return count
 
+
 def sync_all_concepts():
-    """Sync all concepts from JoinQuant."""
-    _ensure_auth()
+    """Sync all concepts."""
     db_path = _get_db_path()
 
-    concepts = jq.get_concepts()
-    total = len(concepts)
-    _log(f"[sync_concepts_jq] Total concepts: {total}")
+    concepts = None
+    try:
+        concepts = _fetch_eastmoney_concept_list()
+        _log(f"[sync_concepts] Eastmoney concept list: {len(concepts)} concepts")
+    except Exception as e:
+        _log(f"[sync_concepts] Eastmoney concept list failed: {e}")
+        try:
+            concepts = _fetch_akshare_concept_list()
+            _log(f"[sync_concepts] Fallback to akshare: {len(concepts)} concepts")
+        except Exception as e2:
+            _log(f"[sync_concepts] akshare fallback also failed: {e2}")
+            print(json.dumps({"error": str(e2)}, ensure_ascii=False))
+            return {"error": str(e2)}
+
+    if not concepts:
+        print(json.dumps({"error": "No concepts found"}, ensure_ascii=False))
+        return {"error": "No concepts found"}
+
+    conn = sqlite3.connect(db_path)
+    cur = conn.cursor()
+    now = time.strftime('%Y-%m-%dT%H:%M:%S')
+
+    # Clear old data before full sync
+    cur.execute("DELETE FROM concept_stocks")
 
     total_stocks = 0
-    for idx, (concept_code, row) in enumerate(concepts.iterrows()):
-        name = row['name']
-        try:
-            stocks = jq.get_concept_stocks(concept_code)
-            count = _save_concept_stocks(db_path, name, stocks)
-            total_stocks += count
-            if (idx + 1) % 50 == 0:
-                _log(f"[sync_concepts_jq] Progress: {idx + 1}/{total} concepts, {total_stocks} stocks synced")
-            # Small delay to avoid rate limiting
-            time.sleep(0.1)
-        except Exception as e:
-            _log(f"[sync_concepts_jq] Failed to sync {name} ({concept_code}): {e}")
+    for idx, concept in enumerate(concepts):
+        name = concept.get("name", "")
+        code = concept.get("code", "")
+        if not name or not code:
+            continue
 
-    _log(f"[sync_concepts_jq] Done. {total} concepts, {total_stocks} stocks synced.")
-    result = {"total_concepts": total, "total_stocks": total_stocks}
+        stocks = []
+        try:
+            stocks = _fetch_eastmoney_concept_stocks(code)
+        except Exception as e:
+            _log(f"[sync_concepts] Eastmoney failed for {name}: {e}")
+            try:
+                stocks = _fetch_akshare_concept_stocks(code)
+            except Exception as e2:
+                _log(f"[sync_concepts] akshare fallback failed for {name}: {e2}")
+
+        for stock in stocks:
+            cur.execute(
+                "INSERT OR REPLACE INTO concept_stocks (concept, code, name, updated_at) VALUES (?, ?, ?, ?)",
+                (name, stock.get("code", ""), stock.get("name"), now)
+            )
+            total_stocks += 1
+
+        if (idx + 1) % 50 == 0:
+            _log(f"[sync_concepts] Progress: {idx + 1}/{len(concepts)} concepts, {total_stocks} stocks synced")
+            conn.commit()
+
+        time.sleep(0.05)
+
+    conn.commit()
+    conn.close()
+
+    _log(f"[sync_concepts] Done. {len(concepts)} concepts, {total_stocks} stocks synced.")
+    result = {"total_concepts": len(concepts), "total_stocks": total_stocks}
     print(json.dumps(result, ensure_ascii=False))
-    return total_stocks
+    return result
+
 
 def main():
-    parser = argparse.ArgumentParser(description="Sync concept stocks from JoinQuant")
+    parser = argparse.ArgumentParser(description="Sync concept stocks (Eastmoney/akshare, no JoinQuant)")
     parser.add_argument("--concept", type=str, help="Sync single concept by name")
     parser.add_argument("--all", action="store_true", help="Sync all concepts")
     args = parser.parse_args()
@@ -116,6 +300,7 @@ def main():
         sync_single_concept(args.concept)
     else:
         parser.print_help()
+
 
 if __name__ == "__main__":
     main()

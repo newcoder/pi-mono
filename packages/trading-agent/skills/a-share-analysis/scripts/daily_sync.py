@@ -6,7 +6,7 @@ A-Share Analysis 全市场数据每日定时同步脚本
 运行建议: 每天 01:20 (A股收盘后数据稳定时段)
 用法:     python daily_sync.py [--validate-only] [--phase PHASE]
 
-依赖:     jqdatasdk, akshare, pandas, requests, beautifulsoup4
+依赖:     akshare, pandas, requests, beautifulsoup4, mootdx
 """
 
 import argparse
@@ -97,6 +97,7 @@ def _phase(name: str):
 def get_db() -> sqlite3.Connection:
     conn = sqlite3.connect(_DB_PATH)
     conn.row_factory = sqlite3.Row
+    conn.execute("PRAGMA journal_mode=WAL;")
     return conn
 
 
@@ -256,42 +257,84 @@ def ensure_tables():
 
 # ── Phase 1: Sync Stocks ───────────────────────────────────────────────────
 
+def _is_a_share(code: str) -> bool:
+    """Strict A-share 6-digit code filter. Excludes funds, bonds, B-shares."""
+    if not code or len(code) != 6 or not code.isdigit():
+        return False
+    # Shanghai main board + STAR market
+    if code.startswith(("600", "601", "602", "603", "605", "688", "689")):
+        return True
+    # Shenzhen main board + SME + ChiNext
+    if code.startswith(("000", "001", "002", "003", "300", "301")):
+        return True
+    return False
+
+
 @_phase("stocks")
 def sync_stocks() -> dict:
-    """Sync full stock list from JoinQuant."""
-    from jq_data import get_all_stocks, normalize_code
-    import jqdatasdk as jq
-
-    if not jq.is_auth():
-        jq.auth('13758103948', 'DingPanBao2021')
-
-    df = get_all_stocks()
-    if df is None or len(df) == 0:
-        raise RuntimeError("Failed to fetch stock list from JoinQuant")
-
+    """Sync full stock list. Priority: akshare -> mootdx fallback."""
     conn = get_db()
-    cur = conn.cursor()
-    now = datetime.now().isoformat()
-    count = 0
+    try:
+        cur = conn.cursor()
+        now = datetime.now().isoformat()
+        count = 0
 
-    for jq_code, row in df.iterrows():
-        code = str(jq_code).split('.')[0]
-        market = 1 if str(jq_code).endswith('XSHG') else 0
-        name = row.get('display_name', '')
-        start_date = row.get('start_date')
-        list_date = str(start_date)[:10] if start_date is not None else None
+        # Try akshare first
+        stocks = []
+        try:
+            import akshare as ak
+            df = ak.stock_zh_a_spot_em()
+            for _, row in df.iterrows():
+                code = str(row.get("代码", "")).strip()
+                name = str(row.get("名称", "")).strip()
+                if not _is_a_share(code):
+                    continue
+                market = 1 if code.startswith(("60", "68")) else 0
+                stocks.append({"code": code, "market": market, "name": name})
+            logger.info(f"Fetched {len(stocks)} stocks from akshare.")
+        except Exception as e:
+            logger.warning(f"akshare stock list failed: {e}")
 
-        cur.execute(
-            """INSERT OR REPLACE INTO stocks (code, market, name, list_date, updated_at)
-               VALUES (?, ?, ?, ?, ?)""",
-            (code, market, name, list_date, now)
-        )
-        count += 1
+        # Fallback: mootdx stock_all (includes non-A-shares, needs filtering)
+        if not stocks:
+            try:
+                from mootdx.quotes import Quotes
+                client = Quotes.factory(market="std")
+                df = client.stock_all()
+                if df is not None and not df.empty:
+                    for _, row in df.iterrows():
+                        code = str(row.get("code", "")).strip()
+                        if not _is_a_share(code):
+                            continue
+                        market = 1 if code.startswith(("60", "68")) else 0
+                        name = str(row.get("name", "") or "").strip()
+                        stocks.append({"code": code, "market": market, "name": name})
+                    logger.info(f"Fetched {len(stocks)} stocks from mootdx.")
+            except Exception as e:
+                logger.warning(f"mootdx stock list failed: {e}")
 
-    conn.commit()
-    conn.close()
-    logger.info(f"Synced {count} stocks.")
-    return {"count": count}
+        if not stocks:
+            raise RuntimeError("Failed to fetch stock list from all sources")
+
+        for stock in stocks:
+            code = stock["code"]
+            market = stock["market"]
+            name = stock.get("name")
+            if not name:
+                name = "(unknown)"
+            # list_date not available from these APIs
+            cur.execute(
+                """INSERT OR REPLACE INTO stocks (code, market, name, list_date, updated_at)
+                   VALUES (?, ?, ?, ?, ?)""",
+                (code, market, name, None, now)
+            )
+            count += 1
+
+        conn.commit()
+        logger.info(f"Synced {count} stocks.")
+        return {"count": count}
+    finally:
+        conn.close()
 
 
 # ── Phase 2: Sync Quotes ───────────────────────────────────────────────────
@@ -313,89 +356,151 @@ def _sync_quotes_from_tencent() -> dict:
     Returns rich fields including PE, PB, market cap, turnover, etc.
     """
     conn = get_db()
-    cur = conn.cursor()
-    today = datetime.now().strftime('%Y-%m-%d')
-    now = datetime.now().isoformat()
+    try:
+        cur = conn.cursor()
+        today = datetime.now().strftime('%Y-%m-%d')
+        now = datetime.now().isoformat()
 
-    # Get all stock codes from DB
-    stocks = conn.execute("SELECT code, market FROM stocks ORDER BY code").fetchall()
-    if not stocks:
-        conn.close()
-        raise RuntimeError("No stocks found in DB")
+        # Get all stock codes from DB
+        stocks = conn.execute("SELECT code, market FROM stocks ORDER BY code").fetchall()
+        if not stocks:
+            raise RuntimeError("No stocks found in DB")
 
-    def _prefix(code: str) -> str:
-        if code.startswith(("60", "68", "90")):
-            return f"sh{code}"
-        elif code.startswith(("8", "4", "92")):
-            return f"bj{code}"
-        else:
-            return f"sz{code}"
+        def _prefix(code: str) -> str:
+            if code.startswith(("60", "68", "90")):
+                return f"sh{code}"
+            elif code.startswith(("8", "4", "92")):
+                return f"bj{code}"
+            else:
+                return f"sz{code}"
 
-    def _safe_float(v):
-        if v is None or v == '' or v == '-':
-            return None
-        try:
-            return float(v)
-        except (ValueError, TypeError):
-            return None
-
-    batch_size = 700
-    total_inserted = 0
-    total_fetched = 0
-
-    for i in range(0, len(stocks), batch_size):
-        batch = stocks[i:i + batch_size]
-        prefixed = [_prefix(s["code"]) for s in batch]
-        url = "https://qt.gtimg.cn/q=" + ",".join(prefixed)
-
-        try:
-            req = urllib.request.Request(url)
-            req.add_header("User-Agent", "Mozilla/5.0")
-            resp = urllib.request.urlopen(req, timeout=15)
-            raw = resp.read()
-        except Exception as e:
-            logger.warning(f"  Tencent API batch {i}-{i+len(batch)} failed: {e}")
-            continue
-
-        # Decode response (gbk/gb18030)
-        data = None
-        for enc in ["gb18030", "gbk", "utf-8"]:
+        def _safe_float(v):
+            if v is None or v == '' or v == '-':
+                return None
             try:
-                data = raw.decode(enc)
-                break
-            except UnicodeDecodeError:
-                continue
-        if data is None:
-            data = raw.decode("gbk", errors="ignore")
+                return float(v)
+            except (ValueError, TypeError):
+                return None
 
-        for line in data.strip().split(";"):
-            if not line.strip() or "=" not in line or '"' not in line:
-                continue
-            key = line.split("=")[0].split("_")[-1]
-            vals = line.split('"')[1].split("~")
-            if len(vals) < 53:
+        batch_size = 700
+        total_inserted = 0
+        total_fetched = 0
+
+        for i in range(0, len(stocks), batch_size):
+            batch = stocks[i:i + batch_size]
+            prefixed = [_prefix(s["code"]) for s in batch]
+            url = "https://qt.gtimg.cn/q=" + ",".join(prefixed)
+
+            try:
+                req = urllib.request.Request(url)
+                req.add_header("User-Agent", "Mozilla/5.0")
+                resp = urllib.request.urlopen(req, timeout=15)
+                raw = resp.read()
+            except Exception as e:
+                logger.warning(f"  Tencent API batch {i}-{i+len(batch)} failed: {e}")
                 continue
 
-            code = key[2:] if len(key) > 2 else key
-            # Determine market from code prefix in response key
-            market = 1 if key.startswith("sh") else 0
+            # Decode response (gbk/gb18030)
+            data = None
+            for enc in ["gb18030", "gbk", "utf-8"]:
+                try:
+                    data = raw.decode(enc)
+                    break
+                except UnicodeDecodeError:
+                    continue
+            if data is None:
+                data = raw.decode("gbk", errors="ignore")
 
-            name = vals[1] if len(vals) > 1 else None
-            latest = _safe_float(vals[3])   # 当前价
-            last_close = _safe_float(vals[4])  # 昨收
-            open_p = _safe_float(vals[5])   # 开盘价
-            high = _safe_float(vals[33])    # 最高价
-            low = _safe_float(vals[34])     # 最低价
-            change_pct = _safe_float(vals[32])  # 涨跌幅
-            # vals[36] = 总成交量(手), convert to shares
-            volume = _safe_float(vals[36])
-            if volume is not None:
-                volume = volume * 100
-            turnover = _safe_float(vals[37])  # 成交金额(元)
-            pe = _safe_float(vals[39])      # 市盈率(TTM)
-            pb = _safe_float(vals[46])      # 市净率
-            mcap_yi = _safe_float(vals[44])  # 流通市值(亿)
-            total_cap_yi = _safe_float(vals[45])  # 总市值(亿)
+            for line in data.strip().split(";"):
+                if not line.strip() or "=" not in line or '"' not in line:
+                    continue
+                key = line.split("=")[0].split("_")[-1]
+                vals = line.split('"')[1].split("~")
+                if len(vals) < 53:
+                    continue
+
+                code = key[2:] if len(key) > 2 else key
+                # Determine market from code prefix in response key
+                market = 1 if key.startswith("sh") else 0
+
+                name = vals[1] if len(vals) > 1 else None
+                latest = _safe_float(vals[3])   # 当前价
+                last_close = _safe_float(vals[4])  # 昨收
+                open_p = _safe_float(vals[5])   # 开盘价
+                high = _safe_float(vals[33])    # 最高价
+                low = _safe_float(vals[34])     # 最低价
+                change_pct = _safe_float(vals[32])  # 涨跌幅
+                # vals[36] = 总成交量(手), convert to shares
+                volume = _safe_float(vals[36])
+                if volume is not None:
+                    volume = volume * 100
+                turnover = _safe_float(vals[37])  # 成交金额(元)
+                pe = _safe_float(vals[39])      # 市盈率(TTM)
+                pb = _safe_float(vals[46])      # 市净率
+                mcap_yi = _safe_float(vals[44])  # 流通市值(亿)
+                total_cap_yi = _safe_float(vals[45])  # 总市值(亿)
+
+                cur.execute(
+                    """INSERT OR REPLACE INTO quotes
+                       (code, market, snapshot_date, name, latest, open, high, low, prev_close,
+                        volume, turnover, change_pct, pe, pb, total_cap, float_cap, high_52w, low_52w, updated_at)
+                       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)""",
+                    (
+                        code, market, today, name,
+                        latest, open_p, high, low, last_close,
+                        volume, turnover, change_pct,
+                        pe, pb,
+                        total_cap_yi, mcap_yi,
+                        None, None,  # 52w high/low not available from Tencent
+                        now
+                    )
+                )
+                total_inserted += 1
+
+            total_fetched += len(batch)
+            if (i // batch_size + 1) % 2 == 0:
+                logger.info(f"  Tencent quotes progress: {total_fetched}/{len(stocks)} stocks, {total_inserted} inserted")
+
+        conn.commit()
+        logger.info(f"Synced {total_inserted} quotes for {today} from Tencent API.")
+        return {"count": total_inserted, "date": today, "source": "tencent"}
+    finally:
+        conn.close()
+
+
+def _sync_quotes_from_klines() -> dict:
+    """Fallback: derive quotes from latest klines when akshare is unavailable."""
+    conn = get_db()
+    try:
+        today = datetime.now().strftime('%Y-%m-%d')
+        now = datetime.now().isoformat()
+
+        # Get latest date from klines
+        row = conn.execute(
+            "SELECT MAX(date) as max_date FROM klines WHERE period = 'daily' AND adjust = 'bfq'"
+        ).fetchone()
+        latest_kline_date = row["max_date"] if row else None
+
+        if not latest_kline_date:
+            raise RuntimeError("No kline data available for fallback quotes")
+
+        logger.info(f"Deriving quotes from klines date {latest_kline_date}...")
+
+        cur = conn.cursor()
+        klines = conn.execute(
+            """SELECT code, market, date, open, high, low, close as latest, volume,
+                      turnover, change_pct, pre_close
+               FROM klines
+               WHERE period = 'daily' AND adjust = 'bfq' AND date = ?""",
+            (latest_kline_date,)
+        ).fetchall()
+
+        count = 0
+        for k in klines:
+            code = k["code"]
+            market = k["market"]
+            # For snapshot_date, use today if kline is today's data, else use kline date
+            snapshot_date = today if latest_kline_date == today else latest_kline_date
 
             cur.execute(
                 """INSERT OR REPLACE INTO quotes
@@ -403,79 +508,20 @@ def _sync_quotes_from_tencent() -> dict:
                     volume, turnover, change_pct, pe, pb, total_cap, float_cap, high_52w, low_52w, updated_at)
                    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)""",
                 (
-                    code, market, today, name,
-                    latest, open_p, high, low, last_close,
-                    volume, turnover, change_pct,
-                    pe, pb,
-                    total_cap_yi, mcap_yi,
-                    None, None,  # 52w high/low not available from Tencent
+                    code, market, snapshot_date, None,
+                    k["latest"], k["open"], k["high"], k["low"], k["pre_close"],
+                    k["volume"], k["turnover"], k["change_pct"],
+                    None, None, None, None, None, None,
                     now
                 )
             )
-            total_inserted += 1
+            count += 1
 
-        total_fetched += len(batch)
-        if (i // batch_size + 1) % 2 == 0:
-            logger.info(f"  Tencent quotes progress: {total_fetched}/{len(stocks)} stocks, {total_inserted} inserted")
-
-    conn.commit()
-    conn.close()
-    logger.info(f"Synced {total_inserted} quotes for {today} from Tencent API.")
-    return {"count": total_inserted, "date": today, "source": "tencent"}
-
-
-def _sync_quotes_from_klines() -> dict:
-    """Fallback: derive quotes from latest klines when akshare is unavailable."""
-    conn = get_db()
-    today = datetime.now().strftime('%Y-%m-%d')
-    now = datetime.now().isoformat()
-
-    # Get latest date from klines
-    row = conn.execute(
-        "SELECT MAX(date) as max_date FROM klines WHERE period = 'daily' AND adjust = 'bfq'"
-    ).fetchone()
-    latest_kline_date = row["max_date"] if row else None
-
-    if not latest_kline_date:
-        raise RuntimeError("No kline data available for fallback quotes")
-
-    logger.info(f"Deriving quotes from klines date {latest_kline_date}...")
-
-    cur = conn.cursor()
-    klines = conn.execute(
-        """SELECT code, market, date, open, high, low, close as latest, volume,
-                  turnover, change_pct, pre_close
-           FROM klines
-           WHERE period = 'daily' AND adjust = 'bfq' AND date = ?""",
-        (latest_kline_date,)
-    ).fetchall()
-
-    count = 0
-    for k in klines:
-        code = k["code"]
-        market = k["market"]
-        # For snapshot_date, use today if kline is today's data, else use kline date
-        snapshot_date = today if latest_kline_date == today else latest_kline_date
-
-        cur.execute(
-            """INSERT OR REPLACE INTO quotes
-               (code, market, snapshot_date, name, latest, open, high, low, prev_close,
-                volume, turnover, change_pct, pe, pb, total_cap, float_cap, high_52w, low_52w, updated_at)
-               VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)""",
-            (
-                code, market, snapshot_date, None,
-                k["latest"], k["open"], k["high"], k["low"], k["pre_close"],
-                k["volume"], k["turnover"], k["change_pct"],
-                None, None, None, None, None, None,
-                now
-            )
-        )
-        count += 1
-
-    conn.commit()
-    conn.close()
-    logger.info(f"Derived {count} quotes from klines ({latest_kline_date}).")
-    return {"count": count, "date": latest_kline_date, "source": "klines_fallback"}
+        conn.commit()
+        logger.info(f"Derived {count} quotes from klines ({latest_kline_date}).")
+        return {"count": count, "date": latest_kline_date, "source": "klines_fallback"}
+    finally:
+        conn.close()
 
 
 @_phase("quotes")
@@ -581,13 +627,8 @@ def sync_quotes() -> dict:
 
 @_phase("klines")
 def sync_klines() -> dict:
-    """Sync daily klines for all stocks from JoinQuant (incremental)."""
-    from jq_data import normalize_code, fetch
-    import jqdatasdk as jq
-    import pandas as pd
-
-    if not jq.is_auth():
-        jq.auth('13758103948', 'DingPanBao2021')
+    """Sync daily klines for all stocks. Uses mootdx (TCP direct) / akshare. No JoinQuant dependency."""
+    from batch_get_kline import batch_get_kline
 
     conn = get_db()
 
@@ -608,89 +649,56 @@ def sync_klines() -> dict:
     failed = 0
     total_rows = 0
 
-    # Process in batches of 50 (jq panel fetch limit considerations)
-    batch_size = 50
-    for i in range(0, total, batch_size):
-        batch = stocks[i:i + batch_size]
-        jq_codes = []
-        code_map = {}
-        for s in batch:
-            code = s["code"]
-            market = s["market"]
-            jq_code = normalize_code(code)
-            jq_codes.append(jq_code)
-            code_map[jq_code] = (code, market)
+    try:
+        # Process in batches of 50
+        batch_size = 50
+        for i in range(0, total, batch_size):
+            batch = stocks[i:i + batch_size]
+            batch_dicts = [{"code": s["code"], "market": s["market"]} for s in batch]
 
-        try:
-            df = jq.get_price(jq_codes, start_date=start_date, end_date=end_date,
-                       frequency='daily', fq=None, fields=['open', 'close', 'low', 'high', 'volume', 'money', 'pre_close'],
-                       panel=True, skip_paused=False)
+            try:
+                klines = batch_get_kline(batch_dicts, start_date=start_date, end_date=end_date,
+                                          period="daily", adjust="bfq")
 
-            if df is None or len(df) == 0:
+                if not klines:
+                    failed += len(batch)
+                    continue
+
+                for k in klines:
+                    code = k["code"]
+                    market = k["market"]
+                    date_str = k["date"]
+                    if not date_str:
+                        continue
+
+                    conn.execute(
+                        """INSERT OR REPLACE INTO klines
+                           (code, market, period, adjust, date, open, high, low, close,
+                            volume, turnover, change_pct, change_amount, amplitude, pre_close)
+                           VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)""",
+                        (code, market, 'daily', 'bfq', date_str,
+                         k.get("open"), k.get("high"), k.get("low"), k.get("close"),
+                         k.get("volume"), k.get("amount"),
+                         k.get("change_pct"), k.get("change_amount"), k.get("amplitude"),
+                         k.get("pre_close"))
+                    )
+                    total_rows += 1
+
+                synced += len(batch)
+
+                if (i // batch_size + 1) % 10 == 0:
+                    conn.commit()
+                    logger.info(f"  Klines progress: {min(i + batch_size, total)}/{total} stocks, {total_rows} rows")
+
+            except Exception as e:
+                logger.warning(f"  Batch {i}-{i+batch_size} failed: {e}")
                 failed += len(batch)
-                continue
 
-            # Normalize panel DataFrame
-            if isinstance(df.columns, pd.MultiIndex):
-                df = df.stack(level=1).reset_index()
-                if 'level_1' in df.columns:
-                    df.rename(columns={'level_1': 'code'}, inplace=True)
-                if 'level_0' in df.columns:
-                    df.rename(columns={'level_0': 'date'}, inplace=True)
-
-            for _, row in df.iterrows():
-                jq_code = row.get('code')
-                if pd.isna(jq_code):
-                    continue
-                code, market = code_map.get(jq_code, (str(jq_code).split('.')[0], 0))
-
-                date_str = str(row.get('date') or row.get('time', '')).split(' ')[0]
-                if not date_str:
-                    continue
-
-                open_p = float(row['open']) if pd.notna(row.get('open')) else None
-                close_p = float(row['close']) if pd.notna(row.get('close')) else None
-                low_p = float(row['low']) if pd.notna(row.get('low')) else None
-                high_p = float(row['high']) if pd.notna(row.get('high')) else None
-                volume = float(row['volume']) if pd.notna(row.get('volume')) else None
-                money = float(row['money']) if pd.notna(row.get('money')) else None
-                pre_close = float(row['pre_close']) if pd.notna(row.get('pre_close')) else None
-
-                change_amount = None
-                change_pct = None
-                amplitude = None
-                if close_p is not None and pre_close is not None and pre_close != 0:
-                    change_amount = round(close_p - pre_close, 4)
-                    change_pct = round((close_p - pre_close) / pre_close * 100, 4)
-                    if high_p is not None and low_p is not None:
-                        amplitude = round((high_p - low_p) / pre_close * 100, 4)
-
-                conn.execute(
-                    """INSERT OR REPLACE INTO klines
-                       (code, market, period, adjust, date, open, high, low, close,
-                        volume, turnover, change_pct, change_amount, amplitude, pre_close)
-                       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)""",
-                    (code, market, 'daily', 'bfq', date_str, open_p, high_p, low_p, close_p,
-                     volume, money, change_pct, change_amount, amplitude, pre_close)
-                )
-                total_rows += 1
-
-            synced += len(batch)
-
-            if (i // batch_size + 1) % 10 == 0:
-                conn.commit()
-                logger.info(f"  Klines progress: {min(i + batch_size, total)}/{total} stocks, {total_rows} rows")
-
-        except Exception as e:
-            logger.warning(f"  Batch {i}-{i+batch_size} failed: {e}")
-            failed += len(batch)
-
-        time.sleep(0.3)  # rate limit
-
-    conn.commit()
-    conn.close()
-    logger.info(f"Klines done: {synced} stocks synced, {failed} failed, {total_rows} rows inserted.")
-    return {"synced": synced, "failed": failed, "rows": total_rows}
+        conn.commit()
+        logger.info(f"Klines done: {synced} stocks synced, {failed} failed, {total_rows} rows inserted.")
+        return {"synced": synced, "failed": failed, "rows": total_rows}
+    finally:
+        conn.close()
 
 
 # ── Phase 4: Sync Fundamentals ─────────────────────────────────────────────
@@ -1094,7 +1102,12 @@ def main():
         run_validation()
         return
 
-    phases = args.phase
+    phases = None
+    if args.phase:
+        # Support both --phase stocks --phase quotes and --phase stocks,quotes,klines
+        phases = []
+        for p in args.phase:
+            phases.extend([s.strip() for s in p.split(",") if s.strip()])
     if args.skip_fundamentals and not phases:
         phases = ["stocks", "quotes", "klines", "industries", "concepts", "stock_news", "market_news", "validation"]
 

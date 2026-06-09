@@ -1,8 +1,9 @@
 #!/usr/bin/env python3
 """
-通过聚宽(jqdatasdk)同步多级多标准行业分类数据到本地SQLite数据库
-支持标准: sw_l1, sw_l2, sw_l3, zjw, jq_l1, jq_l2
-用法: python sync_industries_jq.py [--standard sw_l1] [--all]
+同步行业分类数据到本地SQLite数据库
+优先: 东方财富HTTP API -> akshare fallback (不再依赖JoinQuant)
+支持标准: em (Eastmoney行业分类)
+用法: python sync_industries_jq.py [--standard em] [--all]
 """
 
 import argparse
@@ -12,176 +13,252 @@ import sqlite3
 import sys
 import time
 
-import jqdatasdk as jq
+import requests
+
+_HEADERS = {
+    "User-Agent": (
+        "Mozilla/5.0 (Windows NT 10.0; Win64; x64) "
+        "AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36"
+    ),
+    "Referer": "https://quote.eastmoney.com/",
+}
+_FETCH_TIMEOUT = 15
+
 
 def _log(msg):
     print(msg, file=sys.stderr)
 
-def _ensure_auth():
-    if not jq.is_auth():
-        jq.auth('13758103948', 'DingPanBao2021')
 
 def _get_db_path():
     return os.path.expanduser("~/.trading-agent/data/market.db")
 
-def _norm_to_6digit(code):
-    return code.split('.')[0]
 
 def _get_market_from_code(code):
-    return 1 if code.startswith(('60', '68', '90')) else 0
+    """1=SH, 0=SZ, 2=BJ"""
+    if code.startswith(("8", "4", "92")):
+        return 2
+    return 1 if code.startswith(("60", "68", "90")) else 0
 
-# Map standard name to level
-STANDARD_LEVELS = {
-    'sw_l1': 1,
-    'sw_l2': 2,
-    'sw_l3': 3,
-    'zjw': None,
-    'jq_l1': 1,
-    'jq_l2': 2,
-}
 
-def _build_sw_parent_map(all_industries):
-    """Build sw_l1->sw_l2 and sw_l2->sw_l3 parent mappings by scanning stock data."""
-    _log("[sync_industries_jq] Building SW parent relationships...")
-    all_stocks = jq.get_all_securities(types=['stock'], date=None)
-    stock_codes = list(all_stocks.index)
+# ─── Eastmoney API helpers ──────────────────────────────────────────────────
 
-    today = time.strftime('%Y-%m-%d')
-    industries = jq.get_industry(security=stock_codes, date=today)
+def _fetch_eastmoney_industry_list():
+    """Fetch all industry blocks from Eastmoney."""
+    url = "https://push2.eastmoney.com/api/qt/clist/get"
+    all_industries = []
+    page = 1
+    while True:
+        params = {
+            "pn": str(page),
+            "pz": "100",
+            "po": "1",
+            "np": "1",
+            "fltt": "2",
+            "invt": "2",
+            "fid": "f12",
+            "fs": "m:90+t:3",
+            "fields": "f12,f13,f14",
+        }
+        try:
+            r = requests.get(url, params=params, headers=_HEADERS, timeout=_FETCH_TIMEOUT)
+            data = r.json()
+            diff = data.get("data", {}).get("diff", [])
+            if not diff:
+                break
+            for item in diff:
+                code = item.get("f12", "")
+                name = item.get("f14", "")
+                if code and name:
+                    all_industries.append({"code": code, "name": name})
+            total = data.get("data", {}).get("total", 0)
+            if page * 100 >= total:
+                break
+            page += 1
+            time.sleep(0.1)
+        except Exception as e:
+            _log(f"Error fetching industry list page {page}: {e}")
+            break
+    return all_industries
 
-    l1_to_l2 = {}
-    l2_to_l3 = {}
 
-    for code, info in industries.items():
-        sw_l1 = info.get('sw_l1')
-        sw_l2 = info.get('sw_l2')
-        sw_l3 = info.get('sw_l3')
+def _fetch_eastmoney_industry_stocks(industry_code):
+    """Fetch all stocks in an industry block from Eastmoney."""
+    url = "https://push2.eastmoney.com/api/qt/clist/get"
+    all_stocks = []
+    page = 1
+    while True:
+        params = {
+            "pn": str(page),
+            "pz": "100",
+            "po": "1",
+            "np": "1",
+            "fltt": "2",
+            "invt": "2",
+            "fid": "f12",
+            "fs": f"b:{industry_code}",
+            "fields": "f12,f14",
+        }
+        try:
+            r = requests.get(url, params=params, headers=_HEADERS, timeout=_FETCH_TIMEOUT)
+            data = r.json()
+            diff = data.get("data", {}).get("diff", [])
+            if not diff:
+                break
+            for item in diff:
+                code = item.get("f12", "")
+                name = item.get("f14", "")
+                if code:
+                    all_stocks.append({"code": code, "name": name})
+            total = data.get("data", {}).get("total", 0)
+            if page * 100 >= total:
+                break
+            page += 1
+            time.sleep(0.05)
+        except Exception as e:
+            _log(f"Error fetching industry stocks for {industry_code}: {e}")
+            break
+    return all_stocks
 
-        if sw_l1 and sw_l2:
-            l1_code = sw_l1['industry_code']
-            l2_code = sw_l2['industry_code']
-            if l2_code not in l1_to_l2:
-                l1_to_l2[l2_code] = l1_code
 
-        if sw_l2 and sw_l3:
-            l2_code = sw_l2['industry_code']
-            l3_code = sw_l3['industry_code']
-            if l3_code not in l2_to_l3:
-                l2_to_l3[l3_code] = l2_code
+# ─── akshare fallback helpers ───────────────────────────────────────────────
 
-    return l1_to_l2, l2_to_l3
+def _fetch_akshare_industry_list():
+    """Fetch all industry blocks from akshare."""
+    import akshare as ak
+    df = ak.stock_board_industry_name_em()
+    industries = []
+    for _, row in df.iterrows():
+        code = str(row.get("板块代码", "")).strip()
+        name = str(row.get("板块名称", "")).strip()
+        if code and name:
+            industries.append({"code": code, "name": name})
+    return industries
+
+
+def _fetch_akshare_industry_stocks(industry_code):
+    """Fetch all stocks in an industry block from akshare."""
+    import akshare as ak
+    df = ak.stock_board_industry_cons_em(symbol=industry_code)
+    stocks = []
+    for _, row in df.iterrows():
+        code = str(row.get("代码", "")).strip()
+        name = str(row.get("名称", "")).strip()
+        code = code.split('.')[0]
+        if code:
+            stocks.append({"code": code, "name": name})
+    return stocks
+
+
+# ─── Public API ─────────────────────────────────────────────────────────────
 
 def sync_standard(standard, db_path, now):
-    """Sync a single industry standard."""
-    _log(f"[sync_industries_jq] Syncing standard: {standard}...")
+    """Sync a single industry standard. Currently only supports 'em'."""
+    _log(f"[sync_industries] Syncing standard: {standard}...")
 
-    # 1. Get industry definitions
-    industries_df = jq.get_industries(name=standard)
-    level = STANDARD_LEVELS.get(standard)
+    if standard != "em":
+        _log(f"[sync_industries] Standard '{standard}' not supported without JoinQuant. Use 'em' (Eastmoney).")
+        return {"standard": standard, "error": f"Standard '{standard}' requires JoinQuant"}
 
-    industry_rows = []
-    for industry_code, row in industries_df.iterrows():
-        start_date = None
-        if 'start_date' in row and row['start_date'] is not None:
-            start_date = str(row['start_date'])[:10]
-        industry_rows.append({
-            'industry_code': str(industry_code),
-            'name': row['name'],
-            'standard': standard,
-            'level': level,
-            'parent_code': None,
-            'start_date': start_date,
-            'updated_at': now,
-        })
+    industries = None
+    try:
+        industries = _fetch_eastmoney_industry_list()
+        _log(f"[sync_industries] Eastmoney industry list: {len(industries)} industries")
+    except Exception as e:
+        _log(f"[sync_industries] Eastmoney industry list failed: {e}")
+        try:
+            industries = _fetch_akshare_industry_list()
+            _log(f"[sync_industries] Fallback to akshare: {len(industries)} industries")
+        except Exception as e2:
+            _log(f"[sync_industries] akshare fallback also failed: {e2}")
+            return {"standard": standard, "error": str(e2)}
 
-    # 2. Get all stocks and their industry classification
-    all_stocks = jq.get_all_securities(types=['stock'], date=None)
-    stock_codes = list(all_stocks.index)
+    if not industries:
+        return {"standard": standard, "error": "No industries found"}
 
-    today = time.strftime('%Y-%m-%d')
-    industries = jq.get_industry(security=stock_codes, date=today)
-
-    stock_industry_rows = []
-    default_industry_map = {}  # code -> sw_l1 name for stocks.industry update
-
-    for code, info in industries.items():
-        code_6d = _norm_to_6digit(code)
-        market = _get_market_from_code(code_6d)
-
-        ind_info = info.get(standard)
-        if ind_info:
-            stock_industry_rows.append({
-                'code': code_6d,
-                'market': market,
-                'industry_code': ind_info['industry_code'],
-                'standard': standard,
-                'updated_at': now,
-            })
-
-        # Also capture sw_l1 for stocks.industry default
-        if standard == 'sw_l1':
-            sw_l1_info = info.get('sw_l1')
-            if sw_l1_info:
-                default_industry_map[code_6d] = sw_l1_info['industry_name']
-
-    # 3. Write to SQLite
     conn = sqlite3.connect(db_path)
     cur = conn.cursor()
 
     # Save industry definitions
-    for item in industry_rows:
+    for ind in industries:
         cur.execute(
             """INSERT OR REPLACE INTO industries
                (industry_code, name, standard, level, parent_code, start_date, updated_at)
                VALUES (?, ?, ?, ?, ?, ?, ?)""",
-            (item['industry_code'], item['name'], item['standard'], item['level'],
-             item['parent_code'], item['start_date'], item['updated_at'])
+            (ind["code"], ind["name"], standard, 1, None, None, now)
         )
 
-    # Save stock-industry mappings
-    for item in stock_industry_rows:
-        cur.execute(
-            """INSERT OR REPLACE INTO stock_industries
-               (code, market, industry_code, standard, updated_at)
-               VALUES (?, ?, ?, ?, ?)""",
-            (item['code'], item['market'], item['industry_code'], item['standard'], item['updated_at'])
-        )
+    # Save stock-industry mappings and update stocks.industry default
+    default_industry_map = {}
+    mapping_count = 0
 
-    # Update stocks.industry default (sw_l1)
-    if standard == 'sw_l1':
-        for code_6d, name in default_industry_map.items():
-            market = _get_market_from_code(code_6d)
+    for idx, ind in enumerate(industries):
+        code = ind.get("code", "")
+        name = ind.get("name", "")
+        if not code or not name:
+            continue
+
+        stocks = []
+        try:
+            stocks = _fetch_eastmoney_industry_stocks(code)
+        except Exception as e:
+            _log(f"[sync_industries] Eastmoney failed for {name}: {e}")
+            try:
+                stocks = _fetch_akshare_industry_stocks(code)
+            except Exception as e2:
+                _log(f"[sync_industries] akshare fallback failed for {name}: {e2}")
+
+        for stock in stocks:
+            stock_code = stock.get("code", "")
+            stock_name = stock.get("name")
+            if not stock_code:
+                continue
+            market = _get_market_from_code(stock_code)
             cur.execute(
-                "UPDATE stocks SET industry = ?, updated_at = ? WHERE code = ? AND market = ?",
-                (name, now, code_6d, market)
+                """INSERT OR REPLACE INTO stock_industries
+                   (code, market, industry_code, standard, updated_at)
+                   VALUES (?, ?, ?, ?, ?)""",
+                (stock_code, market, code, standard, now)
             )
+            default_industry_map[stock_code] = name
+            mapping_count += 1
+
+        if (idx + 1) % 20 == 0:
+            _log(f"[sync_industries] Progress: {idx + 1}/{len(industries)} industries, {mapping_count} mappings")
+            conn.commit()
+
+        time.sleep(0.05)
+
+    # Update stocks.industry default
+    for stock_code, industry_name in default_industry_map.items():
+        market = _get_market_from_code(stock_code)
+        cur.execute(
+            "UPDATE stocks SET industry = ?, updated_at = ? WHERE code = ? AND market = ?",
+            (industry_name, now, stock_code, market)
+        )
 
     conn.commit()
 
-    # Count
     cur.execute("SELECT COUNT(*) FROM industries WHERE standard = ?", (standard,))
     industry_count = cur.fetchone()[0]
-
-    cur.execute("SELECT COUNT(*) FROM stock_industries WHERE standard = ?", (standard,))
-    mapping_count = cur.fetchone()[0]
 
     conn.close()
 
     result = {
-        'standard': standard,
-        'industries': industry_count,
-        'mappings': mapping_count,
+        "standard": standard,
+        "industries": industry_count,
+        "mappings": mapping_count,
     }
-    _log(f"[sync_industries_jq] {standard}: {industry_count} industries, {mapping_count} mappings")
+    _log(f"[sync_industries] {standard}: {industry_count} industries, {mapping_count} mappings")
     return result
 
+
 def sync_all_standards():
-    """Sync all industry standards."""
-    _ensure_auth()
+    """Sync all supported industry standards."""
     db_path = _get_db_path()
     now = time.strftime('%Y-%m-%dT%H:%M:%S')
 
-    standards = ['sw_l1', 'sw_l2', 'sw_l3', 'zjw', 'jq_l1', 'jq_l2']
+    # Only Eastmoney standard is supported without JoinQuant
+    standards = ["em"]
     results = []
 
     for standard in standards:
@@ -189,51 +266,31 @@ def sync_all_standards():
             result = sync_standard(standard, db_path, now)
             results.append(result)
         except Exception as e:
-            _log(f"[sync_industries_jq] Failed to sync {standard}: {e}")
-            results.append({'standard': standard, 'error': str(e)})
-
-    # Build and apply SW parent relationships
-    try:
-        l1_to_l2, l2_to_l3 = _build_sw_parent_map(results)
-        conn = sqlite3.connect(db_path)
-        cur = conn.cursor()
-        for l2_code, l1_code in l1_to_l2.items():
-            cur.execute(
-                "UPDATE industries SET parent_code = ? WHERE industry_code = ? AND standard = 'sw_l2'",
-                (l1_code, l2_code)
-            )
-        for l3_code, l2_code in l2_to_l3.items():
-            cur.execute(
-                "UPDATE industries SET parent_code = ? WHERE industry_code = ? AND standard = 'sw_l3'",
-                (l2_code, l3_code)
-            )
-        conn.commit()
-        conn.close()
-        _log(f"[sync_industries_jq] Linked {len(l1_to_l2)} sw_l2 and {len(l2_to_l3)} sw_l3 parents")
-    except Exception as e:
-        _log(f"[sync_industries_jq] Failed to build parent relationships: {e}")
+            _log(f"[sync_industries] Failed to sync {standard}: {e}")
+            results.append({"standard": standard, "error": str(e)})
 
     output = {
-        'results': results,
-        'total_standards': len(standards),
+        "results": results,
+        "total_standards": len(standards),
     }
     print(json.dumps(output, ensure_ascii=False))
     return output
 
+
 def main():
-    parser = argparse.ArgumentParser(description="Sync industry classifications from JoinQuant")
-    parser.add_argument("--standard", type=str, help="Sync single standard: sw_l1/sw_l2/sw_l3/zjw/jq_l1/jq_l2")
+    parser = argparse.ArgumentParser(description="Sync industry classifications (Eastmoney/akshare, no JoinQuant)")
+    parser.add_argument("--standard", type=str, help="Sync single standard: em")
     parser.add_argument("--all", action="store_true", help="Sync all standards")
     args = parser.parse_args()
 
     if args.standard:
-        _ensure_auth()
         db_path = _get_db_path()
         now = time.strftime('%Y-%m-%dT%H:%M:%S')
         result = sync_standard(args.standard, db_path, now)
         print(json.dumps(result, ensure_ascii=False))
     else:
         sync_all_standards()
+
 
 if __name__ == "__main__":
     main()

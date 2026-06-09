@@ -5,132 +5,14 @@ import io
 
 import pandas as pd
 
-from jq_data import normalize_code, get_kline_data, get_kline_factors
-
-
-KLT_MAP = {
-    "1m": "1m",
-    "5m": "5m",
-    "15m": "15m",
-    "30m": "30m",
-    "60m": "60m",
-    "120m": "120m",
-    "daily": "daily",
-    "week": "week",
-    "month": "month",
-    "quarter": "quarter",
-    "year": "year",
+AK_ADJUST_MAP = {
+    "bfq": "",
+    "qfq": "qfq",
+    "hfq": "hfq",
 }
 
-FQT_MAP = {
-    "bfq": None,
-    "qfq": "pre",
-    "hfq": "post",
-}
-
-
-def _format_date(date_val):
-    """Format pandas Timestamp or datetime to string."""
-    if isinstance(date_val, pd.Timestamp):
-        if date_val.hour or date_val.minute:
-            return date_val.strftime('%Y-%m-%d %H:%M:%S')
-        return date_val.strftime('%Y-%m-%d')
-    return str(date_val)
-
-
-def _df_to_klines(df):
-    """Convert DataFrame from jq_data to the expected kline dict format."""
-    klines = []
-    for _, row in df.iterrows():
-        date_str = _format_date(row['date'])
-        open_p = float(row['open']) if pd.notna(row['open']) else None
-        close_p = float(row['close']) if pd.notna(row['close']) else None
-        low_p = float(row['low']) if pd.notna(row['low']) else None
-        high_p = float(row['high']) if pd.notna(row['high']) else None
-        volume = float(row['volume']) if pd.notna(row['volume']) else None
-        money = float(row['money']) if pd.notna(row['money']) else None
-        pre_close = float(row['pre_close']) if pd.notna(row.get('pre_close')) else None
-
-        # Calculate derived fields
-        change_amount = None
-        change_pct = None
-        amplitude = None
-        if close_p is not None and pre_close is not None and pre_close != 0:
-            change_amount = round(close_p - pre_close, 4)
-            change_pct = round((close_p - pre_close) / pre_close * 100, 4)
-            if high_p is not None and low_p is not None:
-                amplitude = round((high_p - low_p) / pre_close * 100, 4)
-
-        klines.append({
-            "date": date_str,
-            "open": open_p,
-            "close": close_p,
-            "low": low_p,
-            "high": high_p,
-            "volume": volume,
-            "amount": money,
-            "amplitude": amplitude,
-            "change_pct": change_pct,
-            "change_amount": change_amount,
-            "turnover": None,
-            "pre_close": pre_close,
-        })
-    return klines
-
-
-def _df_to_factors(df):
-    """Convert factor DataFrame to dict format."""
-    factors = []
-    for _, row in df.iterrows():
-        date_str = _format_date(row['date'])
-        qfq = float(row['qfq_factor']) if pd.notna(row.get('qfq_factor')) else None
-        hfq = float(row['hfq_factor']) if pd.notna(row.get('hfq_factor')) else None
-        if qfq is not None or hfq is not None:
-            factors.append({
-                "date": date_str,
-                "qfq_factor": qfq,
-                "hfq_factor": hfq,
-            })
-    return factors
-
-
-def _mootdx_to_klines(df, stock_code: str, market: int, period: str, adjust: str):
-    """Convert mootdx kline DataFrame to standard kline dict format."""
-    klines = []
-    for _, row in df.iterrows():
-        date_val = row.get("date", "")
-        date_str = str(date_val)[:10] if date_val else ""
-        open_p = float(row["open"]) if pd.notna(row.get("open")) else None
-        close_p = float(row["close"]) if pd.notna(row.get("close")) else None
-        low_p = float(row["low"]) if pd.notna(row.get("low")) else None
-        high_p = float(row["high"]) if pd.notna(row.get("high")) else None
-        volume = float(row["volume"]) if pd.notna(row.get("volume")) else None
-        pre_close = float(row["pre_close"]) if pd.notna(row.get("pre_close")) else None
-
-        change_amount = None
-        change_pct = None
-        amplitude = None
-        if close_p is not None and pre_close is not None and pre_close != 0:
-            change_amount = round(close_p - pre_close, 4)
-            change_pct = round((close_p - pre_close) / pre_close * 100, 4)
-        if high_p is not None and low_p is not None and low_p != 0:
-            amplitude = round((high_p - low_p) / low_p * 100, 4)
-
-        klines.append({
-            "date": date_str,
-            "open": open_p,
-            "close": close_p,
-            "low": low_p,
-            "high": high_p,
-            "volume": volume,
-            "amount": None,
-            "amplitude": amplitude,
-            "change_pct": change_pct,
-            "change_amount": change_amount,
-            "turnover": None,
-            "pre_close": pre_close,
-        })
-    return klines
+PERIOD_CHOICES = ["1m", "5m", "15m", "30m", "60m", "120m", "daily", "week", "month", "quarter", "year"]
+ADJUST_CHOICES = ["bfq", "qfq", "hfq"]
 
 
 def get_stock_kline(
@@ -143,14 +25,14 @@ def get_stock_kline(
 ) -> dict:
     """
     Fetch K-line (OHLCV) data.
-    Priority: mootdx (TCP direct) for bfq -> JoinQuant (jqdatasdk) for qfq/hfq or fallback.
+    Priority: mootdx (TCP direct) for bfq -> akshare for qfq/hfq or fallback.
+    No JoinQuant dependency.
 
     - period: 1m,5m,15m,30m,60m,120m,daily,week,month,quarter,year
     - adjust: bfq (不复权), qfq (前复权), hfq (后复权)
     - start_date / end_date: YYYYMMDD
     """
     # 1. Primary: mootdx for bfq (TCP direct, ~77ms for daily)
-    # mootdx only supports unadjusted data; qfq/hfq need JoinQuant
     if adjust == "bfq":
         try:
             from mootdx_data import get_kline as mootdx_kline
@@ -172,65 +54,59 @@ def get_stock_kline(
                     "_source": "mootdx",
                 }
         except Exception:
-            pass  # fallback to JoinQuant
+            pass  # fallback to akshare
 
-    # 2. Fallback: JoinQuant (supports all adjustment types)
-    jq_code = normalize_code(stock_code)
-    frequency = KLT_MAP.get(period, "daily")
-    fq = FQT_MAP.get(adjust)
-
+    # 2. Fallback: akshare (supports qfq/hfq via stock_zh_a_hist)
     try:
-        df = get_kline_data(
-            jq_code,
-            start_date=start_date,
-            end_date=end_date,
-            frequency=frequency,
-            fq=fq,
-        )
+        import akshare as ak
+        ak_start = f"{start_date[:4]}-{start_date[4:6]}-{start_date[6:8]}" if len(start_date) == 8 else start_date
+        ak_end = f"{end_date[:4]}-{end_date[4:6]}-{end_date[6:8]}" if len(end_date) == 8 else end_date
+        ak_adjust = AK_ADJUST_MAP.get(adjust, "")
+        df = ak.stock_zh_a_hist(symbol=stock_code, period="daily", start_date=ak_start, end_date=ak_end, adjust=ak_adjust)
+        if df is not None and not df.empty:
+            klines = []
+            for _, row in df.iterrows():
+                dt = str(row.get("日期", ""))
+                open_p = float(row["开盘"]) if pd.notna(row.get("开盘")) else None
+                close_p = float(row["收盘"]) if pd.notna(row.get("收盘")) else None
+                low_p = float(row["最低"]) if pd.notna(row.get("最低")) else None
+                high_p = float(row["最高"]) if pd.notna(row.get("最高")) else None
+                volume = float(row["成交量"]) if pd.notna(row.get("成交量")) else None
+                money = float(row["成交额"]) if pd.notna(row.get("成交额")) else None
+                change_pct = float(row["涨跌幅"]) if pd.notna(row.get("涨跌幅")) else None
+                change_amount = float(row["涨跌额"]) if pd.notna(row.get("涨跌额")) else None
+                amplitude = float(row["振幅"]) if pd.notna(row.get("振幅")) else None
+                klines.append({
+                    "date": dt, "open": open_p, "close": close_p, "low": low_p, "high": high_p,
+                    "volume": volume, "amount": money, "amplitude": amplitude,
+                    "change_pct": change_pct, "change_amount": change_amount,
+                    "turnover": None, "pre_close": None,
+                })
+            return {
+                "code": stock_code, "market": "SH" if market == 1 else "SZ",
+                "period": period, "adjust": adjust,
+                "start_date": start_date, "end_date": end_date,
+                "count": len(klines), "klines": klines, "factors": [],
+                "_source": "akshare",
+            }
     except Exception as e:
-        return {
-            "code": stock_code,
-            "market": "SH" if market == 1 else "SZ",
-            "period": period,
-            "adjust": adjust,
-            "start_date": start_date,
-            "end_date": end_date,
-            "count": 0,
-            "klines": [],
-            "factors": [],
-            "error": str(e),
-        }
-
-    klines = _df_to_klines(df)
-
-    # Fetch adjustment factors when storing unadjusted (bfq) data
-    factors = []
-    if adjust == "bfq":
-        try:
-            df_factors = get_kline_factors(jq_code, start_date=start_date, end_date=end_date)
-            factors = _df_to_factors(df_factors)
-        except Exception:
-            pass  # Factors are optional; don't fail the whole sync
+        pass  # all sources failed
 
     return {
-        "code": stock_code,
-        "market": "SH" if market == 1 else "SZ",
-        "period": period,
-        "adjust": adjust,
-        "start_date": start_date,
-        "end_date": end_date,
-        "count": len(klines),
-        "klines": klines,
-        "factors": factors,
+        "code": stock_code, "market": "SH" if market == 1 else "SZ",
+        "period": period, "adjust": adjust,
+        "start_date": start_date, "end_date": end_date,
+        "count": 0, "klines": [], "factors": [],
+        "error": "All data sources failed (mootdx/akshare)",
     }
 
 
 if __name__ == "__main__":
-    parser = argparse.ArgumentParser(description="Fetch A-share K-line data from JoinQuant")
+    parser = argparse.ArgumentParser(description="Fetch A-share K-line data (mootdx/akshare, no JoinQuant)")
     parser.add_argument("stock_code", help="6-digit stock code, e.g. 600845")
     parser.add_argument("--market", type=int, default=1, choices=[0, 1], help="1=Shanghai (default), 0=Shenzhen")
-    parser.add_argument("--period", default="daily", choices=list(KLT_MAP.keys()), help="K-line period")
-    parser.add_argument("--adjust", default="bfq", choices=list(FQT_MAP.keys()), help="Adjustment type")
+    parser.add_argument("--period", default="daily", choices=PERIOD_CHOICES, help="K-line period")
+    parser.add_argument("--adjust", default="bfq", choices=ADJUST_CHOICES, help="Adjustment type")
     parser.add_argument("--start", default="19700101", help="Start date YYYYMMDD")
     parser.add_argument("--end", default="20500101", help="End date YYYYMMDD")
     args = parser.parse_args()
