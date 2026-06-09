@@ -131,16 +131,25 @@ export class DataSyncService {
 	}
 
 	/**
-	 * Fetch all A-share stock list from JoinQuant.
+	 * Fetch all A-share stock list from akshare, fallback to local DB if unavailable.
 	 */
 	async fetchAllAshareList(): Promise<Array<{ code: string; market: number; name: string }>> {
-		const data = await runJsonScript("get_all_stocks.py", []);
-		return data as Array<{ code: string; market: number; name: string }>;
+		try {
+			const data = await runJsonScript("get_all_stocks.py", []);
+			return data as Array<{ code: string; market: number; name: string }>;
+		} catch (e) {
+			console.warn(
+				"[fetchAllAshareList] akshare failed, falling back to local DB:",
+				e instanceof Error ? e.message : String(e),
+			);
+			const stocks = await this.store.getAllStocks();
+			return stocks.map((s) => ({ code: s.code, market: s.market, name: s.name }));
+		}
 	}
 
 	/**
 	 * Sync kline data for ALL A-share stocks in batches.
-	 * Uses JoinQuant batch API for efficient fetching.
+	 * Uses mootdx (TCP direct) for bfq, akshare for qfq/hfq.
 	 *
 	 * Incremental mode (default): only fetches data from the latest date
 	 * already in the DB up to today. For initial sync, pass an explicit
@@ -203,20 +212,24 @@ export class DataSyncService {
 			console.log(`[syncAllKlines] Batch ${batchNum}/${totalBatches} (${batch.length} stocks)...`);
 
 			try {
-				const data = await runJsonScript("batch_get_kline.py", [
-					"--codes",
-					codes,
-					"--markets",
-					markets,
-					"--start",
-					syncStart,
-					"--end",
-					endDate.replace(/-/g, ""),
-					"--period",
-					period === "weekly" ? "week" : period === "monthly" ? "month" : period,
-					"--adjust",
-					adjust,
-				]);
+				const data = await runJsonScript(
+					"batch_get_kline.py",
+					[
+						"--codes",
+						codes,
+						"--markets",
+						markets,
+						"--start",
+						syncStart,
+						"--end",
+						endDate.replace(/-/g, ""),
+						"--period",
+						period === "weekly" ? "week" : period === "monthly" ? "month" : period,
+						"--adjust",
+						adjust,
+					],
+					120_000,
+				);
 
 				if (data.klines && data.klines.length > 0) {
 					const rows: KlineRow[] = data.klines.map((k: any) => ({
@@ -248,7 +261,7 @@ export class DataSyncService {
 					const factorData = await runJsonScript(
 						"batch_get_factors.py",
 						["--codes", codes, "--markets", markets, "--start", syncStart, "--end", endDate.replace(/-/g, "")],
-						120_000,
+						300_000,
 					);
 					if (factorData.factors && factorData.factors.length > 0) {
 						const factorRows = factorData.factors.map((f: any) => ({
@@ -319,12 +332,17 @@ export class DataSyncService {
 
 	// ─── Fundamentals Sync ──────────────────────────────────────────
 
-	async syncFundamentals(code: string, market: number): Promise<FundamentalsRow[]> {
-		const data = await runJsonScript(
-			"get_fundamentals.py",
-			[code, "--market", String(market), "--history", "--limit", "12"],
-			120_000,
-		);
+	async syncFundamentals(code: string, market: number, historyLimit = 12): Promise<FundamentalsRow[]> {
+		const args = [code, "--market", String(market), "--history"];
+		if (historyLimit > 0) {
+			args.push("--limit", String(historyLimit));
+		}
+		const data = await runJsonScript("get_fundamentals.py", args, 120_000);
+
+		// Skip stocks with no F10 data (delisted, indices, invalid codes)
+		if (data._no_f10_data) {
+			return [];
+		}
 
 		const rows: FundamentalsRow[] = [];
 		const now = new Date().toISOString();
@@ -486,9 +504,9 @@ export class DataSyncService {
 	 *
 	 * @returns total number of report rows synced
 	 */
-	async syncAllFundamentals(batchSize = 100): Promise<number> {
+	async syncAllFundamentals(batchSize = 100, historyLimit = 12, force = false): Promise<number> {
 		const stocks = await this.fetchAllAshareList();
-		console.log(`[syncAllFundamentals] Total stocks: ${stocks.length}`);
+		console.log(`[syncAllFundamentals] Total stocks: ${stocks.length}, historyLimit=${historyLimit}, force=${force}`);
 
 		let totalSynced = 0;
 		const startTime = Date.now();
@@ -500,17 +518,24 @@ export class DataSyncService {
 
 			console.log(`[syncAllFundamentals] Batch ${batchNum}/${totalBatches} (${batch.length} stocks)...`);
 
-			for (const stock of batch) {
+			for (let j = 0; j < batch.length; j++) {
+				const stock = batch[j];
 				try {
-					// Incremental: skip if recently synced
-					const latest = await this.store.getLatestFundamentals(stock.code, stock.market);
-					if (latest && isFresh(latest.updated_at, TTL.fundamentals)) {
-						continue;
+					// Incremental: skip if recently synced (unless force=true)
+					if (!force) {
+						const latest = await this.store.getLatestFundamentals(stock.code, stock.market);
+						if (latest && isFresh(latest.updated_at, TTL.fundamentals)) {
+							continue;
+						}
 					}
-					const rows = await this.syncFundamentals(stock.code, stock.market);
+					const rows = await this.syncFundamentals(stock.code, stock.market, historyLimit);
 					totalSynced += rows.length;
 				} catch (e) {
 					console.warn(`[syncAllFundamentals] Failed to sync ${stock.code}:`, e);
+				}
+				// Small delay between stocks to avoid rate limiting Eastmoney F10 page
+				if (j < batch.length - 1) {
+					await new Promise((resolve) => setTimeout(resolve, 100));
 				}
 			}
 
@@ -531,6 +556,75 @@ export class DataSyncService {
 				console.log(`[syncAllFundamentals] Indicators recalculated: ${result.rows_inserted ?? "?"} rows`);
 			} catch (e) {
 				console.warn("[syncAllFundamentals] Indicator recalculation failed:", e);
+			}
+		}
+
+		return totalSynced;
+	}
+
+	/**
+	 * Backfill fundamentals history for stocks missing data before sinceYear.
+	 * Only re-syncs stocks whose earliest report_date is later than the target.
+	 */
+	async backfillFundamentals(sinceYear = 2019, batchSize = 100): Promise<number> {
+		const stocks = await this.fetchAllAshareList();
+		const currentYear = new Date().getFullYear();
+		const yearsNeeded = currentYear - sinceYear + 1;
+		const historyLimit = Math.min(yearsNeeded * 4 + 4, 60); // ~4 reports/year + buffer, cap at 60
+
+		console.log(`[backfillFundamentals] Target: since ${sinceYear}, limit=${historyLimit}, stocks=${stocks.length}`);
+
+		let totalSynced = 0;
+		let skipped = 0;
+		let processed = 0;
+		const startTime = Date.now();
+
+		for (let i = 0; i < stocks.length; i += batchSize) {
+			const batchNum = Math.floor(i / batchSize) + 1;
+			const totalBatches = Math.ceil(stocks.length / batchSize);
+			const batch = stocks.slice(i, i + batchSize);
+
+			console.log(`[backfillFundamentals] Batch ${batchNum}/${totalBatches} (${batch.length} stocks)...`);
+
+			for (const stock of batch) {
+				try {
+					const rows = await this.store.query<{ earliest: string | null }>(
+						"SELECT MIN(report_date) as earliest FROM fundamentals WHERE code = ? AND market = ?",
+						[stock.code, stock.market],
+					);
+					const earliest = rows[0]?.earliest;
+					const targetDate = `${sinceYear}-01-01`;
+
+					if (earliest && earliest <= targetDate) {
+						skipped++;
+						continue;
+					}
+
+					const synced = await this.syncFundamentals(stock.code, stock.market, historyLimit);
+					totalSynced += synced.length;
+					processed++;
+				} catch (e) {
+					console.warn(`[backfillFundamentals] Failed for ${stock.code}:`, e);
+				}
+			}
+
+			if (i + batchSize < stocks.length) {
+				await new Promise((resolve) => setTimeout(resolve, 500));
+			}
+		}
+
+		const elapsed = ((Date.now() - startTime) / 1000).toFixed(1);
+		console.log(
+			`[backfillFundamentals] Done. Processed ${processed}, skipped ${skipped}, total ${totalSynced} rows in ${elapsed}s`,
+		);
+
+		if (totalSynced > 0) {
+			console.log("[backfillFundamentals] Recalculating fundamental indicators...");
+			try {
+				const result = await runJsonScript("calc_fundamental_indicators.py", ["--all"], 600_000);
+				console.log(`[backfillFundamentals] Indicators recalculated: ${result.rows_inserted ?? "?"} rows`);
+			} catch (e) {
+				console.warn("[backfillFundamentals] Indicator recalculation failed:", e);
 			}
 		}
 
@@ -573,13 +667,13 @@ export class DataSyncService {
 	// ─── Concept Stocks Sync ────────────────────────────────────────
 
 	async syncConceptStocks(concept: string): Promise<ConceptStockRow[]> {
-		// Prefer JoinQuant (faster, more reliable) over Eastmoney API
+		// Use Eastmoney/akshare (no JoinQuant dependency)
 		try {
 			const result = await runJsonScript("sync_concepts_jq.py", ["--concept", concept], 120_000);
 			const actualConcept = result.concept || concept;
 			return this.store.getConceptStocks(actualConcept);
 		} catch (e) {
-			console.warn("[syncConceptStocks] JoinQuant failed, falling back to Eastmoney:", e);
+			console.warn("[syncConceptStocks] Concept sync failed:", e);
 		}
 
 		// Fallback to Eastmoney API via Python script
@@ -595,7 +689,7 @@ export class DataSyncService {
 	}
 
 	async syncAllConcepts(): Promise<number> {
-		console.log("[syncAllConcepts] Starting full concept sync via JoinQuant...");
+		console.log("[syncAllConcepts] Starting full concept sync via Eastmoney/akshare...");
 		await runJsonScript("sync_concepts_jq.py", ["--all"], 600_000);
 		const concepts = await this.store.getAllConcepts();
 		console.log(`[syncAllConcepts] Done. ${concepts.length} concepts in local DB.`);
@@ -603,7 +697,7 @@ export class DataSyncService {
 	}
 
 	async syncIndustries(): Promise<{ standards: number; industries: number; mappings: number; errors: string[] }> {
-		console.log("[syncIndustries] Syncing all industry classifications via JoinQuant...");
+		console.log("[syncIndustries] Syncing all industry classifications via Eastmoney/akshare...");
 		const result = await runJsonScript("sync_industries_jq.py", ["--all"], 600_000);
 
 		const results = result.results || [];

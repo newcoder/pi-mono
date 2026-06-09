@@ -56,13 +56,18 @@ export const syncKlineTool: AgentTool<typeof syncKlineParams, { synced: number; 
 
 const syncFundamentalsParams = Type.Object({
 	batchSize: Type.Optional(Type.Number({ description: "每批处理股票数量（越小越慢但越稳定）", default: 100 })),
+	historyLimit: Type.Optional(Type.Number({ description: "每只股票抓取的历史报告期数量（0=不限制）", default: 12 })),
+	force: Type.Optional(Type.Boolean({ description: "强制重新同步，跳过增量检查", default: false })),
+	sinceYear: Type.Optional(
+		Type.Number({ description: "补全模式：抓取该年份以来的历史数据（如2019），只同步缺失的股票", default: 0 }),
+	),
 });
 
 export const syncFundamentalsTool: AgentTool<typeof syncFundamentalsParams, { synced: number }> = {
 	name: "sync_fundamentals",
 	label: "同步财务数据",
 	description:
-		"同步全市场A股基本面财务数据到本地数据库。包括利润表、资产负债表、现金流量表。约5500只股票，默认批大小100，完整同步约需30-60分钟。使用增量模式跳过最近已同步的股票。",
+		"同步全市场A股基本面财务数据到本地数据库。包括利润表、资产负债表、现金流量表。支持增量同步（默认limit=12期）和补全模式（sinceYear=2019会抓取2019年以来的所有历史数据）。约5500只股票，完整同步约需30-60分钟。",
 	parameters: syncFundamentalsParams,
 	execute: async (_id, params) => {
 		const sync = getDataSync();
@@ -74,13 +79,26 @@ export const syncFundamentalsTool: AgentTool<typeof syncFundamentalsParams, { sy
 		}
 
 		const batchSize = params.batchSize || 100;
+		const historyLimit = params.historyLimit ?? 12;
+		const force = params.force || false;
+		const sinceYear = params.sinceYear || 0;
 
 		console.log(`[sync_fundamentals] 开始同步全市场财务数据...`);
 		const startTime = Date.now();
-		const count = await sync.syncAllFundamentals(batchSize);
+
+		let count: number;
+		if (sinceYear > 0) {
+			count = await sync.backfillFundamentals(sinceYear, batchSize);
+		} else {
+			count = await sync.syncAllFundamentals(batchSize, historyLimit, force);
+		}
+
 		const elapsed = ((Date.now() - startTime) / 1000).toFixed(1);
 
-		const text = `【财务数据同步完成】\n同步数量: ${count} 条财报记录\n耗时: ${elapsed} 秒\n说明: 包括利润表、资产负债表、现金流量表。增量模式跳过最近一周已同步的数据。`;
+		const text =
+			sinceYear > 0
+				? `【财务数据补全完成】\n同步数量: ${count} 条财报记录\n耗时: ${elapsed} 秒\n说明: 补全 ${sinceYear} 年以来的历史数据，只同步缺失的股票。`
+				: `【财务数据同步完成】\n同步数量: ${count} 条财报记录\n耗时: ${elapsed} 秒\n说明: 包括利润表、资产负债表、现金流量表。${force ? "强制模式，" : ""}每只股票最多 ${historyLimit} 期报告。`;
 
 		return {
 			content: [{ type: "text", text }],

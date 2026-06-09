@@ -5,8 +5,8 @@ import { join } from "node:path";
 import type { ModelRegistry } from "@mariozechner/pi-coding-agent";
 import type { TradingSession } from "../core/trading-session.js";
 import { requireStore, requireSync } from "../data/index.js";
-import { predictStockRankingTool } from "../tools/ml-prediction.js";
 import { runAStockDataJsonScript, runJsonScript } from "../tools/_utils.js";
+import { predictStockRankingTool } from "../tools/ml-prediction.js";
 import type { BackgroundSyncService } from "./background-sync.js";
 import type { MootdxDaemon } from "./mootdx-daemon.js";
 
