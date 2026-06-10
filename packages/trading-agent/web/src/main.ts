@@ -37,6 +37,8 @@ interface StockPool {
 interface PoolItem {
 	code: string;
 	name: string;
+	change_pct?: number | null;
+	latest?: number | null;
 }
 
 interface CalendarEvent {
@@ -408,16 +410,16 @@ function buildMessageHTML(msg: ChatMessage): string {
 		const attachments = (msg as any).attachments ? buildAttachmentHTML((msg as any).attachments) : "";
 		return `<div class="message-wrapper user">
 			<div class="message-avatar user">你</div>
-			<div class="message-bubble user">${attachments}${escapeHtml(msg.content)}</div>
+			<div class="message-bubble user">${attachments}${formatMessageContent(msg.content)}</div>
 		</div>`;
 	}
 	if (msg.role === "assistant") {
 		return `<div class="message-wrapper assistant">
 			<div class="message-avatar assistant">AI</div>
-			<div class="message-bubble assistant">${formatMarkdown(msg.content)}${msg.isStreaming ? '<span class="animate-pulse">▌</span>' : ""}</div>
+			<div class="message-bubble assistant">${formatMessageContent(msg.content)}${msg.isStreaming ? '<span class="animate-pulse">▌</span>' : ""}</div>
 		</div>`;
 	}
-	return `<div class="message-wrapper system"><div class="message-bubble system">${escapeHtml(msg.content)}</div></div>`;
+	return `<div class="message-wrapper system"><div class="message-bubble system">${formatMessageContent(msg.content)}</div></div>`;
 }
 
 function renderMessages() {
@@ -443,7 +445,7 @@ function renderMessages() {
 		if (lastEl && lastMsg.role === "assistant") {
 			const bubble = lastEl.querySelector(".message-bubble.assistant") as HTMLElement | null;
 			if (bubble) {
-				bubble.innerHTML = formatMarkdown(lastMsg.content) + (lastMsg.isStreaming ? '<span class="animate-pulse">▌</span>' : "");
+				bubble.innerHTML = formatMessageContent(lastMsg.content) + (lastMsg.isStreaming ? '<span class="animate-pulse">▌</span>' : "");
 			}
 		}
 	} else if (messages.length < existing.length || messages.length === 0) {
@@ -487,12 +489,24 @@ function renderWatchlist() {
 	// Render pool items into right column
 	if (state.selectedPool && state.poolItems.length > 0) {
 		let itemsHtml = `<div class="pool-items-header">${escapeHtml(state.selectedPool.name)}</div>`;
-		for (const item of state.poolItems) {
+		// 最近访问：最新的放在最前面（数据库按 added_at 升序，这里反转）
+		const displayItems = state.selectedPool.name === "最近访问" ? [...state.poolItems].reverse() : state.poolItems;
+		for (const item of displayItems) {
 			const isSelected = state.selectedSymbol === item.code;
+			const changePct = item.change_pct;
+			let changeHtml = "";
+			if (changePct != null) {
+				const isUp = changePct > 0;
+				const isDown = changePct < 0;
+				const sign = isUp ? "+" : "";
+				const colorClass = isUp ? "stock-item-up" : isDown ? "stock-item-down" : "";
+				changeHtml = `<span class="stock-item-change ${colorClass}">${sign}${changePct.toFixed(2)}%</span>`;
+			}
 			itemsHtml += `
 				<div class="stock-item ${isSelected ? 'active' : ''}" data-stock-code="${item.code}" data-stock-name="${escapeHtml(item.name)}">
 					<span class="stock-item-code">${item.code}</span>
 					<span class="stock-item-name">${escapeHtml(item.name)}</span>
+					${changeHtml}
 				</div>
 			`;
 		}
@@ -1095,6 +1109,88 @@ function formatMarkdown(text: string): string {
 		.replace(/\*\*(.*?)\*\*/g, "<strong>$1</strong>");
 }
 
+/** Turn known stock codes and names inside HTML into clickable <span class="stock-link"> elements.
+ *  Operates on text nodes only, skipping <pre>/<code> and already-linkified spans. */
+function linkifyStocksInHTML(html: string): string {
+	if (!state.allStocksLoaded || state.allStocks.length === 0) return html;
+
+	const codeMap = new Map<string, { code: string; name: string; market: number }>();
+	const nameMap = new Map<string, { code: string; name: string; market: number }>();
+	for (const s of state.allStocks) {
+		codeMap.set(s.code, s);
+		nameMap.set(s.name, s);
+	}
+	const sortedNames = Array.from(nameMap.keys()).sort((a, b) => b.length - a.length);
+
+	const container = document.createElement("div");
+	container.innerHTML = html;
+
+	const walker = document.createTreeWalker(container, NodeFilter.SHOW_TEXT);
+	const nodes: Text[] = [];
+	let node: Node | null;
+	while ((node = walker.nextNode())) {
+		const parent = node.parentElement;
+		if (parent && (parent.tagName === "PRE" || parent.tagName === "CODE" || parent.closest(".stock-link"))) continue;
+		nodes.push(node as Text);
+	}
+
+	for (const textNode of nodes) {
+		const text = textNode.textContent || "";
+		let result = "";
+		let i = 0;
+		while (i < text.length) {
+			let matched = false;
+
+			// Try 6-digit stock code (not part of a longer number)
+			if (i + 6 <= text.length && /^\d{6}$/.test(text.slice(i, i + 6))) {
+				const prev = i > 0 ? text[i - 1] : "";
+				const next = i + 6 < text.length ? text[i + 6] : "";
+				if (!/\d/.test(prev) && !/\d/.test(next)) {
+					const code = text.slice(i, i + 6);
+					const stock = codeMap.get(code);
+					if (stock) {
+						result += `<span class="stock-link" data-code="${stock.code}" data-market="${stock.market}" data-name="${escapeHtml(stock.name)}">${code}</span>`;
+						i += 6;
+						matched = true;
+					}
+				}
+			}
+
+			// Try longest stock name match
+			if (!matched) {
+				for (const name of sortedNames) {
+					if (text.substr(i, name.length) === name) {
+						const stock = nameMap.get(name)!;
+						result += `<span class="stock-link" data-code="${stock.code}" data-market="${stock.market}" data-name="${escapeHtml(stock.name)}">${name}</span>`;
+						i += name.length;
+						matched = true;
+						break;
+					}
+				}
+			}
+
+			if (!matched) {
+				result += text[i];
+				i++;
+			}
+		}
+
+		if (result !== text) {
+			const wrapper = document.createElement("span");
+			wrapper.innerHTML = result;
+			if (textNode.parentNode) {
+				textNode.parentNode.replaceChild(wrapper, textNode);
+			}
+		}
+	}
+
+	return container.innerHTML;
+}
+
+function formatMessageContent(text: string): string {
+	return linkifyStocksInHTML(formatMarkdown(text));
+}
+
 // ─── API / WebSocket handlers ───────────────────────────────
 
 async function fetchIndices() {
@@ -1165,7 +1261,7 @@ async function selectPool(poolId: number) {
 
 	try {
 		const result = await apiClient.getStockPool(poolId);
-		state.poolItems = result.items.map((s: any) => ({ code: s.code, name: s.name }));
+		state.poolItems = result.items.map((s: any) => ({ code: s.code, name: s.name, change_pct: s.change_pct, latest: s.latest }));
 		renderWatchlist();
 	} catch (err) {
 		console.error("Failed to fetch pool items:", err);
@@ -1790,41 +1886,53 @@ async function selectSearchResult(code: string, name: string, market: number) {
 }
 
 async function addToRecentPool(code: string, name: string, market: number) {
-	// Ensure we have the recent pool ID
+	// Ensure we have the recent pool ID (create if missing)
 	if (!state.recentPoolId) {
-		const recentPool = state.stockPools.find((p) => p.name === "最近访问");
-		if (recentPool) {
-			state.recentPoolId = recentPool.id;
-		} else {
+		let recentPool = state.stockPools.find((p) => p.name === "最近访问");
+		if (!recentPool) {
 			// Try fetching pools fresh
 			try {
 				const pools = await apiClient.getStockPools();
 				state.stockPools = pools;
-				const freshRecent = pools.find((p: any) => p.name === "最近访问");
-				if (freshRecent) {
-					state.recentPoolId = freshRecent.id;
-				} else {
-					console.warn("[RecentPool] '最近访问' pool not found");
-					return;
-				}
+				recentPool = pools.find((p: any) => p.name === "最近访问");
 			} catch {
 				return;
 			}
 		}
+		if (!recentPool) {
+			// Create the pool
+			try {
+				const created = await apiClient.createStockPool("最近访问", "自动记录最近查看的股票");
+				recentPool = { id: created.id, name: created.name, description: created.description, item_count: 0, created_at: new Date().toISOString() };
+				state.stockPools.unshift(recentPool);
+				renderWatchlist();
+			} catch (err) {
+				console.error("[RecentPool] Failed to create pool:", err);
+				return;
+			}
+		}
+		state.recentPoolId = recentPool!.id;
 	}
 	try {
+		// Remove existing entry first so re-adding bumps it to the front (newest added_at)
+		try {
+			await apiClient.removeFromStockPool(state.recentPoolId, [{ code, market }]);
+		} catch {
+			// Ignore errors if item didn't exist
+		}
 		await apiClient.addToStockPool(state.recentPoolId, [{ code, market, name }]);
 		console.log(`[RecentPool] Added ${code} ${name}`);
-		// Update the item_count for the recent pool in state
-		const pool = state.stockPools.find((p) => p.id === state.recentPoolId);
-		if (pool) {
-			pool.item_count += 1;
+		// Refresh pool list to get accurate item_count
+		try {
+			state.stockPools = await apiClient.getStockPools();
+			renderWatchlist();
+		} catch {
+			// ignore
 		}
-		renderWatchlist();
 		// Refresh pool items if the recent pool is currently selected
 		if (state.selectedPool?.id === state.recentPoolId) {
 			const result = await apiClient.getStockPool(state.recentPoolId);
-			state.poolItems = result.items.map((s: any) => ({ code: s.code, name: s.name }));
+			state.poolItems = result.items.map((s: any) => ({ code: s.code, name: s.name, change_pct: s.change_pct, latest: s.latest }));
 			renderWatchlist();
 		}
 	} catch (err) {
@@ -2123,6 +2231,22 @@ function renderApp() {
 
 // ─── Init ───────────────────────────────────────────────────
 
+function setupMessageLinks() {
+	const messageList = $("message-list");
+	messageList.addEventListener("click", (e) => {
+		const target = (e.target as HTMLElement).closest(".stock-link") as HTMLElement | null;
+		if (!target) return;
+		const code = target.dataset.code;
+		const market = target.dataset.market ? Number(target.dataset.market) : NaN;
+		const name = target.dataset.name;
+		if (code && !Number.isNaN(market)) {
+			e.preventDefault();
+			e.stopPropagation();
+			selectSymbol(code, "stock", name);
+		}
+	});
+}
+
 function init() {
 	renderApp();
 	setupWebSocket();
@@ -2130,6 +2254,7 @@ function init() {
 	setupSettingsModal();
 	setupMobileDrawers();
 	setupSearch();
+	setupMessageLinks();
 	fetchIndices();
 	fetchStockPools();
 	loadAllStocks();

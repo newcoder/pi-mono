@@ -106,12 +106,20 @@ export class TradingApiClient extends EventTarget {
 		return this.httpGet(`/api/stock-pools/${poolId}`);
 	}
 
+	async createStockPool(name: string, description?: string) {
+		return this.httpPost("/api/stock-pools", { name, description });
+	}
+
 	async deleteStockPool(poolId: number) {
 		return this.httpDelete(`/api/stock-pools/${poolId}`);
 	}
 
 	async addToStockPool(poolId: number, items: Array<{ code: string; market: number; name?: string }>) {
 		return this.httpPost(`/api/stock-pools/${poolId}/items`, { items });
+	}
+
+	async removeFromStockPool(poolId: number, items: Array<{ code: string; market: number }>) {
+		return this.httpDelete(`/api/stock-pools/${poolId}/items`, { items });
 	}
 
 	async getAllStocks() {
@@ -177,8 +185,13 @@ export class TradingApiClient extends EventTarget {
 		return res.json();
 	}
 
-	private async httpDelete(path: string) {
-		const res = await fetch(`${API_BASE}${path}`, { method: "DELETE" });
+	private async httpDelete(path: string, body?: unknown) {
+		const init: RequestInit = { method: "DELETE" };
+		if (body !== undefined) {
+			init.headers = { "Content-Type": "application/json" };
+			init.body = JSON.stringify(body);
+		}
+		const res = await fetch(`${API_BASE}${path}`, init);
 		if (!res.ok) throw new Error(`HTTP ${res.status}: ${res.statusText}`);
 		return res.json();
 	}

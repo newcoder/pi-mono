@@ -326,11 +326,24 @@ export async function handleRequest(
 					}
 				}
 			}
-			json(res, 200, { pool, items });
+			// Enrich with latest quote data (change_pct, latest price)
+			const allCodes = items.map((i) => i.code);
+			const allMarkets = items.map((i) => i.market);
+			const quotes = await store.getLatestQuotes(allCodes, allMarkets);
+			const quoteMap = new Map(quotes.map((q) => [`${q.code}:${q.market}`, q]));
+			const enrichedItems = items.map((item) => {
+				const q = quoteMap.get(`${item.code}:${item.market}`);
+				return {
+					...item,
+					change_pct: q?.change_pct ?? null,
+					latest: q?.latest ?? null,
+				};
+			});
+			json(res, 200, { pool, items: enrichedItems });
 			return;
 		}
 
-		if (path.startsWith("/api/stock-pools/") && method === "DELETE") {
+		if (path.startsWith("/api/stock-pools/") && !path.endsWith("/items") && method === "DELETE") {
 			const poolId = Number(path.slice("/api/stock-pools/".length));
 			if (Number.isNaN(poolId)) {
 				badRequest(res, "Invalid pool ID");
@@ -367,6 +380,30 @@ export async function handleRequest(
 					name: item.name ? String(item.name) : undefined,
 				})),
 			);
+			json(res, 200, { success: true });
+			return;
+		}
+
+		if (path.startsWith("/api/stock-pools/") && path.endsWith("/items") && method === "DELETE") {
+			const poolId = Number(path.slice("/api/stock-pools/".length, -"/items".length));
+			if (Number.isNaN(poolId)) {
+				badRequest(res, "Invalid pool ID");
+				return;
+			}
+			let body = "";
+			for await (const chunk of req) {
+				body += chunk;
+			}
+			const bodyJson = body ? JSON.parse(body) : {};
+			const items = bodyJson.items;
+			if (!Array.isArray(items) || items.length === 0) {
+				badRequest(res, "items array required");
+				return;
+			}
+			const store = requireStore();
+			for (const item of items) {
+				await store.removeFromStockPool(poolId, String(item.code), Number(item.market));
+			}
 			json(res, 200, { success: true });
 			return;
 		}
@@ -716,8 +753,8 @@ export async function handleRequest(
 			const topN = bodyJson.top_n ?? 50;
 			const poolName = bodyJson.pool_name || undefined;
 
-			if (model !== "de" && model !== "lgb") {
-				badRequest(res, "model must be 'de' or 'lgb'");
+			if (model !== "de" && model !== "de_regression" && model !== "lgb") {
+				badRequest(res, "model must be 'de', 'de_regression' or 'lgb'");
 				return;
 			}
 
@@ -728,6 +765,7 @@ export async function handleRequest(
 					model,
 					top_n: topN,
 					pool_name: poolName,
+					horizon: bodyJson.horizon ?? 5,
 				});
 				const elapsed = Date.now() - startTime;
 				console.log(`[API/Predict] Prediction complete in ${elapsed}ms`);
