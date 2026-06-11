@@ -290,27 +290,33 @@
 
 ---
 
-## 14. backtest_strategy — 策略回测
+## 14. backtest_strategy — 策略回测（单股票或股票池）
 
-**用途**：对单只股票运行技术指标回测，验证策略历史表现
+**用途**：对单只股票运行技术指标回测，**或对股票池中所有股票进行组合级回测**。
+
+**两种调用方式**：
+1. **单股票回测**：传 `code`，对一只股票回测
+2. **股票池组合回测**：传 `pool_id`，对股票池中所有股票**作为一个整体组合**进行回测，所有股票共享同一个资金池、按统一时间线推进，支持动态仓位分配和停牌跳过。**不要逐只调用 backtest_strategy。**
 
 **调用时机**：用户要求"回测XX策略"时
 
 **参数**：
 | 参数 | 类型 | 必填 | 默认值 | 说明 |
 |------|------|------|--------|------|
-| code | string | 是 | - | 6位股票代码 |
+| code | string | 条件 | - | 6位股票代码。**与 pool_id 二选一**，提供 code 时回测单只股票 |
 | market | 1 \| 0 | 否 | 1 | 1=上海，0=深圳 |
+| pool_id | number | 条件 | - | **股票池编号**。提供 pool_id 时，对池中所有股票进行组合回测，code 被忽略 |
 | strategy | string | 是 | - | 策略类型：ma_cross/macd_cross/rsi_reversal/bollinger_breakout |
 | start | string | 否 | - | 起始日期 YYYYMMDD，**默认一年前** |
 | end | string | 否 | - | 结束日期 YYYYMMDD，默认今天 |
 | period | string | 否 | "daily" | 周期：daily/week/month |
 | adjust | string | 否 | "bfq" | **默认不复权**（bfq=不复权，qfq=前复权，hfq=后复权） |
-| initialCapital | number | 否 | 100000 | 初始资金 |
-| positionSize | number | 否 | 1.0 | 仓位比例 0-1 |
+| initialCapital | number | 否 | 100000 | 初始资金（组合回测时为整个组合的初始资金） |
+| positionSize | number | 否 | 1.0 | 单股票模式下每笔交易的仓位比例 0-1 |
 | slippage | number | 否 | 0.001 | 滑点 0.1% |
 | commission | number | 否 | 0.0003 | 手续费 0.03%/边 |
 | maxHoldingDays | number | 否 | - | 最大持仓天数 |
+| min_lot | number | 否 | 100 | 最小交易单位（股），默认100股（组合回测时有效） |
 | params | object | 否 | - | 策略参数，如 {"fast":5,"slow":10} |
 
 **重要默认值**：
@@ -329,13 +335,18 @@
 
 **示例**：
 ```json
+// 单股票回测
 {"code": "600519", "strategy": "ma_cross", "start": "20240101", "end": "20241231", "params": {"fast": 5, "slow": 10}}
+
+// 股票池组合回测（对股票池ID=50的所有股票进行组合回测）
+{"pool_id": 50, "strategy": "ma_cross", "start": "20240101", "end": "20241231", "params": {"fast": 5, "slow": 10}, "initialCapital": 1000000}
 ```
 
 **报告解读**：
 - 关注总收益率、夏普比率、最大回撤三个核心指标
 - 胜率>50%且盈亏比>1.5 视为较优策略
 - 最大回撤>30% 说明风险过高
+- **组合回测**额外关注：各股票资金分配是否均衡、是否有股票长期无交易（信号不足）
 
 ---
 
@@ -539,7 +550,7 @@
 **股票池使用场景**：
 1. 用户筛选出股票 → **自动保存为股票池**，并告知用户池子名称
 2. 用户说"分析一下我刚才保存的那批股票" → 先 show 出股票列表，再逐个分析
-3. 用户说"回测我的股票池" → show 出列表，然后对每只股票调用 backtest_strategy
+3. 用户说"回测我的股票池" → **直接用 pool_id 调用 backtest_strategy，不要逐只股票单独调用**。组合回测会共享资金池、动态分配仓位、按统一时间线推进。
 
 ---
 

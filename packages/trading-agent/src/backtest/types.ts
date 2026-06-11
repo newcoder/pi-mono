@@ -15,6 +15,7 @@ export interface BacktestConfig {
 	slippage?: number; // percent, e.g. 0.001 = 0.1%
 	commission?: number; // percent per side, e.g. 0.0003 = 0.03%
 	maxHoldingDays?: number;
+	minLot?: number; // minimum lot size, e.g. 100 for A-shares
 	strategyParams?: Record<string, number>;
 }
 
@@ -66,6 +67,35 @@ export interface BacktestResult {
 	klines: KlineRow[];
 	signals: Signal[];
 	trades: Trade[];
+	equityCurve: EquityPoint[];
+	metrics: BacktestMetrics;
+	elapsedMs: number;
+}
+
+// ─── Pool Backtest Types ──────────────────────────────────────────
+
+export interface PoolTrade {
+	code: string;
+	market: number;
+	direction: "buy" | "sell";
+	date: string;
+	price: number;
+	shares: number;
+	amount: number;
+	pnl?: number;
+	pnlPct?: number;
+	daysHeld?: number;
+	result?: "win" | "loss" | "breakeven";
+	memo?: string;
+}
+
+export interface PoolBacktestResult {
+	stocks: Array<{ code: string; market: number; name?: string }>;
+	strategy: StrategyType;
+	startDate: string;
+	endDate: string;
+	initialCapital: number;
+	trades: PoolTrade[];
 	equityCurve: EquityPoint[];
 	metrics: BacktestMetrics;
 	elapsedMs: number;

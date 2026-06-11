@@ -13,7 +13,7 @@ async function callTool(action: string, extra: Record<string, any> = {}) {
 }
 
 describe("manage_portfolio tool integration", () => {
-	const testDir = join(tmpdir(), "pi-portfolio-test-" + Date.now());
+	const testDir = join(tmpdir(), `pi-portfolio-test-${Date.now()}`);
 	let portfolioId: number;
 
 	beforeAll(async () => {

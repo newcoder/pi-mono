@@ -410,7 +410,7 @@ function buildMessageHTML(msg: ChatMessage): string {
 		const attachments = (msg as any).attachments ? buildAttachmentHTML((msg as any).attachments) : "";
 		return `<div class="message-wrapper user">
 			<div class="message-avatar user">你</div>
-			<div class="message-bubble user">${attachments}${formatMessageContent(msg.content)}</div>
+			<div class="message-bubble user">${attachments}${formatMarkdown(msg.content)}</div>
 		</div>`;
 	}
 	if (msg.role === "assistant") {

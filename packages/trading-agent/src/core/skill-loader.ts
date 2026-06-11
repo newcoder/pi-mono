@@ -136,7 +136,7 @@ function buildFallbackSystemPrompt(): string {
 - get_kline: 获取历史K线（默认最近60天）
 - screen_stocks: 基本面选股（默认只搜沪深300，全A股需传scope:"all"）
 - advanced_screen: 技术指标+基本面组合选股
-- backtest_strategy: 策略回测（默认qfq、最近一年）
+- backtest_strategy: 策略回测（单股票或股票池组合回测）。传code回测单只，传pool_id对股票池做组合回测（共享资金池、动态仓位分配）
 - compare_stocks: 股票对比
 - get_sector_rotation: 板块轮动
 - get_concept_stocks: 概念股
