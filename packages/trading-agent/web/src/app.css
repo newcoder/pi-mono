@@ -780,6 +780,17 @@
 	color: color-mix(in oklch, var(--primary) 75%, black);
 }
 
+.md-link {
+	color: var(--primary);
+	text-decoration: underline;
+	text-underline-offset: 2px;
+	cursor: pointer;
+}
+
+.md-link:hover {
+	color: color-mix(in oklch, var(--primary) 75%, black);
+}
+
 /* ─── Chat Input ─────────────────────────────────────────────── */
 
 .chat-input-area {

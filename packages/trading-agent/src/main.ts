@@ -33,6 +33,7 @@ import { getFundamentalsTool, getKlineTool, getQuoteTool } from "./tools/market-
 import { predictStockRankingTool } from "./tools/ml-prediction.js";
 import { getMarketNewsTool, getStockNewsTool, screenByNewsTool } from "./tools/news-analysis.js";
 import { managePortfolioTool } from "./tools/portfolio.js";
+import { generateReportTool } from "./tools/report.js";
 import { saveHotStocksAsPoolTool } from "./tools/save-hot-stocks-as-pool.js";
 import { screenStocksTool } from "./tools/screening.js";
 import { getSectorRotationTool } from "./tools/sector-rotation.js";
@@ -288,6 +289,7 @@ const BUILTIN_TOOLS = new Map<string, AgentTool<any>>([
 	["analyze_concept_persistence", analyzeConceptPersistenceTool],
 	["scan_stock_radar", scanStockRadarTool],
 	["predict_stock_ranking", predictStockRankingTool],
+	["generate_report", generateReportTool],
 ]);
 
 const BUILTIN_ROUTINES = new Map([
@@ -561,6 +563,8 @@ async function main() {
 				? resolve(process.argv[staticDirIdx + 1])
 				: resolve(import.meta.dirname || process.cwd(), "../web/dist");
 
+		const reportsDir = join(dataDir, "..", "reports");
+
 		const bgSync = new BackgroundSyncService();
 		globalBgSync = bgSync;
 		bgSync.start();
@@ -577,7 +581,7 @@ async function main() {
 			console.warn("[RecentPool] Failed to ensure recent pool exists:", e);
 		}
 
-		const { httpServer } = startServer(session, { port, staticDir, bgSync, modelRegistry });
+		const { httpServer } = startServer(session, { port, staticDir, reportsDir, bgSync, modelRegistry });
 
 		httpServer.on("close", () => {
 			bgSync.stop();

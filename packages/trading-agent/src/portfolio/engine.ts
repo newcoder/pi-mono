@@ -1,6 +1,7 @@
 import type { EquityPoint } from "../backtest/types.js";
 import { getDataStore } from "../data/index.js";
 import type { PortfolioHolding, PortfolioTradeRow, PortfolioValueBreakdown } from "../data/types.js";
+import { applyAdjustment } from "../tools/market-data.js";
 
 export interface ReplayResult {
 	cashDelta: number;
@@ -133,6 +134,7 @@ export async function computePortfolioValue(
 /**
  * Build daily equity curve for a portfolio over a date range.
  * Uses market calendar (000001.SH klines) to determine trading days.
+ * Falls back to first stock's kline dates if market index not available.
  */
 export async function buildPortfolioEquityCurve(
 	portfolioId: number,
@@ -146,7 +148,17 @@ export async function buildPortfolioEquityCurve(
 	const portfolio = await store.getPortfolioById(portfolioId);
 	if (!portfolio) throw new Error(`Portfolio ${portfolioId} not found`);
 
-	// Use market index klines as trading calendar
+	const trades = await store.getPortfolioTrades(portfolioId, startDate, endDate);
+
+	// Gather unique stocks for pre-fetch
+	const uniqueStocks = new Map<string, { code: string; market: number }>();
+	for (const t of trades) {
+		uniqueStocks.set(`${t.code}:${t.market}`, { code: t.code, market: t.market });
+	}
+
+	// ── Trading calendar ───────────────────────────────────────────
+	// Try SSE market index first, then fallback to any stock's dates
+	let tradingDays: string[] = [];
 	const marketKlines = await store.getKlines({
 		code: "000001",
 		market: 1,
@@ -155,34 +167,47 @@ export async function buildPortfolioEquityCurve(
 		start: startDate,
 		end: endDate,
 	});
-	if (marketKlines.length === 0) return [];
-
-	const tradingDays = marketKlines.map((k) => k.date);
-	const trades = await store.getPortfolioTrades(portfolioId, startDate, endDate);
-
-	// Pre-fetch all klines for all stocks in the portfolio to avoid N+1 queries
-	const uniqueStocks = new Map<string, { code: string; market: number }>();
-	for (const t of trades) {
-		uniqueStocks.set(`${t.code}:${t.market}`, { code: t.code, market: t.market });
-	}
-	const priceCache = new Map<string, Map<string, number | null>>(); // key: "code:market" -> date -> price
-	for (const { code, market } of uniqueStocks.values()) {
-		const klines = await store.getKlines({
-			code,
-			market,
+	if (marketKlines.length > 0) {
+		tradingDays = marketKlines.map((k) => k.date);
+	} else if (uniqueStocks.size > 0) {
+		const firstStock = uniqueStocks.values().next().value!;
+		const fallbackKlines = await store.getKlines({
+			code: firstStock.code,
+			market: firstStock.market,
 			period: "daily",
-			adjust: "qfq",
+			adjust: "bfq",
 			start: startDate,
 			end: endDate,
 		});
+		tradingDays = fallbackKlines.map((k) => k.date);
+	}
+	if (tradingDays.length === 0) return [];
+
+	// ── Pre-fetch all bfq klines and adjustment factors ────────────
+	const priceCache = new Map<string, Map<string, number | null>>(); // "code:market" -> date -> price
+	for (const { code, market } of uniqueStocks.values()) {
+		const bfqKlines = await store.getKlines({
+			code,
+			market,
+			period: "daily",
+			adjust: "bfq",
+			start: startDate,
+			end: endDate,
+		});
+		const factors = await store.getAdjustFactors(code, market, startDate, endDate);
+
+		// Apply qfq adjustment dynamically (qfq data may not exist in DB)
+		const adjustedKlines = factors.length > 0 ? applyAdjustment(bfqKlines, factors, "qfq") : bfqKlines;
+
 		const dateMap = new Map<string, number | null>();
-		for (const k of klines) {
+		for (const k of adjustedKlines) {
 			const price = priceMode === "open" ? k.open : k.close;
 			dateMap.set(k.date, price);
 		}
 		priceCache.set(`${code}:${market}`, dateMap);
 	}
 
+	// ── Build equity curve day by day ──────────────────────────────
 	const curve: EquityPoint[] = [];
 	let cash = portfolio.initial_cash;
 	const positions = new Map<string, PortfolioHolding>();

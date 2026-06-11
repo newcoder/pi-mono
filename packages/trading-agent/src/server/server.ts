@@ -56,6 +56,7 @@ function serveStatic(req: IncomingMessage, res: ServerResponse, staticDir: strin
 export interface ServerOptions {
 	port?: number;
 	staticDir?: string;
+	reportsDir?: string;
 	bgSync?: BackgroundSyncService;
 	modelRegistry?: ModelRegistry;
 }
@@ -66,11 +67,45 @@ export function startServer(
 ): { httpServer: ReturnType<typeof createServer>; wsServer: WebSocketServer; mootdxDaemon: MootdxDaemon } {
 	const port = options.port || 3000;
 	const staticDir = options.staticDir ? resolve(options.staticDir) : undefined;
+	const reportsDir = options.reportsDir ? resolve(options.reportsDir) : undefined;
 	const mootdxDaemon = new MootdxDaemon();
 
 	const httpServer = createServer((req, res) => {
+		const url = req.url || "/";
+
+		// Serve report files from reportsDir
+		if (reportsDir && req.method === "GET" && url.startsWith("/reports/")) {
+			let fileName = url.slice("/reports/".length).split("?")[0];
+			try {
+				fileName = decodeURIComponent(fileName);
+			} catch {
+				// Already decoded or malformed; use as-is
+			}
+			// Security: prevent directory traversal
+			if (fileName.includes("..") || fileName.includes("//")) {
+				res.writeHead(403);
+				res.end("Forbidden");
+				return;
+			}
+			const filePath = resolve(join(reportsDir, fileName));
+			if (!filePath.startsWith(reportsDir)) {
+				res.writeHead(403);
+				res.end("Forbidden");
+				return;
+			}
+			if (existsSync(filePath) && statSync(filePath).isFile()) {
+				const content = readFileSync(filePath);
+				res.writeHead(200, { "Content-Type": getContentType(filePath) });
+				res.end(content);
+				return;
+			}
+			res.writeHead(404);
+			res.end("Report not found");
+			return;
+		}
+
 		// Try static files first (if configured), then API routes
-		if (staticDir && req.method === "GET" && !req.url?.startsWith("/api/")) {
+		if (staticDir && req.method === "GET" && !url.startsWith("/api/")) {
 			const served = serveStatic(req, res, staticDir);
 			if (served) return;
 		}

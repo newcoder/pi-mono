@@ -1,9 +1,13 @@
+import { homedir } from "node:os";
+import { join } from "node:path";
 import type { AgentTool } from "@mariozechner/pi-agent-core";
 import { Type } from "@sinclair/typebox";
 import { runBacktest } from "../backtest/engine.js";
 import { formatBacktestResult, formatTradeList } from "../backtest/report.js";
 import type { BacktestResult, StrategyType } from "../backtest/types.js";
 import { getDataStore } from "../data/index.js";
+import type { ReportData } from "../report/generator.js";
+import { generateReport } from "../report/generator.js";
 
 const backtestParams = Type.Object({
 	code: Type.String({ description: "6位股票代码，如 600519" }),
@@ -145,9 +149,66 @@ export const backtestStrategyTool: AgentTool<typeof backtestParams, BacktestTool
 		const report = formatBacktestResult(result);
 		const tradeList = formatTradeList(result.trades);
 
+		// Auto-generate HTML report
+		let reportLink = "";
+		try {
+			const reportData: ReportData = {
+				title: `${params.code} ${params.strategy} 策略回测报告`,
+				strategy: params.strategy,
+				code: params.code,
+				market: params.market === 1 ? "SH" : "SZ",
+				startDate: result.config.start ?? result.equityCurve[0]?.date ?? params.start ?? "",
+				endDate: result.config.end ?? result.equityCurve[result.equityCurve.length - 1]?.date ?? params.end ?? "",
+				initialCapital: result.config.initialCapital ?? 100_000,
+				equityCurve: result.equityCurve.map((p) => ({ date: p.date, equity: p.equity })),
+				trades: result.trades.flatMap((t) => [
+					{
+						date: t.entryDate,
+						code: params.code,
+						direction: "buy" as const,
+						quantity: t.shares,
+						price: t.entryPrice,
+						amount: t.entryPrice * t.shares,
+						memo: `${params.strategy} 买入`,
+					},
+					{
+						date: t.exitDate,
+						code: params.code,
+						direction: "sell" as const,
+						quantity: t.shares,
+						price: t.exitPrice,
+						amount: t.exitPrice * t.shares,
+						holdingDays: t.daysHeld,
+						pnl: t.pnl,
+						pnlPct: t.pnlPct,
+						memo: `${params.strategy} 卖出 | 持仓${t.daysHeld}天`,
+					},
+				]),
+				metrics: {
+					totalReturn: result.metrics.totalReturn,
+					annualizedReturn: result.metrics.annualizedReturn,
+					sharpeRatio: result.metrics.sharpeRatio,
+					maxDrawdown: result.metrics.maxDrawdown,
+					maxDrawdownDuration: result.metrics.maxDrawdownDuration,
+					winRate: result.metrics.winRate,
+					profitFactor: result.metrics.profitFactor,
+					avgWin: result.metrics.avgWin,
+					avgLoss: result.metrics.avgLoss,
+					avgHoldingDays: result.metrics.avgHoldingDays,
+					totalTrades: result.trades.length,
+				},
+			};
+			const outputDir = join(homedir(), ".trading-agent", "reports");
+			const genResult = await generateReport(reportData, outputDir, "http://localhost:3000");
+			reportLink = `\n\n[查看 HTML 报告](${genResult.url})`;
+		} catch (err) {
+			console.warn("[backtest_strategy] Auto report generation failed:", err);
+		}
+
 		return {
 			content: [
 				{ type: "text", text: report + portfolioNote },
+				...(reportLink ? [{ type: "text" as const, text: reportLink }] : []),
 				{ type: "text", text: `\n--- 全部交易记录 ---\n${tradeList}` },
 			],
 			details: {
@@ -156,6 +217,7 @@ export const backtestStrategyTool: AgentTool<typeof backtestParams, BacktestTool
 				trades: result.trades,
 				equityCurve: result.equityCurve,
 				elapsedMs: result.elapsedMs,
+				reportUrl: reportLink ? reportLink.match(/\(([^)]+)\)/)?.[1] : undefined,
 			},
 		};
 	},
