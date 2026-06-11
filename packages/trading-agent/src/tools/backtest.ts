@@ -3,6 +3,7 @@ import { Type } from "@sinclair/typebox";
 import { runBacktest } from "../backtest/engine.js";
 import { formatBacktestResult, formatTradeList } from "../backtest/report.js";
 import type { BacktestResult, StrategyType } from "../backtest/types.js";
+import { getDataStore } from "../data/index.js";
 
 const backtestParams = Type.Object({
 	code: Type.String({ description: "6位股票代码，如 600519" }),
@@ -45,6 +46,12 @@ const backtestParams = Type.Object({
 			description: "策略参数，如 {fast:5, slow:10}",
 		}),
 	),
+	save_to_portfolio: Type.Optional(
+		Type.String({
+			description: "将回测交易记录保存到指定组合名称。若组合不存在则自动创建，若已存在则追加交易记录。",
+		}),
+	),
+	portfolio_description: Type.Optional(Type.String({ description: "新建组合时的描述（save_to_portfolio 时有效）" })),
 });
 
 interface BacktestToolDetails {
@@ -59,7 +66,7 @@ export const backtestStrategyTool: AgentTool<typeof backtestParams, BacktestTool
 	name: "backtest_strategy",
 	label: "回测策略",
 	description:
-		"对单只股票运行技术指标回测，验证策略历史表现。支持MA金叉、MACD金叉、RSI反转、布林带突破四种策略。数据从本地数据库读取。",
+		"对单只股票运行技术指标回测，验证策略历史表现。支持MA金叉、MACD金叉、RSI反转、布林带突破四种策略。数据从本地数据库读取。可通过 save_to_portfolio 将回测交易记录保存到组合中，以便进行组合级别的分析和跟踪。",
 	parameters: backtestParams,
 	execute: async (_id, params) => {
 		const config = {
@@ -80,12 +87,67 @@ export const backtestStrategyTool: AgentTool<typeof backtestParams, BacktestTool
 
 		const result = await runBacktest(config);
 
+		let portfolioNote = "";
+		if (params.save_to_portfolio) {
+			const store = getDataStore();
+			if (store) {
+				try {
+					const portfolio = await store.getPortfolioByName(params.save_to_portfolio);
+					let portfolioId: number;
+					if (!portfolio) {
+						portfolioId = await store.createPortfolio(
+							params.save_to_portfolio,
+							params.initialCapital ?? 100_000,
+							params.portfolio_description ?? `策略回测: ${params.code} ${params.strategy}`,
+						);
+						portfolioNote = `\n已新建组合 "${params.save_to_portfolio}"（ID: ${portfolioId}）并保存 ${result.trades.length} 笔交易记录。`;
+					} else {
+						portfolioId = portfolio.id;
+						portfolioNote = `\n已追加到组合 "${params.save_to_portfolio}"（ID: ${portfolioId}），保存 ${result.trades.length} 笔交易记录。`;
+					}
+
+					for (const trade of result.trades) {
+						await store.addPortfolioTrade({
+							portfolio_id: portfolioId,
+							trade_date: trade.entryDate,
+							code: params.code,
+							market: params.market ?? 1,
+							direction: "buy",
+							quantity: trade.shares,
+							price: trade.entryPrice,
+							adjust: params.adjust ?? "bfq",
+							commission: 0,
+							tax: 0,
+							memo: `${params.strategy} 策略买入`,
+						});
+						await store.addPortfolioTrade({
+							portfolio_id: portfolioId,
+							trade_date: trade.exitDate,
+							code: params.code,
+							market: params.market ?? 1,
+							direction: "sell",
+							quantity: trade.shares,
+							price: trade.exitPrice,
+							adjust: params.adjust ?? "bfq",
+							commission: 0,
+							tax: 0,
+							memo: `${params.strategy} 策略卖出 | 持仓${trade.daysHeld}天 | 盈亏${trade.pnl >= 0 ? "+" : ""}${trade.pnl.toFixed(2)}`,
+						});
+					}
+				} catch (err) {
+					portfolioNote = `\n保存到组合失败: ${err instanceof Error ? err.message : String(err)}`;
+				}
+			} else {
+				portfolioNote = "\n数据库未初始化，无法保存到组合。";
+			}
+		}
+
 		const report = formatBacktestResult(result);
 		const tradeList = formatTradeList(result.trades);
 
 		return {
 			content: [
-				{ type: "text", text: report },
+				{ type: "text", text: report + portfolioNote },
 				{ type: "text", text: `\n--- 全部交易记录 ---\n${tradeList}` },
 			],
 			details: {

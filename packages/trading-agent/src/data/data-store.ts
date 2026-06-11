@@ -12,6 +12,8 @@ import type {
 	KlineFilter,
 	KlineRow,
 	MacroRow,
+	PortfolioRow,
+	PortfolioTradeRow,
 	QuoteRow,
 	SectorRow,
 	StockIndustryRow,
@@ -318,6 +320,35 @@ CREATE TABLE IF NOT EXISTS calendar_events (
 CREATE INDEX IF NOT EXISTS idx_calendar_date ON calendar_events(event_date);
 CREATE INDEX IF NOT EXISTS idx_calendar_code ON calendar_events(code);
 CREATE INDEX IF NOT EXISTS idx_calendar_category ON calendar_events(category);
+
+CREATE TABLE IF NOT EXISTS portfolios (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    name TEXT NOT NULL UNIQUE,
+    description TEXT,
+    initial_cash REAL NOT NULL,
+    created_at TEXT DEFAULT CURRENT_TIMESTAMP,
+    updated_at TEXT DEFAULT CURRENT_TIMESTAMP
+);
+
+CREATE TABLE IF NOT EXISTS portfolio_trades (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    portfolio_id INTEGER NOT NULL,
+    trade_date TEXT NOT NULL,
+    code TEXT NOT NULL,
+    market INTEGER NOT NULL,
+    direction TEXT NOT NULL CHECK(direction IN ('buy','sell')),
+    quantity INTEGER NOT NULL CHECK(quantity > 0),
+    price REAL NOT NULL,
+    adjust TEXT NOT NULL DEFAULT 'bfq',
+    commission REAL DEFAULT 0,
+    tax REAL DEFAULT 0,
+    memo TEXT,
+    created_at TEXT DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY (portfolio_id) REFERENCES portfolios(id) ON DELETE CASCADE
+);
+
+CREATE INDEX IF NOT EXISTS idx_pt_portfolio ON portfolio_trades(portfolio_id, trade_date);
+CREATE INDEX IF NOT EXISTS idx_pt_code ON portfolio_trades(code, market);
 `;
 
 export class DataStore {
@@ -335,6 +366,7 @@ export class DataStore {
 		mkdirSync(dirname(this.dbPath), { recursive: true });
 		this.db = new sqlite3.Database(this.dbPath);
 
+		await promisifyExec(this.db, "PRAGMA foreign_keys = ON;");
 		await promisifyExec(this.db, SCHEMA_SQL);
 		this.initialized = true;
 	}
@@ -804,6 +836,8 @@ export class DataStore {
 			"stock_pools",
 			"stock_pool_items",
 			"calendar_events",
+			"portfolios",
+			"portfolio_trades",
 		];
 		const result: Record<string, number> = {};
 		for (const t of tables) {
@@ -979,6 +1013,77 @@ export class DataStore {
 	async clearStockPool(poolId: number): Promise<void> {
 		if (!this.db) return;
 		await promisifyExec(this.db, `DELETE FROM stock_pool_items WHERE pool_id = ${poolId}`);
+	}
+
+	// ─── Portfolios ─────────────────────────────────────────────────
+
+	async createPortfolio(name: string, initialCash: number, description?: string): Promise<number> {
+		if (!this.db) throw new Error("DataStore not initialized");
+		const now = new Date().toISOString();
+		const sql = `INSERT INTO portfolios (name, description, initial_cash, created_at, updated_at) VALUES (${s(name)}, ${s(description) ?? "NULL"}, ${initialCash}, ${s(now)}, ${s(now)})`;
+		await promisifyExec(this.db, sql);
+		const rows = await promisifyQuery(this.db, `SELECT last_insert_rowid() as id`);
+		return rows[0]?.id;
+	}
+
+	async deletePortfolio(id: number): Promise<void> {
+		if (!this.db) return;
+		await promisifyExec(this.db, `DELETE FROM portfolios WHERE id = ${id}`);
+	}
+
+	async getPortfolios(): Promise<PortfolioRow[]> {
+		if (!this.db) return [];
+		return promisifyQuery(
+			this.db,
+			`SELECT id, name, description, initial_cash, created_at, updated_at FROM portfolios ORDER BY updated_at DESC`,
+		);
+	}
+
+	async getPortfolioById(id: number): Promise<PortfolioRow | null> {
+		if (!this.db) return null;
+		const rows = await promisifyQuery(
+			this.db,
+			`SELECT id, name, description, initial_cash, created_at, updated_at FROM portfolios WHERE id = ${id}`,
+		);
+		return rows[0] ?? null;
+	}
+
+	async getPortfolioByName(name: string): Promise<PortfolioRow | null> {
+		if (!this.db) return null;
+		const rows = await promisifyQuery(
+			this.db,
+			`SELECT id, name, description, initial_cash, created_at, updated_at FROM portfolios WHERE name = ${s(name)}`,
+		);
+		return rows[0] ?? null;
+	}
+
+	async addPortfolioTrade(trade: Omit<PortfolioTradeRow, "id" | "created_at">): Promise<number> {
+		if (!this.db) throw new Error("DataStore not initialized");
+		const now = new Date().toISOString();
+		const f = (v: number | null | undefined) => (v == null || Number.isNaN(v) ? "NULL" : String(v));
+		const sql = `INSERT INTO portfolio_trades
+			(portfolio_id, trade_date, code, market, direction, quantity, price, adjust, commission, tax, memo, created_at)
+			VALUES (${trade.portfolio_id}, ${s(trade.trade_date)}, ${s(trade.code)}, ${trade.market}, ${s(trade.direction)}, ${trade.quantity}, ${trade.price}, ${s(trade.adjust ?? "bfq")}, ${f(trade.commission)}, ${f(trade.tax)}, ${s(trade.memo) ?? "NULL"}, ${s(now)})`;
+		await promisifyExec(this.db, sql);
+		const rows = await promisifyQuery(
+			this.db,
+			`SELECT id FROM portfolio_trades WHERE portfolio_id = ${trade.portfolio_id} AND trade_date = ${s(trade.trade_date)} AND code = ${s(trade.code)} ORDER BY id DESC LIMIT 1`,
+		);
+		return rows[0]?.id;
+	}
+
+	async getPortfolioTrades(portfolioId: number, startDate?: string, endDate?: string): Promise<PortfolioTradeRow[]> {
+		if (!this.db) return [];
+		let sql = `SELECT id, portfolio_id, trade_date, code, market, direction, quantity, price, adjust, commission, tax, memo, created_at FROM portfolio_trades WHERE portfolio_id = ${portfolioId}`;
+		if (startDate) sql += ` AND trade_date >= ${s(startDate)}`;
+		if (endDate) sql += ` AND trade_date <= ${s(endDate)}`;
+		sql += ` ORDER BY trade_date, id`;
+		return promisifyQuery(this.db, sql);
+	}
+
+	async deletePortfolioTrade(tradeId: number): Promise<void> {
+		if (!this.db) return;
+		await promisifyExec(this.db, `DELETE FROM portfolio_trades WHERE id = ${tradeId}`);
 	}
 
 	close(): void {

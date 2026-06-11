@@ -248,3 +248,54 @@ export interface CalendarEventRow {
 	source?: string | null;
 	updated_at?: string;
 }
+
+export interface PortfolioRow {
+	id: number;
+	name: string;
+	description?: string | null;
+	initial_cash: number;
+	created_at?: string;
+	updated_at?: string;
+}
+
+export interface PortfolioTradeRow {
+	id?: number;
+	portfolio_id: number;
+	trade_date: string;
+	code: string;
+	market: number;
+	direction: "buy" | "sell";
+	quantity: number;
+	price: number;
+	adjust?: string;
+	commission?: number | null;
+	tax?: number | null;
+	memo?: string | null;
+	created_at?: string;
+}
+
+export interface PortfolioHolding {
+	code: string;
+	market: number;
+	quantity: number;
+	avgCost: number;
+	totalCost: number;
+}
+
+export interface PortfolioValueBreakdown {
+	date: string;
+	cash: number;
+	holdings: Array<{
+		code: string;
+		market: number;
+		quantity: number;
+		avgCost: number;
+		marketPrice: number | null;
+		marketValue: number;
+		unrealizedPnl: number;
+	}>;
+	totalValue: number;
+	totalCost: number;
+	unrealizedPnl: number;
+	unrealizedPnlPct: number;
+}

@@ -32,6 +32,7 @@ import { getMacroTool } from "./tools/macro-data.js";
 import { getFundamentalsTool, getKlineTool, getQuoteTool } from "./tools/market-data.js";
 import { predictStockRankingTool } from "./tools/ml-prediction.js";
 import { getMarketNewsTool, getStockNewsTool, screenByNewsTool } from "./tools/news-analysis.js";
+import { managePortfolioTool } from "./tools/portfolio.js";
 import { saveHotStocksAsPoolTool } from "./tools/save-hot-stocks-as-pool.js";
 import { screenStocksTool } from "./tools/screening.js";
 import { getSectorRotationTool } from "./tools/sector-rotation.js";
@@ -271,6 +272,7 @@ const BUILTIN_TOOLS = new Map<string, AgentTool<any>>([
 	["get_stock_industries", getStockIndustriesTool],
 	["backtest_strategy", backtestStrategyTool],
 	["manage_stock_pool", manageStockPoolTool],
+	["manage_portfolio", managePortfolioTool],
 	["save_hot_stocks_as_pool", saveHotStocksAsPoolTool],
 	["analyze_sentiment", analyzeSentimentTool],
 	["get_stock_news", getStockNewsTool],
