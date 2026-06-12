@@ -14,6 +14,18 @@ export interface RSIConfig {
 	period: number;
 }
 
+export interface SupertrendConfig {
+	period: number;
+	multiplier: number;
+}
+
+export interface SupertrendResult {
+	upper: (number | null)[];
+	lower: (number | null)[];
+	trend: ("up" | "down" | null)[];
+	values: (number | null)[];
+}
+
 export interface CrossConfig {
 	fast: number;
 	slow: number;
@@ -175,6 +187,135 @@ export function computeRSI(closes: (number | null)[], config: RSIConfig = { peri
 		}
 	}
 	return { values };
+}
+
+// ─── Average True Range ─────────────────────────────────────────
+
+function computeATR(
+	highs: (number | null)[],
+	lows: (number | null)[],
+	closes: (number | null)[],
+	period: number,
+): (number | null)[] {
+	const atr: (number | null)[] = new Array(closes.length).fill(null);
+	let atrValue: number | null = null;
+
+	for (let i = 0; i < closes.length; i++) {
+		const h = highs[i];
+		const l = lows[i];
+		const c = closes[i];
+		const prevC = i > 0 ? closes[i - 1] : null;
+		if (h == null || l == null || c == null) continue;
+
+		const tr1 = h - l;
+		const tr2 = prevC != null ? Math.abs(h - prevC) : 0;
+		const tr3 = prevC != null ? Math.abs(l - prevC) : 0;
+		const tr = Math.max(tr1, tr2, tr3);
+
+		if (atrValue == null) {
+			// Wilder's smoothing initialization: simple average of first `period` TR values
+			let sum = 0;
+			let count = 0;
+			for (let j = Math.max(0, i - period + 1); j <= i; j++) {
+				const hj = highs[j];
+				const lj = lows[j];
+				const cj = closes[j];
+				const pcj = j > 0 ? closes[j - 1] : null;
+				if (hj == null || lj == null || cj == null) continue;
+				const t1 = hj - lj;
+				const t2 = pcj != null ? Math.abs(hj - pcj) : 0;
+				const t3 = pcj != null ? Math.abs(lj - pcj) : 0;
+				sum += Math.max(t1, t2, t3);
+				count++;
+			}
+			if (count >= period) {
+				atrValue = sum / period;
+				atr[i] = atrValue;
+			}
+		} else {
+			atrValue = (atrValue * (period - 1) + tr) / period;
+			atr[i] = atrValue;
+		}
+	}
+	return atr;
+}
+
+// ─── Supertrend ─────────────────────────────────────────────────
+
+export function computeSupertrend(
+	klines: KlineRow[],
+	config: SupertrendConfig = { period: 10, multiplier: 3 },
+): SupertrendResult {
+	const period = config.period;
+	const multiplier = config.multiplier;
+	const n = klines.length;
+
+	const closes = klines.map((k) => k.close);
+	const highs = klines.map((k) => k.high);
+	const lows = klines.map((k) => k.low);
+
+	const upper: (number | null)[] = new Array(n).fill(null);
+	const lower: (number | null)[] = new Array(n).fill(null);
+	const trend: ("up" | "down" | null)[] = new Array(n).fill(null);
+	const values: (number | null)[] = new Array(n).fill(null);
+
+	const atr = computeATR(highs, lows, closes, period);
+
+	let prevFinalUpper: number | null = null;
+	let prevFinalLower: number | null = null;
+	let prevTrend: "up" | "down" | null = null;
+
+	for (let i = 0; i < n; i++) {
+		const h = highs[i];
+		const l = lows[i];
+		const c = closes[i];
+		const atrValue = atr[i];
+		if (h == null || l == null || c == null || atrValue == null) continue;
+
+		const mid = (h + l) / 2;
+		const basicUpper = mid + multiplier * atrValue;
+		const basicLower = mid - multiplier * atrValue;
+
+		let finalUpper: number;
+		let finalLower: number;
+		if (prevFinalUpper != null && prevFinalLower != null) {
+			finalUpper =
+				basicUpper < prevFinalUpper || closes[i - 1] == null || closes[i - 1]! > prevFinalUpper
+					? basicUpper
+					: prevFinalUpper;
+			finalLower =
+				basicLower > prevFinalLower || closes[i - 1] == null || closes[i - 1]! < prevFinalLower
+					? basicLower
+					: prevFinalLower;
+		} else {
+			finalUpper = basicUpper;
+			finalLower = basicLower;
+		}
+
+		let currentTrend: "up" | "down";
+		if (prevTrend != null && prevFinalUpper != null && prevFinalLower != null) {
+			if (prevTrend === "down" && c > prevFinalUpper) {
+				currentTrend = "up";
+			} else if (prevTrend === "up" && c < prevFinalLower) {
+				currentTrend = "down";
+			} else {
+				currentTrend = prevTrend;
+			}
+		} else {
+			currentTrend = c > mid ? "up" : "down";
+		}
+
+		upper[i] = finalUpper;
+		lower[i] = finalLower;
+		trend[i] = currentTrend;
+		values[i] = currentTrend === "up" ? finalLower : finalUpper;
+
+		prevFinalUpper = finalUpper;
+		prevFinalLower = finalLower;
+		prevTrend = currentTrend;
+	}
+
+	return { upper, lower, trend, values };
 }
 
 // ─── Cross Detection ────────────────────────────────────────────

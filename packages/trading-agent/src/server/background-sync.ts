@@ -26,7 +26,9 @@ export class BackgroundSyncService {
 	private quoteTimer: ReturnType<typeof setInterval> | null = null;
 	private klineTimer: ReturnType<typeof setInterval> | null = null;
 	private indexTimer: ReturnType<typeof setInterval> | null = null;
+	private industryTimer: ReturnType<typeof setInterval> | null = null;
 	private isRunning = false;
+	private lastIndustryKlineSyncDate: string | null = null;
 
 	/**
 	 * Start background sync loops.
@@ -63,10 +65,21 @@ export class BackgroundSyncService {
 		this.klineTimer = setInterval(async () => {
 			try {
 				await this.syncPoolKlines();
+				await this.syncIndustryKlinesDaily();
 			} catch (e) {
 				console.warn("[BackgroundSync] Kline sync failed:", e);
 			}
 		}, klineIntervalMs);
+
+		// Industry quote sync loop — only during market hours
+		this.industryTimer = setInterval(async () => {
+			if (!isMarketHours()) return;
+			try {
+				await this.syncIndustryQuotes();
+			} catch (e) {
+				console.warn("[BackgroundSync] Industry quote sync failed:", e);
+			}
+		}, 60_000);
 
 		// Initial sync on startup
 		this.runInitialSync().catch((e) => console.warn("[BackgroundSync] Initial sync failed:", e));
@@ -79,17 +92,28 @@ export class BackgroundSyncService {
 		if (this.quoteTimer) clearInterval(this.quoteTimer);
 		if (this.klineTimer) clearInterval(this.klineTimer);
 		if (this.indexTimer) clearInterval(this.indexTimer);
+		if (this.industryTimer) clearInterval(this.industryTimer);
 		this.quoteTimer = null;
 		this.klineTimer = null;
 		this.indexTimer = null;
+		this.industryTimer = null;
 	}
 
 	/** Trigger a full on-demand sync. Returns summary of what was synced. */
-	async syncAll(): Promise<{ indices: number; quotes: number; klines: number; errors: string[] }> {
+	async syncAll(): Promise<{
+		indices: number;
+		quotes: number;
+		klines: number;
+		industryQuotes: number;
+		industryKlines: number;
+		errors: string[];
+	}> {
 		const errors: string[] = [];
 		let indices = 0;
 		let quotes = 0;
 		let klines = 0;
+		let industryQuotes = 0;
+		let industryKlines = 0;
 
 		try {
 			indices = await this.syncIndices();
@@ -109,7 +133,19 @@ export class BackgroundSyncService {
 			errors.push(`klines: ${e instanceof Error ? e.message : String(e)}`);
 		}
 
-		return { indices, quotes, klines, errors };
+		try {
+			industryQuotes = await this.syncIndustryQuotes();
+		} catch (e) {
+			errors.push(`industryQuotes: ${e instanceof Error ? e.message : String(e)}`);
+		}
+
+		try {
+			industryKlines = await this.syncIndustryKlines();
+		} catch (e) {
+			errors.push(`industryKlines: ${e instanceof Error ? e.message : String(e)}`);
+		}
+
+		return { indices, quotes, klines, industryQuotes, industryKlines, errors };
 	}
 
 	private async runInitialSync() {
@@ -128,6 +164,16 @@ export class BackgroundSyncService {
 			await this.syncPoolKlines();
 		} catch (e) {
 			console.warn("[BackgroundSync] Initial kline sync failed:", e);
+		}
+		try {
+			await this.syncIndustryQuotes();
+		} catch (e) {
+			console.warn("[BackgroundSync] Initial industry quote sync failed:", e);
+		}
+		try {
+			await this.syncIndustryKlines();
+		} catch (e) {
+			console.warn("[BackgroundSync] Initial industry kline sync failed:", e);
 		}
 		console.log("[BackgroundSync] Initial sync complete.");
 	}
@@ -234,6 +280,41 @@ export class BackgroundSyncService {
 			console.log(`[BackgroundSync] Synced ${synced}/${stocks.length} pool klines`);
 		}
 		return synced;
+	}
+
+	/** Sync real-time quotes for all industry indices. Returns number of indices synced. */
+	private async syncIndustryQuotes(): Promise<number> {
+		const sync = requireSync();
+		try {
+			const count = await sync.syncAllIndustryQuotes();
+			console.log(`[BackgroundSync] Synced ${count} industry quotes`);
+			return count;
+		} catch (e) {
+			console.warn("[BackgroundSync] Industry quote sync failed:", e);
+			return 0;
+		}
+	}
+
+	/** Sync daily klines for all industry indices. Returns number of rows synced. */
+	private async syncIndustryKlines(): Promise<number> {
+		const sync = requireSync();
+		try {
+			const count = await sync.syncAllIndustryKlines("daily");
+			console.log(`[BackgroundSync] Synced ${count} industry kline rows`);
+			this.lastIndustryKlineSyncDate = todayStr();
+			return count;
+		} catch (e) {
+			console.warn("[BackgroundSync] Industry kline sync failed:", e);
+			return 0;
+		}
+	}
+
+	/** Run industry kline sync at most once per calendar day. */
+	private async syncIndustryKlinesDaily(): Promise<number> {
+		if (this.lastIndustryKlineSyncDate === todayStr()) {
+			return 0;
+		}
+		return this.syncIndustryKlines();
 	}
 
 	/** Get unique stocks from all stock pools. */

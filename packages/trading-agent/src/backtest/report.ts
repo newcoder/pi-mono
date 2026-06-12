@@ -136,7 +136,7 @@ export function formatPoolBacktestResult(result: PoolBacktestResult): string {
 		`${"股票".padEnd(12)} ${"买入".padStart(4)} ${"卖出".padStart(4)} ${"胜率".padStart(6)} ${"总盈亏".padStart(10)} ${"均持仓".padStart(6)}`,
 	);
 	for (const [code, stat] of stockStats) {
-		const winRate = stat.sells > 0 ? ((stat.win / stat.sells) * 100).toFixed(1) + "%" : "-";
+		const winRate = stat.sells > 0 ? `${((stat.win / stat.sells) * 100).toFixed(1)}%` : "-";
 		const avgDays = stat.sells > 0 ? (stat.days / stat.sells).toFixed(1) : "-";
 		const pnlStr = (stat.pnl >= 0 ? "+" : "") + stat.pnl.toFixed(0);
 		lines.push(

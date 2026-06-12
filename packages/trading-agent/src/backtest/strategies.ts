@@ -1,5 +1,5 @@
 import type { KlineRow } from "../data/types.js";
-import { computeMA, computeMACD, computeRSI, getCloses } from "../indicators/engine.js";
+import { computeMA, computeMACD, computeRSI, computeSupertrend, getCloses } from "../indicators/engine.js";
 import type { Signal, StrategyType } from "./types.js";
 
 export interface StrategyParams {
@@ -10,6 +10,8 @@ export interface StrategyParams {
 	oversold?: number;
 	overbought?: number;
 	stdDev?: number;
+	multiplier?: number;
+	drawdownSellPct?: number;
 }
 
 export function generateSignals(klines: KlineRow[], strategy: StrategyType, params: StrategyParams = {}): Signal[] {
@@ -22,6 +24,8 @@ export function generateSignals(klines: KlineRow[], strategy: StrategyType, para
 			return rsiReversalSignals(klines, params);
 		case "bollinger_breakout":
 			return bollingerSignals(klines, params);
+		case "supertrend":
+			return supertrendSignals(klines, params);
 		default:
 			return [];
 	}
@@ -199,6 +203,75 @@ function bollingerSignals(klines: KlineRow[], params: StrategyParams): Signal[] 
 				reason: `布林带上轨回落(${close.toFixed(2)} < ${upper.toFixed(2)})`,
 			});
 			inPosition = false;
+		}
+	}
+	return signals;
+}
+
+function supertrendSignals(klines: KlineRow[], params: StrategyParams): Signal[] {
+	const period = params.period ?? 10;
+	const multiplier = params.multiplier ?? 3;
+	const drawdownSellPct = params.drawdownSellPct ?? 0;
+	if (klines.length < period + 1) return [];
+
+	const st = computeSupertrend(klines, { period, multiplier });
+	const signals: Signal[] = [];
+	let inPosition = false;
+	let highestCloseSinceEntry: number | null = null;
+
+	for (let i = 1; i < klines.length; i++) {
+		const prevTrend = st.trend[i - 1];
+		const currTrend = st.trend[i];
+		const close = klines[i].close;
+		if (prevTrend == null || currTrend == null || close == null) continue;
+
+		if (prevTrend === "down" && currTrend === "up") {
+			signals.push({
+				index: i,
+				date: klines[i].date,
+				type: "buy",
+				price: close,
+				reason: `Supertrend转多(周期${period}, 倍数${multiplier})`,
+			});
+			inPosition = true;
+			highestCloseSinceEntry = close;
+			continue;
+		}
+
+		if (inPosition) {
+			if (highestCloseSinceEntry != null && close > highestCloseSinceEntry) {
+				highestCloseSinceEntry = close;
+			}
+
+			// 1. Supertrend death cross
+			if (prevTrend === "up" && currTrend === "down") {
+				signals.push({
+					index: i,
+					date: klines[i].date,
+					type: "sell",
+					price: close,
+					reason: `Supertrend转空(周期${period}, 倍数${multiplier})`,
+				});
+				inPosition = false;
+				highestCloseSinceEntry = null;
+				continue;
+			}
+
+			// 2. Drawdown stop loss
+			if (drawdownSellPct > 0 && highestCloseSinceEntry != null) {
+				const stopPrice = highestCloseSinceEntry * (1 - drawdownSellPct / 100);
+				if (close < stopPrice) {
+					signals.push({
+						index: i,
+						date: klines[i].date,
+						type: "sell",
+						price: close,
+						reason: `Supertrend回撤卖出(从${highestCloseSinceEntry.toFixed(2)}回撤${drawdownSellPct}%)`,
+					});
+					inPosition = false;
+					highestCloseSinceEntry = null;
+				}
+			}
 		}
 	}
 	return signals;

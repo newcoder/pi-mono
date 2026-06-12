@@ -3,6 +3,7 @@ import type { IncomingMessage, ServerResponse } from "node:http";
 import { homedir } from "node:os";
 import { join } from "node:path";
 import type { ModelRegistry } from "@mariozechner/pi-coding-agent";
+import { loadUserConfig, saveUserConfig } from "../config/user-config.js";
 import type { TradingSession } from "../core/trading-session.js";
 import { requireStore, requireSync } from "../data/index.js";
 import { runAStockDataJsonScript, runJsonScript } from "../tools/_utils.js";
@@ -33,6 +34,10 @@ function parseQuery(url: string): Record<string, string> {
 		query[key] = value;
 	}
 	return query;
+}
+
+function todayStr(): string {
+	return new Date().toISOString().slice(0, 10);
 }
 
 /** Route incoming HTTP requests to handlers */
@@ -501,6 +506,84 @@ export async function handleRequest(
 			return;
 		}
 
+		// Industry indices list
+		if (path === "/api/industry/list" && method === "GET") {
+			const store = requireStore();
+			const sync = requireSync();
+			let list = await store.getIndustryList();
+			if (list.length === 0) {
+				try {
+					await sync.syncIndustryList();
+					list = await store.getIndustryList();
+				} catch (e) {
+					console.warn("[Industry/List] Sync failed:", e);
+				}
+			}
+			json(res, 200, list);
+			return;
+		}
+
+		// Industry index spot quote
+		if (path === "/api/industry/spot" && method === "GET") {
+			const query = parseQuery(url);
+			const store = requireStore();
+			const sync = requireSync();
+			const code = query.code;
+
+			if (code) {
+				let quote: any = null;
+				try {
+					quote = await sync.syncIndustryQuote(code);
+				} catch (e) {
+					console.warn(`[Industry/Spot] Real-time fetch failed for ${code}:`, e);
+					quote = await store.getIndustryQuote(code, todayStr());
+				}
+				json(res, 200, quote);
+				return;
+			}
+
+			let quotes = await store.getLatestIndustryQuotes();
+			if (quotes.length === 0) {
+				try {
+					await sync.syncAllIndustryQuotes();
+					quotes = await store.getLatestIndustryQuotes();
+				} catch (e) {
+					console.warn("[Industry/Spot] On-demand sync failed:", e);
+				}
+			}
+			json(res, 200, quotes);
+			return;
+		}
+
+		// Industry index klines
+		if (path === "/api/industry/klines" && method === "GET") {
+			const query = parseQuery(url);
+			const code = query.code;
+			if (!code) {
+				badRequest(res, "code parameter required (e.g. BK1036)");
+				return;
+			}
+			const period = query.period || "daily";
+			const limit = query.limit ? Number(query.limit) : 100;
+			const start = query.start;
+			const end = query.end;
+
+			const store = requireStore();
+			const sync = requireSync();
+
+			let klines: any[] = await store.getIndustryKlines(code, period, start, end, limit);
+			if (klines.length === 0) {
+				try {
+					await sync.syncIndustryKlines(code, period);
+					klines = await store.getIndustryKlines(code, period, start, end, limit);
+				} catch (e) {
+					console.warn(`[Industry/Klines] Sync failed for ${code}:`, e);
+				}
+			}
+			json(res, 200, klines);
+			return;
+		}
+
 		// Macro
 		if (path === "/api/macro" && method === "GET") {
 			const store = requireStore();
@@ -661,6 +744,13 @@ export async function handleRequest(
 			const allModels = modelRegistry.getAll();
 			const availableModels = modelRegistry.getAvailable();
 			const providers = [...new Set(allModels.map((m) => m.provider))];
+
+			// Prefer active session model, then saved user config, then undefined
+			const userConfig = loadUserConfig();
+			const currentModel = session
+				? { provider: session.model.provider, modelId: session.model.id }
+				: userConfig.model;
+
 			json(res, 200, {
 				providers: providers.map((p) => ({
 					id: p,
@@ -678,7 +768,7 @@ export async function handleRequest(
 						})),
 				})),
 				available: availableModels.map((m) => `${m.provider}/${m.id}`),
-				currentModel: session ? { provider: session.model.provider, modelId: session.model.id } : undefined,
+				currentModel,
 			});
 			return;
 		}
@@ -724,6 +814,9 @@ export async function handleRequest(
 
 			// Refresh registry to pick up changes
 			modelRegistry.refresh();
+
+			// Persist selected model as user preference
+			saveUserConfig({ model: { provider, modelId } });
 
 			// Switch model in the active session if available
 			if (session) {

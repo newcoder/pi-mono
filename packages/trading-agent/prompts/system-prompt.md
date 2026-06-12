@@ -306,7 +306,7 @@
 | code | string | 条件 | - | 6位股票代码。**与 pool_id 二选一**，提供 code 时回测单只股票 |
 | market | 1 \| 0 | 否 | 1 | 1=上海，0=深圳 |
 | pool_id | number | 条件 | - | **股票池编号**。提供 pool_id 时，对池中所有股票进行组合回测，code 被忽略 |
-| strategy | string | 是 | - | 策略类型：ma_cross/macd_cross/rsi_reversal/bollinger_breakout |
+| strategy | string | 是 | - | 策略类型：ma_cross/macd_cross/rsi_reversal/bollinger_breakout/supertrend |
 | start | string | 否 | - | 起始日期 YYYYMMDD，**默认一年前** |
 | end | string | 否 | - | 结束日期 YYYYMMDD，默认今天 |
 | period | string | 否 | "daily" | 周期：daily/week/month |
@@ -332,6 +332,7 @@
 | MACD金叉 | macd_cross | {fast: 12, slow: 26, signal: 9} |
 | RSI超卖买入 | rsi_reversal | {period: 14, oversold: 30, overbought: 70} |
 | 布林带突破 | bollinger_breakout | {period: 20, stdDev: 2} |
+| Supertrend趋势跟踪 | supertrend | {period: 10, multiplier: 3, drawdownSellPct: 10} |
 
 **示例**：
 ```json
@@ -347,10 +348,37 @@
 - 胜率>50%且盈亏比>1.5 视为较优策略
 - 最大回撤>30% 说明风险过高
 - **组合回测**额外关注：各股票资金分配是否均衡、是否有股票长期无交易（信号不足）
+- **必须使用本地数据库真实行情数据**，禁止构造模拟数据
 
 ---
 
-## 15. get_stock_news — 个股新闻资讯
+## 15. generate_report — 生成组合回测报告（仅限真实组合数据）
+
+**用途**：从本地数据库中的真实组合交易记录生成独立 HTML 报告。
+
+**调用时机**：用户要求"生成报告""导出报告""看 HTML 报告"，且已经有组合（portfolio）数据时。
+
+**限制**：
+- **必须提供 `portfolio_id` 或 `portfolio_name` 之一**
+- **禁止传入自定义交易记录、权益曲线或指标**。工具会自动从组合数据库读取真实交易，重建权益曲线并计算指标
+- 如果没有组合，先用 `backtest_strategy` 的 `save_to_portfolio` 参数创建组合，再调用本工具
+
+**参数**：
+| 参数 | 类型 | 必填 | 默认值 | 说明 |
+|------|------|------|--------|------|
+| portfolio_id | number | 条件 | - | 组合编号（id/name 至少填一个） |
+| portfolio_name | string | 条件 | - | 组合名称（id/name 至少填一个） |
+| start_date | string | 否 | 组合创建日 | 起始日期 YYYY-MM-DD |
+| end_date | string | 否 | 今天 | 结束日期 YYYY-MM-DD |
+
+**示例**：
+```json
+{"portfolio_name": "Supertrend53号股池"}
+```
+
+---
+
+## 16. get_stock_news — 个股新闻资讯
 
 **用途**：获取指定股票最近的新闻资讯，自动识别利空/利多事件类型
 
@@ -372,7 +400,7 @@
 
 ---
 
-## 16. screen_by_news — 新闻事件筛选
+## 17. screen_by_news — 新闻事件筛选
 
 **用途**：基于新闻事件（减持、增持、定增、业绩预亏/预增等）筛选股票
 
@@ -405,7 +433,7 @@
 
 ---
 
-## 17. get_market_news — 市场宏观新闻
+## 18. get_market_news — 市场宏观新闻
 
 **用途**：获取市场宏观新闻和财经要闻，分析对市场/行业板块的影响
 
@@ -437,7 +465,7 @@
 
 ---
 
-## 18. refresh_calendar — 刷新投资日历
+## 19. refresh_calendar — 刷新投资日历
 
 **用途**：获取未来1-2个月的市场事件（宏观数据、行业展会、限售解禁、财报披露等）
 
@@ -452,7 +480,7 @@
 
 ---
 
-## 19. analyze_calendar_impact — 投资日历深度影响分析
+## 20. analyze_calendar_impact — 投资日历深度影响分析
 
 **用途**：深度分析投资日历中未来事件对个股的影响，识别利好/利空，并可自动保存到「未来关注股池」
 
@@ -490,7 +518,7 @@
 
 ---
 
-## 20. manage_stock_pool — 股票池管理
+## 21. manage_stock_pool — 股票池管理
 
 **用途**：创建、查询、删除股票池。股票池是一组股票的命名集合（不可变），用于后续分析、回测、对比。
 
@@ -554,7 +582,7 @@
 
 ---
 
-## 21. save_hot_stocks_as_pool — 保存同花顺强势股为股票池
+## 22. save_hot_stocks_as_pool — 保存同花顺强势股为股票池
 
 **用途**：获取同花顺当日强势股（热点）数据，并保存为一个新的股票池。每只股票包含代码、名称、题材归因和涨跌幅信息。
 
@@ -594,7 +622,7 @@
 
 ---
 
-## 22. scan_stock_radar — 个股机会风险雷达 V3（事件驱动）
+## 23. scan_stock_radar — 个股机会风险雷达 V3（事件驱动）
 
 **用途**：扫描A股中**"最近有动静"的股票**（有事件/公告/新闻的个股），分析利好利空，输出机会榜和风险榜。采用事件驱动架构：从iwencai事件查询（10类事件）和财联社/东财新闻中提取有动静的股票，**跳过无事件股票**，大幅提高效率。
 

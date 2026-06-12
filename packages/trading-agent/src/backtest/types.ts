@@ -1,6 +1,6 @@
 import type { KlineRow } from "../data/types.js";
 
-export type StrategyType = "ma_cross" | "macd_cross" | "rsi_reversal" | "bollinger_breakout";
+export type StrategyType = "ma_cross" | "macd_cross" | "rsi_reversal" | "bollinger_breakout" | "supertrend";
 
 export interface BacktestConfig {
 	code: string;
@@ -70,6 +70,25 @@ export interface BacktestResult {
 	equityCurve: EquityPoint[];
 	metrics: BacktestMetrics;
 	elapsedMs: number;
+}
+
+export interface PoolBacktestConfig {
+	strategy: StrategyType;
+	start?: string;
+	end?: string;
+	period?: string;
+	adjust?: string;
+	initialCapital?: number;
+	positionSize?: number;
+	fullPosition?: boolean; // 是否一直满仓
+	fullPositionMode?: "add_to_holdings" | "equal_weight"; // 满仓模式：加仓到持仓 / 目标等权再平衡
+	rebalanceThreshold?: number; // 等权再平衡触发阈值，如 0.05 = 偏离目标权重 5% 才调仓
+	minTradeAmount?: number; // 忽略小于该金额的交易，默认 0
+	slippage?: number;
+	commission?: number;
+	maxHoldingDays?: number;
+	minLot?: number;
+	strategyParams?: Record<string, number>;
 }
 
 // ─── Pool Backtest Types ──────────────────────────────────────────

@@ -299,3 +299,52 @@ export interface PortfolioValueBreakdown {
 	unrealizedPnl: number;
 	unrealizedPnlPct: number;
 }
+
+export interface IndustryKlineRow {
+	code: string;
+	period: string;
+	date: string;
+	open: number | null;
+	high: number | null;
+	low: number | null;
+	close: number | null;
+	volume: number | null;
+	turnover: number | null;
+	change_pct: number | null;
+	change_amount: number | null;
+	amplitude: number | null;
+	turnover_rate: number | null;
+}
+
+export interface IndustryQuoteRow {
+	code: string;
+	snapshot_date: string;
+	name?: string | null;
+	latest: number | null;
+	open: number | null;
+	high: number | null;
+	low: number | null;
+	prev_close: number | null;
+	volume: number | null;
+	turnover: number | null;
+	change_pct: number | null;
+	change_amount: number | null;
+	amplitude: number | null;
+	turnover_rate: number | null;
+	up_count: number | null;
+	down_count: number | null;
+	flat_count: number | null;
+	leading_stock: string | null;
+	leading_stock_code: string | null;
+	leading_change_pct: number | null;
+	lagging_stock: string | null;
+	lagging_stock_code: string | null;
+	lagging_change_pct: number | null;
+	updated_at?: string;
+}
+
+export interface IndustryIndexRow {
+	code: string;
+	name: string;
+	updated_at?: string;
+}

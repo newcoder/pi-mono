@@ -9,7 +9,7 @@ import {
 	formatPoolTradeList,
 	formatTradeList,
 } from "../backtest/report.js";
-import type { BacktestResult, StrategyType } from "../backtest/types.js";
+import type { BacktestResult, PoolBacktestConfig, StrategyType } from "../backtest/types.js";
 import { getDataStore } from "../data/index.js";
 import type { ReportData } from "../report/generator.js";
 import { generateReport } from "../report/generator.js";
@@ -31,6 +31,7 @@ const backtestParams = Type.Object({
 			Type.Literal("macd_cross", { description: "MACD金叉/死叉" }),
 			Type.Literal("rsi_reversal", { description: "RSI超卖买入/超买卖出" }),
 			Type.Literal("bollinger_breakout", { description: "布林带下轨反弹/上轨回落" }),
+			Type.Literal("supertrend", { description: "Supertrend趋势跟踪：转多买入/转空卖出" }),
 		],
 		{ description: "回测策略类型" },
 	),
@@ -50,6 +51,38 @@ const backtestParams = Type.Object({
 	),
 	initialCapital: Type.Optional(Type.Number({ description: "初始资金，默认100000", default: 100000 })),
 	positionSize: Type.Optional(Type.Number({ description: "每笔交易仓位比例 0-1，默认1.0", default: 1.0 })),
+	full_position: Type.Optional(
+		Type.Boolean({
+			description: "是否一直满仓。启用后每次调仓会把剩余现金用于加仓/再平衡，提高资金利用率。",
+			default: false,
+		}),
+	),
+	full_position_mode: Type.Optional(
+		Type.Union(
+			[
+				Type.Literal("add_to_holdings", {
+					description: "把剩余现金平均加到已有持仓上（默认）。会提高集中度，收益可能更高。",
+				}),
+				Type.Literal("equal_weight", {
+					description: "目标等权再平衡。对持仓+当日买入候选股进行买卖，使权重尽量相等，避免集中。",
+				}),
+			],
+			{ description: "满仓模式", default: "add_to_holdings" },
+		),
+	),
+	rebalance_threshold: Type.Optional(
+		Type.Number({
+			description:
+				"等权再平衡触发阈值，如 0.05 表示偏离目标权重 5% 以上才调仓。仅在 full_position_mode=equal_weight 时有效。默认 0（每天严格等权）。",
+			default: 0,
+		}),
+	),
+	min_trade_amount: Type.Optional(
+		Type.Number({
+			description: "最小交易金额（元），小于该金额的交易将被忽略。默认 0。强制平仓不受此限制。",
+			default: 0,
+		}),
+	),
 	slippage: Type.Optional(Type.Number({ description: "滑点比例，默认0.001(0.1%)", default: 0.001 })),
 	commission: Type.Optional(Type.Number({ description: "手续费比例，默认0.0003(0.03%)", default: 0.0003 })),
 	maxHoldingDays: Type.Optional(Type.Number({ description: "最大持仓天数，超出强制平仓" })),
@@ -68,7 +101,7 @@ const backtestParams = Type.Object({
 });
 
 interface BacktestToolDetails {
-	config?: BacktestResult["config"];
+	config?: BacktestResult["config"] | PoolBacktestConfig;
 	metrics?: BacktestResult["metrics"];
 	trades?: unknown[];
 	equityCurve?: BacktestResult["equityCurve"];
@@ -76,13 +109,17 @@ interface BacktestToolDetails {
 	elapsedMs?: number;
 	reportUrl?: string;
 	error?: string;
+	poolName?: string;
+	strategy?: StrategyType;
+	formattedReport?: string;
+	formattedTradeList?: string;
 }
 
 export const backtestStrategyTool: AgentTool<typeof backtestParams, BacktestToolDetails> = {
 	name: "backtest_strategy",
 	label: "回测策略",
 	description:
-		"对单只股票或股票池运行技术指标回测，验证策略历史表现。支持MA金叉、MACD金叉、RSI反转、布林带突破四种策略。提供 code 回测单只股票，或提供 pool_id 对股票池中所有股票批量回测（共享资金池、动态仓位分配、100股整数倍）。数据从本地数据库读取。可通过 save_to_portfolio 将回测交易记录保存到组合中。",
+		"对单只股票或股票池运行技术指标回测，验证策略历史表现。支持MA金叉、MACD金叉、RSI反转、布林带突破、Supertrend趋势跟踪五种策略。提供 code 回测单只股票，或提供 pool_id 对股票池中所有股票批量回测（共享资金池、动态仓位分配、100股整数倍）。数据从本地数据库读取。可通过 save_to_portfolio 将回测交易记录保存到组合中。",
 	parameters: backtestParams,
 	execute: async (_id, params) => {
 		const isPool = params.pool_id != null;
@@ -119,6 +156,10 @@ export const backtestStrategyTool: AgentTool<typeof backtestParams, BacktestTool
 				adjust: params.adjust ?? "bfq",
 				initialCapital: params.initialCapital ?? 100_000,
 				positionSize: params.positionSize ?? 1.0,
+				fullPosition: params.full_position ?? false,
+				fullPositionMode: params.full_position_mode ?? "add_to_holdings",
+				rebalanceThreshold: params.rebalance_threshold ?? 0,
+				minTradeAmount: params.min_trade_amount ?? 0,
 				slippage: params.slippage ?? 0.001,
 				commission: params.commission ?? 0.0003,
 				maxHoldingDays: params.maxHoldingDays,
@@ -170,6 +211,7 @@ export const backtestStrategyTool: AgentTool<typeof backtestParams, BacktestTool
 			const tradeList = formatPoolTradeList(result.trades);
 
 			// Auto-generate HTML report
+			let reportUrl: string | undefined;
 			let reportLink = "";
 			try {
 				const reportData: ReportData = {
@@ -207,24 +249,35 @@ export const backtestStrategyTool: AgentTool<typeof backtestParams, BacktestTool
 				};
 				const outputDir = join(homedir(), ".trading-agent", "reports");
 				const genResult = await generateReport(reportData, outputDir, "http://localhost:3000");
+				reportUrl = genResult.url;
 				reportLink = `\n\n[查看 HTML 报告](${genResult.url})`;
 			} catch (err) {
 				console.warn("[backtest_strategy] Auto report generation failed:", err);
 			}
 
+			const sellCount = result.trades.filter((t) => t.direction === "sell").length;
+			const summaryText =
+				`股池回测完成：${pool.name} / ${params.strategy}\n` +
+				`区间：${result.startDate} ~ ${result.endDate}，初始资金：${result.initialCapital.toLocaleString("zh-CN")}\n` +
+				`总收益：${result.metrics.totalReturn.toFixed(2)}%，年化：${result.metrics.annualizedReturn.toFixed(2)}%，` +
+				`最大回撤：${result.metrics.maxDrawdown.toFixed(2)}%，胜率：${result.metrics.winRate.toFixed(2)}%，交易次数：${sellCount}` +
+				portfolioNote +
+				reportLink;
+
 			return {
-				content: [
-					{ type: "text", text: report + portfolioNote },
-					...(reportLink ? [{ type: "text" as const, text: reportLink }] : []),
-					{ type: "text", text: `\n--- 全部交易记录 ---\n${tradeList}` },
-				],
+				content: [{ type: "text", text: summaryText }],
 				details: {
+					poolName: pool.name,
+					strategy: params.strategy,
+					config: poolConfig,
 					stocks: result.stocks,
 					metrics: result.metrics,
 					trades: result.trades,
 					equityCurve: result.equityCurve,
+					formattedReport: report,
+					formattedTradeList: tradeList,
 					elapsedMs: result.elapsedMs,
-					reportUrl: reportLink ? reportLink.match(/\(([^)]+)\)/)?.[1] : undefined,
+					reportUrl,
 				},
 			};
 		}
@@ -314,6 +367,7 @@ export const backtestStrategyTool: AgentTool<typeof backtestParams, BacktestTool
 		const tradeList = formatTradeList(result.trades);
 
 		// Auto-generate HTML report
+		let reportUrl: string | undefined;
 		let reportLink = "";
 		try {
 			const reportData: ReportData = {
@@ -364,24 +418,33 @@ export const backtestStrategyTool: AgentTool<typeof backtestParams, BacktestTool
 			};
 			const outputDir = join(homedir(), ".trading-agent", "reports");
 			const genResult = await generateReport(reportData, outputDir, "http://localhost:3000");
+			reportUrl = genResult.url;
 			reportLink = `\n\n[查看 HTML 报告](${genResult.url})`;
 		} catch (err) {
 			console.warn("[backtest_strategy] Auto report generation failed:", err);
 		}
 
+		const startDate = result.config.start ?? result.equityCurve[0]?.date ?? params.start ?? "";
+		const endDate = result.config.end ?? result.equityCurve[result.equityCurve.length - 1]?.date ?? params.end ?? "";
+		const summaryText =
+			`回测完成：${params.code} / ${params.strategy}\n` +
+			`区间：${startDate} ~ ${endDate}，初始资金：${(result.config.initialCapital ?? 100_000).toLocaleString("zh-CN")}\n` +
+			`总收益：${result.metrics.totalReturn.toFixed(2)}%，年化：${result.metrics.annualizedReturn.toFixed(2)}%，` +
+			`最大回撤：${result.metrics.maxDrawdown.toFixed(2)}%，胜率：${result.metrics.winRate.toFixed(2)}%，交易次数：${result.trades.length}` +
+			portfolioNote +
+			reportLink;
+
 		return {
-			content: [
-				{ type: "text", text: report + portfolioNote },
-				...(reportLink ? [{ type: "text" as const, text: reportLink }] : []),
-				{ type: "text", text: `\n--- 全部交易记录 ---\n${tradeList}` },
-			],
+			content: [{ type: "text", text: summaryText }],
 			details: {
 				config: result.config,
 				metrics: result.metrics,
 				trades: result.trades,
 				equityCurve: result.equityCurve,
+				formattedReport: report,
+				formattedTradeList: tradeList,
 				elapsedMs: result.elapsedMs,
-				reportUrl: reportLink ? reportLink.match(/\(([^)]+)\)/)?.[1] : undefined,
+				reportUrl,
 			},
 		};
 	},

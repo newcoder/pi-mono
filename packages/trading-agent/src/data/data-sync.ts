@@ -1,8 +1,19 @@
 import { mkdir } from "node:fs/promises";
 import { dirname } from "node:path";
-import { runJsonScript } from "../tools/_utils.js";
+import { runAStockDataJsonScript, runJsonScript } from "../tools/_utils.js";
 import type { DataStore } from "./data-store.js";
-import type { ConceptStockRow, FundamentalsRow, KlineRow, MacroRow, QuoteRow, SectorRow, StockRow } from "./types.js";
+import type {
+	ConceptStockRow,
+	FundamentalsRow,
+	IndustryIndexRow,
+	IndustryKlineRow,
+	IndustryQuoteRow,
+	KlineRow,
+	MacroRow,
+	QuoteRow,
+	SectorRow,
+	StockRow,
+} from "./types.js";
 
 // TTL configurations (in minutes)
 const TTL = {
@@ -662,6 +673,160 @@ export class DataSyncService {
 			return sectors;
 		}
 		return this.syncSectors();
+	}
+
+	// ─── Industry Index Sync ────────────────────────────────────────
+
+	async syncIndustryList(): Promise<number> {
+		console.log("[syncIndustryList] Fetching industry index list from Eastmoney...");
+		const data = await runAStockDataJsonScript("get_industry_index_em.py", ["list"], 60_000);
+		const industries: IndustryIndexRow[] = (data.data || []).map((item: any) => ({
+			code: item.板块代码,
+			name: item.板块名称,
+			updated_at: new Date().toISOString(),
+		}));
+		await this.store.saveIndustryList(industries);
+		console.log(`[syncIndustryList] Saved ${industries.length} industry indices`);
+		return industries.length;
+	}
+
+	async syncIndustryQuote(code: string): Promise<IndustryQuoteRow> {
+		const data = await runAStockDataJsonScript("get_industry_index_em.py", ["spot", "--symbol", code], 30_000);
+		const raw = data;
+		const now = new Date().toISOString();
+		const quote: IndustryQuoteRow = {
+			code: raw.板块代码 || code,
+			snapshot_date: todayStr(),
+			name: null,
+			latest: raw.最新 ?? null,
+			open: raw.开盘 ?? null,
+			high: raw.最高 ?? null,
+			low: raw.最低 ?? null,
+			prev_close: raw.昨收 ?? null,
+			volume: raw.成交量 ?? null,
+			turnover: raw.成交额 ?? null,
+			change_pct: raw.涨跌幅 ?? null,
+			change_amount: raw.涨跌额 ?? null,
+			amplitude: raw.振幅 ?? null,
+			turnover_rate: raw.换手率 ?? null,
+			up_count: null,
+			down_count: null,
+			flat_count: null,
+			leading_stock: null,
+			leading_stock_code: null,
+			leading_change_pct: null,
+			lagging_stock: null,
+			lagging_stock_code: null,
+			lagging_change_pct: null,
+			updated_at: now,
+		};
+		await this.store.saveIndustryQuote(quote);
+		return quote;
+	}
+
+	async syncAllIndustryQuotes(): Promise<number> {
+		console.log("[syncAllIndustryQuotes] Fetching all industry index quotes from Eastmoney...");
+		const data = await runAStockDataJsonScript("get_industry_index_em.py", ["list"], 60_000);
+		const items = data.data || [];
+		const now = new Date().toISOString();
+		for (const item of items) {
+			const quote: IndustryQuoteRow = {
+				code: item.板块代码,
+				snapshot_date: todayStr(),
+				name: item.板块名称 ?? null,
+				latest: item.最新价 ?? null,
+				open: item.今开 ?? null,
+				high: item.最高 ?? null,
+				low: item.最低 ?? null,
+				prev_close: item.昨收 ?? null,
+				volume: item.成交量 ?? null,
+				turnover: item.成交额 ?? null,
+				change_pct: item.涨跌幅 ?? null,
+				change_amount: item.涨跌额 ?? null,
+				amplitude: item.振幅 ?? null,
+				turnover_rate: item.换手率 ?? null,
+				up_count: item.上涨家数 ?? null,
+				down_count: item.下跌家数 ?? null,
+				flat_count: item.平盘家数 ?? null,
+				leading_stock: item.领涨股票 ?? null,
+				leading_stock_code: item.领涨股票代码 ?? null,
+				leading_change_pct: item["领涨股票-涨跌幅"] ?? null,
+				lagging_stock: item.领跌股票 ?? null,
+				lagging_stock_code: item.领跌股票代码 ?? null,
+				lagging_change_pct: item["领跌股票-涨跌幅"] ?? null,
+				updated_at: now,
+			};
+			await this.store.saveIndustryQuote(quote);
+		}
+		await this.store.saveIndustryList(
+			items.map((item: any) => ({
+				code: item.板块代码,
+				name: item.板块名称,
+				updated_at: now,
+			})),
+		);
+		console.log(`[syncAllIndustryQuotes] Saved ${items.length} industry quotes`);
+		return items.length;
+	}
+
+	async syncIndustryKlines(code: string, period = "daily"): Promise<number> {
+		const today = todayStr();
+		const latestDate = await this.store.getLatestIndustryKlineDate(code, period);
+		let fetchStart: string;
+		if (!latestDate) {
+			fetchStart = "20200101";
+		} else {
+			const d = new Date(latestDate);
+			d.setDate(d.getDate() + 1);
+			fetchStart = d.toISOString().slice(0, 10).replace(/-/g, "");
+		}
+		if (fetchStart > today.replace(/-/g, "")) {
+			return 0;
+		}
+
+		const periodArg = period === "weekly" ? "week" : period === "monthly" ? "month" : "daily";
+		const data = await runAStockDataJsonScript(
+			"get_industry_index_em.py",
+			["klines", "--symbol", code, "--start", fetchStart, "--end", today.replace(/-/g, ""), "--period", periodArg],
+			60_000,
+		);
+		const rows: IndustryKlineRow[] = (data.data || []).map((k: any) => ({
+			code: k.板块代码 || code,
+			period,
+			date: k.日期,
+			open: k.开盘 ?? null,
+			high: k.最高 ?? null,
+			low: k.最低 ?? null,
+			close: k.收盘 ?? null,
+			volume: k.成交量 ?? null,
+			turnover: k.成交额 ?? null,
+			change_pct: k.涨跌幅 ?? null,
+			change_amount: k.涨跌额 ?? null,
+			amplitude: k.振幅 ?? null,
+			turnover_rate: k.换手率 ?? null,
+		}));
+		await this.store.saveIndustryKlines(rows);
+		return rows.length;
+	}
+
+	async syncAllIndustryKlines(period = "daily"): Promise<number> {
+		let industries = await this.store.getIndustryList();
+		if (industries.length === 0) {
+			await this.syncIndustryList();
+			industries = await this.store.getIndustryList();
+		}
+		let total = 0;
+		console.log(`[syncAllIndustryKlines] Syncing klines for ${industries.length} industries...`);
+		for (const ind of industries) {
+			try {
+				const n = await this.syncIndustryKlines(ind.code, period);
+				total += n;
+			} catch (e) {
+				console.warn(`[syncAllIndustryKlines] Failed for ${ind.code}:`, e);
+			}
+		}
+		console.log(`[syncAllIndustryKlines] Done. Total ${total} rows synced`);
+		return total;
 	}
 
 	// ─── Concept Stocks Sync ────────────────────────────────────────

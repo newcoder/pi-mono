@@ -8,6 +8,9 @@ import type {
 	ConceptStockRow,
 	FundamentalIndicatorsRow,
 	FundamentalsRow,
+	IndustryIndexRow,
+	IndustryKlineRow,
+	IndustryQuoteRow,
 	IndustryRow,
 	KlineFilter,
 	KlineRow,
@@ -230,6 +233,61 @@ CREATE INDEX IF NOT EXISTS idx_stocks_industry ON stocks(industry);
 CREATE INDEX IF NOT EXISTS idx_concept_stocks_concept ON concept_stocks(concept);
 CREATE INDEX IF NOT EXISTS idx_stock_industries_code ON stock_industries(code, market);
 CREATE INDEX IF NOT EXISTS idx_stock_industries_industry ON stock_industries(industry_code, standard);
+
+CREATE TABLE IF NOT EXISTS industry_indices (
+    code TEXT PRIMARY KEY,
+    name TEXT NOT NULL,
+    updated_at TEXT
+);
+
+CREATE TABLE IF NOT EXISTS industry_klines (
+    code TEXT NOT NULL,
+    period TEXT NOT NULL,
+    date TEXT NOT NULL,
+    open REAL,
+    high REAL,
+    low REAL,
+    close REAL,
+    volume REAL,
+    turnover REAL,
+    change_pct REAL,
+    change_amount REAL,
+    amplitude REAL,
+    turnover_rate REAL,
+    PRIMARY KEY (code, period, date)
+);
+
+CREATE INDEX IF NOT EXISTS idx_industry_klines_code_period ON industry_klines(code, period, date);
+
+CREATE TABLE IF NOT EXISTS industry_quotes (
+    code TEXT NOT NULL,
+    snapshot_date TEXT NOT NULL,
+    name TEXT,
+    latest REAL,
+    open REAL,
+    high REAL,
+    low REAL,
+    prev_close REAL,
+    volume REAL,
+    turnover REAL,
+    change_pct REAL,
+    change_amount REAL,
+    amplitude REAL,
+    turnover_rate REAL,
+    up_count INTEGER,
+    down_count INTEGER,
+    flat_count INTEGER,
+    leading_stock TEXT,
+    leading_stock_code TEXT,
+    leading_change_pct REAL,
+    lagging_stock TEXT,
+    lagging_stock_code TEXT,
+    lagging_change_pct REAL,
+    updated_at TEXT,
+    PRIMARY KEY (code, snapshot_date)
+);
+
+CREATE INDEX IF NOT EXISTS idx_industry_quotes_date ON industry_quotes(snapshot_date);
 
 CREATE TABLE IF NOT EXISTS stock_pools (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -787,6 +845,109 @@ export class DataStore {
 		return promisifyQuery(this.db, sql);
 	}
 
+	// ─── Industry Indices ───────────────────────────────────────────
+
+	async saveIndustryList(items: IndustryIndexRow[]): Promise<void> {
+		if (items.length === 0 || !this.db) return;
+		const now = new Date().toISOString();
+		for (const item of items) {
+			const sql = `
+				INSERT OR REPLACE INTO industry_indices (code, name, updated_at)
+				VALUES (${s(item.code)}, ${s(item.name)}, ${s(item.updated_at ?? now)})
+			`;
+			await promisifyExec(this.db, sql);
+		}
+	}
+
+	async getIndustryList(): Promise<IndustryIndexRow[]> {
+		if (!this.db) return [];
+		return promisifyQuery(this.db, `SELECT code, name, updated_at FROM industry_indices ORDER BY code`);
+	}
+
+	async saveIndustryKlines(klines: IndustryKlineRow[]): Promise<void> {
+		if (klines.length === 0 || !this.db) return;
+		const f = (v: number | null) => (v == null || Number.isNaN(v) ? "NULL" : String(v));
+		const values = klines
+			.map(
+				(k) =>
+					`(${s(k.code)}, ${s(k.period)}, ${s(k.date)}, ${f(k.open)}, ${f(k.high)}, ${f(k.low)}, ${f(k.close)}, ${f(k.volume)}, ${f(k.turnover)}, ${f(k.change_pct)}, ${f(k.change_amount)}, ${f(k.amplitude)}, ${f(k.turnover_rate)})`,
+			)
+			.join(",\n");
+		const sql = `
+			INSERT OR REPLACE INTO industry_klines
+			(code, period, date, open, high, low, close, volume, turnover, change_pct, change_amount, amplitude, turnover_rate)
+			VALUES ${values}
+		`;
+		await promisifyExec(this.db, sql);
+	}
+
+	async getIndustryKlines(
+		code: string,
+		period: string,
+		start?: string,
+		end?: string,
+		limit?: number,
+	): Promise<IndustryKlineRow[]> {
+		if (!this.db) return [];
+		let sql = `SELECT * FROM industry_klines WHERE code = ${s(code)} AND period = ${s(period)}`;
+		if (start) sql += ` AND date >= ${s(start)}`;
+		if (end) sql += ` AND date <= ${s(end)}`;
+		sql += ` ORDER BY date`;
+		if (limit) sql += ` LIMIT ${limit}`;
+		return promisifyQuery(this.db, sql);
+	}
+
+	async getLatestIndustryKlineDate(code: string, period: string): Promise<string | null> {
+		if (!this.db) return null;
+		const rows = await promisifyQuery(
+			this.db,
+			`SELECT MAX(date) as max_date FROM industry_klines WHERE code = ${s(code)} AND period = ${s(period)}`,
+		);
+		return rows[0]?.max_date ?? null;
+	}
+
+	async saveIndustryQuote(quote: IndustryQuoteRow): Promise<void> {
+		if (!this.db) return;
+		const f = (v: number | null | undefined) => (v == null || Number.isNaN(v) ? "NULL" : String(v));
+		const sql = `
+			INSERT OR REPLACE INTO industry_quotes
+			(code, snapshot_date, name, latest, open, high, low, prev_close, volume, turnover, change_pct, change_amount, amplitude, turnover_rate,
+			 up_count, down_count, flat_count, leading_stock, leading_stock_code, leading_change_pct, lagging_stock, lagging_stock_code, lagging_change_pct, updated_at)
+			VALUES (${s(quote.code)}, ${s(quote.snapshot_date)}, ${s(quote.name)},
+				${f(quote.latest)}, ${f(quote.open)}, ${f(quote.high)}, ${f(quote.low)}, ${f(quote.prev_close)},
+				${f(quote.volume)}, ${f(quote.turnover)}, ${f(quote.change_pct)}, ${f(quote.change_amount)}, ${f(quote.amplitude)}, ${f(quote.turnover_rate)},
+				${f(quote.up_count)}, ${f(quote.down_count)}, ${f(quote.flat_count)},
+				${s(quote.leading_stock)}, ${s(quote.leading_stock_code)}, ${f(quote.leading_change_pct)},
+				${s(quote.lagging_stock)}, ${s(quote.lagging_stock_code)}, ${f(quote.lagging_change_pct)},
+				${s(quote.updated_at ?? new Date().toISOString())})
+		`;
+		await promisifyExec(this.db, sql);
+	}
+
+	async getIndustryQuote(code: string, date: string): Promise<IndustryQuoteRow | null> {
+		if (!this.db) return null;
+		const rows = await promisifyQuery(
+			this.db,
+			`SELECT * FROM industry_quotes WHERE code = ${s(code)} AND snapshot_date = ${s(date)} LIMIT 1`,
+		);
+		return rows[0] ?? null;
+	}
+
+	async getLatestIndustryQuotes(codes?: string[]): Promise<IndustryQuoteRow[]> {
+		if (!this.db) return [];
+		if (codes && codes.length > 0) {
+			const codeList = codes.map((c) => s(c)).join(", ");
+			return promisifyQuery(
+				this.db,
+				`SELECT * FROM industry_quotes WHERE code IN (${codeList}) AND snapshot_date = (SELECT MAX(snapshot_date) FROM industry_quotes)`,
+			);
+		}
+		return promisifyQuery(
+			this.db,
+			`SELECT * FROM industry_quotes WHERE snapshot_date = (SELECT MAX(snapshot_date) FROM industry_quotes)`,
+		);
+	}
+
 	// ─── Macro ──────────────────────────────────────────────────────
 
 	async saveMacro(data: MacroRow): Promise<void> {
@@ -838,6 +999,9 @@ export class DataStore {
 			"calendar_events",
 			"portfolios",
 			"portfolio_trades",
+			"industry_indices",
+			"industry_klines",
+			"industry_quotes",
 		];
 		const result: Record<string, number> = {};
 		for (const t of tables) {

@@ -60,6 +60,11 @@ export const SCRIPTS_DIR = EXTERNAL_A_SHARE_SCRIPTS;
 
 const DEFAULT_TIMEOUT_MS = 30000;
 
+/** In-flight Python script executions keyed by script+args. Prevents duplicate
+ *  concurrent subprocesses for identical calls (e.g. frontend polling the same
+ *  stock quote simultaneously). */
+const inFlight = new Map<string, Promise<string>>();
+
 function runPythonCommand(cmd: string, script: string, args: string[], timeoutMs: number): Promise<string> {
 	return new Promise((resolve, reject) => {
 		// Resolve script path if not absolute (bundled takes priority)
@@ -106,27 +111,43 @@ function runPythonCommand(cmd: string, script: string, args: string[], timeoutMs
 }
 
 export async function runPython(script: string, args: string[], timeoutMs = DEFAULT_TIMEOUT_MS): Promise<string> {
-	const commands = ["python3", "python", "py"];
-	let lastError: Error | undefined;
-
-	for (const cmd of commands) {
-		try {
-			return await runPythonCommand(cmd, script, args, timeoutMs);
-		} catch (err) {
-			const message = err instanceof Error ? err.message : String(err);
-			if (
-				message.includes("ENOENT") ||
-				message.includes("not found") ||
-				message.includes("not recognized") ||
-				message.includes("No such file")
-			) {
-				continue;
-			}
-			lastError = err instanceof Error ? err : new Error(message);
-		}
+	const key = `${script}\0${args.join("\0")}`;
+	const existing = inFlight.get(key);
+	if (existing) {
+		return existing;
 	}
 
-	throw lastError ?? new Error(`No Python interpreter found. Tried: ${commands.join(", ")}`);
+	const promise = (async (): Promise<string> => {
+		const commands = ["python3", "python", "py"];
+		let lastError: Error | undefined;
+
+		for (const cmd of commands) {
+			try {
+				return await runPythonCommand(cmd, script, args, timeoutMs);
+			} catch (err) {
+				const message = err instanceof Error ? err.message : String(err);
+				if (
+					message.includes("ENOENT") ||
+					message.includes("not found") ||
+					message.includes("not recognized") ||
+					message.includes("No such file")
+				) {
+					continue;
+				}
+				lastError = err instanceof Error ? err : new Error(message);
+			}
+		}
+
+		throw lastError ?? new Error(`No Python interpreter found. Tried: ${commands.join(", ")}`);
+	})();
+
+	inFlight.set(key, promise);
+	promise.then(
+		() => inFlight.delete(key),
+		() => inFlight.delete(key),
+	);
+
+	return promise;
 }
 
 /** Run a Python script with a specific interpreter and working directory.
