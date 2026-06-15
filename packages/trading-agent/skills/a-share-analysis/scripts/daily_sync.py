@@ -250,6 +250,57 @@ def ensure_tables():
         )
     """)
 
+    # industry_indicators
+    cur.execute("""
+        CREATE TABLE IF NOT EXISTS industry_indicators (
+            code TEXT NOT NULL,
+            date TEXT NOT NULL,
+            period_days INTEGER NOT NULL,
+            momentum_return REAL,
+            momentum_rank INTEGER,
+            has_momentum INTEGER,
+            updated_at TEXT,
+            PRIMARY KEY (code, date, period_days)
+        )
+    """)
+    cur.execute("""
+        CREATE INDEX IF NOT EXISTS idx_industry_indicators_date
+        ON industry_indicators(date, period_days)
+    """)
+
+    # factor_ic (generic factor effectiveness)
+    cur.execute("""
+        CREATE TABLE IF NOT EXISTS factor_ic (
+            date TEXT NOT NULL,
+            factor_name TEXT NOT NULL,
+            ic_value REAL,
+            sample_count INTEGER,
+            updated_at TEXT,
+            PRIMARY KEY (date, factor_name)
+        )
+    """)
+    cur.execute("""
+        CREATE INDEX IF NOT EXISTS idx_factor_ic_lookup
+        ON factor_ic(factor_name, date)
+    """)
+
+    # industry_synthetic_klines
+    cur.execute("""
+        CREATE TABLE IF NOT EXISTS industry_synthetic_klines (
+            code TEXT NOT NULL,
+            standard TEXT NOT NULL,
+            date TEXT NOT NULL,
+            close REAL,
+            constituent_count INTEGER,
+            updated_at TEXT,
+            PRIMARY KEY (code, standard, date)
+        )
+    """)
+    cur.execute("""
+        CREATE INDEX IF NOT EXISTS idx_industry_synthetic_klines_lookup
+        ON industry_synthetic_klines(code, standard, date)
+    """)
+
     conn.commit()
     conn.close()
     logger.info("Database tables ensured.")
@@ -950,6 +1001,30 @@ def sync_indicators() -> dict:
         raise RuntimeError(f"Indicators calculation failed: {e}")
 
 
+# ── Phase 6: Sync Industry Momentum ──────────────────────────────────────────
+
+@_phase("industry_momentum")
+def sync_industry_momentum() -> dict:
+    """Calculate industry momentum factor and IC from industry_klines."""
+    try:
+        import calc_industry_momentum
+        result = calc_industry_momentum.calc_all(get_db(), periods=[20], forwards=[5])
+        return {"detail": result}
+    except Exception as e:
+        raise RuntimeError(f"Industry momentum calculation failed: {e}")
+
+
+@_phase("size_ic")
+def sync_size_ic() -> dict:
+    """Calculate size (market cap) factor IC from klines and fundamentals."""
+    try:
+        import calc_size_ic
+        result = calc_size_ic.calc_all(get_db(), forwards=[5, 10, 20])
+        return {"detail": result}
+    except Exception as e:
+        raise RuntimeError(f"Size IC calculation failed: {e}")
+
+
 # ── Phase 6: Sync Industries ───────────────────────────────────────────────
 
 @_phase("industries")
@@ -1119,6 +1194,8 @@ def run_all_phases(phases: Optional[List[str]] = None):
         ("klines", sync_klines),
         ("fundamentals", sync_fundamentals),
         ("indicators", sync_indicators),
+        ("industry_momentum", sync_industry_momentum),
+        ("size_ic", sync_size_ic),
         ("industries", sync_industries),
         ("concepts", sync_concepts),
         ("stock_news", sync_stock_news),
@@ -1185,7 +1262,7 @@ def main():
         for p in args.phase:
             phases.extend([s.strip() for s in p.split(",") if s.strip()])
     if args.skip_fundamentals and not phases:
-        phases = ["stocks", "quotes", "klines", "industries", "concepts", "stock_news", "market_news", "validation"]
+        phases = ["stocks", "quotes", "klines", "industry_momentum", "size_ic", "industries", "concepts", "stock_news", "market_news", "validation"]
 
     run_all_phases(phases)
 

@@ -16,6 +16,7 @@
 		"clean": "shx rm -rf dist",
 		"build": "tsgo -p tsconfig.build.json && shx chmod +x dist/main.js",
 		"dev": "tsgo -p tsconfig.build.json --watch --preserveWatchOutput",
+		"test": "vitest --run",
 		"prepublishOnly": "npm run clean && npm run build"
 	},
 	"dependencies": {
@@ -34,7 +35,8 @@
 		"@types/node-schedule": "^2.1.7",
 		"@types/ws": "^8.18.1",
 		"shx": "^0.4.0",
-		"typescript": "^5.7.3"
+		"typescript": "^5.7.3",
+		"vitest": "^3.2.4"
 	},
 	"keywords": [
 		"pi-package",

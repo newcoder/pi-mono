@@ -6,12 +6,15 @@ import type {
 	BusinessCompositionRow,
 	CalendarEventRow,
 	ConceptStockRow,
+	FactorIcRow,
 	FundamentalIndicatorsRow,
 	FundamentalsRow,
 	IndustryIndexRow,
+	IndustryIndicatorRow,
 	IndustryKlineRow,
 	IndustryQuoteRow,
 	IndustryRow,
+	IndustrySyntheticKlineRow,
 	KlineFilter,
 	KlineRow,
 	MacroRow,
@@ -19,6 +22,7 @@ import type {
 	PortfolioTradeRow,
 	QuoteRow,
 	SectorRow,
+	StockIndicatorRow,
 	StockIndustryRow,
 	StockRow,
 } from "./types.js";
@@ -288,6 +292,60 @@ CREATE TABLE IF NOT EXISTS industry_quotes (
 );
 
 CREATE INDEX IF NOT EXISTS idx_industry_quotes_date ON industry_quotes(snapshot_date);
+
+CREATE TABLE IF NOT EXISTS industry_indicators (
+    code TEXT NOT NULL,
+    date TEXT NOT NULL,
+    period_days INTEGER NOT NULL,
+    momentum_return REAL,
+    momentum_rank INTEGER,
+    has_momentum INTEGER,
+    updated_at TEXT,
+    PRIMARY KEY (code, date, period_days)
+);
+
+CREATE INDEX IF NOT EXISTS idx_industry_indicators_date ON industry_indicators(date, period_days);
+
+CREATE TABLE IF NOT EXISTS stock_indicators (
+    code TEXT NOT NULL,
+    market INTEGER NOT NULL,
+    date TEXT NOT NULL,
+    indicator_name TEXT NOT NULL,
+    indicator_value REAL,
+    indicator_rank INTEGER,
+    has_signal INTEGER,
+    updated_at TEXT,
+    PRIMARY KEY (code, market, date, indicator_name)
+);
+
+CREATE INDEX IF NOT EXISTS idx_stock_indicators_lookup
+    ON stock_indicators(code, market, date, indicator_name);
+CREATE INDEX IF NOT EXISTS idx_stock_indicators_name_date
+    ON stock_indicators(indicator_name, date);
+
+CREATE TABLE IF NOT EXISTS factor_ic (
+    date TEXT NOT NULL,
+    factor_name TEXT NOT NULL,
+    ic_value REAL,
+    sample_count INTEGER,
+    updated_at TEXT,
+    PRIMARY KEY (date, factor_name)
+);
+
+CREATE INDEX IF NOT EXISTS idx_factor_ic_lookup ON factor_ic(factor_name, date);
+
+CREATE TABLE IF NOT EXISTS industry_synthetic_klines (
+    code TEXT NOT NULL,
+    standard TEXT NOT NULL,
+    date TEXT NOT NULL,
+    close REAL,
+    constituent_count INTEGER,
+    updated_at TEXT,
+    PRIMARY KEY (code, standard, date)
+);
+
+CREATE INDEX IF NOT EXISTS idx_industry_synthetic_klines_lookup
+    ON industry_synthetic_klines(code, standard, date);
 
 CREATE TABLE IF NOT EXISTS stock_pools (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -948,6 +1006,142 @@ export class DataStore {
 		);
 	}
 
+	// ─── Industry Indicators ────────────────────────────────────────
+
+	async saveIndustryIndicators(indicators: IndustryIndicatorRow[]): Promise<void> {
+		if (indicators.length === 0 || !this.db) return;
+		const f = (v: number | null | undefined) => (v == null || Number.isNaN(v) ? "NULL" : String(v));
+		const now = new Date().toISOString();
+		const values = indicators
+			.map(
+				(r) =>
+					`(${s(r.code)}, ${s(r.date)}, ${r.period_days}, ${f(r.momentum_return)}, ${f(r.momentum_rank)}, ${f(r.has_momentum)}, ${s(now)})`,
+			)
+			.join(", ");
+		const sql = `
+			INSERT OR REPLACE INTO industry_indicators
+			(code, date, period_days, momentum_return, momentum_rank, has_momentum, updated_at)
+			VALUES ${values}
+		`;
+		await promisifyExec(this.db, sql);
+	}
+
+	async getIndustryIndicators(
+		code: string,
+		periodDays: number,
+		start?: string,
+		end?: string,
+	): Promise<IndustryIndicatorRow[]> {
+		if (!this.db) return [];
+		let sql = `SELECT * FROM industry_indicators WHERE code = ${s(code)} AND period_days = ${periodDays}`;
+		if (start) sql += ` AND date >= ${s(start)}`;
+		if (end) sql += ` AND date <= ${s(end)}`;
+		sql += ` ORDER BY date`;
+		return promisifyQuery(this.db, sql);
+	}
+
+	async getLatestIndustryIndicatorDate(code: string, periodDays: number): Promise<string | null> {
+		if (!this.db) return null;
+		const rows = await promisifyQuery(
+			this.db,
+			`SELECT MAX(date) as max_date FROM industry_indicators WHERE code = ${s(code)} AND period_days = ${periodDays}`,
+		);
+		return rows[0]?.max_date ?? null;
+	}
+
+	// ─── Stock Indicators ───────────────────────────────────────────
+
+	async saveStockIndicators(rows: StockIndicatorRow[]): Promise<void> {
+		if (rows.length === 0 || !this.db) return;
+		const f = (v: number | null | undefined) => (v == null || Number.isNaN(v) ? "NULL" : String(v));
+		const now = new Date().toISOString();
+		const values = rows
+			.map(
+				(r) =>
+					`(${s(r.code)}, ${r.market}, ${s(r.date)}, ${s(r.indicator_name)}, ${f(r.indicator_value)}, ${f(r.indicator_rank)}, ${f(r.has_signal)}, ${s(now)})`,
+			)
+			.join(", ");
+		const sql = `
+			INSERT OR REPLACE INTO stock_indicators
+			(code, market, date, indicator_name, indicator_value, indicator_rank, has_signal, updated_at)
+			VALUES ${values}
+		`;
+		await promisifyExec(this.db, sql);
+	}
+
+	async getStockIndicators(
+		code: string,
+		market: number,
+		indicatorName: string,
+		start?: string,
+		end?: string,
+	): Promise<StockIndicatorRow[]> {
+		if (!this.db) return [];
+		let sql = `SELECT * FROM stock_indicators WHERE code = ${s(code)} AND market = ${market} AND indicator_name = ${s(indicatorName)}`;
+		if (start) sql += ` AND date >= ${s(start)}`;
+		if (end) sql += ` AND date <= ${s(end)}`;
+		sql += ` ORDER BY date`;
+		return promisifyQuery(this.db, sql);
+	}
+
+	async saveFactorIc(rows: FactorIcRow[]): Promise<void> {
+		if (rows.length === 0 || !this.db) return;
+		const f = (v: number | null | undefined) => (v == null || Number.isNaN(v) ? "NULL" : String(v));
+		const now = new Date().toISOString();
+		const values = rows
+			.map((r) => `(${s(r.date)}, ${s(r.factor_name)}, ${f(r.ic_value)}, ${f(r.sample_count)}, ${s(now)})`)
+			.join(", ");
+		const sql = `
+			INSERT OR REPLACE INTO factor_ic
+			(date, factor_name, ic_value, sample_count, updated_at)
+			VALUES ${values}
+		`;
+		await promisifyExec(this.db, sql);
+	}
+
+	async getFactorIc(factorName: string, start?: string, end?: string): Promise<FactorIcRow[]> {
+		if (!this.db) return [];
+		let sql = `SELECT * FROM factor_ic WHERE factor_name = ${s(factorName)}`;
+		if (start) sql += ` AND date >= ${s(start)}`;
+		if (end) sql += ` AND date <= ${s(end)}`;
+		sql += ` ORDER BY date`;
+		return promisifyQuery(this.db, sql);
+	}
+
+	// ─── Synthetic Industry Klines ──────────────────────────────────
+
+	async saveIndustrySyntheticKlines(klines: IndustrySyntheticKlineRow[]): Promise<void> {
+		if (klines.length === 0 || !this.db) return;
+		const f = (v: number | null | undefined) => (v == null || Number.isNaN(v) ? "NULL" : String(v));
+		const now = new Date().toISOString();
+		const values = klines
+			.map(
+				(r) =>
+					`(${s(r.code)}, ${s(r.standard)}, ${s(r.date)}, ${f(r.close)}, ${f(r.constituent_count)}, ${s(now)})`,
+			)
+			.join(", ");
+		const sql = `
+			INSERT OR REPLACE INTO industry_synthetic_klines
+			(code, standard, date, close, constituent_count, updated_at)
+			VALUES ${values}
+		`;
+		await promisifyExec(this.db, sql);
+	}
+
+	async getIndustrySyntheticKlines(
+		code: string,
+		standard: string,
+		start?: string,
+		end?: string,
+	): Promise<IndustrySyntheticKlineRow[]> {
+		if (!this.db) return [];
+		let sql = `SELECT * FROM industry_synthetic_klines WHERE code = ${s(code)} AND standard = ${s(standard)}`;
+		if (start) sql += ` AND date >= ${s(start)}`;
+		if (end) sql += ` AND date <= ${s(end)}`;
+		sql += ` ORDER BY date`;
+		return promisifyQuery(this.db, sql);
+	}
+
 	// ─── Macro ──────────────────────────────────────────────────────
 
 	async saveMacro(data: MacroRow): Promise<void> {
@@ -1002,6 +1196,9 @@ export class DataStore {
 			"industry_indices",
 			"industry_klines",
 			"industry_quotes",
+			"industry_indicators",
+			"factor_ic",
+			"industry_synthetic_klines",
 		];
 		const result: Record<string, number> = {};
 		for (const t of tables) {

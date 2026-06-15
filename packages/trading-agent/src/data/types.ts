@@ -348,3 +348,41 @@ export interface IndustryIndexRow {
 	name: string;
 	updated_at?: string;
 }
+
+export interface IndustryIndicatorRow {
+	code: string;
+	date: string;
+	period_days: number;
+	momentum_return: number | null;
+	momentum_rank: number | null;
+	has_momentum: number | null;
+	updated_at?: string;
+}
+
+export interface StockIndicatorRow {
+	code: string;
+	market: number;
+	date: string;
+	indicator_name: string;
+	indicator_value: number | null;
+	indicator_rank: number | null;
+	has_signal: number | null;
+	updated_at?: string;
+}
+
+export interface FactorIcRow {
+	date: string;
+	factor_name: string;
+	ic_value: number | null;
+	sample_count: number | null;
+	updated_at?: string;
+}
+
+export interface IndustrySyntheticKlineRow {
+	code: string;
+	standard: string;
+	date: string;
+	close: number | null;
+	constituent_count: number | null;
+	updated_at?: string;
+}

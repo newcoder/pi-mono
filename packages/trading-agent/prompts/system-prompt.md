@@ -313,11 +313,20 @@
 | adjust | string | 否 | "bfq" | **默认不复权**（bfq=不复权，qfq=前复权，hfq=后复权） |
 | initialCapital | number | 否 | 100000 | 初始资金（组合回测时为整个组合的初始资金） |
 | positionSize | number | 否 | 1.0 | 单股票模式下每笔交易的仓位比例 0-1 |
+| full_position | boolean | 否 | false | 是否一直满仓（组合回测有效） |
+| full_position_mode | string | 否 | "add_to_holdings" | 满仓模式：`add_to_holdings`=把剩余现金加到已有持仓；`equal_weight`=目标等权再平衡 |
+| rebalance_threshold | number | 否 | 0 | 等权再平衡触发阈值，如 0.05=偏离目标权重 5% 才调仓（仅 equal_weight 有效） |
+| max_position_weight | number | 否 | 0.1 | 单标的最大权重上限，防止目标集合过小时 all-in 单只股票 |
+| min_trade_amount | number | 否 | 0 | 最小交易金额（元），小于该金额的交易被忽略 |
 | slippage | number | 否 | 0.001 | 滑点 0.1% |
 | commission | number | 否 | 0.0003 | 手续费 0.03%/边 |
 | maxHoldingDays | number | 否 | - | 最大持仓天数 |
-| min_lot | number | 否 | 100 | 最小交易单位（股），默认100股（组合回测时有效） |
+| min_lot | number | 否 | 100 | 最小交易单位（股），默认100股 |
 | params | object | 否 | - | 策略参数，如 {"fast":5,"slow":10} |
+| benchmark_index | string | 否 | - | 基准指数代码，多个用逗号分隔，如 `sh000905,sh000300`。提供后生成带指数对比的 HTML 报告 |
+| save_holdings_as_pool | boolean | 否 | false | 是否将回测终点时的持仓保存为一个新的股票池 |
+| save_to_portfolio | string | 否 | - | 将回测交易记录保存到指定组合名称，若不存在则自动创建 |
+| portfolio_description | string | 否 | - | 新建组合时的描述 |
 
 **重要默认值**：
 - **默认使用 bfq（不复权）数据**（本地数据库主要存储不复权数据）
@@ -339,15 +348,21 @@
 // 单股票回测
 {"code": "600519", "strategy": "ma_cross", "start": "20240101", "end": "20241231", "params": {"fast": 5, "slow": 10}}
 
-// 股票池组合回测（对股票池ID=50的所有股票进行组合回测）
-{"pool_id": 50, "strategy": "ma_cross", "start": "20240101", "end": "20241231", "params": {"fast": 5, "slow": 10}, "initialCapital": 1000000}
+// 股票池组合回测（满仓等权重，单标的上限10%）
+{"pool_id": 53, "strategy": "supertrend", "start": "20230615", "end": "20260612", "initialCapital": 100000000, "full_position": true, "full_position_mode": "equal_weight", "max_position_weight": 0.1}
+
+// 带指数对比 + 保存最终持仓
+{"pool_id": 53, "strategy": "supertrend", "start": "20230615", "end": "20260612", "initialCapital": 100000000, "full_position": true, "full_position_mode": "equal_weight", "benchmark_index": "sh000905,sh000300", "save_holdings_as_pool": true}
 ```
 
 **报告解读**：
+- 股池回测会自动生成 HTML 报告（含资金曲线、回撤曲线、月度收益热力图、调仓明细）
+- 提供 `benchmark_index` 时，报告中会叠加指数曲线和指数最大回撤
 - 关注总收益率、夏普比率、最大回撤三个核心指标
 - 胜率>50%且盈亏比>1.5 视为较优策略
 - 最大回撤>30% 说明风险过高
 - **组合回测**额外关注：各股票资金分配是否均衡、是否有股票长期无交易（信号不足）
+- 若 `save_holdings_as_pool=true`，工具会返回最终持仓保存的新股池 ID
 - **必须使用本地数据库真实行情数据**，禁止构造模拟数据
 
 ---
@@ -752,10 +767,14 @@
 
 ## 回测流程
 
-1. **确认策略类型和参数**
+1. **确认策略类型和参数**（策略类型、时间区间、初始资金、满仓/仓位模式）
 2. **调用 backtest_strategy**
-3. **解读结果**：总收益、夏普、最大回撤、胜率、盈亏比
-4. **给出评价**：策略是否有效、是否建议实盘、改进方向
+   - 股票池回测必须传 `pool_id`，不要逐只股票调用
+   - 需要与指数对比时，加 `benchmark_index`，如 `"sh000905,sh000300"`
+   - 需要保存最终持仓时，加 `save_holdings_as_pool: true`
+3. **解读结果**：总收益、年化、夏普、最大回撤、胜率、盈亏比
+4. **查看 HTML 报告**（工具返回的 reportUrl）和保存的持仓股池（如有）
+5. **给出评价**：策略是否有效、是否建议实盘、改进方向
 
 ---
 

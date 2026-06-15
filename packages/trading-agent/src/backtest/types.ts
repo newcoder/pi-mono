@@ -72,6 +72,28 @@ export interface BacktestResult {
 	elapsedMs: number;
 }
 
+export interface PoolIndustryFilterConfig {
+	standard: string;
+	periodDays: number;
+	topIndustryCount: number;
+	icPeriodDays: number;
+	icThreshold: number;
+}
+
+export interface IndustryMomentumInfo {
+	momentum_return: number | null;
+	momentum_rank: number | null;
+	has_momentum: number | null;
+}
+
+export interface PoolSizeFilterConfig {
+	forwardDays: number; // size IC 预测窗口，如 5 表示 size_forward5d
+	topStockCount: number; // IC 有效时只保留市值排名头部的股票
+	icPeriodDays: number; // IC 滚动平均窗口
+	icThreshold: number; // IC 阈值：small 方向下滚动 IC <= 阈值时启用过滤；large 方向下 >= 阈值时启用
+	direction: "small" | "large"; // small=买入小市值，large=买入大市值
+}
+
 export interface PoolBacktestConfig {
 	strategy: StrategyType;
 	start?: string;
@@ -83,12 +105,15 @@ export interface PoolBacktestConfig {
 	fullPosition?: boolean; // 是否一直满仓
 	fullPositionMode?: "add_to_holdings" | "equal_weight"; // 满仓模式：加仓到持仓 / 目标等权再平衡
 	rebalanceThreshold?: number; // 等权再平衡触发阈值，如 0.05 = 偏离目标权重 5% 才调仓
+	maxPositionWeight?: number; // 单个标的最大权重上限，如 0.1 = 10%。防止目标集合过小时 all-in 单只股票。默认 0.1
 	minTradeAmount?: number; // 忽略小于该金额的交易，默认 0
 	slippage?: number;
 	commission?: number;
 	maxHoldingDays?: number;
 	minLot?: number;
 	strategyParams?: Record<string, number>;
+	industryFilter?: PoolIndustryFilterConfig;
+	sizeFilter?: PoolSizeFilterConfig;
 }
 
 // ─── Pool Backtest Types ──────────────────────────────────────────

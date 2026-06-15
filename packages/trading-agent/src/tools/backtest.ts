@@ -2,6 +2,7 @@ import { homedir } from "node:os";
 import { join } from "node:path";
 import type { AgentTool } from "@mariozechner/pi-agent-core";
 import { Type } from "@sinclair/typebox";
+import { buildBenchmarkCurve, fetchIndexCurve } from "../backtest/benchmark.js";
 import { runBacktest, runPoolBacktest } from "../backtest/engine.js";
 import {
 	formatBacktestResult,
@@ -13,6 +14,7 @@ import type { BacktestResult, PoolBacktestConfig, StrategyType } from "../backte
 import { getDataStore } from "../data/index.js";
 import type { ReportData } from "../report/generator.js";
 import { generateReport } from "../report/generator.js";
+import { generatePoolBacktestReport } from "../report/pool-report.js";
 
 const backtestParams = Type.Object({
 	code: Type.Optional(Type.String({ description: "6位股票代码，如 600519。与 pool_id 二选一。" })),
@@ -77,6 +79,12 @@ const backtestParams = Type.Object({
 			default: 0,
 		}),
 	),
+	max_position_weight: Type.Optional(
+		Type.Number({
+			description: "单个标的最大权重上限，如 0.1 表示最多 10%。防止目标集合过小时 all-in 单只股票。默认 0.1。",
+			default: 0.1,
+		}),
+	),
 	min_trade_amount: Type.Optional(
 		Type.Number({
 			description: "最小交易金额（元），小于该金额的交易将被忽略。默认 0。强制平仓不受此限制。",
@@ -92,12 +100,82 @@ const backtestParams = Type.Object({
 			description: "策略参数，如 {fast:5, slow:10}",
 		}),
 	),
+	industry_filter: Type.Optional(
+		Type.Object(
+			{
+				standard: Type.String({
+					description: "行业分类标准，如 sw_l1",
+					default: "sw_l1",
+				}),
+				period_days: Type.Number({
+					description: "行业动量回看天数",
+					default: 20,
+				}),
+				top_industry_count: Type.Number({
+					description: "IC 高于阈值时只保留前 N 个动量行业的股票",
+					default: 5,
+				}),
+				ic_period_days: Type.Number({
+					description: "IC 滚动平均窗口",
+					default: 20,
+				}),
+				ic_threshold: Type.Number({
+					description: "IC 滚动平均阈值，超过才启用行业动量过滤",
+					default: 0.05,
+				}),
+			},
+			{
+				description: "行业动量 IC 过滤：IC 高于阈值时，仅买入前 N 个动量行业的股票；否则不过滤",
+			},
+		),
+	),
+	size_filter: Type.Optional(
+		Type.Object(
+			{
+				forward_days: Type.Number({
+					description: "市值因子 IC 预测窗口，如 5 表示用 size_forward5d",
+					default: 5,
+				}),
+				top_stock_count: Type.Number({
+					description: "IC 有效时只保留市值排名头部的股票数量",
+					default: 100,
+				}),
+				ic_period_days: Type.Number({
+					description: "IC 滚动平均窗口",
+					default: 20,
+				}),
+				ic_threshold: Type.Number({
+					description:
+						"IC 滚动平均阈值。direction=small 时 IC <= 阈值启用小市值过滤；direction=large 时 IC >= 阈值启用大市值过滤",
+					default: -0.03,
+				}),
+				direction: Type.Union([Type.Literal("small"), Type.Literal("large")], {
+					description: "small=买入小市值，large=买入大市值",
+					default: "small",
+				}),
+			},
+			{
+				description: "市值（size）因子 IC 过滤：IC 有效时，仅买入小市值/大市值头部股票；否则不过滤",
+			},
+		),
+	),
 	save_to_portfolio: Type.Optional(
 		Type.String({
 			description: "将回测交易记录保存到指定组合名称。若组合不存在则自动创建，若已存在则追加交易记录。",
 		}),
 	),
 	portfolio_description: Type.Optional(Type.String({ description: "新建组合时的描述（save_to_portfolio 时有效）" })),
+	benchmark_index: Type.Optional(
+		Type.String({
+			description: "可选的基准指数代码，多个用逗号分隔，如 sh000905,sh000300。提供后将生成带指数对比的 HTML 报告。",
+		}),
+	),
+	save_holdings_as_pool: Type.Optional(
+		Type.Boolean({
+			description: "是否将回测终点时的持仓保存为一个新的股票池。",
+			default: false,
+		}),
+	),
 });
 
 interface BacktestToolDetails {
@@ -113,13 +191,15 @@ interface BacktestToolDetails {
 	strategy?: StrategyType;
 	formattedReport?: string;
 	formattedTradeList?: string;
+	holdingsPoolId?: number;
+	holdingsPoolName?: string;
 }
 
 export const backtestStrategyTool: AgentTool<typeof backtestParams, BacktestToolDetails> = {
 	name: "backtest_strategy",
 	label: "回测策略",
 	description:
-		"对单只股票或股票池运行技术指标回测，验证策略历史表现。支持MA金叉、MACD金叉、RSI反转、布林带突破、Supertrend趋势跟踪五种策略。提供 code 回测单只股票，或提供 pool_id 对股票池中所有股票批量回测（共享资金池、动态仓位分配、100股整数倍）。数据从本地数据库读取。可通过 save_to_portfolio 将回测交易记录保存到组合中。",
+		"对单只股票或股票池运行技术指标回测，验证策略历史表现。支持MA金叉、MACD金叉、RSI反转、布林带突破、Supertrend趋势跟踪五种策略。提供 code 回测单只股票，或提供 pool_id 对股票池中所有股票批量回测（共享资金池、动态仓位分配、100股整数倍）。数据从本地数据库读取。可通过 save_to_portfolio 将回测交易记录保存到组合中；通过 benchmark_index 生成带指数对比的 HTML 报告；通过 save_holdings_as_pool 将回测终点持仓保存为新股池。",
 	parameters: backtestParams,
 	execute: async (_id, params) => {
 		const isPool = params.pool_id != null;
@@ -159,12 +239,31 @@ export const backtestStrategyTool: AgentTool<typeof backtestParams, BacktestTool
 				fullPosition: params.full_position ?? false,
 				fullPositionMode: params.full_position_mode ?? "add_to_holdings",
 				rebalanceThreshold: params.rebalance_threshold ?? 0,
+				maxPositionWeight: params.max_position_weight ?? 0.1,
 				minTradeAmount: params.min_trade_amount ?? 0,
 				slippage: params.slippage ?? 0.001,
 				commission: params.commission ?? 0.0003,
 				maxHoldingDays: params.maxHoldingDays,
 				minLot: params.min_lot,
 				strategyParams: params.params,
+				industryFilter: params.industry_filter
+					? {
+							standard: params.industry_filter.standard ?? "sw_l1",
+							periodDays: params.industry_filter.period_days ?? 20,
+							topIndustryCount: params.industry_filter.top_industry_count ?? 5,
+							icPeriodDays: params.industry_filter.ic_period_days ?? 20,
+							icThreshold: params.industry_filter.ic_threshold ?? 0.05,
+						}
+					: undefined,
+				sizeFilter: params.size_filter
+					? {
+							forwardDays: params.size_filter.forward_days ?? 5,
+							topStockCount: params.size_filter.top_stock_count ?? 100,
+							icPeriodDays: params.size_filter.ic_period_days ?? 20,
+							icThreshold: params.size_filter.ic_threshold ?? -0.03,
+							direction: params.size_filter.direction ?? "small",
+						}
+					: undefined,
 			};
 
 			const stocks = items.map((item) => ({ code: item.code, market: item.market, name: item.name ?? undefined }));
@@ -187,6 +286,7 @@ export const backtestStrategyTool: AgentTool<typeof backtestParams, BacktestTool
 						portfolioNote = `\n已追加到组合 "${params.save_to_portfolio}"（ID: ${portfolioId}），保存 ${result.trades.length} 笔交易记录。`;
 					}
 
+					const commissionRate = params.commission ?? 0.0003;
 					for (const trade of result.trades) {
 						await store.addPortfolioTrade({
 							portfolio_id: portfolioId,
@@ -197,7 +297,7 @@ export const backtestStrategyTool: AgentTool<typeof backtestParams, BacktestTool
 							quantity: trade.shares,
 							price: trade.price,
 							adjust: params.adjust ?? "bfq",
-							commission: 0,
+							commission: (trade.amount ?? 0) * commissionRate,
 							tax: 0,
 							memo: trade.memo ?? `${params.strategy} ${trade.direction === "buy" ? "买入" : "卖出"}`,
 						});
@@ -210,49 +310,97 @@ export const backtestStrategyTool: AgentTool<typeof backtestParams, BacktestTool
 			const report = formatPoolBacktestResult(result);
 			const tradeList = formatPoolTradeList(result.trades);
 
+			// Build benchmark curves if requested
+			const benchmarks = [];
+			if (params.benchmark_index) {
+				const symbols = params.benchmark_index
+					.split(",")
+					.map((s) => s.trim())
+					.filter(Boolean);
+				for (const symbol of symbols) {
+					try {
+						const raw = fetchIndexCurve(symbol, result.startDate, result.endDate);
+						benchmarks.push(buildBenchmarkCurve(symbol, raw, result.equityCurve, result.initialCapital));
+					} catch (err) {
+						console.warn(`[backtest_strategy] Failed to fetch benchmark ${symbol}:`, err);
+					}
+				}
+			}
+
 			// Auto-generate HTML report
 			let reportUrl: string | undefined;
 			let reportLink = "";
 			try {
-				const reportData: ReportData = {
-					title: `${pool.name} ${params.strategy} 批量回测报告`,
-					strategy: params.strategy,
-					startDate: result.startDate,
-					endDate: result.endDate,
-					initialCapital: result.initialCapital,
-					equityCurve: result.equityCurve.map((p) => ({ date: p.date, equity: p.equity })),
-					trades: result.trades.map((t) => ({
-						date: t.date,
-						code: t.code,
-						direction: t.direction,
-						quantity: t.shares,
-						price: t.price,
-						amount: t.amount,
-						holdingDays: t.daysHeld,
-						pnl: t.pnl,
-						pnlPct: t.pnlPct,
-						memo: t.memo,
-					})),
-					metrics: {
-						totalReturn: result.metrics.totalReturn,
-						annualizedReturn: result.metrics.annualizedReturn,
-						sharpeRatio: result.metrics.sharpeRatio,
-						maxDrawdown: result.metrics.maxDrawdown,
-						maxDrawdownDuration: result.metrics.maxDrawdownDuration,
-						winRate: result.metrics.winRate,
-						profitFactor: result.metrics.profitFactor,
-						avgWin: result.metrics.avgWin,
-						avgLoss: result.metrics.avgLoss,
-						avgHoldingDays: result.metrics.avgHoldingDays,
-						totalTrades: result.trades.filter((t) => t.direction === "sell").length,
-					},
-				};
 				const outputDir = join(homedir(), ".trading-agent", "reports");
-				const genResult = await generateReport(reportData, outputDir, "http://localhost:3000");
+				const genResult = await generatePoolBacktestReport(
+					{
+						title: `${pool.name} ${params.strategy} 批量回测报告`,
+						poolName: pool.name,
+						strategy: params.strategy,
+						startDate: result.startDate,
+						endDate: result.endDate,
+						initialCapital: result.initialCapital,
+						strategyCurve: result.equityCurve.map((p) => ({ date: p.date, equity: p.equity })),
+						strategyMetrics: {
+							totalReturn: result.metrics.totalReturn,
+							annualizedReturn: result.metrics.annualizedReturn,
+							sharpeRatio: result.metrics.sharpeRatio,
+							maxDrawdown: result.metrics.maxDrawdown,
+							maxDrawdownDuration: result.metrics.maxDrawdownDuration,
+							winRate: result.metrics.winRate,
+							profitFactor: result.metrics.profitFactor,
+							avgWin: result.metrics.avgWin,
+							avgLoss: result.metrics.avgLoss,
+							avgHoldingDays: result.metrics.avgHoldingDays,
+							totalTrades: result.trades.filter((t) => t.direction === "sell").length,
+						},
+						benchmarks,
+						trades: result.trades,
+					},
+					outputDir,
+					"http://localhost:3000",
+				);
 				reportUrl = genResult.url;
 				reportLink = `\n\n[查看 HTML 报告](${genResult.url})`;
 			} catch (err) {
 				console.warn("[backtest_strategy] Auto report generation failed:", err);
+			}
+
+			// Save final holdings as a new stock pool if requested
+			let holdingsNote = "";
+			let holdingsPoolId: number | undefined;
+			if (params.save_holdings_as_pool) {
+				try {
+					const positions = new Map<string, number>();
+					for (const t of result.trades) {
+						const key = `${t.code}_${t.market}`;
+						const current = positions.get(key) ?? 0;
+						positions.set(key, t.direction === "buy" ? current + t.shares : current - t.shares);
+					}
+
+					const holdings: Array<{ code: string; market: number; name?: string }> = [];
+					for (const [key, shares] of positions.entries()) {
+						if (shares <= 0) continue;
+						const [code, marketStr] = key.split("_");
+						const market = Number(marketStr);
+						const item = items.find((i) => i.code === code && i.market === market);
+						holdings.push({ code, market, name: item?.name ?? undefined });
+					}
+
+					if (holdings.length > 0) {
+						const holdingsPoolName = `${pool.name}_${params.strategy}_最终持仓_${result.endDate}`;
+						holdingsPoolId = await store.createStockPool(
+							holdingsPoolName,
+							`股池 "${pool.name}" 使用 ${params.strategy} 策略回测至 ${result.endDate} 的终点持仓。`,
+						);
+						await store.addToStockPool(holdingsPoolId, holdings);
+						holdingsNote = `\n\n已保存最终持仓为新股池 "${holdingsPoolName}"（ID: ${holdingsPoolId}），共 ${holdings.length} 只标的。`;
+					} else {
+						holdingsNote = "\n\n回测终点无持仓，未创建新股池。";
+					}
+				} catch (err) {
+					holdingsNote = `\n\n保存最终持仓失败: ${err instanceof Error ? err.message : String(err)}`;
+				}
 			}
 
 			const sellCount = result.trades.filter((t) => t.direction === "sell").length;
@@ -262,6 +410,7 @@ export const backtestStrategyTool: AgentTool<typeof backtestParams, BacktestTool
 				`总收益：${result.metrics.totalReturn.toFixed(2)}%，年化：${result.metrics.annualizedReturn.toFixed(2)}%，` +
 				`最大回撤：${result.metrics.maxDrawdown.toFixed(2)}%，胜率：${result.metrics.winRate.toFixed(2)}%，交易次数：${sellCount}` +
 				portfolioNote +
+				holdingsNote +
 				reportLink;
 
 			return {
@@ -278,6 +427,10 @@ export const backtestStrategyTool: AgentTool<typeof backtestParams, BacktestTool
 					formattedTradeList: tradeList,
 					elapsedMs: result.elapsedMs,
 					reportUrl,
+					holdingsPoolId,
+					holdingsPoolName: holdingsPoolId
+						? `${pool.name}_${params.strategy}_最终持仓_${result.endDate}`
+						: undefined,
 				},
 			};
 		}
@@ -327,6 +480,7 @@ export const backtestStrategyTool: AgentTool<typeof backtestParams, BacktestTool
 						portfolioNote = `\n已追加到组合 "${params.save_to_portfolio}"（ID: ${portfolioId}），保存 ${result.trades.length} 笔交易记录。`;
 					}
 
+					const commissionRate = params.commission ?? 0.0003;
 					for (const trade of result.trades) {
 						await store.addPortfolioTrade({
 							portfolio_id: portfolioId,
@@ -337,7 +491,7 @@ export const backtestStrategyTool: AgentTool<typeof backtestParams, BacktestTool
 							quantity: trade.shares,
 							price: trade.entryPrice,
 							adjust: params.adjust ?? "bfq",
-							commission: 0,
+							commission: trade.shares * trade.entryPrice * commissionRate,
 							tax: 0,
 							memo: `${params.strategy} 策略买入`,
 						});
@@ -350,7 +504,7 @@ export const backtestStrategyTool: AgentTool<typeof backtestParams, BacktestTool
 							quantity: trade.shares,
 							price: trade.exitPrice,
 							adjust: params.adjust ?? "bfq",
-							commission: 0,
+							commission: trade.shares * trade.exitPrice * commissionRate,
 							tax: 0,
 							memo: `${params.strategy} 策略卖出 | 持仓${trade.daysHeld}天 | 盈亏${trade.pnl >= 0 ? "+" : ""}${trade.pnl.toFixed(2)}`,
 						});

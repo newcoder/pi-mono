@@ -23,7 +23,8 @@ export function computeMetrics(trades: Trade[], equityCurve: EquityPoint[], init
 
 	// Annualized return
 	const years = equityCurve.length > 1 ? equityCurve.length / 252 : 1; // approximate trading days per year
-	const annualizedReturn = years > 0 ? ((1 + totalReturn / 100) ** (1 / years) - 1) * 100 : 0;
+	const annualizedReturn =
+		totalReturn <= -100 ? -100 : years > 0 ? ((1 + totalReturn / 100) ** (1 / years) - 1) * 100 : 0;
 
 	// Max drawdown
 	let maxDrawdown = 0;

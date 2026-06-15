@@ -123,22 +123,22 @@ function rsiReversalSignals(klines: KlineRow[], params: StrategyParams): Signal[
 		const curr = rsi[i];
 		if (prev == null || curr == null) continue;
 
-		if (!inPosition && prev >= oversold && curr < oversold) {
+		if (!inPosition && prev <= oversold && curr > oversold) {
 			signals.push({
 				index: i,
 				date: klines[i].date,
 				type: "buy",
 				price: klines[i].close ?? 0,
-				reason: `RSI${period}超卖(${curr.toFixed(1)})`,
+				reason: `RSI${period}超卖反弹(${curr.toFixed(1)})`,
 			});
 			inPosition = true;
-		} else if (inPosition && prev <= overbought && curr > overbought) {
+		} else if (inPosition && prev >= overbought && curr < overbought) {
 			signals.push({
 				index: i,
 				date: klines[i].date,
 				type: "sell",
 				price: klines[i].close ?? 0,
-				reason: `RSI${period}超买(${curr.toFixed(1)})`,
+				reason: `RSI${period}超买回落(${curr.toFixed(1)})`,
 			});
 			inPosition = false;
 		}
