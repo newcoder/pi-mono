@@ -701,7 +701,7 @@ python scripts/valuation_calculator.py \
 {
   "lookback_days": 20,
   "max_ideas": 5,
-  "categories": ["market_style", "technical", "fundamental", "event", "classic"],
+  "categories": ["market_style", "technical", "fundamental", "event", "classic", "multifactor"],
   "min_confidence": 50
 }
 ```
@@ -714,6 +714,7 @@ python scripts/valuation_calculator.py \
   - `fundamental`: 基本面 / 估值
   - `event`: 事件 / 情绪驱动
   - `classic`: 经典技术指标策略（MA/MACD/RSI/Bollinger/Supertrend）
+- `multifactor`: 多因子综合选股（价值/动量/质量/低波动，Z-score 等权合成）
 - `min_confidence`: 最低置信度过滤（0-100）。
 
 ### Output
@@ -792,7 +793,7 @@ python scripts/valuation_calculator.py \
 
 1. **调用外部 skill 获取市场结构/因子视角**：在运行 `discover_trading_ideas` 之前或之后，调用上述 skill 获取对当前市场状态、热点、有效因子的定性/定量分析。
 2. **与本 skill 的本地数据做交叉验证**：外部 skill 的结论必须与本地 `factor_ic`、`industry_indicators`、`industry_quotes`、`quotes` 中的最新 IC、动量、情绪数据做交叉验证。若出现冲突，优先以本地数据库为准，并在最终报告中标注分歧。
-3. **吸收框架，不照搬结论**：例如 `longbridge-quant` 的 IC/IR 分析流程（Spearman IC、信息比率、分位组合回测、IC 衰减）和 `quantitative-research` 的 walk-forward / 成本控制原则，可直接吸收进 Phase 2 的回测验证；`a-share-primary-theme-identification` 的“市场环境→主线→龙头→情绪周期→持续性”五步框架，可用于 enriched idea 的叙事和风险识别。
+3. **吸收框架，不照搬结论**：例如 `longbridge-quant` 的 IC/IR 分析流程（Spearman IC、信息比率、分位组合回测、IC 衰减）和 multi-factor 框架（价值/动量/质量/低波动 Z-score 等权合成），已分别吸收进 `discover_trading_ideas` 的因子快照与 `multifactor` 类别；`quantitative-research` 的 walk-forward / 成本控制原则，可直接吸收进 Phase 2 的回测验证；`a-share-primary-theme-identification` 的“市场环境→主线→龙头→情绪周期→持续性”五步框架，可用于 enriched idea 的叙事和风险识别。
 
 > 注意：部分外部 skill 依赖网络数据（如 Wind、AKShare、Longbridge）或 PromptScript 组件。当网络不可用或全局安装受限时，仍以本 skill 的本地工具和数据库为 fallback。
 

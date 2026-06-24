@@ -3,6 +3,7 @@ import { Type } from "@sinclair/typebox";
 import { checkFeasibility } from "../analysis/feasibility-check.js";
 import { generateIdeas } from "../analysis/idea-generator.js";
 import { classifyMarketRegime } from "../analysis/market-regime.js";
+import { computeMultiFactorScores } from "../analysis/multifactor.js";
 import type { MarketRegime, TradingIdea } from "../analysis/types.js";
 import { getDataStore } from "../data/index.js";
 
@@ -17,10 +18,14 @@ const discoverParams = Type.Object({
 				Type.Literal("fundamental"),
 				Type.Literal("event"),
 				Type.Literal("classic"),
+				Type.Literal("multifactor"),
 			],
 			{ description: "想法来源类别" },
 		),
-		{ default: ["market_style", "technical", "fundamental", "event", "classic"], description: "启用的想法来源类别" },
+		{
+			default: ["market_style", "technical", "fundamental", "event", "classic", "multifactor"],
+			description: "启用的想法来源类别",
+		},
 	),
 	min_confidence: Type.Number({ default: 50, description: "最低置信度 0-100" }),
 });
@@ -93,7 +98,10 @@ export const discoverTradingIdeasTool: AgentTool<typeof discoverParams, Discover
 		const minConfidence = params.min_confidence ?? 50;
 
 		const regime = await classifyMarketRegime(store, lookbackDays);
-		const candidates = generateIdeas(regime, categories, maxIdeas * 2);
+		const multiFactorContext = categories.includes("multifactor")
+			? await computeMultiFactorScores(store, regime.latestDate, { lookbackDays: 60 })
+			: null;
+		const candidates = generateIdeas(regime, categories, maxIdeas * 2, multiFactorContext);
 
 		// Run lightweight feasibility checks in parallel
 		const checked = await Promise.all(

@@ -2,6 +2,7 @@ import { describe, expect, it, vi } from "vitest";
 import { checkFeasibility } from "../analysis/feasibility-check.js";
 import { generateIdeas } from "../analysis/idea-generator.js";
 import { classifyMarketRegime } from "../analysis/market-regime.js";
+import type { MultiFactorContext } from "../analysis/multifactor.js";
 import type { MarketRegime } from "../analysis/types.js";
 import type { DataStore } from "../data/index.js";
 
@@ -197,6 +198,68 @@ describe("idea-generator", () => {
 		const ideas = generateIdeas(regime, ["classic"], 5);
 		expect(ideas.length).toBeGreaterThan(0);
 		expect(ideas.some((i) => i.suggestedStrategy.strategy === "ma_cross")).toBe(true);
+	});
+
+	it("generates multifactor idea when context is provided", () => {
+		const multiFactorContext: MultiFactorContext = {
+			scores: Array.from({ length: 100 }, (_, i) => ({
+				code: `0000${i.toString().padStart(2, "0")}`,
+				market: 0,
+				name: `股票${i}`,
+				valueZ: (100 - i) / 100,
+				momentumZ: (90 - i) / 100,
+				qualityZ: (80 - i) / 100,
+				lowVolZ: (70 - i) / 100,
+				composite: (100 - i) / 50,
+			})),
+			topScores: Array.from({ length: 20 }, (_, i) => ({
+				code: `0000${i.toString().padStart(2, "0")}`,
+				market: 0,
+				name: `股票${i}`,
+				valueZ: (100 - i) / 100,
+				momentumZ: (90 - i) / 100,
+				qualityZ: (80 - i) / 100,
+				lowVolZ: (70 - i) / 100,
+				composite: (100 - i) / 50,
+			})),
+			bottomScores: [],
+			stats: {
+				value: { mean: 0, std: 1 },
+				momentum: { mean: 0, std: 1 },
+				quality: { mean: 0, std: 1 },
+				lowVol: { mean: 0, std: 1 },
+			},
+			latestDate: "2026-06-23",
+			lookbackDays: 60,
+		};
+		const regime: MarketRegime = {
+			regime: "neutral",
+			subRegimes: [],
+			latestDate: "2026-06-23",
+			topIndustries: [],
+			weakIndustries: [],
+			factorIcSnapshot: {
+				industry_momentum_20d_forward5d: {
+					latest: 0.03,
+					avg20d: 0.03,
+					direction: "positive",
+					ir: 0.6,
+					hitRate: 0.6,
+					tStat: 2.0,
+				},
+				size_forward5d: { latest: 0, avg20d: 0, direction: "neutral", ir: 0, hitRate: 0.5, tStat: 0 },
+				size_forward10d: { latest: 0, avg20d: 0, direction: "neutral", ir: 0, hitRate: 0.5, tStat: 0 },
+				size_forward20d: { latest: 0, avg20d: 0, direction: "neutral", ir: 0, hitRate: 0.5, tStat: 0 },
+			},
+			sentimentIndex: 50,
+			volatilityProxy: 2,
+		};
+
+		const ideas = generateIdeas(regime, ["multifactor"], 5, multiFactorContext);
+		expect(ideas.length).toBe(1);
+		expect(ideas[0].category).toBe("market_style");
+		expect(ideas[0].suggestedStrategy.strategy).toBe("ma_cross");
+		expect(ideas[0].universeFilter).toContain("多因子综合评分前");
 	});
 });
 

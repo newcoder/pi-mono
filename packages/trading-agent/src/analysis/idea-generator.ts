@@ -1,4 +1,5 @@
 import type { StrategyType } from "../backtest/types.js";
+import type { MultiFactorContext } from "./multifactor.js";
 import type { MarketRegime, TradingIdea } from "./types.js";
 
 const CLASSIC_STRATEGIES: StrategyType[] = [
@@ -49,7 +50,12 @@ function buildSnapshot(regime: MarketRegime, sampleSize: number): TradingIdea["d
 	};
 }
 
-export function generateIdeas(regime: MarketRegime, categories: string[], maxIdeas: number): TradingIdea[] {
+export function generateIdeas(
+	regime: MarketRegime,
+	categories: string[],
+	maxIdeas: number,
+	multiFactorContext?: MultiFactorContext | null,
+): TradingIdea[] {
 	const candidates: TradingIdea[] = [];
 
 	// ─── Market style / industry momentum ─────────────────────────────
@@ -284,6 +290,33 @@ export function generateIdeas(regime: MarketRegime, categories: string[], maxIde
 			risks: ["事件热度难以量化", "利好兑现后回调"],
 			invalidationConditions: ["相关板块成交量萎缩", "市场情绪指数回落至50以下"],
 			dataSnapshot: buildSnapshot(regime, 300),
+		});
+	}
+
+	// ─── Multi-factor composite ───────────────────────────────────────
+	if (categories.includes("multifactor") && multiFactorContext) {
+		const topNames = multiFactorContext.topScores
+			.slice(0, 10)
+			.map((s) => s.name ?? s.code)
+			.join("、");
+		candidates.push({
+			id: makeId(),
+			hypothesis: "价值/动量/质量/低波动四因子综合评分最高的股票组合存在超额收益机会",
+			rationale: `基于 ${multiFactorContext.latestDate} 数据，对全 A 股计算价值（1/PE、1/PB）、动量（${multiFactorContext.lookbackDays}日收益）、质量（ROE）、低波动（负年化波动率）四因子，Z-score 等权合成后排名前 ${multiFactorContext.topScores.length} 的股票构成选股池。`,
+			category: "market_style",
+			timeframe: "medium_term",
+			entryCriteria: "多因子综合评分排名前10%，且短期均线呈多头排列",
+			exitCriteria: "综合评分跌出前30%或均线死叉",
+			universeFilter: `多因子综合评分前 ${multiFactorContext.topScores.length} 的股票：${topNames} 等`,
+			suggestedStrategy: {
+				strategy: "ma_cross",
+				params: { fast: 10, slow: 30 },
+			},
+			confidence: confidenceScore(55, regime, ["ic_industry_momentum_20d_forward5d", "sample_large"]),
+			feasibility: { pass: true, reason: "待检查" },
+			risks: ["多因子组合可能暴露于共同的宏观风险", "因子轮动导致某阶段失效"],
+			invalidationConditions: ["价值/动量/质量因子IC同时转负", "组合回撤超过15%"],
+			dataSnapshot: buildSnapshot(regime, multiFactorContext.scores.length),
 		});
 	}
 
