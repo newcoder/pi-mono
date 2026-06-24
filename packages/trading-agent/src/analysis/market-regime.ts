@@ -66,14 +66,17 @@ export async function classifyMarketRegime(store: DataStore, lookbackDays: numbe
 		name: string;
 		momentum_return: number;
 		momentum_rank: number;
-	}>(`
+	}>(
+		`
 		SELECT ii.code, i.name, ii.momentum_return, ii.momentum_rank
 		FROM industry_indicators ii
 		JOIN industries i ON ii.code = i.industry_code AND i.standard = 'sw_l1'
-		WHERE ii.period_days = 20 AND ii.date = ${s(store, latestIndustryDate)}
+		WHERE ii.period_days = 20 AND ii.date = ?
 		ORDER BY ii.momentum_rank ASC
 		LIMIT 10
-	`)) as { code: string; name: string; momentum_return: number; momentum_rank: number }[];
+	`,
+		[latestIndustryDate],
+	)) as { code: string; name: string; momentum_return: number; momentum_rank: number }[];
 
 	const topIndustries = topIndustryRows.slice(0, 5).map((r) => ({
 		code: r.code,
@@ -87,14 +90,17 @@ export async function classifyMarketRegime(store: DataStore, lookbackDays: numbe
 		name: string;
 		momentum_return: number;
 		momentum_rank: number;
-	}>(`
+	}>(
+		`
 		SELECT ii.code, i.name, ii.momentum_return, ii.momentum_rank
 		FROM industry_indicators ii
 		JOIN industries i ON ii.code = i.industry_code AND i.standard = 'sw_l1'
-		WHERE ii.period_days = 20 AND ii.date = ${s(store, latestIndustryDate)}
+		WHERE ii.period_days = 20 AND ii.date = ?
 		ORDER BY ii.momentum_rank DESC
 		LIMIT 5
-	`)) as { code: string; name: string; momentum_return: number; momentum_rank: number }[];
+	`,
+		[latestIndustryDate],
+	)) as { code: string; name: string; momentum_return: number; momentum_rank: number }[];
 
 	const weakIndustries = weakIndustryRows.map((r) => ({
 		code: r.code,
@@ -104,11 +110,14 @@ export async function classifyMarketRegime(store: DataStore, lookbackDays: numbe
 	}));
 
 	// ─── Volatility proxy from industry quotes ────────────────────────
-	const volRows = (await store.query<{ avg_amplitude: number }>(`
+	const volRows = (await store.query<{ avg_amplitude: number }>(
+		`
 		SELECT AVG(amplitude) as avg_amplitude
 		FROM industry_quotes
-		WHERE snapshot_date = ${s(store, latestIndustryQuoteDate)}
-	`)) as { avg_amplitude: number }[];
+		WHERE snapshot_date = ?
+	`,
+		[latestIndustryQuoteDate],
+	)) as { avg_amplitude: number }[];
 	const volatilityProxy = volRows[0]?.avg_amplitude ?? null;
 
 	// ─── Hot sectors from sector table ────────────────────────────────
@@ -119,11 +128,14 @@ export async function classifyMarketRegime(store: DataStore, lookbackDays: numbe
 	`)) as { name: string; change_pct: number }[];
 
 	// ─── Simple sentiment proxy from quotes ───────────────────────────
-	const sentimentRows = (await store.query<{ up_ratio: number }>(`
+	const sentimentRows = (await store.query<{ up_ratio: number }>(
+		`
 		SELECT AVG(CASE WHEN change_pct > 0 THEN 1.0 ELSE 0.0 END) as up_ratio
 		FROM quotes
-		WHERE snapshot_date = ${s(store, latestDate)}
-	`)) as { up_ratio: number }[];
+		WHERE snapshot_date = ?
+	`,
+		[latestDate],
+	)) as { up_ratio: number }[];
 	const upRatio = sentimentRows[0]?.up_ratio ?? null;
 	const sentimentIndex = upRatio == null ? null : Math.round(upRatio * 100);
 
@@ -162,9 +174,4 @@ export async function classifyMarketRegime(store: DataStore, lookbackDays: numbe
 		sentimentIndex,
 		volatilityProxy,
 	};
-}
-
-function s(_store: DataStore, v: string | null | undefined): string {
-	if (v == null) return "NULL";
-	return `'${v.replace(/'/g, "''")}'`;
 }

@@ -5,11 +5,6 @@ const MIN_UNIVERSE_SIZE = 10;
 const MIN_LOOKBACK_KLINES = 15;
 const MAX_RECENCY_DAYS = 3;
 
-function s(v: string | null | undefined): string {
-	if (v == null) return "NULL";
-	return `'${v.replace(/'/g, "''")}'`;
-}
-
 function formatDate(d: Date): string {
 	return d.toISOString().slice(0, 10);
 }
@@ -22,6 +17,14 @@ function daysBetween(a: string, b: string): number {
 	const bm = Number(b.slice(5, 7)) - 1;
 	const bd = Number(b.slice(8, 10));
 	return Math.abs((new Date(ay, am, ad).getTime() - new Date(by, bm, bd).getTime()) / (1000 * 60 * 60 * 24));
+}
+
+function assertPositiveInteger(value: unknown, name: string): number {
+	const n = Number(value);
+	if (!Number.isInteger(n) || n <= 0) {
+		throw new Error(`${name} must be a positive integer, got ${value}`);
+	}
+	return n;
 }
 
 export async function checkFeasibility(
@@ -40,7 +43,13 @@ export async function checkFeasibility(
 	}
 
 	// 2. Universe non-empty
-	const universeCount = await estimateUniverseSize(store, idea);
+	let universeCount: number;
+	try {
+		universeCount = await estimateUniverseSize(store, idea);
+	} catch (err) {
+		const message = err instanceof Error ? err.message : String(err);
+		return { pass: false, reason: `可行性检查失败: ${message}` };
+	}
 	if (universeCount < MIN_UNIVERSE_SIZE) {
 		return { pass: false, reason: `估算股票池仅 ${universeCount} 只，少于最小要求 ${MIN_UNIVERSE_SIZE}` };
 	}
@@ -66,61 +75,79 @@ async function estimateUniverseSize(store: DataStore, idea: TradingIdea): Promis
 
 	// Industry filter: stocks in top momentum industries on latest date
 	if (industryFilter) {
-		const rows = (await store.query<{ count: number }>(`
+		const periodDays = assertPositiveInteger(industryFilter.periodDays, "periodDays");
+		const topIndustryCount = assertPositiveInteger(industryFilter.topIndustryCount, "topIndustryCount");
+		const rows = (await store.query<{ count: number }>(
+			`
 			SELECT COUNT(DISTINCT si.code) as count
 			FROM stock_industries si
-			JOIN industry_indicators ii ON si.industry_code = ii.code AND si.standard = ${s(industryFilter.standard)}
-			WHERE ii.period_days = ${industryFilter.periodDays}
-			  AND ii.date = ${s(idea.dataSnapshot.latestDate)}
-			  AND ii.momentum_rank <= ${industryFilter.topIndustryCount}
-		`)) as { count: number }[];
+			JOIN industry_indicators ii ON si.industry_code = ii.code AND si.standard = ?
+			WHERE ii.period_days = ?
+			  AND ii.date = ?
+			  AND ii.momentum_rank <= ?
+		`,
+			[industryFilter.standard, periodDays, idea.dataSnapshot.latestDate, topIndustryCount],
+		)) as { count: number }[];
 		return rows[0]?.count ?? 0;
 	}
 
 	// Size filter: stocks by market cap rank
 	if (sizeFilter) {
+		const topStockCount = assertPositiveInteger(sizeFilter.topStockCount, "topStockCount");
 		const order = sizeFilter.direction === "small" ? "ASC" : "DESC";
-		const rows = (await store.query<{ count: number }>(`
+		const rows = (await store.query<{ count: number }>(
+			`
 			SELECT COUNT(*) as count FROM (
 				SELECT code FROM quotes
-				WHERE snapshot_date = ${s(idea.dataSnapshot.latestDate)}
+				WHERE snapshot_date = ?
 				  AND total_cap IS NOT NULL
 				ORDER BY total_cap ${order}
-				LIMIT ${sizeFilter.topStockCount}
+				LIMIT ?
 			)
-		`)) as { count: number }[];
+		`,
+			[idea.dataSnapshot.latestDate, topStockCount],
+		)) as { count: number }[];
 		return rows[0]?.count ?? 0;
 	}
 
 	// Fundamental: low PE/PB healthy companies
 	if (idea.category === "fundamental") {
-		const rows = (await store.query<{ count: number }>(`
+		const rows = (await store.query<{ count: number }>(
+			`
 			SELECT COUNT(DISTINCT q.code) as count
 			FROM quotes q
-			WHERE q.snapshot_date = ${s(idea.dataSnapshot.latestDate)}
+			WHERE q.snapshot_date = ?
 			  AND q.pe > 0 AND q.pe < 30
 			  AND q.pb > 0 AND q.pb < 2
-		`)) as { count: number }[];
+		`,
+			[idea.dataSnapshot.latestDate],
+		)) as { count: number }[];
 		return rows[0]?.count ?? 0;
 	}
 
 	// Technical / event / classic: all stocks with recent klines
-	const rows = (await store.query<{ count: number }>(`
+	const rows = (await store.query<{ count: number }>(
+		`
 		SELECT COUNT(DISTINCT code) as count
 		FROM klines
-		WHERE date = ${s(idea.dataSnapshot.latestDate)} AND period = 'daily'
-	`)) as { count: number }[];
+		WHERE date = ? AND period = 'daily'
+	`,
+		[idea.dataSnapshot.latestDate],
+	)) as { count: number }[];
 	return rows[0]?.count ?? 0;
 }
 
 async function estimateKlineCoverage(store: DataStore, latestDate: string): Promise<number> {
-	const rows = (await store.query<{ count: number }>(`
+	const rows = (await store.query<{ count: number }>(
+		`
 		SELECT COUNT(DISTINCT date) as count
 		FROM klines
-		WHERE period = 'daily' AND date <= ${s(latestDate)}
+		WHERE period = 'daily' AND date <= ?
 		ORDER BY date DESC
 		LIMIT 60
-	`)) as { count: number }[];
+	`,
+		[latestDate],
+	)) as { count: number }[];
 	return rows[0]?.count ?? 0;
 }
 
