@@ -21,6 +21,25 @@ function avg(values: number[]): number {
 	return values.reduce((a, b) => a + b, 0) / values.length;
 }
 
+function std(values: number[]): number {
+	if (values.length === 0) return 0;
+	const mean = avg(values);
+	const variance = values.reduce((sum, v) => sum + (v - mean) ** 2, 0) / values.length;
+	return Math.sqrt(variance);
+}
+
+function computeIcStats(values: number[]): { ir: number; hitRate: number; tStat: number } {
+	if (values.length < 5) {
+		return { ir: 0, hitRate: 0.5, tStat: 0 };
+	}
+	const mean = avg(values);
+	const s = std(values);
+	const ir = s === 0 ? 0 : mean / s;
+	const hitRate = values.filter((v) => v > 0).length / values.length;
+	const tStat = s === 0 ? 0 : mean / (s / Math.sqrt(values.length));
+	return { ir, hitRate, tStat };
+}
+
 export async function classifyMarketRegime(store: DataStore, lookbackDays: number): Promise<MarketRegime> {
 	// ─── Determine latest available dates per table ───────────────────
 	const dateRows = (await store.query<{ source: string; max_date: string }>(`
@@ -48,16 +67,25 @@ export async function classifyMarketRegime(store: DataStore, lookbackDays: numbe
 	for (const factorName of FACTOR_NAMES) {
 		const rows = await store.getFactorIc(factorName, startDate, latestDate);
 		if (rows.length === 0) {
-			factorIcSnapshot[factorName] = { latest: 0, avg20d: 0, direction: "neutral" };
+			factorIcSnapshot[factorName] = {
+				latest: 0,
+				avg20d: 0,
+				direction: "neutral",
+				ir: 0,
+				hitRate: 0.5,
+				tStat: 0,
+			};
 			continue;
 		}
 		const values = rows.map((r) => r.ic_value ?? 0);
 		const latest = values.at(-1) ?? 0;
-		const avg20d = avg(values.slice(-Math.min(20, values.length)));
+		const window = values.slice(-Math.min(20, values.length));
+		const avg20d = avg(window);
 		let direction: "positive" | "negative" | "neutral" = "neutral";
 		if (avg20d > 0.02) direction = "positive";
 		else if (avg20d < -0.02) direction = "negative";
-		factorIcSnapshot[factorName] = { latest, avg20d, direction };
+		const { ir, hitRate, tStat } = computeIcStats(window);
+		factorIcSnapshot[factorName] = { latest, avg20d, direction, ir, hitRate, tStat };
 	}
 
 	// ─── Industry momentum ranks on latest date ───────────────────────

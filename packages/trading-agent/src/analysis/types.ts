@@ -11,8 +11,21 @@ export interface MarketRegime {
 	topIndustries: Array<{ code: string; name: string; momentumReturn: number; rank: number }>;
 	/** Weakest momentum industries */
 	weakIndustries: Array<{ code: string; name: string; momentumReturn: number; rank: number }>;
-	/** Snapshot of factor IC: latest value, rolling average, and direction */
-	factorIcSnapshot: Record<string, { latest: number; avg20d: number; direction: "positive" | "negative" | "neutral" }>;
+	/** Snapshot of factor IC: latest value, rolling average, direction, and significance stats */
+	factorIcSnapshot: Record<
+		string,
+		{
+			latest: number;
+			avg20d: number;
+			direction: "positive" | "negative" | "neutral";
+			/** Information Ratio = mean IC / std IC over the lookback window */
+			ir: number;
+			/** Percentage of periods in the window with IC > 0 */
+			hitRate: number;
+			/** t-statistic of the mean IC */
+			tStat: number;
+		}
+	>;
 	/** Market sentiment index (0-100) if available */
 	sentimentIndex: number | null;
 	/** Volatility proxy: average industry amplitude on latest date */

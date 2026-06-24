@@ -16,7 +16,14 @@ function makeId(): string {
 function confidenceScore(base: number, regime: MarketRegime, supportingFactors: string[]): number {
 	let score = base;
 	for (const factor of supportingFactors) {
-		if (factor.startsWith("ic_") && regime.factorIcSnapshot[factor.slice(3)]?.direction === "positive") score += 20;
+		if (factor.startsWith("ic_")) {
+			const snap = regime.factorIcSnapshot[factor.slice(3)];
+			if (snap?.direction === "positive") score += 15;
+			if (snap?.direction === "negative") score -= 10;
+			// Reward statistically robust IC: IR > 0.5 or hit rate > 55%
+			if (snap && snap.ir > 0.5) score += 10;
+			if (snap && snap.hitRate > 0.55) score += 5;
+		}
 		if (factor === "sentiment_bullish" && (regime.sentimentIndex ?? 50) > 60) score += 10;
 		if (factor === "sentiment_bearish" && (regime.sentimentIndex ?? 50) < 40) score += 10;
 		if (factor === "high_volatility" && (regime.volatilityProxy ?? 0) > 3) score += 10;

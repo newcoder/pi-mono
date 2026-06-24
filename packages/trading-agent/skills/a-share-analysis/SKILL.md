@@ -728,6 +728,32 @@ python scripts/valuation_calculator.py \
 - `feasibility`: 轻量可行性检查结果
 - `risks` / `invalidationConditions`: 风险与失效条件
 
+### Cross-Skill Idea Enrichment（可选增强）
+
+`discover_trading_ideas` 返回的是基于本地 `market.db` 的量化候选。若要叠加市场结构、热点题材、因子有效性等视角，可按以下步骤增强：
+
+1. **运行 `discover_trading_ideas` 获取数据基线**：
+   - 关注 `regime`、`topIndustries`、`factorIcSnapshot`、`sentimentIndex` 等字段。
+
+2. **调用 `a-share-primary-theme-identification` 获取市场结构视角**：
+   - 输入当前市场概况、板块表现、`discover_trading_ideas` 提取的前 5 动量行业。
+   - 获取：今日主线、次级热点、核心龙头/中军、情绪周期、主线持续性、明日观察重点。
+   - 若其主线与本 skill 的 `topIndustries` 一致，可增强相关想法的置信度；若不一致，需标记为分歧并降低权重。
+
+3. **调用 `longbridge-quant` 或 `quantitative-research` 做因子验证**：
+   - 对核心因子（如 `industry_momentum_20d_forward5d`、`size_forward5d`）做 IC/IR 复核。
+   - 参考 `longbridge-quant` 的 factor-research 流程：Spearman IC、信息比率 IR、分位组合回测、IC 衰减分析。
+   - 参考 `quantitative-research` 的 alpha signal research：要求 IC > 0.02、t-stat > 2、IR > 0.5；多因子组合可做 Z-score 等权或 IC 加权。
+
+4. **调用 `geek-skills-a-share-analyst` 做个股/板块深度检查**（针对筛选后的重点标的）：
+   - 技术面评分、基本面评分、板块热点定位。
+   - 用于细化 `universeFilter` 或排除高风险标的。
+
+5. **综合输出**：
+   - 保留 `discover_trading_ideas` 的结构化字段。
+   - 在 `rationale` / `risks` 中补充外部 skill 的关键洞察（如情绪周期位置、IC 衰减方向、主线持续性评估）。
+   - 如果外部 skill 认为某方向处于退潮期或 IC 连续衰减，即使本地数据置信度高，也应加入风险提示或列为 invalidation condition。
+
 ### Phase 1 → Phase 2 Handoff
 
 `discover_trading_ideas` 只返回想法，不保存到数据库。下一步验证流程：
@@ -736,6 +762,7 @@ python scripts/valuation_calculator.py \
 2. 根据 `universeFilter` 使用 `screen_stocks` / `advanced_screen` / `iwencai_screen` 构建股票池。
 3. 使用 `manage_stock_pool` 保存股票池。
 4. 使用 `backtest_strategy` 对股票池进行长期历史回测（phase 2）。
+   - 回测设计应吸收 `quantitative-research` 的严谨性： walk-forward 验证、样本外测试、显式交易成本、避免前视偏差和过拟合。
 5. 回测表现优秀的策略进入 `manage_portfolio` 进行模拟跟踪（phase 3）。
 
 ### Example
@@ -747,6 +774,27 @@ python scripts/valuation_calculator.py \
   "categories": ["market_style", "classic"]
 }
 ```
+
+---
+
+## Related Skills for Market State & Quantitative Research
+
+本 skill 的 `discover_trading_ideas` 已经可以从本地 `market.db` 提取市场风格、行业动量、size IC、情绪等数据并生成可量化的交易想法。以下外部 skill 可与本 skill 互补使用，或将其分析框架吸收进交易想法发现流程：
+
+| Skill | 作用 | 使用时机 |
+|---|---|---|
+| `a-share-primary-theme-identification` | A 股主线识别：市场结构 / 题材周期 / 资金行为 / 情绪周期 | 需要理解当前真正的交易主线、龙头/中军/补涨、明日观察重点时 |
+| `geek-skills-a-share-analyst` | A 股分析师：技术面 / 基本面 / 板块热点 / 量化因子 | 需要对单只个股或板块做更深入的技术/基本面分析时 |
+| `longbridge-quant` | 量化框架：IC/IR 分析、多因子模型、波动率制度、配对交易、季节性等 | 需要验证因子有效性、构建多因子组合、评估 IC 衰减时 |
+| `quantitative-research` | 系统化量化研究：alpha 生成、回测陷阱、walk-forward、成本控制 | 需要将想法推进到严格的历史回测和策略优化时 |
+
+### 使用方式
+
+1. **调用外部 skill 获取市场结构/因子视角**：在运行 `discover_trading_ideas` 之前或之后，调用上述 skill 获取对当前市场状态、热点、有效因子的定性/定量分析。
+2. **与本 skill 的本地数据做交叉验证**：外部 skill 的结论必须与本地 `factor_ic`、`industry_indicators`、`industry_quotes`、`quotes` 中的最新 IC、动量、情绪数据做交叉验证。若出现冲突，优先以本地数据库为准，并在最终报告中标注分歧。
+3. **吸收框架，不照搬结论**：例如 `longbridge-quant` 的 IC/IR 分析流程（Spearman IC、信息比率、分位组合回测、IC 衰减）和 `quantitative-research` 的 walk-forward / 成本控制原则，可直接吸收进 Phase 2 的回测验证；`a-share-primary-theme-identification` 的“市场环境→主线→龙头→情绪周期→持续性”五步框架，可用于 enriched idea 的叙事和风险识别。
+
+> 注意：部分外部 skill 依赖网络数据（如 Wind、AKShare、Longbridge）或 PromptScript 组件。当网络不可用或全局安装受限时，仍以本 skill 的本地工具和数据库为 fallback。
 
 ---
 
