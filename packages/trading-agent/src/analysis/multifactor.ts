@@ -171,7 +171,7 @@ async function fetchKlineCloses(
 		`
 		SELECT code, market, date, close
 		FROM klines
-		WHERE period = 'daily' AND adjust = 'qfq' AND date <= ? AND date >= ?
+		WHERE period = 'daily' AND adjust = 'bfq' AND date <= ? AND date >= ?
 		ORDER BY code, market, date ASC
 	`,
 		[latestDate, startDate],
@@ -222,7 +222,7 @@ export async function computeMultiFactorScores(
 	},
 ): Promise<MultiFactorContext | null> {
 	const lookbackDays = options?.lookbackDays ?? DEFAULT_LOOKBACK_DAYS;
-	const minTotalCap = options?.minTotalCap ?? 1_000_000_000; // 1 billion default
+	const minTotalCap = options?.minTotalCap ?? 1; // total_cap is stored in billions CNY; default >= 1B CNY
 	const topN = options?.topN ?? 20;
 	const bottomN = options?.bottomN ?? 20;
 
