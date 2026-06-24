@@ -25,6 +25,7 @@ import {
 } from "./tools/concept-analysis.js";
 import { getConceptStocksTool, listConceptsTool } from "./tools/concept-stocks.js";
 import { syncFundamentalsTool, syncKlineTool, syncNewsTool } from "./tools/data-sync.js";
+import { discoverTradingIdeasTool } from "./tools/discover-trading-ideas.js";
 import { getIndustryStocksTool, getStockIndustriesTool, listIndustriesTool } from "./tools/industry-classification.js";
 import { analyzeCalendarImpactTool, refreshCalendarTool } from "./tools/investment-calendar.js";
 import { iwencaiScreenTool } from "./tools/iwencai-screening.js";
@@ -265,6 +266,7 @@ const BUILTIN_TOOLS = new Map<string, AgentTool<any>>([
 	["iwencai_screen", iwencaiScreenTool],
 	["advanced_screen", advancedScreenTool],
 	["compare_stocks", compareStocksTool],
+	["discover_trading_ideas", discoverTradingIdeasTool],
 	["get_sector_rotation", getSectorRotationTool],
 	["get_concept_stocks", getConceptStocksTool],
 	["list_concepts", listConceptsTool],

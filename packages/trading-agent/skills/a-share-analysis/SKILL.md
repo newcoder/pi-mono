@@ -9,6 +9,7 @@ tools:
   - iwencai_screen
   - compare_stocks
   - backtest_strategy
+  - discover_trading_ideas
   - get_stock_news
   - screen_by_news
   - get_market_news
@@ -679,6 +680,73 @@ python scripts/valuation_calculator.py \
 - "6月份有什么行业展会？"
 - "刷新投资日历"
 - "查看贵州茅台近期有哪些事件"
+
+---
+
+## Workflow 8: Trading Idea Discovery (交易策略发现)
+
+自动生成可量化、可验证的交易策略想法，作为自动化策略创建流程的第1阶段。
+
+### When to Use
+
+当用户请求以下操作时使用 `discover_trading_ideas`：
+- "发现交易想法"
+- "生成交易策略"
+- "当前市场风格下有什么可做的策略"
+- "策略自动化创建"
+
+### Input Parameters
+
+```json
+{
+  "lookback_days": 20,
+  "max_ideas": 5,
+  "categories": ["market_style", "technical", "fundamental", "event", "classic"],
+  "min_confidence": 50
+}
+```
+
+- `lookback_days`: 回看天数，用于计算因子IC和行业动量的近期趋势。
+- `max_ideas`: 返回的候选想法数量上限。
+- `categories`: 想法来源类别，可多选。
+  - `market_style`: 市场风格 / 行业动量 / 市值因子
+  - `technical`: 技术形态信号
+  - `fundamental`: 基本面 / 估值
+  - `event`: 事件 / 情绪驱动
+  - `classic`: 经典技术指标策略（MA/MACD/RSI/Bollinger/Supertrend）
+- `min_confidence`: 最低置信度过滤（0-100）。
+
+### Output
+
+返回结构化想法列表，每个想法包含：
+- `hypothesis`: 一句话交易假设
+- `rationale`: 逻辑依据
+- `entryCriteria` / `exitCriteria`: 可量化的入场/出场条件
+- `universeFilter`: 选股范围描述
+- `suggestedStrategy`: 可直接用于 `backtest_strategy` 的策略类型和参数
+- `confidence`: 置信度评分
+- `feasibility`: 轻量可行性检查结果
+- `risks` / `invalidationConditions`: 风险与失效条件
+
+### Phase 1 → Phase 2 Handoff
+
+`discover_trading_ideas` 只返回想法，不保存到数据库。下一步验证流程：
+
+1. 用户或 agent 从返回的想法中选择 1-3 个。
+2. 根据 `universeFilter` 使用 `screen_stocks` / `advanced_screen` / `iwencai_screen` 构建股票池。
+3. 使用 `manage_stock_pool` 保存股票池。
+4. 使用 `backtest_strategy` 对股票池进行长期历史回测（phase 2）。
+5. 回测表现优秀的策略进入 `manage_portfolio` 进行模拟跟踪（phase 3）。
+
+### Example
+
+```json
+{
+  "lookback_days": 20,
+  "max_ideas": 3,
+  "categories": ["market_style", "classic"]
+}
+```
 
 ---
 
