@@ -14,22 +14,24 @@ function makeId(): string {
 	return Math.random().toString(36).slice(2, 10);
 }
 
-function confidenceScore(base: number, regime: MarketRegime, supportingFactors: string[]): number {
-	let score = base;
+/** Placeholder confidence for non-event ideas. Phase 2 replaces this with backtest-derived confidence. */
+const PLACEHOLDER_CONFIDENCE = 40;
+
+function heuristicConfidence(regime: MarketRegime, supportingFactors: string[]): number {
+	let score = PLACEHOLDER_CONFIDENCE;
 	for (const factor of supportingFactors) {
 		if (factor.startsWith("ic_")) {
 			const snap = regime.factorIcSnapshot[factor.slice(3)];
-			if (snap?.direction === "positive") score += 15;
-			if (snap?.direction === "negative") score -= 10;
-			// Reward statistically robust IC: IR > 0.5 or hit rate > 55%
-			if (snap && snap.ir > 0.5) score += 10;
+			if (snap?.direction === "positive") score += 10;
+			if (snap?.direction === "negative") score -= 5;
+			if (snap && snap.ir > 0.5) score += 5;
 			if (snap && snap.hitRate > 0.55) score += 5;
 		}
 		if (factor === "sentiment_bullish" && (regime.sentimentIndex ?? 50) > 60) score += 10;
 		if (factor === "sentiment_bearish" && (regime.sentimentIndex ?? 50) < 40) score += 10;
-		if (factor === "high_volatility" && (regime.volatilityProxy ?? 0) > 3) score += 10;
-		if (factor === "momentum_aligned" && regime.subRegimes.includes("strong_momentum")) score += 10;
-		if (factor === "sample_large" && regime.topIndustries.length >= 3) score += 10;
+		if (factor === "high_volatility" && (regime.volatilityProxy ?? 0) > 3) score += 5;
+		if (factor === "momentum_aligned" && regime.subRegimes.includes("strong_momentum")) score += 5;
+		if (factor === "sample_large" && regime.topIndustries.length >= 3) score += 5;
 	}
 	return Math.min(100, Math.max(0, score));
 }
@@ -58,7 +60,7 @@ export function generateIdeas(
 ): TradingIdea[] {
 	const candidates: TradingIdea[] = [];
 
-	// ─── Market style / industry momentum ─────────────────────────────
+	// Market style / industry momentum
 	if (categories.includes("market_style")) {
 		const industryMomentum = regime.factorIcSnapshot.industry_momentum_20d_forward5d;
 		if (
@@ -87,7 +89,7 @@ export function generateIdeas(
 						icThreshold: 0.05,
 					},
 				},
-				confidence: confidenceScore(50, regime, [
+				confidence: heuristicConfidence(regime, [
 					"ic_industry_momentum_20d_forward5d",
 					"momentum_aligned",
 					"sample_large",
@@ -120,7 +122,7 @@ export function generateIdeas(
 						direction: "small",
 					},
 				},
-				confidence: confidenceScore(50, regime, ["ic_size_forward5d", "sample_large"]),
+				confidence: heuristicConfidence(regime, ["ic_size_forward5d", "sample_large"]),
 				feasibility: { pass: true, reason: "待检查" },
 				risks: ["小市值流动性差", "退市风险高于大盘股"],
 				invalidationConditions: ["size_forward5d IC连续5日高于-0.01", "市场风格切换至大市值"],
@@ -149,7 +151,7 @@ export function generateIdeas(
 						direction: "large",
 					},
 				},
-				confidence: confidenceScore(50, regime, ["ic_size_forward5d", "sample_large"]),
+				confidence: heuristicConfidence(regime, ["ic_size_forward5d", "sample_large"]),
 				feasibility: { pass: true, reason: "待检查" },
 				risks: ["大盘补涨后轮动风险", "波动率较低收益空间有限"],
 				invalidationConditions: ["size_forward5d IC回落至0以下", "市场成交量萎缩"],
@@ -158,7 +160,7 @@ export function generateIdeas(
 		}
 	}
 
-	// ─── Technical ────────────────────────────────────────────────────
+	// Technical
 	if (categories.includes("technical")) {
 		if (regime.subRegimes.includes("high_volatility")) {
 			candidates.push({
@@ -174,7 +176,7 @@ export function generateIdeas(
 					strategy: "bollinger_breakout",
 					params: { period: 20, stdDev: 2 },
 				},
-				confidence: confidenceScore(50, regime, ["high_volatility", "sample_large"]),
+				confidence: heuristicConfidence(regime, ["high_volatility", "sample_large"]),
 				feasibility: { pass: true, reason: "待检查" },
 				risks: ["高波动可能伴随假突破", "单边行情中布林带失效"],
 				invalidationConditions: ["平均振幅回落至1.5%以下", "突破信号胜率连续低于40%"],
@@ -196,7 +198,7 @@ export function generateIdeas(
 					strategy: "rsi_reversal",
 					params: { period: 14, oversold: 30, overbought: 50 },
 				},
-				confidence: confidenceScore(50, regime, ["sentiment_bearish", "sample_large"]),
+				confidence: heuristicConfidence(regime, ["sentiment_bearish", "sample_large"]),
 				feasibility: { pass: true, reason: "待检查" },
 				risks: ["情绪可能继续恶化", "抄底风险"],
 				invalidationConditions: [" sentimentIndex 连续3日低于20", "市场出现恐慌性下跌"],
@@ -218,7 +220,7 @@ export function generateIdeas(
 					strategy: "ma_cross",
 					params: { fast: 5, slow: 20 },
 				},
-				confidence: confidenceScore(50, regime, ["sentiment_bullish", "sample_large"]),
+				confidence: heuristicConfidence(regime, ["sentiment_bullish", "sample_large"]),
 				feasibility: { pass: true, reason: "待检查" },
 				risks: ["情绪过热后回调", "追涨风险"],
 				invalidationConditions: ["sentimentIndex 连续3日低于55", "领涨板块大幅回调"],
@@ -227,7 +229,7 @@ export function generateIdeas(
 		}
 	}
 
-	// ─── Fundamental / valuation ──────────────────────────────────────
+	// Fundamental / valuation
 	if (categories.includes("fundamental")) {
 		candidates.push({
 			id: makeId(),
@@ -242,7 +244,7 @@ export function generateIdeas(
 				strategy: "rsi_reversal",
 				params: { period: 14, oversold: 40, overbought: 65 },
 			},
-			confidence: confidenceScore(50, regime, ["sample_large"]),
+			confidence: heuristicConfidence(regime, ["sample_large"]),
 			feasibility: { pass: true, reason: "待检查" },
 			risks: ["价值陷阱", "估值中枢下移"],
 			invalidationConditions: ["所选标的盈利预期下调", "行业景气度持续恶化"],
@@ -262,7 +264,7 @@ export function generateIdeas(
 				strategy: "ma_cross",
 				params: { fast: 10, slow: 30 },
 			},
-			confidence: confidenceScore(50, regime, ["sample_large"]),
+			confidence: heuristicConfidence(regime, ["sample_large"]),
 			feasibility: { pass: true, reason: "待检查" },
 			risks: ["成长股估值波动大", "业绩不及预期风险"],
 			invalidationConditions: ["最新季度净利润同比下滑", "行业景气度指标转负"],
@@ -270,7 +272,7 @@ export function generateIdeas(
 		});
 	}
 
-	// ─── Event / sentiment ────────────────────────────────────────────
+	// Event / sentiment
 	if (categories.includes("event")) {
 		candidates.push({
 			id: makeId(),
@@ -285,7 +287,7 @@ export function generateIdeas(
 				strategy: "macd_cross",
 				params: { fast: 12, slow: 26, signal: 9 },
 			},
-			confidence: confidenceScore(45, regime, ["sentiment_bullish", "sample_large"]),
+			confidence: heuristicConfidence(regime, ["sentiment_bullish", "sample_large"]),
 			feasibility: { pass: true, reason: "待检查" },
 			risks: ["事件热度难以量化", "利好兑现后回调"],
 			invalidationConditions: ["相关板块成交量萎缩", "市场情绪指数回落至50以下"],
@@ -293,7 +295,7 @@ export function generateIdeas(
 		});
 	}
 
-	// ─── Multi-factor composite ───────────────────────────────────────
+	// Multi-factor composite
 	if (categories.includes("multifactor") && multiFactorContext) {
 		const topNames = multiFactorContext.topScores
 			.slice(0, 10)
@@ -312,7 +314,7 @@ export function generateIdeas(
 				strategy: "ma_cross",
 				params: { fast: 10, slow: 30 },
 			},
-			confidence: confidenceScore(55, regime, ["ic_industry_momentum_20d_forward5d", "sample_large"]),
+			confidence: heuristicConfidence(regime, ["ic_industry_momentum_20d_forward5d", "sample_large"]),
 			feasibility: { pass: true, reason: "待检查" },
 			risks: ["多因子组合可能暴露于共同的宏观风险", "因子轮动导致某阶段失效"],
 			invalidationConditions: ["价值/动量/质量因子IC同时转负", "组合回撤超过15%"],
@@ -320,11 +322,103 @@ export function generateIdeas(
 		});
 	}
 
-	// ─── Classic strategies ───────────────────────────────────────────
+	// Classic strategies
 	if (categories.includes("classic")) {
 		for (const strategy of CLASSIC_STRATEGIES) {
 			const idea = classicIdea(strategy, regime);
 			if (idea) candidates.push(idea);
+		}
+	}
+
+	// Data-driven: Factor IC scanning -- generate ideas from statistically significant factors
+	const significantFactors = Object.entries(regime.factorIcSnapshot).filter(
+		([, snap]) => Math.abs(snap.tStat) > 2 && snap.hitRate > 0.5,
+	);
+	for (const [factorName, snap] of significantFactors) {
+		if (factorName === "industry_momentum_20d_forward5d" && snap.direction === "positive") {
+			candidates.push({
+				id: makeId(),
+				hypothesis: `行业动量因子统计显著 (t=${snap.tStat.toFixed(2)}, IR=${snap.ir.toFixed(2)}), 趋势跟踪策略有效`,
+				rationale: `IC均值 ${snap.avg20d.toFixed(3)}, t=${snap.tStat.toFixed(2)}(>2), 胜率 ${(snap.hitRate * 100).toFixed(0)}%`,
+				category: "market_style",
+				timeframe: "short_term",
+				entryCriteria: "行业动量排名前5, 个股MA5上穿MA20",
+				exitCriteria: "行业动量排名跌出前10或个股MA死叉",
+				universeFilter: "动量排名前5的申万一级行业成分股",
+				suggestedStrategy: {
+					strategy: "ma_cross",
+					params: { fast: 5, slow: 20 },
+					industryFilter: {
+						standard: "sw_l1",
+						periodDays: 20,
+						topIndustryCount: 5,
+						icPeriodDays: 20,
+						icThreshold: 0.03,
+					},
+				},
+				confidence: PLACEHOLDER_CONFIDENCE,
+				feasibility: { pass: true, reason: "待检查" },
+				risks: ["因子显著性可能衰减", "过度依赖单因子"],
+				invalidationConditions: ["行业动量 tStat < 1.5", "IC 方向反转"],
+				dataSnapshot: buildSnapshot(regime, regime.topIndustries.length * 50),
+			});
+		}
+		if (factorName.startsWith("size_") && snap.direction !== "neutral") {
+			const dirLabel = snap.direction === "positive" ? "大市值" : "小市值";
+			const sizeDir = snap.direction === "positive" ? "large" : ("small" as const);
+			const fwd = factorName.includes("5d") ? 5 : factorName.includes("10d") ? 10 : 20;
+			candidates.push({
+				id: makeId(),
+				hypothesis: `市值因子统计显著 (${dirLabel}占优, t=${snap.tStat.toFixed(2)}), ${dirLabel}风格策略`,
+				rationale: `${factorName} IC均值 ${snap.avg20d.toFixed(3)}, t=${snap.tStat.toFixed(2)}, 胜率 ${(snap.hitRate * 100).toFixed(0)}%`,
+				category: "market_style",
+				timeframe: "short_term",
+				entryCriteria: `市值${dirLabel === "大市值" ? "前" : "后"}30%, 技术指标确认`,
+				exitCriteria: "因子IC方向反转或持仓达最大天数",
+				universeFilter: `全A股中市值${dirLabel === "大市值" ? "最大" : "最小"}的100只`,
+				suggestedStrategy: {
+					strategy: sizeDir === "large" ? "ma_cross" : "rsi_reversal",
+					params: sizeDir === "large" ? { fast: 5, slow: 20 } : { period: 14, oversold: 30, overbought: 70 },
+					sizeFilter: {
+						forwardDays: fwd,
+						topStockCount: 100,
+						icPeriodDays: 20,
+						icThreshold: sizeDir === "large" ? 0.03 : -0.03,
+						direction: sizeDir,
+					},
+				},
+				confidence: PLACEHOLDER_CONFIDENCE,
+				feasibility: { pass: true, reason: "待检查" },
+				risks: ["市值风格轮动风险", "极端行情下因子失效"],
+				invalidationConditions: ["size IC 回落", "市场成交量萎缩"],
+				dataSnapshot: buildSnapshot(regime, 100),
+			});
+		}
+	}
+
+	// Data-driven: Regime -> Strategy mapping
+	if (regime.subRegimes.length > 0) {
+		const regimeKey = regime.subRegimes.slice(0, 2).join("+");
+		const mappedStrategies = REGIME_STRATEGY_MAP[regimeKey];
+		if (mappedStrategies?.length) {
+			for (const strat of mappedStrategies.slice(0, 2)) {
+				candidates.push({
+					id: makeId(),
+					hypothesis: `当前市场状态 (${regimeKey}) 历史上 ${strat.name} 策略表现较好`,
+					rationale: `${regimeKey} 状态下 ${strat.name} 策略在历史回测中Sharpe和胜率表现较好. ${strat.rationale}`,
+					category: "classic",
+					timeframe: "short_term",
+					entryCriteria: strat.entryCriteria,
+					exitCriteria: strat.exitCriteria,
+					universeFilter: "全A股",
+					suggestedStrategy: { strategy: strat.strategy, params: strat.params },
+					confidence: PLACEHOLDER_CONFIDENCE + (strat.bonus ?? 0),
+					feasibility: { pass: true, reason: "待检查" },
+					risks: ["历史规律可能失效", "市场状态识别可能存在偏差"],
+					invalidationConditions: ["市场状态切换", "策略信号频率异常"],
+					dataSnapshot: buildSnapshot(regime, 5000),
+				});
+			}
 		}
 	}
 
@@ -335,6 +429,96 @@ export function generateIdeas(
 
 	return candidates.slice(0, maxIdeas * 2);
 }
+
+/** Regime sub-regime key -> suggested strategies based on empirical mapping */
+const REGIME_STRATEGY_MAP: Record<
+	string,
+	Array<{
+		name: string;
+		strategy: StrategyType;
+		params: Record<string, number>;
+		rationale: string;
+		entryCriteria: string;
+		exitCriteria: string;
+		bonus: number;
+	}>
+> = {
+	"strong_momentum+bullish_sentiment": [
+		{
+			name: "趋势跟踪",
+			strategy: "supertrend",
+			params: { atrPeriod: 10, multiplier: 3 },
+			rationale: "强动量+乐观情绪最适合趋势跟踪",
+			entryCriteria: "Supertrend转多",
+			exitCriteria: "Supertrend转空",
+			bonus: 5,
+		},
+		{
+			name: "均线交叉",
+			strategy: "ma_cross",
+			params: { fast: 5, slow: 20 },
+			rationale: "趋势延续环境中均线策略胜率高",
+			entryCriteria: "MA5上穿MA20",
+			exitCriteria: "MA5下穿MA20",
+			bonus: 5,
+		},
+	],
+	"high_volatility+bearish_sentiment": [
+		{
+			name: "超卖反弹",
+			strategy: "rsi_reversal",
+			params: { period: 14, oversold: 25, overbought: 50 },
+			rationale: "高波动+悲观情绪下超卖反弹概率高",
+			entryCriteria: "RSI<25且阳线",
+			exitCriteria: "RSI>50或-3%止损",
+			bonus: 5,
+		},
+	],
+	"high_volatility+bullish_sentiment": [
+		{
+			name: "布林突破",
+			strategy: "bollinger_breakout",
+			params: { period: 20, stdDev: 2 },
+			rationale: "高波动+乐观情绪下突破信号可靠",
+			entryCriteria: "价格突破上轨",
+			exitCriteria: "回落中轨",
+			bonus: 3,
+		},
+	],
+	"small_cap_favored+strong_momentum": [
+		{
+			name: "小市值动量",
+			strategy: "rsi_reversal",
+			params: { period: 14, oversold: 30, overbought: 70 },
+			rationale: "小市值+动量环境下超卖反弹有效",
+			entryCriteria: "市值后30%+RSI<30",
+			exitCriteria: "RSI>70",
+			bonus: 3,
+		},
+	],
+	"large_cap_favored+bullish_sentiment": [
+		{
+			name: "大盘蓝筹趋势",
+			strategy: "ma_cross",
+			params: { fast: 10, slow: 30 },
+			rationale: "大盘+乐观情绪下慢趋势策略更稳",
+			entryCriteria: "MA10上穿MA30",
+			exitCriteria: "MA10下穿MA30",
+			bonus: 3,
+		},
+	],
+	"strong_momentum+high_volatility": [
+		{
+			name: "动量突破",
+			strategy: "supertrend",
+			params: { atrPeriod: 14, multiplier: 2.5 },
+			rationale: "动量+高波动适合较宽的止损",
+			entryCriteria: "Supertrend转多",
+			exitCriteria: "Supertrend转空",
+			bonus: 5,
+		},
+	],
+};
 
 function classicIdea(strategy: StrategyType, regime: MarketRegime): TradingIdea | null {
 	const industryMomentum = regime.factorIcSnapshot.industry_momentum_20d_forward5d;
@@ -354,7 +538,7 @@ function classicIdea(strategy: StrategyType, regime: MarketRegime): TradingIdea 
 				exitCriteria: "MA5下穿MA20",
 				universeFilter: "全A股",
 				suggestedStrategy: { strategy: "ma_cross", params: { fast: 5, slow: 20 } },
-				confidence: confidenceScore(55, regime, ["ic_industry_momentum_20d_forward5d", "sentiment_bullish"]),
+				confidence: heuristicConfidence(regime, ["ic_industry_momentum_20d_forward5d", "sentiment_bullish"]),
 				feasibility: { pass: true, reason: "待检查" },
 				risks: ["震荡市产生频繁假信号", "滞后性"],
 				invalidationConditions: ["市场进入高波动区间", "动量IC转负"],
@@ -374,7 +558,7 @@ function classicIdea(strategy: StrategyType, regime: MarketRegime): TradingIdea 
 				exitCriteria: "DIF下穿DEA",
 				universeFilter: "全A股",
 				suggestedStrategy: { strategy: "macd_cross", params: { fast: 12, slow: 26, signal: 9 } },
-				confidence: confidenceScore(55, regime, ["sentiment_bullish", "ic_size_forward5d"]),
+				confidence: heuristicConfidence(regime, ["sentiment_bullish", "ic_size_forward5d"]),
 				feasibility: { pass: true, reason: "待检查" },
 				risks: ["震荡市频繁交叉", "信号滞后"],
 				invalidationConditions: ["市场情绪指数回落至50以下", "size IC转正"],
@@ -395,7 +579,7 @@ function classicIdea(strategy: StrategyType, regime: MarketRegime): TradingIdea 
 				exitCriteria: "RSI > 50或亏损3%止损",
 				universeFilter: "全A股",
 				suggestedStrategy: { strategy: "rsi_reversal", params: { period: 14, oversold: 30, overbought: 50 } },
-				confidence: confidenceScore(55, regime, ["sentiment_bearish", "high_volatility"]),
+				confidence: heuristicConfidence(regime, ["sentiment_bearish", "high_volatility"]),
 				feasibility: { pass: true, reason: "待检查" },
 				risks: ["下跌趋势中抄底风险", "假反弹"],
 				invalidationConditions: ["市场出现系统性下跌", "情绪指数持续低于20"],
@@ -414,7 +598,7 @@ function classicIdea(strategy: StrategyType, regime: MarketRegime): TradingIdea 
 				exitCriteria: "价格上触上轨或重新跌破下轨止损",
 				universeFilter: "全A股",
 				suggestedStrategy: { strategy: "bollinger_breakout", params: { period: 20, stdDev: 2 } },
-				confidence: confidenceScore(55, regime, ["high_volatility"]),
+				confidence: heuristicConfidence(regime, ["high_volatility"]),
 				feasibility: { pass: true, reason: "待检查" },
 				risks: ["假突破", "波动率突然下降"],
 				invalidationConditions: ["平均振幅回落至1.5%以下", "布林带宽度收窄"],
@@ -434,7 +618,7 @@ function classicIdea(strategy: StrategyType, regime: MarketRegime): TradingIdea 
 				exitCriteria: "Supertrend由多头转为空头",
 				universeFilter: "全A股",
 				suggestedStrategy: { strategy: "supertrend", params: { atrPeriod: 10, multiplier: 3 } },
-				confidence: confidenceScore(55, regime, ["ic_industry_momentum_20d_forward5d", "sentiment_bullish"]),
+				confidence: heuristicConfidence(regime, ["ic_industry_momentum_20d_forward5d", "sentiment_bullish"]),
 				feasibility: { pass: true, reason: "待检查" },
 				risks: ["震荡市频繁止损", "参数敏感"],
 				invalidationConditions: ["行业动量IC转负", "市场进入横盘震荡"],

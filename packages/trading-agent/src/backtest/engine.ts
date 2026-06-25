@@ -529,6 +529,48 @@ export async function runPoolBacktest(
 
 	const sizeFilter = await buildSizeFilterContext(config.sizeFilter);
 
+	// 3d. Secondary ranking scorer for buy candidates
+	function computeRankScore(
+		stock: (typeof stockData)[number],
+		klineMaps: Array<{ code: string; map: Map<string, KlineRow> }>,
+		date: string,
+		rankBy?: PoolBacktestConfig["rankBy"],
+	): number {
+		if (!rankBy) return 0;
+
+		const klineMap = klineMaps.find((m) => m.code === stock.code)?.map;
+		const kline = klineMap?.get(date);
+		if (!kline) return 0;
+
+		switch (rankBy) {
+			case "momentum":
+				// Latest change_pct — higher is better for momentum/trend strategies
+				return kline.change_pct ?? 0;
+			case "value": {
+				// Approximate PE from latest close — lower PE = higher score (inverted)
+				// If change_pct and pre_close available: price = pre_close * (1 + change_pct/100)
+				const change = kline.change_pct ?? 0;
+				const preClose = kline.pre_close ?? kline.close ?? 0;
+				const price = preClose > 0 ? preClose * (1 + change / 100) : (kline.close ?? 0);
+				// Invert: lower price = higher score (cheap stocks preferred)
+				return price > 0 ? 1 / price : 0;
+			}
+			case "turnover":
+				// Higher turnover = more active = higher score
+				return kline.turnover ?? kline.volume ?? 0;
+			case "technical": {
+				// Composite: trend + momentum + volume + volatility
+				// Simplified: use change_pct as proxy for momentum, turnover for activity
+				const chg = kline.change_pct ?? 0;
+				const to = kline.turnover ?? 0;
+				// Normalize roughly: change in range [-10,10], turnover in [0, 20]
+				return chg * 0.5 + Math.min(to, 20) * 0.5;
+			}
+			default:
+				return 0;
+		}
+	}
+
 	// 4. Simulation state
 	let cash = initialCapital;
 	const positions = new Map<
@@ -616,16 +658,25 @@ export async function runPoolBacktest(
 			}
 		}
 
-		// 5.3 Buy phase (sorted by code for determinism)
-		const sortedCandidates = stockData
+		// 5.3 Buy phase with secondary ranking + position limit
+		const buyCandidates = stockData
 			.filter((s) => !positions.has(s.code))
 			.filter((s) => passesIndustryFilter(s, s.execMap.get(date), industryFilter))
 			.filter((s) => passesSizeFilter(s, s.execMap.get(date), sizeFilter))
-			.map((s) => s.code)
-			.sort();
+			.map((s) => {
+				const exec = s.execMap.get(date);
+				if (exec?.type !== "buy") return null;
+				const rankScore = computeRankScore(s, klineMaps, date, config.rankBy);
+				return { code: s.code, stock: s, score: rankScore };
+			})
+			.filter((c): c is NonNullable<typeof c> => c !== null)
+			.sort((a, b) => b.score - a.score);
+
+		const maxBuy = config.maxPositions ?? buyCandidates.length;
+		const selectedCodes = buyCandidates.slice(0, maxBuy).map((c) => c.code);
 
 		if (!fullPosition || fullPositionMode !== "equal_weight") {
-			for (const code of sortedCandidates) {
+			for (const code of selectedCodes) {
 				const stock = stockData.find((s) => s.code === code);
 				if (!stock) continue;
 
@@ -730,7 +781,7 @@ export async function runPoolBacktest(
 			} else if (fullPositionMode === "equal_weight") {
 				// Target equal-weight rebalancing among holdings + today's buy candidates
 				const targetCodes = new Set<string>([...positions.keys()]);
-				for (const code of sortedCandidates) {
+				for (const code of selectedCodes) {
 					const stock = stockData.find((s) => s.code === code);
 					if (!stock) continue;
 					if (stock.execMap.get(date)?.type === "buy") targetCodes.add(code);

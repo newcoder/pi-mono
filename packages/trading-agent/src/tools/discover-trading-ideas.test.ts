@@ -11,6 +11,39 @@ vi.mock("../data/index.js", () => ({
 	requireStore: vi.fn(),
 }));
 
+vi.mock("../analysis/backtest-validator.js", () => ({
+	validateIdea: vi.fn(),
+	metricsToConfidence: vi.fn(),
+}));
+
+vi.mock("../analysis/robustness-check.js", () => ({
+	checkRobustness: vi.fn(),
+	robustnessScore: vi.fn(),
+}));
+
+function makeValidationResult(success: boolean, confidence: number) {
+	return {
+		success,
+		reason: success ? "回测验证通过" : "回测验证失败",
+		metrics: success
+			? { totalReturn: 5.2, sharpeRatio: 0.8, winRate: 55, profitFactor: 1.3, maxDrawdown: 8.5, totalTrades: 12 }
+			: null,
+		validatedConfidence: confidence,
+		elapsedMs: 450,
+	};
+}
+
+function makeRobustnessResult(success: boolean, score: number) {
+	return {
+		success,
+		score,
+		parameterCv: 0.2,
+		timeConsistency: 0.67,
+		poolCv: 0.3,
+		reason: "参数稳定性好 (CV=0.20); 时间稳定性好 (67%窗口盈利); 股票池稳定性一般 (CV=0.30)",
+	};
+}
+
 function createMockStore(overrides?: {
 	latestDate?: string;
 	factorIc?: Record<string, number[]>;
@@ -164,63 +197,126 @@ describe("idea-generator", () => {
 			sentimentIndex: 65,
 			volatilityProxy: 2.5,
 		};
-
 		const ideas = generateIdeas(regime, ["market_style"], 5);
 		expect(ideas.length).toBeGreaterThan(0);
 		expect(ideas[0].category).toBe("market_style");
-		expect(ideas[0].suggestedStrategy.strategy).toBeTruthy();
+		expect(ideas[0].suggestedStrategy.strategy).toBe("supertrend");
 	});
 
 	it("generates classic ideas when regime is favorable", () => {
 		const regime: MarketRegime = {
-			regime: "bullish_sentiment",
-			subRegimes: ["bullish_sentiment"],
+			regime: "bullish_momentum",
+			subRegimes: ["bullish_sentiment", "strong_momentum"],
 			latestDate: "2026-06-23",
-			topIndustries: [],
+			topIndustries: [{ code: "801010", name: "煤炭", momentumReturn: 0.08, rank: 1 }],
 			weakIndustries: [],
 			factorIcSnapshot: {
 				industry_momentum_20d_forward5d: {
-					latest: 0.02,
-					avg20d: 0.03,
+					latest: 0.08,
+					avg20d: 0.07,
 					direction: "positive",
 					ir: 1.0,
 					hitRate: 0.65,
 					tStat: 2.0,
 				},
-				size_forward5d: { latest: -0.01, avg20d: -0.01, direction: "neutral", ir: 0, hitRate: 0.5, tStat: 0 },
-				size_forward10d: { latest: -0.01, avg20d: -0.01, direction: "neutral", ir: 0, hitRate: 0.5, tStat: 0 },
-				size_forward20d: { latest: -0.01, avg20d: -0.01, direction: "neutral", ir: 0, hitRate: 0.5, tStat: 0 },
+				size_forward5d: {
+					latest: 0,
+					avg20d: 0,
+					direction: "neutral",
+					ir: 0,
+					hitRate: 0.5,
+					tStat: 0,
+				},
+				size_forward10d: {
+					latest: 0,
+					avg20d: 0,
+					direction: "neutral",
+					ir: 0,
+					hitRate: 0.5,
+					tStat: 0,
+				},
+				size_forward20d: {
+					latest: 0,
+					avg20d: 0,
+					direction: "neutral",
+					ir: 0,
+					hitRate: 0.5,
+					tStat: 0,
+				},
 			},
-			sentimentIndex: 70,
-			volatilityProxy: 1.5,
+			sentimentIndex: 65,
+			volatilityProxy: 2.5,
 		};
-
 		const ideas = generateIdeas(regime, ["classic"], 5);
 		expect(ideas.length).toBeGreaterThan(0);
-		expect(ideas.some((i) => i.suggestedStrategy.strategy === "ma_cross")).toBe(true);
+		const strategies = ideas.map((i) => i.suggestedStrategy.strategy);
+		expect(strategies).toContain("ma_cross");
 	});
 
 	it("generates multifactor idea when context is provided", () => {
+		const regime: MarketRegime = {
+			regime: "neutral",
+			subRegimes: [],
+			latestDate: "2026-06-23",
+			topIndustries: [],
+			weakIndustries: [],
+			factorIcSnapshot: {
+				industry_momentum_20d_forward5d: {
+					latest: 0.05,
+					avg20d: 0.05,
+					direction: "positive",
+					ir: 0.6,
+					hitRate: 0.55,
+					tStat: 2.0,
+				},
+				size_forward5d: {
+					latest: 0,
+					avg20d: 0,
+					direction: "neutral",
+					ir: 0,
+					hitRate: 0.5,
+					tStat: 0,
+				},
+				size_forward10d: {
+					latest: 0,
+					avg20d: 0,
+					direction: "neutral",
+					ir: 0,
+					hitRate: 0.5,
+					tStat: 0,
+				},
+				size_forward20d: {
+					latest: 0,
+					avg20d: 0,
+					direction: "neutral",
+					ir: 0,
+					hitRate: 0.5,
+					tStat: 0,
+				},
+			},
+			sentimentIndex: 50,
+			volatilityProxy: 2.0,
+		};
 		const multiFactorContext: MultiFactorContext = {
 			scores: Array.from({ length: 100 }, (_, i) => ({
-				code: `0000${i.toString().padStart(2, "0")}`,
-				market: 0,
+				code: `00000${i}`,
 				name: `股票${i}`,
-				valueZ: (100 - i) / 100,
-				momentumZ: (90 - i) / 100,
-				qualityZ: (80 - i) / 100,
-				lowVolZ: (70 - i) / 100,
-				composite: (100 - i) / 50,
+				market: 0,
+				valueZ: 0.5,
+				momentumZ: 0.3,
+				qualityZ: 0.4,
+				lowVolZ: 0.2,
+				composite: 0.5 + i * 0.01,
 			})),
 			topScores: Array.from({ length: 20 }, (_, i) => ({
-				code: `0000${i.toString().padStart(2, "0")}`,
-				market: 0,
+				code: `00000${i}`,
 				name: `股票${i}`,
-				valueZ: (100 - i) / 100,
-				momentumZ: (90 - i) / 100,
-				qualityZ: (80 - i) / 100,
-				lowVolZ: (70 - i) / 100,
-				composite: (100 - i) / 50,
+				market: 0,
+				valueZ: 1.0,
+				momentumZ: 0.8,
+				qualityZ: 0.9,
+				lowVolZ: 0.7,
+				composite: 1.0 + i * 0.01,
 			})),
 			bottomScores: [],
 			stats: {
@@ -232,29 +328,6 @@ describe("idea-generator", () => {
 			latestDate: "2026-06-23",
 			lookbackDays: 60,
 		};
-		const regime: MarketRegime = {
-			regime: "neutral",
-			subRegimes: [],
-			latestDate: "2026-06-23",
-			topIndustries: [],
-			weakIndustries: [],
-			factorIcSnapshot: {
-				industry_momentum_20d_forward5d: {
-					latest: 0.03,
-					avg20d: 0.03,
-					direction: "positive",
-					ir: 0.6,
-					hitRate: 0.6,
-					tStat: 2.0,
-				},
-				size_forward5d: { latest: 0, avg20d: 0, direction: "neutral", ir: 0, hitRate: 0.5, tStat: 0 },
-				size_forward10d: { latest: 0, avg20d: 0, direction: "neutral", ir: 0, hitRate: 0.5, tStat: 0 },
-				size_forward20d: { latest: 0, avg20d: 0, direction: "neutral", ir: 0, hitRate: 0.5, tStat: 0 },
-			},
-			sentimentIndex: 50,
-			volatilityProxy: 2,
-		};
-
 		const ideas = generateIdeas(regime, ["multifactor"], 5, multiFactorContext);
 		expect(ideas.length).toBe(1);
 		expect(ideas[0].category).toBe("market_style");
@@ -327,10 +400,14 @@ describe("feasibility-check", () => {
 });
 
 describe("discover-trading-ideas tool", () => {
-	it("returns structured ideas when data is healthy", async () => {
+	it("returns structured ideas with backtest validation", async () => {
 		const { getDataStore } = await import("../data/index.js");
+		const { validateIdea } = await import("../analysis/backtest-validator.js");
+		const { checkRobustness } = await import("../analysis/robustness-check.js");
 		const store = createMockStore({ universeCount: 200, klineCount: 25 });
 		vi.mocked(getDataStore).mockReturnValue(store);
+		vi.mocked(validateIdea).mockResolvedValue(makeValidationResult(true, 65));
+		vi.mocked(checkRobustness).mockResolvedValue(makeRobustnessResult(true, 75));
 
 		const { discoverTradingIdeasTool } = await import("./discover-trading-ideas.js");
 		const result = await discoverTradingIdeasTool.execute("test", {
@@ -343,7 +420,31 @@ describe("discover-trading-ideas tool", () => {
 		expect(result.details.ideas.length).toBeGreaterThan(0);
 		expect(result.details.ideas[0].hypothesis).toBeTruthy();
 		expect(result.details.ideas[0].feasibility.pass).toBe(true);
+		expect(result.details.ideas[0].backtestValidation).toBeDefined();
+		expect(result.details.ideas[0].backtestValidation!.success).toBe(true);
 		expect((result.content[0] as { text: string }).text).toContain("当前市场风格");
+		expect((result.content[0] as { text: string }).text).toContain("回测验证");
+	});
+
+	it("still returns ideas when backtest validation fails", async () => {
+		const { getDataStore } = await import("../data/index.js");
+		const { validateIdea } = await import("../analysis/backtest-validator.js");
+		const { checkRobustness } = await import("../analysis/robustness-check.js");
+		const store = createMockStore({ universeCount: 200, klineCount: 25 });
+		vi.mocked(getDataStore).mockReturnValue(store);
+		vi.mocked(validateIdea).mockResolvedValue(makeValidationResult(false, 20));
+		vi.mocked(checkRobustness).mockResolvedValue(makeRobustnessResult(false, 0));
+
+		const { discoverTradingIdeasTool } = await import("./discover-trading-ideas.js");
+		const result = await discoverTradingIdeasTool.execute("test", {
+			lookback_days: 20,
+			max_ideas: 3,
+			categories: ["market_style"],
+			min_confidence: 50,
+		});
+
+		expect(result.details.ideas.length).toBe(0);
+		expect((result.content[0] as { text: string }).text).toContain("未通过");
 	});
 
 	it("returns empty ideas when no data store", async () => {
@@ -357,7 +458,8 @@ describe("discover-trading-ideas tool", () => {
 			categories: ["market_style", "technical", "fundamental", "event", "classic"],
 			min_confidence: 50,
 		});
-		expect(result.details.ideas).toEqual([]);
+
+		expect(result.details.ideas.length).toBe(0);
 		expect((result.content[0] as { text: string }).text).toContain("数据库未初始化");
 	});
 });

@@ -40,7 +40,7 @@ export interface TradingIdea {
 	/** Why this idea makes sense now */
 	rationale: string;
 	/** Source category */
-	category: "market_style" | "technical" | "fundamental" | "event" | "classic";
+	category: "market_style" | "technical" | "fundamental" | "event" | "classic" | "multifactor";
 	/** Expected holding horizon */
 	timeframe: "intraday" | "short_term" | "medium_term";
 	/** Quantifiable entry condition */
@@ -74,4 +74,60 @@ export interface TradingIdea {
 		sectorRotationHot: string[];
 		sampleSize: number;
 	};
+	/** Phase 2: Backtest validation result (populated after pipeline runs) */
+	backtestValidation?: BacktestValidationResult;
+	/** Phase 2: Robustness check result */
+	robustness?: RobustnessResult;
+	/** Phase 2: Precise constraints for time range and universe scope */
+	constraints?: IdeaConstraints;
+}
+
+export interface IdeaConstraints {
+	/** Start date for backtest validation (YYYY-MM-DD) */
+	startDate: string;
+	/** End date for backtest validation (YYYY-MM-DD) */
+	endDate: string;
+	/** Maximum number of stocks in the universe */
+	maxStocks: number;
+	/** Minimum number of stocks required */
+	minStocks: number;
+	/** Industry standard for filtering ("sw_l1", "sw_l2", etc.) */
+	industryScope?: string;
+	/** Size scope: "large", "small", or undefined for all */
+	sizeScope?: "large" | "small";
+}
+
+export interface BacktestValidationResult {
+	/** Whether the backtest ran without errors */
+	success: boolean;
+	/** Human-readable explanation */
+	reason: string;
+	/** Aggregate backtest metrics from validation */
+	metrics: {
+		totalReturn: number;
+		sharpeRatio: number;
+		winRate: number;
+		profitFactor: number;
+		maxDrawdown: number;
+		totalTrades: number;
+	} | null;
+	/** Confidence score 0-100 derived exclusively from backtest metrics */
+	validatedConfidence: number;
+	/** Wall-clock time for the validation in milliseconds */
+	elapsedMs: number;
+}
+
+export interface RobustnessResult {
+	/** Whether robustness checks ran without errors */
+	success: boolean;
+	/** Overall robustness score 0-100 */
+	score: number;
+	/** Parameter sensitivity: coefficient of variation of Sharpe across perturbed params (0-1, lower is better) */
+	parameterCv: number | null;
+	/** Time window consistency: fraction of sub-windows with positive return (0-1) */
+	timeConsistency: number | null;
+	/** Stock pool stability: coefficient of variation of Sharpe across resampled pools (0-1) */
+	poolCv: number | null;
+	/** Human-readable breakdown */
+	reason: string;
 }

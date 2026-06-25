@@ -3,13 +3,11 @@
 import argparse
 import json
 import sys
-import io
 import warnings
 import pandas as pd
 from concurrent.futures import ThreadPoolExecutor, as_completed
 
 warnings.filterwarnings('ignore')
-sys.stdout = io.TextIOWrapper(sys.stdout.buffer, encoding="utf-8")
 
 
 def _market_prefix(code: str) -> str:

@@ -10,6 +10,7 @@ tools:
   - compare_stocks
   - backtest_strategy
   - discover_trading_ideas
+  - analyze_market_theme
   - get_stock_news
   - screen_by_news
   - get_market_news
@@ -796,6 +797,60 @@ python scripts/valuation_calculator.py \
 3. **吸收框架，不照搬结论**：例如 `longbridge-quant` 的 IC/IR 分析流程（Spearman IC、信息比率、分位组合回测、IC 衰减）和 multi-factor 框架（价值/动量/质量/低波动 Z-score 等权合成），已分别吸收进 `discover_trading_ideas` 的因子快照与 `multifactor` 类别；`quantitative-research` 的 walk-forward / 成本控制原则，可直接吸收进 Phase 2 的回测验证；`a-share-primary-theme-identification` 的“市场环境→主线→龙头→情绪周期→持续性”五步框架，可用于 enriched idea 的叙事和风险识别。
 
 > 注意：部分外部 skill 依赖网络数据（如 Wind、AKShare、Longbridge）或 PromptScript 组件。当网络不可用或全局安装受限时，仍以本 skill 的本地工具和数据库为 fallback。
+
+---
+
+## Workflow: A-Share Primary Theme Identification (A股主线识别)
+
+当用户需要判断当前 A 股市场主线、情绪周期、龙头/中军/补涨、主线持续性和明日观察重点时，使用本 skill 的 `a-share-primary-theme-identification` 框架。trading-agent 已内置 `analyze_market_theme` 工具，可直接基于本地 `market.db` 最近 N 日数据生成结构化结论。
+
+### 输入参数
+
+```json
+{
+  "lookback_days": 5,
+  "end_date": "2026-06-24"
+}
+```
+
+- `lookback_days`: 回看交易日数，默认 5。用于计算连板梯队、板块轮动、情绪周期。
+- `end_date`: 分析截止日期，格式 `YYYY-MM-DD`；默认使用 `quotes` 表最新日期。
+
+### 输出结构
+
+严格遵循 `a-share-primary-theme-identification` 技能的 8 节模板：
+
+1. **市场环境**：涨跌家数、涨停/跌停数、成交额、情绪周期定位、操作建议。
+2. **当前主线**：窗口期累计涨幅最大的板块/主题、连板梯队、消息催化。
+3. **次级热点**：窗口期内累计涨幅第 2-4 名的板块/主题。
+4. **核心龙头与中军**：情绪龙头、趋势中军、补涨标的的分类列表。
+5. **情绪周期**：冰点/修复/主升/高位震荡/退潮判断及依据（连板高度、涨停趋势、跌停潮、高位股反馈、炸板率）。
+6. **主线持续性评估**：产业逻辑、事件催化、资金合力三维评分（弱/一般/较强/强）及失效条件。
+7. **明日观察重点**：具体观察清单（龙头承接、板块扩散、事件落地、风险信号）。
+8. **一句话交易结论**：可执行的交易建议。
+
+### 数据来源
+
+| 数据 | 来源表 | 用途 |
+|---|---|---|
+| 个股涨跌幅/市值 | `quotes` | 涨跌家数、涨停跌停、连板梯队、龙头分层 |
+| 个股 K 线 high/close/pre_close | `klines` | 炸板率 proxy |
+| 行业/板块行情 | `industry_quotes` / `industry_indicators` | 板块轮动、主线识别 |
+| 市场新闻 | `market_news` | 事件催化、主题聚合 |
+
+### 使用方式
+
+直接调用 `analyze_market_theme`，无需额外安装。例如：
+
+```json
+{ "lookback_days": 5 }
+```
+
+### 与 `discover_trading_ideas` 的关系
+
+- `analyze_market_theme` 输出**定性+定量**的市场结构结论，服务于短线/波段交易决策。
+- `discover_trading_ideas` 输出**可回测的交易策略想法**，服务于自动化策略创建。
+- 典型 workflow：先用 `analyze_market_theme` 识别主线和情绪周期，再调用 `discover_trading_ideas` 生成围绕主线的量化策略候选。
 
 ---
 

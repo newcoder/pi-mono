@@ -1,9 +1,11 @@
 import type { AgentTool } from "@mariozechner/pi-agent-core";
 import { Type } from "@sinclair/typebox";
+import { validateIdea } from "../analysis/backtest-validator.js";
 import { checkFeasibility } from "../analysis/feasibility-check.js";
 import { generateIdeas } from "../analysis/idea-generator.js";
 import { classifyMarketRegime } from "../analysis/market-regime.js";
 import { computeMultiFactorScores } from "../analysis/multifactor.js";
+import { checkRobustness } from "../analysis/robustness-check.js";
 import type { MarketRegime, TradingIdea } from "../analysis/types.js";
 import { getDataStore } from "../data/index.js";
 
@@ -53,6 +55,22 @@ function formatIdea(idea: TradingIdea, index: number): string {
 		lines.push(`   市值过滤: ${JSON.stringify(idea.suggestedStrategy.sizeFilter)}`);
 	}
 	lines.push(`   可行性: ${idea.feasibility.pass ? "通过" : "未通过"} — ${idea.feasibility.reason}`);
+
+	// Phase 2: Backtest validation results
+	if (idea.backtestValidation) {
+		if (idea.backtestValidation.success && idea.backtestValidation.metrics) {
+			const m = idea.backtestValidation.metrics;
+			lines.push(
+				`   回测验证: Sharpe=${m.sharpeRatio.toFixed(2)} 胜率=${m.winRate.toFixed(1)}% 盈亏比=${m.profitFactor.toFixed(2)} 回撤=${m.maxDrawdown.toFixed(1)}% 交易${m.totalTrades}次 (${idea.backtestValidation.elapsedMs}ms)`,
+			);
+		} else {
+			lines.push(`   回测验证: 跳过 — ${idea.backtestValidation.reason}`);
+		}
+	}
+	if (idea.robustness?.success) {
+		lines.push(`   鲁棒性: ${idea.robustness.score}/100 — ${idea.robustness.reason}`);
+	}
+
 	lines.push(`   风险: ${idea.risks.join("；")}`);
 	lines.push(`   失效条件: ${idea.invalidationConditions.join("；")}`);
 	return lines.join("\n");
@@ -81,7 +99,7 @@ export const discoverTradingIdeasTool: AgentTool<typeof discoverParams, Discover
 	name: "discover_trading_ideas",
 	label: "交易策略发现",
 	description:
-		"基于近期市场风格、行业动量、因子IC、情绪、基本面和事件，自动发现可量化的交易策略想法。仅返回结构化想法，不保存到数据库或股票池。",
+		"基于近期市场风格、行业动量、因子IC、情绪、基本面和事件，自动发现可量化的交易策略想法。每个想法经回测验证和鲁棒性检验，输出数据驱动的置信度。仅返回结构化想法，不保存到数据库或股票池。",
 	parameters: discoverParams,
 	execute: async (_id, params) => {
 		const store = getDataStore();
@@ -113,7 +131,26 @@ export const discoverTradingIdeasTool: AgentTool<typeof discoverParams, Discover
 			}),
 		);
 
-		const ideas = checked
+		// Phase 2: Backtest validation + robustness check for feasible non-event ideas
+		const validated = await Promise.all(
+			checked.map(async (idea) => {
+				if (!idea.feasibility.pass) return idea;
+
+				const validation = await validateIdea(store, idea, lookbackDays);
+				idea.backtestValidation = validation;
+				// Always use backtest-derived confidence (failing validation = lower confidence)
+				idea.confidence = validation.validatedConfidence;
+
+				// Only check robustness for ideas that passed backtest validation
+				if (validation.success && idea.category !== "event") {
+					idea.robustness = await checkRobustness(store, idea, lookbackDays);
+				}
+
+				return idea;
+			}),
+		);
+
+		const ideas = validated
 			.filter((idea) => idea.feasibility.pass && idea.confidence >= minConfidence)
 			.sort((a, b) => b.confidence - a.confidence)
 			.slice(0, maxIdeas);
@@ -123,12 +160,17 @@ export const discoverTradingIdeasTool: AgentTool<typeof discoverParams, Discover
 		textParts.push("\n--- 候选交易想法 ---");
 		if (ideas.length === 0) {
 			textParts.push(
-				"\n当前市场条件下未通过可行性筛选的交易想法。建议扩大 categories、降低 min_confidence 或增加 lookback_days 后重试。",
+				"\n当前市场条件下未通过可行性筛选或回测验证的交易想法。建议扩大 categories、降低 min_confidence 或增加 lookback_days 后重试。",
 			);
 		} else {
 			for (const [i, idea] of ideas.entries()) {
 				textParts.push(formatIdea(idea, i));
 			}
+			const validatedCount = ideas.filter((i) => i.backtestValidation?.success).length;
+			const robustCount = ideas.filter((i) => i.robustness?.success).length;
+			textParts.push(
+				`\n---\n${ideas.length} 个想法通过筛选 (${validatedCount} 个经回测验证, ${robustCount} 个经鲁棒性检验)。通过验证的想法可后续用 manage_strategies 注册为跟踪策略。`,
+			);
 		}
 
 		return {

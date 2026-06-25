@@ -159,6 +159,23 @@ const backtestParams = Type.Object({
 			},
 		),
 	),
+
+	rank_by: Type.Optional(
+		Type.Union(
+			[
+				Type.Literal("momentum", { description: "按涨跌幅排序，追涨" }),
+				Type.Literal("value", { description: "按价格倒数排序，买便宜" }),
+				Type.Literal("turnover", { description: "按换手率排序，买活跃" }),
+				Type.Literal("technical", { description: "按技术综合分排序" }),
+			],
+			{ description: "买入候选的二级排序因子" },
+		),
+	),
+	max_positions: Type.Optional(
+		Type.Number({
+			description: "最大同时持仓数，只买入排名前N的",
+		}),
+	),
 	save_to_portfolio: Type.Optional(
 		Type.String({
 			description: "将回测交易记录保存到指定组合名称。若组合不存在则自动创建，若已存在则追加交易记录。",
@@ -262,6 +279,8 @@ export const backtestStrategyTool: AgentTool<typeof backtestParams, BacktestTool
 							icPeriodDays: params.size_filter.ic_period_days ?? 20,
 							icThreshold: params.size_filter.ic_threshold ?? -0.03,
 							direction: params.size_filter.direction ?? "small",
+							rankBy: params.rank_by as "momentum" | "value" | "turnover" | "technical" | undefined,
+							maxPositions: params.max_positions,
 						}
 					: undefined,
 			};

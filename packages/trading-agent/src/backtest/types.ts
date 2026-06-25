@@ -114,6 +114,8 @@ export interface PoolBacktestConfig {
 	strategyParams?: Record<string, number>;
 	industryFilter?: PoolIndustryFilterConfig;
 	sizeFilter?: PoolSizeFilterConfig;
+	rankBy?: "momentum" | "value" | "turnover" | "technical";
+	maxPositions?: number;
 }
 
 // ─── Pool Backtest Types ──────────────────────────────────────────

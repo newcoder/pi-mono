@@ -1,0 +1,763 @@
+{
+  "meta": {
+    "analysis_date": "2026-05-28 11:37:39",
+    "total_articles": 115,
+    "data_source": "同花顺问财"
+  },
+  "summary": {
+    "market_sentiment": "中性偏乐观",
+    "sentiment_score": 0.219,
+    "hot_topics_count": 15,
+    "affected_industries_count": 31,
+    "mentioned_stocks_count": 36,
+    "risk_articles_count": 18,
+    "opportunity_articles_count": 45,
+    "duration_distribution": {
+      "short": 61,
+      "medium": 33,
+      "long": 21
+    },
+    "market_region_distribution": {
+      "A股": 31,
+      "港股": 26,
+      "美股": 27,
+      "全球": 31
+    },
+    "daily_distribution": {
+      "2026-05-22": 3,
+      "2026-05-23": 3,
+      "2026-05-24": 2,
+      "2026-05-25": 4,
+      "2026-05-26": 11,
+      "2026-05-27": 36,
+      "2026-05-28": 56
+    }
+  },
+  "topics": [
+    {
+      "name": "5月27日",
+      "count": 11
+    },
+    {
+      "name": "5月28日",
+      "count": 10
+    },
+    {
+      "name": "与此同时",
+      "count": 7
+    },
+    {
+      "name": "人工智能",
+      "count": 6
+    },
+    {
+      "name": "5月26日",
+      "count": 6
+    },
+    {
+      "name": "截至发稿",
+      "count": 6
+    },
+    {
+      "name": "道指涨0",
+      "count": 6
+    },
+    {
+      "name": "中材科技股价跌3",
+      "count": 6
+    },
+    {
+      "name": "证券代码",
+      "count": 5
+    },
+    {
+      "name": "华虹半导体",
+      "count": 5
+    }
+  ],
+  "industries": [
+    {
+      "name": "计算机",
+      "total_mentions": 30,
+      "positive_count": 27,
+      "negative_count": 3,
+      "sentiment": "positive",
+      "sentiment_score": 0.409,
+      "direction": "偏多"
+    },
+    {
+      "name": "电子",
+      "total_mentions": 24,
+      "positive_count": 20,
+      "negative_count": 4,
+      "sentiment": "positive",
+      "sentiment_score": 0.348,
+      "direction": "偏多"
+    },
+    {
+      "name": "有色金属",
+      "total_mentions": 19,
+      "positive_count": 12,
+      "negative_count": 7,
+      "sentiment": "neutral",
+      "sentiment_score": 0.122,
+      "direction": "中性"
+    },
+    {
+      "name": "美股",
+      "total_mentions": 17,
+      "positive_count": 11,
+      "negative_count": 6,
+      "sentiment": "neutral",
+      "sentiment_score": 0.081,
+      "direction": "中性"
+    },
+    {
+      "name": "港股",
+      "total_mentions": 17,
+      "positive_count": 12,
+      "negative_count": 5,
+      "sentiment": "positive",
+      "sentiment_score": 0.203,
+      "direction": "偏多"
+    },
+    {
+      "name": "电力设备",
+      "total_mentions": 12,
+      "positive_count": 9,
+      "negative_count": 3,
+      "sentiment": "positive",
+      "sentiment_score": 0.392,
+      "direction": "偏多"
+    },
+    {
+      "name": "石油石化",
+      "total_mentions": 11,
+      "positive_count": 6,
+      "negative_count": 5,
+      "sentiment": "neutral",
+      "sentiment_score": -0.034,
+      "direction": "中性"
+    },
+    {
+      "name": "公用事业",
+      "total_mentions": 9,
+      "positive_count": 9,
+      "negative_count": 0,
+      "sentiment": "positive",
+      "sentiment_score": 0.742,
+      "direction": "偏多"
+    },
+    {
+      "name": "宏观",
+      "total_mentions": 7,
+      "positive_count": 3,
+      "negative_count": 4,
+      "sentiment": "neutral",
+      "sentiment_score": -0.007,
+      "direction": "中性"
+    },
+    {
+      "name": "多元金融",
+      "total_mentions": 6,
+      "positive_count": 3,
+      "negative_count": 3,
+      "sentiment": "neutral",
+      "sentiment_score": -0.069,
+      "direction": "中性"
+    },
+    {
+      "name": "基础化工",
+      "total_mentions": 4,
+      "positive_count": 4,
+      "negative_count": 0,
+      "sentiment": "positive",
+      "sentiment_score": 0.833,
+      "direction": "偏多"
+    },
+    {
+      "name": "国防军工",
+      "total_mentions": 4,
+      "positive_count": 3,
+      "negative_count": 1,
+      "sentiment": "positive",
+      "sentiment_score": 0.233,
+      "direction": "偏多"
+    },
+    {
+      "name": "建筑材料",
+      "total_mentions": 4,
+      "positive_count": 1,
+      "negative_count": 3,
+      "sentiment": "negative",
+      "sentiment_score": -0.381,
+      "direction": "偏空"
+    },
+    {
+      "name": "银行",
+      "total_mentions": 4,
+      "positive_count": 2,
+      "negative_count": 2,
+      "sentiment": "neutral",
+      "sentiment_score": -0.155,
+      "direction": "中性"
+    },
+    {
+      "name": "机械设备",
+      "total_mentions": 4,
+      "positive_count": 4,
+      "negative_count": 0,
+      "sentiment": "positive",
+      "sentiment_score": 0.6,
+      "direction": "偏多"
+    }
+  ],
+  "stocks": [
+    {
+      "code": "688981",
+      "name": "中芯国际",
+      "mention_count": 5,
+      "sentiment": "positive",
+      "sentiment_score": 0.229
+    },
+    {
+      "code": "AMZN",
+      "name": "Amazon",
+      "mention_count": 5,
+      "sentiment": "positive",
+      "sentiment_score": 0.333
+    },
+    {
+      "code": "TSLA",
+      "name": "Tesla",
+      "mention_count": 5,
+      "sentiment": "positive",
+      "sentiment_score": 0.6
+    },
+    {
+      "code": "NVDA",
+      "name": "NVIDIA",
+      "mention_count": 5,
+      "sentiment": "positive",
+      "sentiment_score": 0.6
+    },
+    {
+      "code": "600030",
+      "name": "中信证券",
+      "mention_count": 3,
+      "sentiment": "positive",
+      "sentiment_score": 0.381
+    },
+    {
+      "code": "0700.HK",
+      "name": "腾讯控股",
+      "mention_count": 3,
+      "sentiment": "neutral",
+      "sentiment_score": -0.167
+    },
+    {
+      "code": "BABA",
+      "name": "阿里巴巴",
+      "mention_count": 3,
+      "sentiment": "neutral",
+      "sentiment_score": -0.167
+    },
+    {
+      "code": "1810.HK",
+      "name": "小米集团",
+      "mention_count": 3,
+      "sentiment": "positive",
+      "sentiment_score": 0.5
+    },
+    {
+      "code": "AAPL",
+      "name": "Apple",
+      "mention_count": 3,
+      "sentiment": "positive",
+      "sentiment_score": 0.333
+    },
+    {
+      "code": "MSFT",
+      "name": "Microsoft",
+      "mention_count": 3,
+      "sentiment": "positive",
+      "sentiment_score": 0.333
+    },
+    {
+      "code": "GOOGL",
+      "name": "Alphabet",
+      "mention_count": 3,
+      "sentiment": "positive",
+      "sentiment_score": 0.333
+    },
+    {
+      "code": "PDD",
+      "name": "拼多多",
+      "mention_count": 2,
+      "sentiment": "positive",
+      "sentiment_score": 0.267
+    },
+    {
+      "code": "META",
+      "name": "Facebook",
+      "mention_count": 2,
+      "sentiment": "positive",
+      "sentiment_score": 0.5
+    },
+    {
+      "code": "300750",
+      "name": "宁德时代",
+      "mention_count": 2,
+      "sentiment": "positive",
+      "sentiment_score": 1.0
+    },
+    {
+      "code": "002560",
+      "name": "",
+      "mention_count": 1,
+      "sentiment": "positive",
+      "sentiment_score": 1.0
+    }
+  ],
+  "risks": [
+    {
+      "description": "A股证券代码：688234 证券简称：天岳先进 公告编号：2026-033 H股证券代码：02631 证券简称：天岳先进 山东天岳先进科技股份有限公司关于持股5%以上股 东权益变动触及1%刻度的提示性公告",
+      "severity": "中",
+      "affected_industries": [],
+      "duration": "medium",
+      "url": "https://epaper.cs.com.cn/zgzqb/html/2026-05/28/nw.D110000zgzqb_20260528_6-B039.htm"
+    },
+    {
+      "description": "三家A股公司，终止上市",
+      "severity": "中",
+      "affected_industries": [],
+      "duration": "short",
+      "url": "https://m.thepaper.cn/newsDetail_forward_33226216"
+    },
+    {
+      "description": "超千家A股上市公司母公司营业收入占合并报表比重不足10%",
+      "severity": "中",
+      "affected_industries": [],
+      "duration": "medium",
+      "url": "https://finance.sina.com.cn/jjxw/2026-05-28/doc-inhzkwsy8810961.shtml"
+    },
+    {
+      "description": "2025年超千家A股上市公司母公司营收占合并报表比重不足10%，子公司信披短板待补",
+      "severity": "中",
+      "affected_industries": [],
+      "duration": "medium",
+      "url": "https://www.jiemian.com/article/14495551.html"
+    },
+    {
+      "description": "2026，港股迎来“东南亚时刻”",
+      "severity": "中",
+      "affected_industries": [
+        "银行",
+        "港股",
+        "石油石化"
+      ],
+      "duration": "medium",
+      "url": "https://www.tmtpost.com/8003748.html"
+    }
+  ],
+  "opportunities": [
+    {
+      "description": "诚通证券早报 | 5月28日资讯聚焦一文全掌握",
+      "confidence": "中",
+      "related_stocks": [],
+      "duration": "short",
+      "url": "https://mp.weixin.qq.com/s?__biz=MzkxNDUzNTY0MA==&chksm=c05b9a7e8348e027fce0946b2fdf7168697fbaa3b83c09d8875ea208d8a0a5191b13d3451ca2&idx=2&mid=2247514070&sn=4483e7443b10ca996ae2f6ef0326a2f8"
+    },
+    {
+      "description": "财联社A股24小时电报-上市公司动态-今日股市行情报道",
+      "confidence": "中",
+      "related_stocks": [],
+      "duration": "short",
+      "url": "https://www.cls.cn/telegraph"
+    },
+    {
+      "description": "利好丨5月27日晚间上市公司利好公告一览",
+      "confidence": "高",
+      "related_stocks": [
+        "002560"
+      ],
+      "duration": "short",
+      "url": "https://finance.sina.cn/2026-05-27/detail-inhzkfve8243237.d.html"
+    },
+    {
+      "description": "联电2026年5月27日股价创历史新高 多重利好共振驱动",
+      "confidence": "高",
+      "related_stocks": [],
+      "duration": "medium",
+      "url": "https://m.eeo.com.cn/2026/0528/892997.shtml"
+    },
+    {
+      "description": "A股:突发,傍晚5个大消息,一条重磅官宣发布,5月24日正式启航大家好周...",
+      "confidence": "高",
+      "related_stocks": [],
+      "duration": "long",
+      "url": "https://xueqiu.com/7641505013/390601476?_ugc_source=ugcbaiducard"
+    }
+  ],
+  "calendar_matches": [],
+  "articles": [
+    {
+      "title": "A股收评：超4000只个股飘绿，深指、创业板指收涨，沪指收跌",
+      "summary": "A股收评：超4000只个股飘绿，深指、创业板指收涨，沪指收跌；贵金属板块爆发，石油化工领涨，电脑硬件、互联网、航天军工领跌 26日，A股三大指数低开，尾盘深指、创业板指翻红，沪指跌幅收窄。 截至收盘，沪指跌0.17%，深证成指涨0.12%，创业板指涨0.54%。 全市成交额3.26万亿，超4000只个股下跌。 板块方面，贵金属板块爆发，多股涨停；石油化工、化肥农药、教育、基本金属、石油天然气等板块上涨。 电脑硬件、互联网、航天军工、文化传媒、半导体、海运、能源设备等跌幅居前。来源：“中新经纬”微信公众号| || | ",
+      "url": "http://www.chinanews.com.cn/cj/2026/05-26/10628734.shtml",
+      "publish_date": "2026-05-26 15:16:00",
+      "sentiment": "positive",
+      "sentiment_score": 0.333,
+      "industries": [
+        "电子",
+        "基础化工",
+        "有色金属",
+        "国防军工"
+      ],
+      "stocks": [],
+      "impact_level": "minor",
+      "duration": "short",
+      "duration_reason": "市场短期波动或技术性行情",
+      "market_region": "A股"
+    },
+    {
+      "title": "A股开盘：超3000只个股下跌，沪指、深指跌，创业板指上涨",
+      "summary": "A股开盘：超3000只个股下跌，沪指、深指跌，创业板指上涨；电脑硬件、半导体板块上涨，通信设备、贵金属下跌 27日，A股三大指数涨跌不一。 Wind数据显示，上证指数低开0.16%，深证成指低开0.05%，创业板指高开0.26%。全市超3000只个股下跌。 板块方面，电脑硬件、半导体板块上涨，通信设备、贵金属下跌。| || |【编辑:曹子健】 ",
+      "url": "https://www.chinanews.com/cj/2026/05-27/10629161.shtml",
+      "publish_date": "2026-05-27 09:43:30",
+      "sentiment": "neutral",
+      "sentiment_score": 0.0,
+      "industries": [
+        "电子",
+        "通信",
+        "有色金属"
+      ],
+      "stocks": [],
+      "impact_level": "minor",
+      "duration": "short",
+      "duration_reason": "市场短期波动或技术性行情",
+      "market_region": "A股"
+    },
+    {
+      "title": "诚通证券早报 | 5月28日资讯聚焦一文全掌握",
+      "summary": "诚通证券早报 | 5月28日资讯聚焦一文全掌握【内容导读】【宏观政策】（1）工信部：重点围绕驾驶自动化等领域加速标准研制与迭代。（2）国家能源局召开全国“人工智能+”能源现场推进会。 （3）两项光伏组件强制性国标发布规范安全要求杜绝功率“虚标”。【行业要闻】（1）我国人形机器人全球市场占比超八成。（2）AI短剧出海订单预计暴增5000% 不少企业正加码布局海外定制内容。 （3）AI行业高景气有望延续至2027年。【市场数据】（1）截至收盘，沪指跌1.25%报4093.73点，深证成指跌0.88%，创业板指微涨0.07%，科创综指跌2.53%，沪深北三市合计成交约3.26万亿元。 （2）截止收盘，恒生指数跌1.06%报25328点，国企指数跌1.33%8463点，恒生科技指数跌0.79%报4907点。【公告精选】（1）仕佳光子：终止购买福可喜玛通讯公司事项。 （2）天赐材料：拟开展年产16万吨高压实磷酸铁锂项目前期工作，预计总投资不超过21亿元。（3）深科技：子公司拟扩大高端存储芯片封测产能 项目计划总投资14.7亿元。 一宏观政策1、工信部：重点围绕驾驶自动化等领域加速标准研制与迭代。...",
+      "url": "https://mp.weixin.qq.com/s?__biz=MzkxNDUzNTY0MA==&chksm=c05b9a7e8348e027fce0946b2fdf7168697fbaa3b83c09d8875ea208d8a0a5191b13d3451ca2&idx=2&mid=2247514070&sn=4483e7443b10ca996ae2f6ef0326a2f8",
+      "publish_date": "2026-05-28 08:27:00",
+      "sentiment": "positive",
+      "sentiment_score": 1.0,
+      "industries": [
+        "港股",
+        "电子",
+        "计算机",
+        "电力设备",
+        "有色金属",
+        "机械设备"
+      ],
+      "stocks": [],
+      "impact_level": "medium",
+      "duration": "short",
+      "duration_reason": "市场短期波动或技术性行情",
+      "market_region": "港股"
+    },
+    {
+      "title": "财联社A股24小时电报-上市公司动态-今日股市行情报道",
+      "summary": "财联社电报中心，A股24小时电报。为投资者提供专业的上市公司动态、股市资讯、股票行情、财经新闻、今日股市行情、创业板、新能源汽车、板块投资资讯。",
+      "url": "https://www.cls.cn/telegraph",
+      "publish_date": "2026-05-27 08:21:24",
+      "sentiment": "positive",
+      "sentiment_score": 1.0,
+      "industries": [],
+      "stocks": [],
+      "impact_level": "minor",
+      "duration": "short",
+      "duration_reason": "日常市场波动，无明显长期信号",
+      "market_region": "A股"
+    },
+    {
+      "title": "A股指数 4347.07 (-0.17%)_股票行情_新浪财经_新浪网",
+      "summary": "30日盘中新高。30日盘中新低。最近2日 最近3日 最近4日 最近5日。| 股票名称 | 涨跌幅 |。| -------- | ------ |。最近2日 最近3日 最近4日 最近5日。| 股票名称 | 涨跌幅 |。 | -------- | ------ |。最近10日 最近20日 最近30日 最近60日。| 股票名称 | 涨跌幅 |。| -------- | ------ |。最近10日 最近20日 最近30日 最近60日。 连续放量。连续缩量。成交量骤增。成交量骤减。| 股票名称 | 放量天数 |。| -------- | -------- |。| 股票名称 | 缩量天数 |。| -------- | -------- |。 ",
+      "url": "https://finance.sina.com.cn/realstock/company/sh000002/nc.shtml",
+      "publish_date": "2026-05-26 11:10:09",
+      "sentiment": "neutral",
+      "sentiment_score": 0.0,
+      "industries": [],
+      "stocks": [],
+      "impact_level": "minor",
+      "duration": "short",
+      "duration_reason": "市场短期波动或技术性行情",
+      "market_region": "A股"
+    },
+    {
+      "title": "利好丨5月27日晚间上市公司利好公告一览",
+      "summary": "（来源：券研社）。5月27日晚间，沪深两市多家上市公司发布了公告。以下是利好一览：。通达股份：预中标物资项目总价值共计1.76亿元。 5月27日晚，通达股份(002560)发布公告称，国家电网有限公司电子商务平台发布了四则中标候选人公示，公司为其中的中标候选人。预中标物资总价值共计人民币1.76亿元，约占公司2025年度营业总收入的2.20%。 具体包括低压电力电缆、10kV电力电缆、电能计量箱、架空绝缘导线等项目。侨源股份：全资子公司签订1.7亿元工业气体供应合同。 本次回购的股份将予以注销并减少注册资本。远信工业：获得政府补助278.09万元占净利润16.73%。 上述政府补助预计增加公司2026年度利润总额278.09万元。鑫宏业：全资子公司中标4188.09万元核电电缆项目。 该计划涉及张小泉集团(公司持股5%以上股东)的重整执行，若执行完毕，富阳瀚朋将成为张小泉集团控股股东，但尚需法院认可执行方案，存在不确定性。中国国航：向特定对象发行A股股票完成备案 募集资金约200亿元。 德福科技：拟投资31亿元建设年产5万吨高端AI电子电路铜箔项目。 建设年产5万吨高端AI电子电路铜箔...",
+      "url": "https://finance.sina.cn/2026-05-27/detail-inhzkfve8243237.d.html",
+      "publish_date": "2026-05-27 23:13:00",
+      "sentiment": "positive",
+      "sentiment_score": 1.0,
+      "industries": [
+        "计算机",
+        "家用电器",
+        "有色金属",
+        "公用事业"
+      ],
+      "stocks": [
+        "002560"
+      ],
+      "impact_level": "medium",
+      "duration": "short",
+      "duration_reason": "日常市场波动，无明显长期信号",
+      "market_region": "A股"
+    },
+    {
+      "title": "联电2026年5月27日股价创历史新高 多重利好共振驱动",
+      "summary": "经济观察网 联电2026年5月27日股价创历史新高，受涨价信号、业绩向好等多重利好因素共振推动。股价异动原因：。 这一消息直接强化了市场对成熟制程代工行业供需趋紧、公司定价权回归的预期。业绩经营情况：。2026年第一季度，公司归母净利润达161.7亿新台币，同比大幅增长107.8%，毛利率提升至29.2%。 第二季度整体产能利用率达85%，其中12英寸厂（新加坡及厦门厂）接近满载。22nm制程需求最热，营收占比创历史新高。2026年4月单月营收同比增长10.8%，显示旺季需求强劲。。。行业政策与环境：。 美股半导体板块整体走强，叠加公司执行中的股份回购计划，共同推动了市场资金的关注和流入，催化了股价上涨。。。以上内容基于公开资料整理，不构成投资建议。 ",
+      "url": "https://m.eeo.com.cn/2026/0528/892997.shtml",
+      "publish_date": "2026-05-28 04:47:00",
+      "sentiment": "positive",
+      "sentiment_score": 1.0,
+      "industries": [
+        "美股",
+        "电子"
+      ],
+      "stocks": [],
+      "impact_level": "medium",
+      "duration": "medium",
+      "duration_reason": "涉及季度/中期业绩或阶段性政策",
+      "market_region": "美股"
+    },
+    {
+      "title": "A股:突发,傍晚5个大消息,一条重磅官宣发布,5月24日正式启航大家好周...",
+      "summary": "A股：突发，傍晚5个大消息，一条重磅官宣发布，5月24日正式启航。大家好。周末A股市场彻底被重磅消息点燃，政策、产业、科技三大维度集体释放强利好，叠加资金面持续宽松，下周市场迎来更大级别变盘窗口期。 从神舟二十三号载人飞船即将发射、升级版星舰V3成功试飞，到国产自研600公斤推力级涡扇发动机首飞圆满成功，硬核科技突破密集落地；再到八部门联合整治非法跨境证券、官媒定调数字经济主线、央行释放流动性，政策组合拳持续加码。 多重利好共振下，A股结构性行情将进一步深化，航天军工、数字经济、高端制造等核心赛道有望迎来主升浪，主力资金抱团方向明确，市场做多情绪全面升温。消息一：八部门联合整治非法跨境证券，数千亿资金回流A股，市场流动性持续宽松。 三是引导资金回流，通过整治非法跨境证券，引导境内投资者资金转向港股通、QDII、跨境理财通等合规渠道，数千亿外流资金有望回流A股，补充市场流动性，提升市场活跃度 。对A股市场而言，此次整治行动影响深远，直接利好三大方向。 三是市场生态优化，整治非法跨境证券活动，净化资本市场环境，防范跨境金融风险，提升A股市场国际化、规范化水平，增强外资与内资对A股市场的信心...",
+      "url": "https://xueqiu.com/7641505013/390601476?_ugc_source=ugcbaiducard",
+      "publish_date": "2026-05-23 14:19:50",
+      "sentiment": "positive",
+      "sentiment_score": 1.0,
+      "industries": [
+        "港股",
+        "国防军工"
+      ],
+      "stocks": [],
+      "impact_level": "major",
+      "duration": "long",
+      "duration_reason": "涉及结构性变革、长期政策或产业周期",
+      "market_region": "港股"
+    },
+    {
+      "title": "多地优化楼市政策 房地产板块逆势上涨 北辰实业、天健集团等多股涨停【SMM快讯】",
+      "summary": "多地优化楼市政策 房地产板块逆势上涨 北辰实业、天健集团等多股涨停【SMM快讯】SMM5月28日讯：近期全国多地发布促进房地产市场平稳健康发展的政策，广州、深圳、厦门、湖南、苏州等省市相继优化楼市调控细则， 包括放宽公积金贷款条件、上调贷款额度、推进国企收购存量二手房、落地住房 “以旧换新” 等举措，有望逐步激活住房置换需求、盘活存量房源。 伴随政策效应逐步显现，北上广深等核心城市楼市成交活跃度有所回暖，房企融资环境出现边际改善，行业基本面小幅修复。受政策、基本面共同提振，叠加部分资金调仓布局，房地产板块走出逆势上涨行情。 截至28日10:14分左右，房地产服务涨1.06%，个股方面：世联行、南都物业等涨幅居前。消息面【中共中央政治局召开会议，分析研究当前经济形势和经济工作】中共中央政治局4月28日召开会议，分析研究当前经济形势和经济工作。 有序化解地方政府债务风险，着力解决拖欠企业账款问题。推动中小金融机构改革，稳定和增强资本市场信心。 花都区迅速响应，推出“花八条”具体举措；以广州安居集团为代表的国企，正加快启动二手房收购盘活试点工作。相信随着这些细则全面落地、各板块协同推进，我们...",
+      "url": "https://news.smm.cn/news/103925453",
+      "publish_date": "2026-05-28 10:43:00",
+      "sentiment": "positive",
+      "sentiment_score": 1.0,
+      "industries": [
+        "房地产"
+      ],
+      "stocks": [],
+      "impact_level": "minor",
+      "duration": "short",
+      "duration_reason": "市场短期波动或技术性行情",
+      "market_region": "A股"
+    },
+    {
+      "title": "非银金融行业ETF双周报：严厉整治非法跨境证券业务 多家券商持续推进并购重组",
+      "summary": "行业动态：1、证监会等八部门联合印发《综合整治非法跨境证券期货基金经营活动实施方案》； 2、证监会严肃查处老虎证券等机构非法跨境展业案件；3、证监会发布《衍生品交易监督管理办法（试行）》； 4、证监会召开资本市场支持现代服务业和新型消费企业发展座谈会； 5、险企争相入局居家养老，助力破解养老焦虑；6、线上渠道首超线下，AI 重塑保险消费新生态。 行业周度数据跟踪：证券业务方面，市场成交量保持活跃，日均交易额环比前两周增加12.24%；期末沪深300 指数为4845 点，2026 年以来沪深300 指数上涨4.65%； 近两周股权募资金额为173.4 亿元，近两周债券承销规模为4.33 万亿元，分别较前两周增长24.22%、109.38%； 期末A 股融资余额28,782 亿元，环比增加3.45%，融券余额209.31 亿元，环比增加3.73%； 重点公司动态：1、东吴证券关于发行股份及支付现金购买东海证券公司股权的进展公告； 2、湘财股份有限公司关于换股吸收合并上海大智慧股份有限公司并募集配套资金暨关联交易报告书（修订稿）； 3、中国国际金融股份有限公司关于披露重大资产重组报告书的一般...",
+      "url": "http://stock.finance.sina.com.cn/stock/go.php/vReport_Show/kind/industry/rptid/833216496293/index.phtml",
+      "publish_date": "2026-05-27 00:00:00",
+      "sentiment": "positive",
+      "sentiment_score": 1.0,
+      "industries": [
+        "保险",
+        "证券",
+        "多元金融",
+        "计算机"
+      ],
+      "stocks": [],
+      "impact_level": "major",
+      "duration": "medium",
+      "duration_reason": "涉及季度/中期业绩或阶段性政策",
+      "market_region": "全球"
+    },
+    {
+      "title": "创业板50指数已进入估值与盈利双修复通道，创业板50ETF嘉实(159373)高配“硬科技”行业",
+      "summary": "2026年5月27日盘中，创业板指最高攀升至4148.23点，点数盘中一度超越沪指。 截至13:12，创业板50指数强势上涨1.24%，成分股扬杰科技上涨15.07%，北京君正上涨8.63%，天孚通信上涨7.40%，锦浪科技，江波龙等个股跟涨。 近期，A股各家公司财报集中披露，整体一季报和年报业绩亮眼，其中创业板50指数2025归母净利润增速高达21.58%，远超A股平均2.5%水准。中信证券最新研报指出，创业板50指数已进入估值与盈利双修复通道。 截至2026年5月26日，其动态PE为34.2倍，处于近五年23%分位；同时，成分股2026年一致预测净利润增速为28.4%，较2025年提升5.7个百分点，盈利弹性持续释放。 创业板50ETF嘉实(159373)紧密跟踪创业板50指数，创业板50指数由创业板市场中日均成交额较大的50只股票组成，成分股高配电力设备、通信、电子等“硬科技”行业。 ",
+      "url": "https://www.jiemian.com/article/14491529.html",
+      "publish_date": "2026-05-27 13:38:54",
+      "sentiment": "positive",
+      "sentiment_score": 1.0,
+      "industries": [
+        "公用事业"
+      ],
+      "stocks": [
+        "600030"
+      ],
+      "impact_level": "minor",
+      "duration": "medium",
+      "duration_reason": "涉及季度/中期业绩或阶段性政策",
+      "market_region": "A股"
+    },
+    {
+      "title": "A股TTM&全动态估值全景扫描：A股估值收缩 电子行业逆势上涨",
+      "summary": "本周A 股总体估值收缩，电子行业逆势上涨。AI 算力基础设施需求爆发带来确定性业绩增长，资金在市场波动中集中流向高景气、高确定性的细分赛道。 估值角度，当前电子行业PE(TTM)和PB(LF)分别处于历史98%和100%分位数水平，处于历史高位，后续行情更多需要盈利持续兑现承接。 科创板PE（TTM）扩张幅度高于主板和创业板。 （3）从全动态PE 角度，各大类行业中，可选消费、中游制造、周期类、TMT 绝对估值和相对估值高于历史中位数，可选消费绝对估值和相对估值高于历史90 分位数。 当前，电力设备、传媒、钢铁、有色金属兼具低估值与高业绩增速。 本周股市相对债市性价比下降：A 股非金融ERP 从上周的0.61%升至本周的0.63%，股债收益差从上周的-0.23%升至本周的-0.20%。 A 股非金融重点公司全动态ERP 从上周的3.01%降至本周的2.98%。 风险提示：策略观点不代表行业；估值水平并不代表股价走势；盈利环境发生超预期波动。 ",
+      "url": "https://stock.finance.sina.com.cn/stock/go.php/vReport_Show/kind/search/rptid/832892896223/index.phtml",
+      "publish_date": "2026-05-23 00:00:00",
+      "sentiment": "positive",
+      "sentiment_score": 0.667,
+      "industries": [
+        "计算机",
+        "钢铁",
+        "有色金属",
+        "公用事业"
+      ],
+      "stocks": [],
+      "impact_level": "minor",
+      "duration": "short",
+      "duration_reason": "市场短期波动或技术性行情",
+      "market_region": "A股"
+    },
+    {
+      "title": "5月27日，A股市场上市公司公告汇总摘要",
+      "summary": "2026年5月27日，A股市场上市公司公告汇总摘要。一、重大资产重组。1. 永杰新材（ 603271 ）——重大资产购买报告书修订。 公司根据上交所《问询函》要求，对《重大资产购买报告书（草案）》进行修订，补充披露了标的公司土地房产产权瑕疵、技术许可核心条款及受限区域销售情况、租赁具体内容及租金、核心客户对控制权变更的意见， 以及收益法下未来现金流预测值、分产品毛利率、可比公司数据等。2. 嘉戎技术（ 301148 ）——重大资产重组说明。公司拟发行股份购买杭州蓝然技术股份有限公司100%股权并募集配套资金。 3. 富创精密（ 688409 ）——拟收购上海日扬65%股权。公司拟以现金1.89亿元收购日扬电子科技（上海）有限公司65%股权，快速切入半导体真空阀核心赛道。 标的公司2024-2025年分别实现净利润1233.47万元和1220.35万元。二、风险警示与退市相关。1. *ST汇科（ 300561 ）——撤销退市风险警示及其他风险警示。 补充说明： 英洛华（ 000795 ）、利仁科技（ 001259 ）分别于5月26日发布了权益分派实施公告，股权登记日分别为5月29日和6月...",
+      "url": "https://www.tgb.cn/a/2s82N6KUUeO",
+      "publish_date": "2026-05-27 05:58:00",
+      "sentiment": "negative",
+      "sentiment_score": -0.5,
+      "industries": [
+        "电子"
+      ],
+      "stocks": [
+        "688409",
+        "603271",
+        "000795",
+        "001259",
+        "301148",
+        "300561"
+      ],
+      "impact_level": "major",
+      "duration": "medium",
+      "duration_reason": "涉及季度/中期业绩或阶段性政策",
+      "market_region": "A股"
+    },
+    {
+      "title": "沪市上市公司公告（5月28日）",
+      "summary": "*ST国化：控股股东拟于公司退市整理期增持2%至3.86%股份 5月27日电，*ST国化5月27日公告，控股股东中国文化产业发展集团有限公司拟于公司退市整理期通过上交所采用集中竞价的方式增持公司股份， 拟增持数量不少于公司总股本的2%，不超过公司总股本的3.86%，增持价格上限为4.6元/股。 宁波韵升：港股上市相关工作按计划有序推进 5月27日，宁波韵升在接受调研者提问时表示，港股上市相关工作按计划有序推进，如有进展公司会及时发布公告。 华润微：拟与关联方共同投资设立产业基金 聚焦半导体核心设备等领域 5月27日，华润微公告称，公司拟与关联方共同投资设立润科(重庆)股权投资基金合伙企业(有限合伙)，聚焦半导体核心设备、零部件、耗材及高端芯片设计等领域。 (央广财经) 振华重工：已完成股份回购 5月27日，振华重工发布公告称，2025年9月8日，公司通过上海证券交易所股票交易系统以集中竞价交易方式首次回购公司A股股份。 金帝股份：公司无逾期对外担保情况 5月27日，金帝股份发布公告称，截至本公告披露日，公司及其控股子公司对外担保总额为207，500.00万元，公司对控股子公司提供的担保...",
+      "url": "http://news.10jqka.com.cn/19700121/c677029698.shtml",
+      "publish_date": "2026-05-28 08:40:41",
+      "sentiment": "negative",
+      "sentiment_score": -0.333,
+      "industries": [
+        "港股",
+        "电子"
+      ],
+      "stocks": [],
+      "impact_level": "medium",
+      "duration": "medium",
+      "duration_reason": "涉及季度/中期业绩或阶段性政策",
+      "market_region": "港股"
+    },
+    {
+      "title": "A股证券代码：688234 证券简称：天岳先进 公告编号：2026-033 H股证券代码：02631 证券简称：天岳先进 山东天岳先进科技股份有限公司关于持股5%以上股 东权益变动触及1%刻度的提示性公告",
+      "summary": "A股证券代码：688234 证券简称：天岳先进 公告编号：2026-033 H股证券代码：02631 证券简称：天岳先进 山东天岳先进科技股份有限公司关于持股5%以上股 东权益变动触及1%刻度的提示性公告。 公司本次发行的47,745,700股H股股票（行使超额配售权之前）在香港联交所主板挂牌并上市交易。本次发行上市完成后，公司股份总数由429,711,044股变更为477,456,744股。 2025年9月14日，公司悉数行使超额配售权7,161,800股H股股份，本次悉数行使超额配售权后，公司股份总数由477,456,744股变更为484,618,544股。 2、本次权益变动为公司股东履行其减持股份计划，具体内容详见公司于2026年5月1日在上海证券交易所（www.sse.com.cn）及香港联合交易所披露易网站（www.hkexnews. hk）披露的《股东及其一致行动人减持股份计划公告》（公告编号：2026-027）。截至本公告披露日，上述减持计划尚未实施完毕。3、本次权益变动不会导致公司控股股东、实际控制人发生变化。 敬请广大投资者注意投资风险。特此公告。山东天岳先进科技股份...",
+      "url": "https://epaper.cs.com.cn/zgzqb/html/2026-05/28/nw.D110000zgzqb_20260528_6-B039.htm",
+      "publish_date": "2026-05-28 00:00:00",
+      "sentiment": "negative",
+      "sentiment_score": -1.0,
+      "industries": [],
+      "stocks": [
+        "688234"
+      ],
+      "impact_level": "medium",
+      "duration": "medium",
+      "duration_reason": "涉及季度/中期业绩或阶段性政策",
+      "market_region": "A股"
+    },
+    {
+      "title": "三家A股公司，终止上市",
+      "summary": "5月22日，*ST熊猫（600599）、*ST国化(600636)、*ST华嵘(600421)同日公告，收到上交所对其股票终止上市的决定，公司股票将进入退市整理期交易。 此外，*ST国化公告称，公司收到上交所终止上市决定，因2025年度净利润为负且营收低于3亿元，内部控制被出具否定意见审计报告，触及终止上市条件。 公司股票将于2026年6月1日进入退市整理期，预计最后交易日期为6月22日，交易期限为15个交易日。*ST华嵘也公告称，公司收到上交所股票终止上市决定，因2025年度净利润为负且营收低于3亿元，触及终止上市条件。 公司股票将于2026年6月1日进入退市整理期，预计最后交易日期为2026年6月22日，退市整理期届满后5个交易日内摘牌。原标题：《三家A股公司，终止上市》。阅读原文。 ",
+      "url": "https://m.thepaper.cn/newsDetail_forward_33226216",
+      "publish_date": "2026-05-25 09:06:00",
+      "sentiment": "negative",
+      "sentiment_score": -1.0,
+      "industries": [],
+      "stocks": [
+        "600599",
+        "600636",
+        "600421"
+      ],
+      "impact_level": "medium",
+      "duration": "short",
+      "duration_reason": "市场短期波动或技术性行情",
+      "market_region": "A股"
+    },
+    {
+      "title": "河北A股上市公司2025年报观察：盈利增速持续稳健，创新与资本双轮驱动",
+      "summary": "1、河北省A股上市公司在2025年取得了显著成绩，全省A股上市公司数量达到84家，创历史新高。67家公司实现盈利，归母净利润总额245.82亿元，同比增长8.34%。 截至年末，全省A股上市公司达84家，创历史新高；67家公司实现盈利，盈利面达77.38%，归母净利润总额245.82亿元，同比增长8.34%，展现出强劲的经济韧性与转型动能。产业底盘：传统“压舱”与新兴“突围”并行。 其中长城汽车（601633）研发费用达104.32亿元，连续三年破百亿，以新诺威（300765）、紫光国微（002049）为代表的生物医药、半导体（881121）等新兴领域企业研发占比领跑全省，创新势能持续释放。 华能国际（600011）入驻雄安，积极落实国家战略、服务非首都功能疏解，以央企能源（850101）优势赋能新区绿色低碳高质量发展。河钢集团携手中兴通讯（HK0763）、雄安科技产业园共同打造智能制造垂直大模型。 另外，润泽科技（300442）成功发行全国首批数据中心基础设施REITs项目，募集资金45亿元，有效盘活存量资产。 并购重组方面，全年29家公司首次披露相关事项，交易金额超700亿元，涵盖...",
+      "url": "https://stock.10jqka.com.cn/20260527/c677004958.shtml",
+      "publish_date": "2026-05-27 12:13:01",
+      "sentiment": "positive",
+      "sentiment_score": 1.0,
+      "industries": [
+        "电子",
+        "计算机"
+      ],
+      "stocks": [
+        "300765",
+        "601633",
+        "002049",
+        "600011",
+        "300442"
+      ],
+      "impact_level": "minor",
+      "duration": "long",
+      "duration_reason": "涉及结构性变革、长期政策或产业周期",
+      "market_region": "全球"
+    },
+    {
+      "title": "超千家A股上市公司母公司营业收入占合并报表比重不足10%",
+      "summary": "登录新浪财经APP 搜索【信披】查看更多考评等级近日，浙江证监局对ST臻镭作出行政处罚，直指其全资核心子公司城芯科技2022年虚增营收，导致上市公司年报存在虚假记载。 这家撑起上市公司三成以上营收的子公司造假翻车，直接动摇了ST臻镭整体业绩的可信度。ST臻镭并非孤例，背后是A股上市公司经营架构的变迁。 据证券时报记者统计，2025年超千家上市公司母公司营收占合并报表比重不足10%，数量较往年显著攀升。诸多上市公司母公司逐步剥离实体经营职能，转向控股，子公司则从昔日业务配角，一跃成为支撑上市公司的实际经营核心。 与之相悖的是，子公司经营权重快速抬升，信息披露要求却并未同步跟进。手握上市公司业绩命脉的核心子公司长期处于披露不充分状态，持续影响上市公司规范运作与信息透明度。（证券时报） ",
+      "url": "https://finance.sina.com.cn/jjxw/2026-05-28/doc-inhzkwsy8810961.shtml",
+      "publish_date": "2026-05-28 07:08:00",
+      "sentiment": "negative",
+      "sentiment_score": -1.0,
+      "industries": [],
+      "stocks": [],
+      "impact_level": "minor",
+      "duration": "medium",
+      "duration_reason": "涉及季度/中期业绩或阶段性政策",
+      "market_region": "A股"
+    },
+    {
+      "title": "2025年超千家A股上市公司母公司营收占合并报表比重不足10%，子公司信披短板待补",
+      "summary": "近日，浙江证监局对ST臻镭作出行政处罚，直指其全资核心子公司城芯科技2022年虚增营收，导致上市公司年报存在虚假记载。这家撑起上市公司三成以上营收的子公司造假翻车，直接动摇了ST臻镭整体业绩的可信度。 ST臻镭并非孤例，背后是A股上市公司经营架构的变迁。据统计，2025年超千家上市公司母公司营收占合并报表比重不足10%，数量较往年显著攀升。 诸多上市公司母公司逐步剥离实体经营职能，转向控股，子公司则从昔日业务配角，一跃成为支撑上市公司的实际经营核心。 与之相悖的是，子公司经营权重快速抬升，信息披露要求却并未同步跟进。 手握上市公司业绩命脉的核心子公司长期处于披露不充分状态，持续影响上市公司规范运作与信息透明度。（人民财讯） ",
+      "url": "https://www.jiemian.com/article/14495551.html",
+      "publish_date": "2026-05-28 08:14:58",
+      "sentiment": "negative",
+      "sentiment_score": -1.0,
+      "industries": [],
+      "stocks": [],
+      "impact_level": "minor",
+      "duration": "medium",
+      "duration_reason": "涉及季度/中期业绩或阶段性政策",
+      "market_region": "A股"
+    },
+    {
+      "title": "证券代码：600019 证券简称：宝钢股份 公告编号：临2026-025 宝山钢铁股份有限公司关于与关联人共同投资公告",
+      "summary": "证券代码：600019 证券简称：宝钢股份 公告编号：临2026-025 宝山钢铁股份有限公司关于与关联人共同投资公告本公司董事会及全体董事保证本公告内容不存在任何虚假记载、误导性陈述或者重大遗漏， 并对其内容的真实性、准确性和完整性承担法律责任。重要内容提示： ● 宝山钢铁股份有限公司（以下简称“本公司”或“宝钢股份”）及下属公司武汉钢铁有限公司（以下简称“武钢有限”）、宝钢湛江钢铁有限公司（以下简称“湛江钢铁”）、上海梅山钢铁股份有限公司（以下简称“梅钢公司”）、 宝武碳业科技股份有限公司（以下简称“宝武碳业”）、宝钢化工湛江有限公司（以下简称“宝化湛江”）拟以所持宝武水务科技有限公司（以下简称“宝武水务”）46.44%股权评估作价16.80亿元， 与宝武水务现股东中国宝武钢铁集团有限公司（以下简称“中国宝武”）及下属公司共同增资入股宝武集团环境资源科技有限公司（以下简称“宝武环科”），增资后宝钢股份及下属公司合计持股宝武环科19.93%， 投资金额及股权比例最终以经国资备案的宝武水务及宝武环科的净资产评估价值为基准确定，下同。 截至本公告披露日，本次关联交易事项所涉其他上市公司均...",
+      "url": "https://epaper.cs.com.cn/zgzqb/html/2026-05/28/nw.D110000zgzqb_20260528_7-B004.htm",
+      "publish_date": "2026-05-28 00:00:00",
+      "sentiment": "positive",
+      "sentiment_score": 1.0,
+      "industries": [
+        "钢铁",
+        "基础化工",
+        "公用事业"
+      ],
+      "stocks": [
+        "600019"
+      ],
+      "impact_level": "major",
+      "duration": "medium",
+      "duration_reason": "涉及季度/中期业绩或阶段性政策",
+      "market_region": "A股"
+    }
+  ]
+}

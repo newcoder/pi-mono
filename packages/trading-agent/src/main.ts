@@ -16,6 +16,7 @@ import { TaskScheduler } from "./scheduler/task-scheduler.js";
 import { BackgroundSyncService } from "./server/background-sync.js";
 import { startServer } from "./server/index.js";
 import { advancedScreenTool } from "./tools/advanced-screening.js";
+import { analyzeMarketThemeTool } from "./tools/analyze-market-theme.js";
 import { backtestStrategyTool } from "./tools/backtest.js";
 import { compareStocksTool } from "./tools/compare-stocks.js";
 import {
@@ -267,6 +268,7 @@ const BUILTIN_TOOLS = new Map<string, AgentTool<any>>([
 	["advanced_screen", advancedScreenTool],
 	["compare_stocks", compareStocksTool],
 	["discover_trading_ideas", discoverTradingIdeasTool],
+	["analyze_market_theme", analyzeMarketThemeTool],
 	["get_sector_rotation", getSectorRotationTool],
 	["get_concept_stocks", getConceptStocksTool],
 	["list_concepts", listConceptsTool],

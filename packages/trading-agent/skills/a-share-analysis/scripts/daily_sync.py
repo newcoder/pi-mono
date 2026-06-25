@@ -1042,10 +1042,10 @@ def sync_industries() -> dict:
 
 @_phase("concepts")
 def sync_concepts() -> dict:
-    """Sync concept stocks via existing sync_concepts_jq.py."""
+    """Sync concept stocks via Tonghuashun (avoids blocked Eastmoney HTTP APIs)."""
     try:
-        import sync_concepts_jq
-        result = sync_concepts_jq.sync_all_concepts()
+        import sync_concept_stocks_ths
+        result = sync_concept_stocks_ths.sync_all_concepts()
         return {"detail": result}
     except Exception as e:
         raise RuntimeError(f"Concept sync failed: {e}")
