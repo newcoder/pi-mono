@@ -20,6 +20,21 @@ function localDateString(d = new Date()): string {
 	return d.toLocaleDateString("sv-SE");
 }
 
+/** Check if a kline is at limit-up (cannot buy). Covers all A-share boards (10/20/30%). */
+function isLimitUp(kline: KlineRow): boolean {
+	const chg = kline.change_pct;
+	if (chg == null) return false;
+	// Boards: main ±10%, ChiNext/STAR ±20%, Beijing ±30%. 0.5% tolerance for rounding.
+	return Math.abs(chg - 10) < 0.5 || Math.abs(chg - 20) < 0.5 || Math.abs(chg - 30) < 0.5;
+}
+
+/** Check if a kline is at limit-down (cannot sell). */
+function isLimitDown(kline: KlineRow): boolean {
+	const chg = kline.change_pct;
+	if (chg == null) return false;
+	return Math.abs(chg + 10) < 0.5 || Math.abs(chg + 20) < 0.5 || Math.abs(chg + 30) < 0.5;
+}
+
 export async function runBacktest(config: BacktestConfig): Promise<BacktestResult> {
 	const t0 = performance.now();
 
@@ -167,6 +182,11 @@ export function simulateTrades(
 					signalIdx++;
 					continue;
 				}
+				// Skip buy if at limit-up (cannot buy涨停)
+				if (isLimitUp(execKline)) {
+					signalIdx++;
+					continue;
+				}
 
 				entryPrice = execKline.open * (1 + slippage);
 				const tradeCapital = capital * positionSize;
@@ -184,6 +204,11 @@ export function simulateTrades(
 			} else if (signal.type === "sell" && entryIndex >= 0) {
 				const execKline = klines[execIdx];
 				if (!execKline || execKline.open == null) {
+					signalIdx++;
+					continue;
+				}
+				// Skip sell if at limit-down (cannot sell跌停)
+				if (isLimitDown(execKline)) {
 					signalIdx++;
 					continue;
 				}
@@ -273,6 +298,58 @@ export async function runPoolBacktest(
 	if (!store) throw new Error("DataStore not initialized.");
 
 	const initialCapital = config.initialCapital ?? 100_000;
+	const randomRuns = config.randomRuns ?? 1;
+
+	// Multi-run aggregation for random selection
+	if (config.rankBy === "random" && randomRuns > 1) {
+		const runs: PoolBacktestResult[] = [];
+		for (let i = 0; i < randomRuns; i++) {
+			runs.push(await runPoolBacktest(stocks, { ...config, randomRuns: 1 }));
+		}
+		const valid = runs.filter((r) => r.metrics.totalTrades > 0);
+		if (valid.length === 0) return runs[0];
+
+		const allTrades = valid.flatMap((r) => r.trades);
+		const maxEqLen = Math.max(...valid.map((r) => r.equityCurve.length));
+		const aggEquity: EquityPoint[] = [];
+		for (let d = 0; d < maxEqLen; d++) {
+			const vals = valid.map((r) => r.equityCurve[d]?.equity).filter((e): e is number => e != null);
+			if (vals.length >= valid.length / 2) {
+				aggEquity.push({
+					date: valid[0].equityCurve[Math.min(d, valid[0].equityCurve.length - 1)].date,
+					equity: vals.sort((a, b) => a - b)[Math.floor(vals.length / 2)],
+				});
+			}
+		}
+		const sellTrades = allTrades.filter((t) => t.direction === "sell" && t.pnl != null);
+		const tradeObjs = sellTrades.map((t) => ({
+			entryIndex: 0,
+			entryDate: t.date,
+			entryPrice: t.price,
+			exitIndex: 0,
+			exitDate: t.date,
+			exitPrice: t.price,
+			shares: t.shares,
+			pnl: t.pnl ?? 0,
+			pnlPct: t.pnlPct ?? 0,
+			daysHeld: t.daysHeld ?? 0,
+			result: (t.result ?? "breakeven") as "win" | "loss" | "breakeven",
+		}));
+		const aggMetrics = computeMetrics(tradeObjs, aggEquity, initialCapital);
+
+		return {
+			stocks,
+			strategy: config.strategy,
+			startDate: valid[0].startDate,
+			endDate: valid[0].endDate,
+			initialCapital,
+			trades: allTrades,
+			equityCurve: aggEquity,
+			metrics: aggMetrics,
+			elapsedMs: Math.round(performance.now() - t0),
+		};
+	}
+
 	const slippage = config.slippage ?? 0.001;
 	const commission = config.commission ?? 0.0003;
 	const minLot = config.minLot ?? 100;
@@ -594,6 +671,9 @@ export async function runPoolBacktest(
 
 			const exec = stock.execMap.get(date);
 			if (exec?.type === "sell") {
+				// Skip if at limit-down
+				const execKline = klineMaps.find((m) => m.code === code)?.map.get(date);
+				if (execKline && isLimitDown(execKline)) continue;
 				const sellPrice = exec.price * (1 - slippage);
 				const sellAmount = pos.shares * sellPrice;
 				if (!isTradeAmountValid(sellAmount, minTradeAmount)) {
@@ -666,7 +746,8 @@ export async function runPoolBacktest(
 			.map((s) => {
 				const exec = s.execMap.get(date);
 				if (exec?.type !== "buy") return null;
-				const rankScore = computeRankScore(s, klineMaps, date, config.rankBy);
+				const rankScore =
+					config.rankBy === "random" ? Math.random() : computeRankScore(s, klineMaps, date, config.rankBy);
 				return { code: s.code, stock: s, score: rankScore };
 			})
 			.filter((c): c is NonNullable<typeof c> => c !== null)
@@ -682,6 +763,10 @@ export async function runPoolBacktest(
 
 				const exec = stock.execMap.get(date);
 				if (exec?.type !== "buy") continue;
+
+				// Skip if at limit-up
+				const execKline2 = klineMaps.find((m) => m.code === code)?.map.get(date);
+				if (execKline2 && isLimitUp(execKline2)) continue;
 
 				const buyPrice = exec.price * (1 + slippage);
 				const maxBuyAmount = computeMaxBuyAmount(initialCapital, cash, positions.size, stockData.length);
@@ -784,7 +869,12 @@ export async function runPoolBacktest(
 				for (const code of selectedCodes) {
 					const stock = stockData.find((s) => s.code === code);
 					if (!stock) continue;
-					if (stock.execMap.get(date)?.type === "buy") targetCodes.add(code);
+					if (stock.execMap.get(date)?.type === "buy") {
+						// Skip if at limit-up
+						const ek = klineMaps.find((m) => m.code === code)?.map.get(date);
+						if (ek && isLimitUp(ek)) continue;
+						targetCodes.add(code);
+					}
 				}
 
 				if (targetCodes.size > 0) {

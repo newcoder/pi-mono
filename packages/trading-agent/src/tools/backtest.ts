@@ -34,6 +34,12 @@ const backtestParams = Type.Object({
 			Type.Literal("rsi_reversal", { description: "RSI超卖买入/超买卖出" }),
 			Type.Literal("bollinger_breakout", { description: "布林带下轨反弹/上轨回落" }),
 			Type.Literal("supertrend", { description: "Supertrend趋势跟踪：转多买入/转空卖出" }),
+			Type.Literal("hammer", { description: "锤子线反转：长下影+小实体，前日阴线" }),
+			Type.Literal("bullish_engulf", { description: "阳包阴：阳线实体完全吞没前日阴线" }),
+			Type.Literal("morning_star", { description: "晨星：大阴→小星→大阳，底部反转" }),
+			Type.Literal("three_soldiers", { description: "红三兵：连续三阳，逐步放量" }),
+			Type.Literal("tech_composite", { description: "技术综合打分：趋势+动量+量能+波动率四维评分" }),
+			Type.Literal("breakout", { description: "突破买入：放量上涨，量比阈值+涨幅阈值" }),
 		],
 		{ description: "回测策略类型" },
 	),
@@ -167,6 +173,7 @@ const backtestParams = Type.Object({
 				Type.Literal("value", { description: "按价格倒数排序，买便宜" }),
 				Type.Literal("turnover", { description: "按换手率排序，买活跃" }),
 				Type.Literal("technical", { description: "按技术综合分排序" }),
+				Type.Literal("random", { description: "随机选择，多次运行取平均" }),
 			],
 			{ description: "买入候选的二级排序因子" },
 		),
@@ -174,6 +181,13 @@ const backtestParams = Type.Object({
 	max_positions: Type.Optional(
 		Type.Number({
 			description: "最大同时持仓数，只买入排名前N的",
+		}),
+	),
+
+	random_runs: Type.Optional(
+		Type.Number({
+			description: "随机选择时运行次数，>1时多次采样取中位数",
+			default: 1,
 		}),
 	),
 	save_to_portfolio: Type.Optional(
@@ -281,6 +295,7 @@ export const backtestStrategyTool: AgentTool<typeof backtestParams, BacktestTool
 							direction: params.size_filter.direction ?? "small",
 							rankBy: params.rank_by as "momentum" | "value" | "turnover" | "technical" | undefined,
 							maxPositions: params.max_positions,
+							randomRuns: params.random_runs,
 						}
 					: undefined,
 			};

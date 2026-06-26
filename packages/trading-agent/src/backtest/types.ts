@@ -1,6 +1,17 @@
 import type { KlineRow } from "../data/types.js";
 
-export type StrategyType = "ma_cross" | "macd_cross" | "rsi_reversal" | "bollinger_breakout" | "supertrend";
+export type StrategyType =
+	| "ma_cross"
+	| "macd_cross"
+	| "rsi_reversal"
+	| "bollinger_breakout"
+	| "supertrend"
+	| "hammer"
+	| "bullish_engulf"
+	| "morning_star"
+	| "three_soldiers"
+	| "tech_composite"
+	| "breakout";
 
 export interface BacktestConfig {
 	code: string;
@@ -114,8 +125,9 @@ export interface PoolBacktestConfig {
 	strategyParams?: Record<string, number>;
 	industryFilter?: PoolIndustryFilterConfig;
 	sizeFilter?: PoolSizeFilterConfig;
-	rankBy?: "momentum" | "value" | "turnover" | "technical";
+	rankBy?: "momentum" | "value" | "turnover" | "technical" | "random";
 	maxPositions?: number;
+	randomRuns?: number;
 }
 
 // ─── Pool Backtest Types ──────────────────────────────────────────
