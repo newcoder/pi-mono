@@ -40,8 +40,36 @@ const backtestParams = Type.Object({
 			Type.Literal("three_soldiers", { description: "红三兵：连续三阳，逐步放量" }),
 			Type.Literal("tech_composite", { description: "技术综合打分：趋势+动量+量能+波动率四维评分" }),
 			Type.Literal("breakout", { description: "突破买入：放量上涨，量比阈值+涨幅阈值" }),
+			Type.Literal("volume_contraction", { description: "缩量调整：价格下跌+成交量萎缩+波动率收敛后买入" }),
+			Type.Literal("shooting_star", { description: "流星线反转：长上影+小实体，顶部卖出信号" }),
+			Type.Literal("bearish_engulf", { description: "阴包阳：阴线实体完全吞没前日阳线，卖出信号" }),
+			Type.Literal("evening_star", { description: "暮星：大阳→小星→大阴，顶部反转卖出信号" }),
+			Type.Literal("three_crows", { description: "三只乌鸦：连续三阴，逐步下跌，卖出信号" }),
+			Type.Literal("rsi_overbought_sell", { description: "RSI超买回落：RSI从超买区下穿，卖出信号" }),
 		],
 		{ description: "回测策略类型" },
+	),
+	exit_strategy: Type.Optional(
+		Type.Union(
+			[
+				Type.Literal("ma_cross", { description: "MA均线死叉" }),
+				Type.Literal("macd_cross", { description: "MACD死叉" }),
+				Type.Literal("rsi_reversal", { description: "RSI超买回落" }),
+				Type.Literal("bollinger_breakout", { description: "布林带上轨回落" }),
+				Type.Literal("supertrend", { description: "Supertrend转空" }),
+				Type.Literal("shooting_star", { description: "流星线反转" }),
+				Type.Literal("bearish_engulf", { description: "阴包阳" }),
+				Type.Literal("evening_star", { description: "暮星" }),
+				Type.Literal("three_crows", { description: "三只乌鸦" }),
+				Type.Literal("rsi_overbought_sell", { description: "RSI超买回落" }),
+			],
+			{ description: "独立的卖出信号策略，与主策略买入信号配合作为退出条件；不生成买入信号" },
+		),
+	),
+	exit_params: Type.Optional(
+		Type.Record(Type.String(), Type.Number(), {
+			description: "退出策略参数，如 {fast:5, slow:10} 或 {period:14, overbought:70}",
+		}),
 	),
 	start: Type.Optional(Type.String({ description: "起始日期 YYYYMMDD，默认一年前" })),
 	end: Type.Optional(Type.String({ description: "结束日期 YYYYMMDD，默认今天" })),
@@ -177,6 +205,7 @@ const backtestParams = Type.Object({
 				Type.Literal("low_volatility", { description: "按近期收益率波动排序，波动低的排前面" }),
 				Type.Literal("signal_recency", { description: "按买入信号产生时间排序，越近的排前面" }),
 				Type.Literal("ma_alignment", { description: "按10/20/60日均线多头排列强度排序，越强越靠前" }),
+				Type.Literal("weekly_ma_alignment", { description: "按5/10/20周均线多头排列强度排序，越强越靠前" }),
 				Type.Literal("random", { description: "随机选择，多次运行取平均" }),
 			],
 			{ description: "买入候选的二级排序因子" },
@@ -240,7 +269,7 @@ export const backtestStrategyTool: AgentTool<typeof backtestParams, BacktestTool
 	name: "backtest_strategy",
 	label: "回测策略",
 	description:
-		"对单只股票或股票池运行技术指标回测，验证策略历史表现。支持MA均线金叉/死叉、MACD金叉/死叉、RSI超卖买入/超买卖出、布林带下轨反弹/上轨回落、Supertrend趋势跟踪、锤子线反转、阳包阴、晨星、红三兵、技术综合打分、突破买入共11种策略。提供 code 回测单只股票，或提供 pool_id 对股票池中所有股票批量回测（共享资金池、动态仓位分配、100股整数倍）。数据从本地数据库读取。可通过 save_to_portfolio 将回测交易记录保存到组合中；通过 benchmark_index 生成带指数对比的 HTML 报告；通过 save_holdings_as_pool 将回测终点持仓保存为新股池。",
+		"对单只股票或股票池运行技术指标回测，验证策略历史表现。支持MA均线金叉/死叉、MACD金叉/死叉、RSI超卖买入/超买卖出、布林带下轨反弹/上轨回落、Supertrend趋势跟踪、锤子线反转、阳包阴、晨星、红三兵、技术综合打分、突破买入、缩量调整、流星线、阴包阳、暮星、三只乌鸦、RSI超买回落共17种策略。可通过 exit_strategy 指定独立的卖出信号策略作为退出条件（例如买入用 hammer，卖出用 shooting_star）。提供 code 回测单只股票，或提供 pool_id 对股票池中所有股票批量回测（共享资金池、动态仓位分配、100股整数倍）。数据从本地数据库读取。可通过 save_to_portfolio 将回测交易记录保存到组合中；通过 benchmark_index 生成带指数对比的 HTML 报告；通过 save_holdings_as_pool 将回测终点持仓保存为新股池。",
 	parameters: backtestParams,
 	execute: async (_id, params) => {
 		const isPool = params.pool_id != null;
@@ -271,6 +300,8 @@ export const backtestStrategyTool: AgentTool<typeof backtestParams, BacktestTool
 
 			const poolConfig = {
 				strategy: params.strategy as StrategyType,
+				exitStrategy: params.exit_strategy as StrategyType | undefined,
+				exitStrategyParams: params.exit_params,
 				start: params.start,
 				end: params.end,
 				period: params.period ?? "daily",
@@ -500,6 +531,8 @@ export const backtestStrategyTool: AgentTool<typeof backtestParams, BacktestTool
 			code: params.code,
 			market: params.market ?? 1,
 			strategy: params.strategy as StrategyType,
+			exitStrategy: params.exit_strategy as StrategyType | undefined,
+			exitStrategyParams: params.exit_params,
 			start: params.start,
 			end: params.end,
 			period: params.period ?? "daily",

@@ -13,8 +13,34 @@ import type {
 	PoolSizeFilterConfig,
 	PoolTrade,
 	Signal,
+	StrategyType,
 	Trade,
 } from "./types.js";
+
+function combineSignals(entrySignals: Signal[], exitSignals?: Signal[]): Signal[] {
+	const buys = entrySignals.filter((s) => s.type === "buy");
+	const sells = entrySignals.filter((s) => s.type === "sell");
+	const extraSells = exitSignals?.filter((s) => s.type === "sell") ?? [];
+	const combined = [...buys, ...sells, ...extraSells];
+	combined.sort((a, b) => {
+		if (a.index !== b.index) return a.index - b.index;
+		// Within the same candle, process buys before sells to avoid same-day churn
+		return a.type === "buy" ? -1 : 1;
+	});
+	return combined;
+}
+
+function generateStrategySignals(
+	klines: KlineRow[],
+	strategy: StrategyType,
+	strategyParams?: Record<string, number>,
+	exitStrategy?: StrategyType,
+	exitStrategyParams?: Record<string, number>,
+): Signal[] {
+	const entrySignals = generateSignals(klines, strategy, strategyParams);
+	const exitSignals = exitStrategy ? generateSignals(klines, exitStrategy, exitStrategyParams) : undefined;
+	return combineSignals(entrySignals, exitSignals);
+}
 
 function localDateString(d = new Date()): string {
 	return d.toLocaleDateString("sv-SE");
@@ -35,6 +61,29 @@ function isLimitDown(kline: KlineRow): boolean {
 	return Math.abs(chg + 10) < 0.5 || Math.abs(chg + 20) < 0.5 || Math.abs(chg + 30) < 0.5;
 }
 
+function getISOWeek(dateStr: string): string {
+	const [y, m, d] = dateStr.split("-").map(Number);
+	const date = new Date(y, m - 1, d);
+	const day = date.getDay() || 7;
+	date.setDate(date.getDate() + 4 - day);
+	const yearStart = new Date(date.getFullYear(), 0, 1);
+	const weekNo = Math.ceil(((date.getTime() - yearStart.getTime()) / 86_400_000 + 1) / 7);
+	return `${date.getFullYear()}-W${String(weekNo).padStart(2, "0")}`;
+}
+
+function buildWeeklyCloses(klines: KlineRow[]): Array<{ endDate: string; close: number }> {
+	const weekMap = new Map<string, { endDate: string; close: number }>();
+	for (const k of klines) {
+		if (k.close == null) continue;
+		const week = getISOWeek(k.date);
+		const existing = weekMap.get(week);
+		if (!existing || k.date > existing.endDate) {
+			weekMap.set(week, { endDate: k.date, close: k.close });
+		}
+	}
+	return [...weekMap.values()].sort((a, b) => a.endDate.localeCompare(b.endDate));
+}
+
 export async function runBacktest(config: BacktestConfig): Promise<BacktestResult> {
 	const t0 = performance.now();
 
@@ -44,8 +93,14 @@ export async function runBacktest(config: BacktestConfig): Promise<BacktestResul
 		throw new Error("No kline data available for the specified stock and date range.");
 	}
 
-	// 2. Generate signals
-	const signals = generateSignals(klines, config.strategy, config.strategyParams);
+	// 2. Generate signals (entry + optional exit strategy)
+	const signals = generateStrategySignals(
+		klines,
+		config.strategy,
+		config.strategyParams,
+		config.exitStrategy,
+		config.exitStrategyParams,
+	);
 
 	// 3. Simulate trades
 	const initialCapital = config.initialCapital ?? 100_000;
@@ -418,7 +473,13 @@ export async function runPoolBacktest(
 			}
 		}
 
-		const signals = generateSignals(adjustedKlines, config.strategy, config.strategyParams);
+		const signals = generateStrategySignals(
+			adjustedKlines,
+			config.strategy,
+			config.strategyParams,
+			config.exitStrategy,
+			config.exitStrategyParams,
+		);
 
 		// Pre-compute execution events: signal at index i executes at index i+1 open
 		const execMap = new Map<string, { type: "buy" | "sell"; price: number; signalDate: string }>();
@@ -461,6 +522,12 @@ export async function runPoolBacktest(
 		for (const k of s.klines) map.set(k.date, k);
 		return { code: s.code, map };
 	});
+
+	// 3a. Build weekly close series for weekly MA ranking
+	const weeklyCloseSeries = new Map<string, Array<{ endDate: string; close: number }>>();
+	for (const s of stockData) {
+		weeklyCloseSeries.set(s.code, buildWeeklyCloses(s.klines));
+	}
 
 	// 3b. Load optional industry momentum filter data
 	type IndustryFilterContext = PoolIndustryFilterConfig & {
@@ -697,6 +764,28 @@ export async function runPoolBacktest(
 				if (ma10 <= 0 || ma20 <= 0 || ma60 <= 0) return 0;
 				const close = closes[closes.length - 1];
 				return close / ma10 - 1 + (ma10 / ma20 - 1) + (ma20 / ma60 - 1);
+			}
+			case "weekly_ma_alignment": {
+				// Bullish alignment strength on weekly closes: 5/10/20 week MA.
+				// Score = (close/WMA5 - 1) + (WMA5/WMA10 - 1) + (WMA10/WMA20 - 1).
+				const series = weeklyCloseSeries.get(stock.code);
+				if (!series || series.length === 0) return 0;
+				let idx = -1;
+				for (let i = 0; i < series.length; i++) {
+					if (series[i].endDate <= scoreDate) idx = i;
+					else break;
+				}
+				if (idx < 0) return 0;
+				const needed = 20;
+				if (idx + 1 < needed) return 0;
+				const avg = (arr: number[]) => arr.reduce((a, b) => a + b, 0) / arr.length;
+				const closes = series.slice(0, idx + 1).map((s) => s.close);
+				const wma5 = avg(closes.slice(-5));
+				const wma10 = avg(closes.slice(-10));
+				const wma20 = avg(closes.slice(-20));
+				if (wma5 <= 0 || wma10 <= 0 || wma20 <= 0) return 0;
+				const close = closes[closes.length - 1];
+				return close / wma5 - 1 + (wma5 / wma10 - 1) + (wma10 / wma20 - 1);
 			}
 			default:
 				return 0;

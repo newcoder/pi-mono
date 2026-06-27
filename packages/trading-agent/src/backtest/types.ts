@@ -11,12 +11,19 @@ export type StrategyType =
 	| "morning_star"
 	| "three_soldiers"
 	| "tech_composite"
-	| "breakout";
+	| "breakout"
+	| "volume_contraction"
+	| "shooting_star"
+	| "bearish_engulf"
+	| "evening_star"
+	| "three_crows"
+	| "rsi_overbought_sell";
 
 export interface BacktestConfig {
 	code: string;
 	market: number;
 	strategy: StrategyType;
+	exitStrategy?: StrategyType;
 	start?: string;
 	end?: string;
 	period?: string;
@@ -28,6 +35,7 @@ export interface BacktestConfig {
 	maxHoldingDays?: number;
 	minLot?: number; // minimum lot size, e.g. 100 for A-shares
 	strategyParams?: Record<string, number>;
+	exitStrategyParams?: Record<string, number>;
 }
 
 export interface Signal {
@@ -107,6 +115,7 @@ export interface PoolSizeFilterConfig {
 
 export interface PoolBacktestConfig {
 	strategy: StrategyType;
+	exitStrategy?: StrategyType;
 	start?: string;
 	end?: string;
 	period?: string;
@@ -123,6 +132,7 @@ export interface PoolBacktestConfig {
 	maxHoldingDays?: number;
 	minLot?: number;
 	strategyParams?: Record<string, number>;
+	exitStrategyParams?: Record<string, number>;
 	industryFilter?: PoolIndustryFilterConfig;
 	sizeFilter?: PoolSizeFilterConfig;
 	rankBy?:
@@ -133,6 +143,7 @@ export interface PoolBacktestConfig {
 		| "low_volatility"
 		| "signal_recency"
 		| "ma_alignment"
+		| "weekly_ma_alignment"
 		| "random";
 	maxPositions?: number;
 	randomRuns?: number;

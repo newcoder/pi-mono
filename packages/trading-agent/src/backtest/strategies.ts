@@ -19,6 +19,12 @@ export interface StrategyParams {
 	minChange?: number; // min change_pct for breakout (default 2)
 	compositeThreshold?: number; // buy threshold for tech_composite (default 65)
 	compositeExitThreshold?: number; // sell threshold (default 40)
+	// Volume contraction signal
+	lookbackDays?: number; // prior reference window length (default 20)
+	contractionDays?: number; // recent adjustment window length (default 5)
+	priceDropPct?: number; // min price drop from adjustment start (default 5)
+	volumeRatioMax?: number; // max recent/prior volume ratio (default 0.7)
+	volatilityRatioMax?: number; // max recent/prior volatility ratio (default 0.6)
 }
 
 export function generateSignals(klines: KlineRow[], strategy: StrategyType, params: StrategyParams = {}): Signal[] {
@@ -45,6 +51,18 @@ export function generateSignals(klines: KlineRow[], strategy: StrategyType, para
 			return techCompositeSignals(klines, params);
 		case "breakout":
 			return breakoutSignals(klines, params);
+		case "volume_contraction":
+			return volumeContractionSignals(klines, params);
+		case "shooting_star":
+			return shootingStarSignals(klines, params);
+		case "bearish_engulf":
+			return bearishEngulfSignals(klines, params);
+		case "evening_star":
+			return eveningStarSignals(klines, params);
+		case "three_crows":
+			return threeCrowsSignals(klines, params);
+		case "rsi_overbought_sell":
+			return rsiOverboughtSellSignals(klines, params);
 		default:
 			return [];
 	}
@@ -369,6 +387,206 @@ function threeSoldiersSignals(klines: KlineRow[], _params: StrategyParams): Sign
 		signals.push({ index: i, date: c3.date, type: "buy", price: c3.close, reason: "ThreeSoldiers" });
 	}
 	return signals;
+}
+
+function shootingStarSignals(klines: KlineRow[], params: StrategyParams): Signal[] {
+	const minBody = params.minBodyRatio ?? 0.02;
+	const signals: Signal[] = [];
+	for (let i = 1; i < klines.length; i++) {
+		const c = klines[i],
+			p = klines[i - 1];
+		if (c.open == null || c.close == null || c.high == null || c.low == null) continue;
+		if (p.open == null || p.close == null) continue;
+		const body = Math.abs(c.close - c.open);
+		const upper = c.high - Math.max(c.open, c.close);
+		const lower = Math.min(c.open, c.close) - c.low;
+		if (body < c.close * minBody) continue;
+		if (upper < body * 2) continue;
+		if (lower > body * 0.3) continue;
+		if (p.close <= p.open) continue; // prior should be bullish
+		if (p.close >= c.open) continue; // gap up
+		signals.push({ index: i, date: c.date, type: "sell", price: c.close, reason: "ShootingStar" });
+	}
+	return signals;
+}
+
+function bearishEngulfSignals(klines: KlineRow[], _params: StrategyParams): Signal[] {
+	const signals: Signal[] = [];
+	for (let i = 1; i < klines.length; i++) {
+		const c = klines[i],
+			p = klines[i - 1];
+		if (c.open == null || c.close == null || p.open == null || p.close == null) continue;
+		const cBody = Math.abs(c.close - c.open),
+			pBody = Math.abs(p.close - p.open);
+		if (c.close >= c.open || p.close <= p.open) continue;
+		if (c.open <= p.close || c.close >= p.open) continue;
+		if (cBody < pBody * 0.8) continue;
+		signals.push({ index: i, date: c.date, type: "sell", price: c.close, reason: "BearishEngulf" });
+	}
+	return signals;
+}
+
+function eveningStarSignals(klines: KlineRow[], params: StrategyParams): Signal[] {
+	const minBody = params.minBodyRatio ?? 0.02;
+	const signals: Signal[] = [];
+	for (let i = 2; i < klines.length; i++) {
+		const pp = klines[i - 2],
+			p = klines[i - 1],
+			c = klines[i];
+		if (!pp.close || !pp.open || !p.close || !p.open || !c.close || !c.open) continue;
+		const ppBody = Math.abs(pp.close - pp.open),
+			pBody = Math.abs(p.close - p.open),
+			cBody = Math.abs(c.close - c.open);
+		if (pp.close <= pp.open || ppBody < pp.close * minBody) continue;
+		if (pBody > ppBody * 0.5) continue;
+		if ((p.open + p.close) / 2 <= pp.close) continue;
+		if (c.close >= c.open || cBody < c.close * minBody) continue;
+		if (c.open >= (p.open + p.close) / 2) continue;
+		const midPoint = (pp.open + pp.close) / 2;
+		if (c.close >= midPoint) continue;
+		signals.push({ index: i, date: c.date, type: "sell", price: c.close, reason: "EveningStar" });
+	}
+	return signals;
+}
+
+function threeCrowsSignals(klines: KlineRow[], _params: StrategyParams): Signal[] {
+	const signals: Signal[] = [];
+	for (let i = 2; i < klines.length; i++) {
+		const c1 = klines[i - 2],
+			c2 = klines[i - 1],
+			c3 = klines[i];
+		if (!c1.close || !c2.close || !c3.close || !c1.open || !c2.open || !c3.open) continue;
+		if (c1.close >= c1.open || c2.close >= c2.open || c3.close >= c3.open) continue;
+		if (c2.close >= c1.close || c3.close >= c2.close) continue;
+		if (c2.open > c1.open || c2.open < c1.close) continue;
+		if (c3.open > c2.open || c3.open < c2.close) continue;
+		signals.push({ index: i, date: c3.date, type: "sell", price: c3.close, reason: "ThreeCrows" });
+		i += 2; // avoid overlapping patterns
+	}
+	return signals;
+}
+
+function rsiOverboughtSellSignals(klines: KlineRow[], params: StrategyParams): Signal[] {
+	const period = params.period ?? 14;
+	const overbought = params.overbought ?? 70;
+	if (klines.length < period + 1) return [];
+
+	const closes = getCloses(klines);
+	const rsi = computeRSI(closes, { period }).values;
+	const signals: Signal[] = [];
+
+	for (let i = 1; i < klines.length; i++) {
+		const prev = rsi[i - 1];
+		const curr = rsi[i];
+		if (prev == null || curr == null) continue;
+
+		if (prev >= overbought && curr < overbought) {
+			signals.push({
+				index: i,
+				date: klines[i].date,
+				type: "sell",
+				price: klines[i].close ?? 0,
+				reason: `RSI${period}超买回落(${curr.toFixed(1)})`,
+			});
+		}
+	}
+	return signals;
+}
+
+function volumeContractionSignals(klines: KlineRow[], params: StrategyParams): Signal[] {
+	const lookbackDays = params.lookbackDays ?? 20;
+	const contractionDays = params.contractionDays ?? 5;
+	const priceDropPct = params.priceDropPct ?? 5;
+	const volumeRatioMax = params.volumeRatioMax ?? 0.7;
+	const volatilityRatioMax = params.volatilityRatioMax ?? 0.6;
+
+	const minLength = lookbackDays + contractionDays;
+	if (klines.length < minLength) return [];
+
+	const signals: Signal[] = [];
+
+	for (let i = minLength - 1; i < klines.length; i++) {
+		const current = klines[i];
+		if (current.close == null || current.volume == null) continue;
+
+		const priorStart = i - lookbackDays - contractionDays + 1;
+		const priorEnd = i - contractionDays;
+		const recentStart = i - contractionDays + 1;
+		const recentEnd = i;
+
+		const priorWindow = klines.slice(priorStart, priorEnd + 1);
+		const recentWindow = klines.slice(recentStart, recentEnd + 1);
+
+		if (priorWindow.length < lookbackDays || recentWindow.length < contractionDays) continue;
+
+		// 1. Price adjustment: recent close is lower than adjustment start
+		const adjustmentStartClose = klines[priorEnd].close;
+		if (adjustmentStartClose == null) continue;
+		if (current.close >= adjustmentStartClose * (1 - priceDropPct / 100)) continue;
+
+		// 2. Volume contraction: recent average volume significantly lower than prior average
+		const avgVolumePrior = average(priorWindow.map((k) => k.volume));
+		const avgVolumeRecent = average(recentWindow.map((k) => k.volume));
+		if (avgVolumePrior <= 0 || avgVolumeRecent > avgVolumePrior * volumeRatioMax) continue;
+
+		// 3. Volatility contraction: recent realized vol lower than prior realized vol
+		const priorVol = realizedVolatility(priorWindow);
+		const recentVol = realizedVolatility(recentWindow);
+		if (priorVol <= 0 || recentVol > priorVol * volatilityRatioMax) continue;
+
+		// 4. Gradually declining price fluctuation within the recent window
+		const trs = recentWindow.map((k, idx) => {
+			const prevClose = idx === 0 ? adjustmentStartClose : recentWindow[idx - 1].close;
+			if (k.high == null || k.low == null || prevClose == null) return 0;
+			return Math.max(k.high - k.low, Math.abs(k.high - prevClose), Math.abs(k.low - prevClose));
+		});
+		if (slope(trs) >= 0) continue;
+
+		signals.push({
+			index: i,
+			date: current.date,
+			type: "buy",
+			price: current.close,
+			reason: `VolumeContraction(价跌${priceDropPct.toFixed(0)}% 量缩${((avgVolumeRecent / avgVolumePrior) * 100).toFixed(0)}% 波动${((recentVol / priorVol) * 100).toFixed(0)}%)`,
+		});
+	}
+
+	return signals;
+}
+
+function average(values: (number | null | undefined)[]): number {
+	const valid = values.filter((v): v is number => v != null && !Number.isNaN(v));
+	if (valid.length === 0) return 0;
+	return valid.reduce((a, b) => a + b, 0) / valid.length;
+}
+
+function realizedVolatility(window: KlineRow[]): number {
+	const returns: number[] = [];
+	for (let i = 1; i < window.length; i++) {
+		const prev = window[i - 1].close;
+		const curr = window[i].close;
+		if (prev != null && curr != null && prev > 0) {
+			returns.push(Math.log(curr / prev));
+		}
+	}
+	if (returns.length < 2) return 0;
+	const mean = returns.reduce((a, b) => a + b, 0) / returns.length;
+	const variance = returns.reduce((sum, r) => sum + (r - mean) ** 2, 0) / (returns.length - 1);
+	return Math.sqrt(variance) * Math.sqrt(252) * 100; // annualized pct
+}
+
+function slope(values: number[]): number {
+	const n = values.length;
+	if (n < 2) return 0;
+	const meanX = (n - 1) / 2;
+	const meanY = values.reduce((a, b) => a + b, 0) / n;
+	let num = 0;
+	let den = 0;
+	for (let x = 0; x < n; x++) {
+		num += (x - meanX) * (values[x] - meanY);
+		den += (x - meanX) ** 2;
+	}
+	return den === 0 ? 0 : num / den;
 }
 
 // ─── Composite Signals ───────────────────────────────────────────
