@@ -263,7 +263,7 @@ const clsTd = (n) => '<span class="' + clsVal(n) + '">' + fmtPct(n) + '</span>';
 
 // ── Metric Cards ─────────────────────────────────────────────────
 const metricsEl = document.getElementById('metrics');
-const metrics = [
+const cards = [
   { label: '总收益率', value: fmtPct(REPORT.metrics.totalReturn), cls: clsVal(REPORT.metrics.totalReturn) },
   { label: '年化收益率', value: fmtPct(REPORT.metrics.annualizedReturn), cls: clsVal(REPORT.metrics.annualizedReturn) },
   { label: '夏普比率', value: fmtNum(REPORT.metrics.sharpeRatio), cls: 'neu' },
@@ -276,7 +276,11 @@ const metrics = [
   { label: '平均亏损', value: fmtNum(REPORT.metrics.avgLoss), cls: 'neg' },
   { label: '平均持仓天数', value: fmtNum(REPORT.metrics.avgHoldingDays, 1), cls: 'neu' },
 ];
-metricsEl.innerHTML = metrics.map(m =>
+for (const b of REPORT.benchmarks || []) {
+  cards.push({ label: b.label + '总收益', value: fmtPct(b.totalReturn), cls: clsVal(b.totalReturn) });
+  cards.push({ label: b.label + '最大回撤', value: fmtPct(-b.maxDrawdown), cls: 'neg' });
+}
+metricsEl.innerHTML = cards.map(m =>
   '<div class="metric-card">' +
     '<div class="label">' + m.label + '</div>' +
     '<div class="value ' + m.cls + '">' + m.value + '</div>' +
@@ -284,108 +288,121 @@ metricsEl.innerHTML = metrics.map(m =>
 ).join('');
 
 // ── Equity Curve Chart ───────────────────────────────────────────
+const fmtEq = (n) => n.toLocaleString('zh-CN', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
 const eqCtx = document.getElementById('equityChart').getContext('2d');
 const eqLabels = REPORT.equityCurve.map(p => p.date);
 const eqData = REPORT.equityCurve.map(p => p.equity);
-const eqInitial = REPORT.initialCapital;
 
-// Compute drawdown series
-let eqPeak = eqInitial;
-const drawdownData = eqData.map(v => {
-  if (v > eqPeak) eqPeak = v;
-  return ((v - eqPeak) / eqPeak) * 100;
-});
+const eqDatasets = [{
+  label: '净值',
+  data: eqData,
+  borderColor: '#58a6ff',
+  backgroundColor: 'rgba(88,166,255,0.08)',
+  fill: true,
+  tension: 0.1,
+  pointRadius: 0,
+  pointHoverRadius: 4,
+  borderWidth: 1.5,
+}];
+for (let i = 0; i < (REPORT.benchmarks || []).length; i++) {
+  const b = REPORT.benchmarks[i];
+  eqDatasets.push({
+    label: b.label,
+    data: b.equityCurve.map(p => p.equity),
+    borderColor: i === 0 ? '#f0883e' : '#3fb950',
+    backgroundColor: 'transparent',
+    fill: false,
+    tension: 0.1,
+    pointRadius: 0,
+    pointHoverRadius: 4,
+    borderWidth: 1.2,
+    borderDash: i === 0 ? [4, 4] : [2, 2],
+  });
+}
 
 new Chart(eqCtx, {
   type: 'line',
-  data: {
-    labels: eqLabels,
-    datasets: [{
-      label: '净值',
-      data: eqData,
-      borderColor: '#58a6ff',
-      backgroundColor: 'rgba(88,166,255,0.08)',
-      fill: true,
-      tension: 0.1,
-      pointRadius: 0,
-      pointHoverRadius: 4,
-      borderWidth: 1.5,
-    }]
-  },
+  data: { labels: eqLabels, datasets: eqDatasets },
   options: {
     responsive: true,
     maintainAspectRatio: false,
     interaction: { mode: 'index', intersect: false },
     plugins: {
-      legend: { display: false },
+      legend: { labels: { color: '#c9d1d9' } },
       tooltip: {
         backgroundColor: '#161b22',
         titleColor: '#c9d1d9',
         bodyColor: '#c9d1d9',
         borderColor: '#30363d',
         borderWidth: 1,
-        callbacks: {
-          label: (ctx) => '净值: ' + ctx.parsed.y.toLocaleString('zh-CN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })
-        }
+        callbacks: { label: (ctx) => ctx.dataset.label + ': ' + fmtEq(ctx.parsed.y) }
       }
     },
     scales: {
-      x: {
-        grid: { color: '#21262d' },
-        ticks: { color: '#8b949e', maxTicksLimit: 8 }
-      },
-      y: {
-        grid: { color: '#21262d' },
-        ticks: { color: '#8b949e', callback: v => v.toLocaleString() }
-      }
+      x: { grid: { color: '#21262d' }, ticks: { color: '#8b949e', maxTicksLimit: 8 } },
+      y: { grid: { color: '#21262d' }, ticks: { color: '#8b949e', callback: v => v.toLocaleString() } }
     }
   }
 });
 
 // ── Drawdown Chart ───────────────────────────────────────────────
+const computeDrawdown = (curve) => {
+  let peak = curve[0]?.equity ?? 0;
+  return curve.map(p => {
+    if (p.equity > peak) peak = p.equity;
+    return peak > 0 ? ((p.equity - peak) / peak) * 100 : 0;
+  });
+};
+
 const ddCtx = document.getElementById('drawdownChart').getContext('2d');
+const ddDatasets = [{
+  label: '回撤',
+  data: computeDrawdown(REPORT.equityCurve),
+  borderColor: '#f85149',
+  backgroundColor: 'rgba(248,81,73,0.1)',
+  fill: true,
+  tension: 0.1,
+  pointRadius: 0,
+  pointHoverRadius: 4,
+  borderWidth: 1.5,
+}];
+for (let i = 0; i < (REPORT.benchmarks || []).length; i++) {
+  const b = REPORT.benchmarks[i];
+  ddDatasets.push({
+    label: b.label + '回撤',
+    data: computeDrawdown(b.equityCurve),
+    borderColor: i === 0 ? '#f0883e' : '#3fb950',
+    backgroundColor: 'transparent',
+    fill: false,
+    tension: 0.1,
+    pointRadius: 0,
+    pointHoverRadius: 4,
+    borderWidth: 1.2,
+    borderDash: i === 0 ? [4, 4] : [2, 2],
+  });
+}
+
 new Chart(ddCtx, {
   type: 'line',
-  data: {
-    labels: eqLabels,
-    datasets: [{
-      label: '回撤',
-      data: drawdownData,
-      borderColor: '#f85149',
-      backgroundColor: 'rgba(248,81,73,0.1)',
-      fill: true,
-      tension: 0.1,
-      pointRadius: 0,
-      pointHoverRadius: 4,
-      borderWidth: 1.5,
-    }]
-  },
+  data: { labels: eqLabels, datasets: ddDatasets },
   options: {
     responsive: true,
     maintainAspectRatio: false,
     interaction: { mode: 'index', intersect: false },
     plugins: {
-      legend: { display: false },
+      legend: { labels: { color: '#c9d1d9' } },
       tooltip: {
         backgroundColor: '#161b22',
         titleColor: '#c9d1d9',
         bodyColor: '#c9d1d9',
         borderColor: '#30363d',
         borderWidth: 1,
-        callbacks: {
-          label: (ctx) => '回撤: ' + ctx.parsed.y.toFixed(2) + '%'
-        }
+        callbacks: { label: (ctx) => ctx.dataset.label + ': ' + ctx.parsed.y.toFixed(2) + '%' }
       }
     },
     scales: {
-      x: {
-        grid: { color: '#21262d' },
-        ticks: { color: '#8b949e', maxTicksLimit: 8 }
-      },
-      y: {
-        grid: { color: '#21262d' },
-        ticks: { color: '#8b949e', callback: v => v.toFixed(1) + '%' }
-      }
+      x: { grid: { color: '#21262d' }, ticks: { color: '#8b949e', maxTicksLimit: 8 } },
+      y: { grid: { color: '#21262d' }, ticks: { color: '#8b949e', callback: v => v.toFixed(1) + '%' } }
     }
   }
 });

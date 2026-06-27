@@ -408,7 +408,8 @@ function techCompositeSignals(klines: KlineRow[], params: StrategyParams): Signa
 		const volaScore = v20 < v30 * 0.7 ? 70 : v20 > v30 * 1.3 ? 30 : 50;
 
 		const comp = trendScore * 0.3 + momScore * 0.3 + volScore * 0.2 + volaScore * 0.2;
-		const close = klines[i].close!;
+		const close = klines[i].close;
+		if (close == null) continue;
 
 		if (!inPosition && comp >= buyThreshold) {
 			signals.push({
@@ -416,7 +417,7 @@ function techCompositeSignals(klines: KlineRow[], params: StrategyParams): Signa
 				date: klines[i].date,
 				type: "buy",
 				price: close,
-				reason: "TechComp(" + comp.toFixed(0) + ")",
+				reason: `TechComp(${comp.toFixed(0)})`,
 			});
 			inPosition = true;
 		} else if (inPosition && comp < exitThreshold) {
@@ -425,7 +426,7 @@ function techCompositeSignals(klines: KlineRow[], params: StrategyParams): Signa
 				date: klines[i].date,
 				type: "sell",
 				price: close,
-				reason: "TechComp(" + comp.toFixed(0) + ")",
+				reason: `TechComp(${comp.toFixed(0)})`,
 			});
 			inPosition = false;
 		}
@@ -452,7 +453,7 @@ function breakoutSignals(klines: KlineRow[], params: StrategyParams): Signal[] {
 				date: c.date,
 				type: "buy",
 				price: c.close ?? c.open!,
-				reason: "Breakout(+" + c.change_pct.toFixed(1) + "%," + vr.toFixed(1) + "x)",
+				reason: `Breakout(+${c.change_pct.toFixed(1)}%,${vr.toFixed(1)}x)`,
 			});
 		}
 	}

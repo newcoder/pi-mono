@@ -12,7 +12,7 @@ import {
 } from "../backtest/report.js";
 import type { BacktestResult, PoolBacktestConfig, StrategyType } from "../backtest/types.js";
 import { getDataStore } from "../data/index.js";
-import type { ReportData } from "../report/generator.js";
+import type { ReportBenchmark, ReportData } from "../report/generator.js";
 import { generateReport } from "../report/generator.js";
 import { generatePoolBacktestReport } from "../report/pool-report.js";
 
@@ -61,21 +61,22 @@ const backtestParams = Type.Object({
 	positionSize: Type.Optional(Type.Number({ description: "每笔交易仓位比例 0-1，默认1.0", default: 1.0 })),
 	full_position: Type.Optional(
 		Type.Boolean({
-			description: "是否一直满仓。启用后每次调仓会把剩余现金用于加仓/再平衡，提高资金利用率。",
-			default: false,
+			description: "是否一直满仓。启用后每次调仓会把剩余现金用于加仓/再平衡，提高资金利用率。默认 true。",
+			default: true,
 		}),
 	),
 	full_position_mode: Type.Optional(
 		Type.Union(
 			[
 				Type.Literal("add_to_holdings", {
-					description: "把剩余现金平均加到已有持仓上（默认）。会提高集中度，收益可能更高。",
+					description: "买入新目标仓位后，把剩余现金平均加到已有持仓上。会提高集中度，收益可能更高。",
 				}),
 				Type.Literal("equal_weight", {
-					description: "目标等权再平衡。对持仓+当日买入候选股进行买卖，使权重尽量相等，避免集中。",
+					description:
+						"目标等权再平衡。对持仓+当日买入候选股进行买卖，使权重尽量相等，避免集中。默认 equal_weight。",
 				}),
 			],
-			{ description: "满仓模式", default: "add_to_holdings" },
+			{ description: "满仓模式", default: "equal_weight" },
 		),
 	),
 	rebalance_threshold: Type.Optional(
@@ -173,6 +174,9 @@ const backtestParams = Type.Object({
 				Type.Literal("value", { description: "按价格倒数排序，买便宜" }),
 				Type.Literal("turnover", { description: "按换手率排序，买活跃" }),
 				Type.Literal("technical", { description: "按技术综合分排序" }),
+				Type.Literal("low_volatility", { description: "按近期收益率波动排序，波动低的排前面" }),
+				Type.Literal("signal_recency", { description: "按买入信号产生时间排序，越近的排前面" }),
+				Type.Literal("ma_alignment", { description: "按10/20/60日均线多头排列强度排序，越强越靠前" }),
 				Type.Literal("random", { description: "随机选择，多次运行取平均" }),
 			],
 			{ description: "买入候选的二级排序因子" },
@@ -181,6 +185,12 @@ const backtestParams = Type.Object({
 	max_positions: Type.Optional(
 		Type.Number({
 			description: "最大同时持仓数，只买入排名前N的",
+		}),
+	),
+	volatility_lookback_days: Type.Optional(
+		Type.Number({
+			description: "low_volatility 排序时回看交易日天数，默认 5",
+			default: 5,
 		}),
 	),
 
@@ -230,7 +240,7 @@ export const backtestStrategyTool: AgentTool<typeof backtestParams, BacktestTool
 	name: "backtest_strategy",
 	label: "回测策略",
 	description:
-		"对单只股票或股票池运行技术指标回测，验证策略历史表现。支持MA金叉、MACD金叉、RSI反转、布林带突破、Supertrend趋势跟踪五种策略。提供 code 回测单只股票，或提供 pool_id 对股票池中所有股票批量回测（共享资金池、动态仓位分配、100股整数倍）。数据从本地数据库读取。可通过 save_to_portfolio 将回测交易记录保存到组合中；通过 benchmark_index 生成带指数对比的 HTML 报告；通过 save_holdings_as_pool 将回测终点持仓保存为新股池。",
+		"对单只股票或股票池运行技术指标回测，验证策略历史表现。支持MA均线金叉/死叉、MACD金叉/死叉、RSI超卖买入/超买卖出、布林带下轨反弹/上轨回落、Supertrend趋势跟踪、锤子线反转、阳包阴、晨星、红三兵、技术综合打分、突破买入共11种策略。提供 code 回测单只股票，或提供 pool_id 对股票池中所有股票批量回测（共享资金池、动态仓位分配、100股整数倍）。数据从本地数据库读取。可通过 save_to_portfolio 将回测交易记录保存到组合中；通过 benchmark_index 生成带指数对比的 HTML 报告；通过 save_holdings_as_pool 将回测终点持仓保存为新股池。",
 	parameters: backtestParams,
 	execute: async (_id, params) => {
 		const isPool = params.pool_id != null;
@@ -267,8 +277,8 @@ export const backtestStrategyTool: AgentTool<typeof backtestParams, BacktestTool
 				adjust: params.adjust ?? "bfq",
 				initialCapital: params.initialCapital ?? 100_000,
 				positionSize: params.positionSize ?? 1.0,
-				fullPosition: params.full_position ?? false,
-				fullPositionMode: params.full_position_mode ?? "add_to_holdings",
+				fullPosition: params.full_position ?? true,
+				fullPositionMode: params.full_position_mode ?? "equal_weight",
 				rebalanceThreshold: params.rebalance_threshold ?? 0,
 				maxPositionWeight: params.max_position_weight ?? 0.1,
 				minTradeAmount: params.min_trade_amount ?? 0,
@@ -293,11 +303,20 @@ export const backtestStrategyTool: AgentTool<typeof backtestParams, BacktestTool
 							icPeriodDays: params.size_filter.ic_period_days ?? 20,
 							icThreshold: params.size_filter.ic_threshold ?? -0.03,
 							direction: params.size_filter.direction ?? "small",
-							rankBy: params.rank_by as "momentum" | "value" | "turnover" | "technical" | undefined,
-							maxPositions: params.max_positions,
-							randomRuns: params.random_runs,
 						}
 					: undefined,
+				rankBy: params.rank_by as
+					| "momentum"
+					| "value"
+					| "turnover"
+					| "technical"
+					| "low_volatility"
+					| "signal_recency"
+					| "ma_alignment"
+					| undefined,
+				maxPositions: params.max_positions,
+				randomRuns: params.random_runs,
+				volatilityLookbackDays: params.volatility_lookback_days,
 			};
 
 			const stocks = items.map((item) => ({ code: item.code, market: item.market, name: item.name ?? undefined }));
@@ -604,6 +623,25 @@ export const backtestStrategyTool: AgentTool<typeof backtestParams, BacktestTool
 					totalTrades: result.trades.length,
 				},
 			};
+
+			// Build benchmark curves if requested
+			const benchmarks: ReportBenchmark[] = [];
+			if (params.benchmark_index) {
+				const symbols = params.benchmark_index
+					.split(",")
+					.map((s) => s.trim())
+					.filter(Boolean);
+				for (const symbol of symbols) {
+					try {
+						const raw = fetchIndexCurve(symbol, reportData.startDate, reportData.endDate);
+						benchmarks.push(buildBenchmarkCurve(symbol, raw, reportData.equityCurve, reportData.initialCapital));
+					} catch (err) {
+						console.warn(`[backtest_strategy] Failed to fetch benchmark ${symbol}:`, err);
+					}
+				}
+				reportData.benchmarks = benchmarks;
+			}
+
 			const outputDir = join(homedir(), ".trading-agent", "reports");
 			const genResult = await generateReport(reportData, outputDir, "http://localhost:3000");
 			reportUrl = genResult.url;

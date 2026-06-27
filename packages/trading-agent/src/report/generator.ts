@@ -37,6 +37,13 @@ export interface ReportEquityPoint {
 	equity: number;
 }
 
+export interface ReportBenchmark {
+	label: string;
+	equityCurve: Array<{ date: string; equity: number }>;
+	totalReturn: number;
+	maxDrawdown: number;
+}
+
 export interface ReportData {
 	title: string;
 	strategy?: string;
@@ -48,6 +55,7 @@ export interface ReportData {
 	equityCurve: ReportEquityPoint[];
 	trades: ReportTrade[];
 	metrics: ReportMetrics;
+	benchmarks?: ReportBenchmark[];
 }
 
 // ─── Report Generator ─────────────────────────────────────────────

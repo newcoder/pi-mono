@@ -1,6 +1,31 @@
 import type { BacktestMetrics, EquityPoint, Trade } from "./types.js";
 
-export function computeMetrics(trades: Trade[], equityCurve: EquityPoint[], initialCapital: number): BacktestMetrics {
+function parseDate(dateStr: string): Date {
+	return new Date(dateStr.includes("T") ? dateStr : `${dateStr}T00:00:00+08:00`);
+}
+
+function daysBetween(a: string, b: string): number {
+	const ms = parseDate(b).getTime() - parseDate(a).getTime();
+	return ms / (24 * 60 * 60 * 1000);
+}
+
+function periodsPerYear(period?: string): number {
+	switch (period) {
+		case "week":
+			return 52;
+		case "month":
+			return 12;
+		default:
+			return 252;
+	}
+}
+
+export function computeMetrics(
+	trades: Trade[],
+	equityCurve: EquityPoint[],
+	initialCapital: number,
+	period?: string,
+): BacktestMetrics {
 	const totalTrades = trades.length;
 	const winningTrades = trades.filter((t) => t.result === "win").length;
 	const losingTrades = trades.filter((t) => t.result === "loss").length;
@@ -21,8 +46,9 @@ export function computeMetrics(trades: Trade[], equityCurve: EquityPoint[], init
 	const finalEquity = equityCurve.length > 0 ? equityCurve[equityCurve.length - 1].equity : initialCapital;
 	const totalReturn = initialCapital > 0 ? ((finalEquity - initialCapital) / initialCapital) * 100 : 0;
 
-	// Annualized return
-	const years = equityCurve.length > 1 ? equityCurve.length / 252 : 1; // approximate trading days per year
+	// Annualized return based on the selected period frequency
+	const periods = periodsPerYear(period);
+	const years = equityCurve.length > 1 ? equityCurve.length / periods : 1;
 	const annualizedReturn =
 		totalReturn <= -100 ? -100 : years > 0 ? ((1 + totalReturn / 100) ** (1 / years) - 1) * 100 : 0;
 
@@ -40,25 +66,24 @@ export function computeMetrics(trades: Trade[], equityCurve: EquityPoint[], init
 		const dd = peak > 0 ? ((peak - equity) / peak) * 100 : 0;
 		if (dd > maxDrawdown) {
 			maxDrawdown = dd;
-			maxDrawdownDuration = i - peakIndex;
+			maxDrawdownDuration = Math.max(0, daysBetween(equityCurve[peakIndex].date, equityCurve[i].date));
 		}
 	}
 
-	// Sharpe ratio from daily returns
-	const dailyReturns: number[] = [];
+	// Sharpe ratio from period returns
+	const returns: number[] = [];
 	for (let i = 1; i < equityCurve.length; i++) {
 		const prev = equityCurve[i - 1].equity;
 		const curr = equityCurve[i].equity;
 		if (prev > 0) {
-			dailyReturns.push((curr - prev) / prev);
+			returns.push((curr - prev) / prev);
 		}
 	}
-	const avgReturn = dailyReturns.length > 0 ? dailyReturns.reduce((s, v) => s + v, 0) / dailyReturns.length : 0;
-	const variance =
-		dailyReturns.length > 0 ? dailyReturns.reduce((s, v) => s + (v - avgReturn) ** 2, 0) / dailyReturns.length : 0;
+	const avgReturn = returns.length > 0 ? returns.reduce((s, v) => s + v, 0) / returns.length : 0;
+	const variance = returns.length > 0 ? returns.reduce((s, v) => s + (v - avgReturn) ** 2, 0) / returns.length : 0;
 	const stdDev = Math.sqrt(variance);
-	const riskFreeRate = 0.02 / 252; // 2% annual risk-free rate, daily
-	const sharpeRatio = stdDev > 0 ? ((avgReturn - riskFreeRate) / stdDev) * Math.sqrt(252) : 0;
+	const riskFreeRate = 0.02 / periods;
+	const sharpeRatio = stdDev > 0 ? ((avgReturn - riskFreeRate) / stdDev) * Math.sqrt(periods) : 0;
 
 	return {
 		totalReturn,

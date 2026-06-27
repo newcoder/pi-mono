@@ -1,4 +1,4 @@
-import { describe, expect, it, vi } from "vitest";
+import { afterAll, beforeAll, describe, expect, it, vi } from "vitest";
 import { checkFeasibility } from "../analysis/feasibility-check.js";
 import { generateIdeas } from "../analysis/idea-generator.js";
 import { classifyMarketRegime } from "../analysis/market-regime.js";
@@ -20,6 +20,15 @@ vi.mock("../analysis/robustness-check.js", () => ({
 	checkRobustness: vi.fn(),
 	robustnessScore: vi.fn(),
 }));
+
+beforeAll(() => {
+	vi.useFakeTimers({ shouldAdvanceTime: true });
+	vi.setSystemTime(new Date("2026-06-23"));
+});
+
+afterAll(() => {
+	vi.useRealTimers();
+});
 
 function makeValidationResult(success: boolean, confidence: number) {
 	return {
