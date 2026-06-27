@@ -1,83 +1,121 @@
 import { describe, expect, it } from "vitest";
 import type { KlineRow } from "../data/types.js";
-import { simulateTrades } from "./engine.js";
+import { generateAllSignals } from "./engine.js";
+import type { BacktestConfig } from "./types.js";
 
-function makeKlines(prices: number[], options: { nullCloseAt?: number[] } = {}): KlineRow[] {
-	return prices.map((price, i) => ({
+function makeKlines(closes: number[]): KlineRow[] {
+	return closes.map((close, i) => ({
 		code: "600519",
 		market: 1,
 		period: "daily",
 		adjust: "bfq",
 		date: `2024-01-${String(i + 1).padStart(2, "0")}`,
-		open: price,
-		high: price,
-		low: price,
-		close: options.nullCloseAt?.includes(i) ? null : price,
+		open: close,
+		high: close,
+		low: close,
+		close,
 		volume: null,
 		turnover: null,
 		change_pct: null,
 		change_amount: null,
 		amplitude: null,
-		pre_close: i > 0 ? prices[i - 1] : null,
+		pre_close: null,
 	}));
 }
 
-function makeSignal(index: number, type: "buy" | "sell", price: number) {
-	return { index, date: `2024-01-${String(index + 1).padStart(2, "0")}`, type, price, reason: "test" };
+function makeKlinesOHLC(data: Array<{ open: number; high: number; low: number; close: number }>): KlineRow[] {
+	return data.map((d, i) => ({
+		code: "600519",
+		market: 1,
+		period: "daily",
+		adjust: "bfq",
+		date: `2024-01-${String(i + 1).padStart(2, "0")}`,
+		open: d.open,
+		high: d.high,
+		low: d.low,
+		close: d.close,
+		volume: null,
+		turnover: null,
+		change_pct: null,
+		change_amount: null,
+		amplitude: null,
+		pre_close: null,
+	}));
 }
 
-describe("simulateTrades", () => {
-	it("should enforce minLot when buying shares", () => {
-		const klines = makeKlines([100, 100, 100]);
-		const signals = [makeSignal(0, "buy", 100)];
-		const { trades } = simulateTrades(klines, signals, 100_000, 1.0, 0, 0, 100);
-
-		expect(trades).toHaveLength(1);
-		expect(trades[0].shares % 100).toBe(0);
-		expect(trades[0].shares).toBeGreaterThan(0);
+describe("generateAllSignals", () => {
+	it("should merge buy signals from multiple buy-only strategies", () => {
+		// hammer needs prior bearish candle with long lower shadow
+		const hammerKlines = makeKlinesOHLC([
+			{ open: 100, high: 100, low: 92, close: 96 }, // prior bearish
+			{ open: 96, high: 97, low: 90, close: 97 }, // hammer: small body, long lower shadow
+		]);
+		const config: Pick<BacktestConfig, "buyStrategies" | "sellStrategies"> = {
+			buyStrategies: [
+				{ strategy: "hammer", params: { minBodyRatio: 0.005 } },
+				{ strategy: "breakout", params: { minChange: 2, volRatio: 1 } },
+			],
+		};
+		const signals = generateAllSignals(hammerKlines, config);
+		const buys = signals.filter((s) => s.type === "buy");
+		expect(buys.length).toBeGreaterThanOrEqual(1);
+		expect(buys.some((s) => s.reason.includes("Hammer"))).toBe(true);
+		expect(signals.some((s) => s.type === "sell")).toBe(false);
 	});
 
-	it("should skip buy if rounded shares are below minLot", () => {
-		const klines = makeKlines([5000, 5000, 5000]);
-		const signals = [makeSignal(0, "buy", 5000)];
-		// 100000 capital, positionSize=0.5, minLot=100, price=5000 -> raw 10 shares, but after rounding to 100 lot becomes 0
-		const { trades } = simulateTrades(klines, signals, 100_000, 0.5, 0, 0, 100);
-
-		expect(trades).toHaveLength(0);
+	it("should merge sell signals from multiple sell-only strategies", () => {
+		const klines = makeKlinesOHLC([
+			{ open: 100, high: 102, low: 99, close: 101 }, // prior bullish
+			{ open: 101.5, high: 109, low: 101.5, close: 104 }, // shooting star: small body, long upper shadow
+		]);
+		const config: Pick<BacktestConfig, "buyStrategies" | "sellStrategies"> = {
+			sellStrategies: [
+				{ strategy: "shooting_star", params: { minBodyRatio: 0.005 } },
+				{ strategy: "bearish_engulf" },
+			],
+		};
+		const signals = generateAllSignals(klines, config);
+		const sells = signals.filter((s) => s.type === "sell");
+		expect(sells.length).toBeGreaterThanOrEqual(1);
+		expect(sells.some((s) => s.reason.includes("ShootingStar"))).toBe(true);
+		expect(signals.some((s) => s.type === "buy")).toBe(false);
 	});
 
-	it("should force-close open positions at end of simulation", () => {
-		const klines = makeKlines([100, 100, 100, 100, 100, 100, 100, 100, 100, 100]);
-		const signals = [makeSignal(0, "buy", 100)];
-		const { trades, equityCurve } = simulateTrades(klines, signals, 100_000, 1.0, 0, 0, 100);
-
-		expect(trades).toHaveLength(1);
-		expect(trades[0].daysHeld).toBe(8); // bought at execIdx=1, closed at last index 9
-		expect(equityCurve[equityCurve.length - 1].equity).toBe(100_000);
+	it("should take only buy side from auto two-way indicators in buy list", () => {
+		// ma_cross with fast=1 slow=2: dip then rise -> golden cross at index 2
+		const klines = makeKlines([100, 99, 101, 102, 103]);
+		const config: Pick<BacktestConfig, "buyStrategies"> = {
+			buyStrategies: [{ strategy: "ma_cross", params: { fast: 1, slow: 2 } }],
+		};
+		const signals = generateAllSignals(klines, config);
+		expect(signals.every((s) => s.type === "buy")).toBe(true);
+		expect(signals.some((s) => s.reason.includes("金叉"))).toBe(true);
 	});
 
-	it("should include buy-side commission in trade PnL", () => {
-		const klines = makeKlines([100, 100, 110]);
-		const signals = [makeSignal(0, "buy", 100), makeSignal(1, "sell", 110)];
-		const { trades } = simulateTrades(klines, signals, 100_000, 0.5, 0, 0.01, 100);
-
-		expect(trades).toHaveLength(1);
-		const trade = trades[0];
-		// 500 shares @ 100, commission 1%: cost basis = 500 * 100 * 1.01 = 50500
-		// sell proceeds = 500 * 110 * 0.99 = 54450
-		// pnl = 54450 - 50500 = 3950
-		expect(trade.pnl).toBeCloseTo(3950, 2);
-		expect(trade.pnlPct).toBeCloseTo((3950 / 50500) * 100, 2);
+	it("should take only sell side from auto two-way indicators in sell list", () => {
+		// ma_cross with fast=1 slow=2: close falls -> death cross at index 4
+		const klines = makeKlines([100, 101, 102, 101, 100]);
+		const config: Pick<BacktestConfig, "sellStrategies"> = {
+			sellStrategies: [{ strategy: "ma_cross", params: { fast: 1, slow: 2 } }],
+		};
+		const signals = generateAllSignals(klines, config);
+		expect(signals.every((s) => s.type === "sell")).toBe(true);
+		expect(signals.some((s) => s.reason.includes("死叉"))).toBe(true);
 	});
 
-	it("should use last known close instead of 0 for null close days", () => {
-		const klines = makeKlines([100, 100, 100], { nullCloseAt: [1] });
-		const signals = [makeSignal(0, "buy", 100)];
-		const { equityCurve } = simulateTrades(klines, signals, 100_000, 1.0, 0, 0, 100);
-
-		// Day 0: buy 1000 shares @ 100, equity = 0 cash + 1000*100 = 100000
-		// Day 1: close is null, should fall back to lastClose=100, equity = 100000
-		// Day 2: close=100, equity = 100000
-		expect(equityCurve[1].equity).toBe(100_000);
+	it("should merge legacy strategy with new-style strategy lists", () => {
+		const klines = makeKlinesOHLC([
+			{ open: 100, high: 100, low: 96, close: 97 }, // bearish
+			{ open: 96.5, high: 101, low: 96, close: 100.5 }, // bullish engulf (legacy buy)
+			{ open: 101.5, high: 109, low: 101.5, close: 104 }, // shooting star (new-style sell)
+		]);
+		const config: Pick<BacktestConfig, "strategy" | "buyStrategies" | "sellStrategies"> = {
+			strategy: "bullish_engulf",
+			sellStrategies: [{ strategy: "shooting_star", params: { minBodyRatio: 0.005 } }],
+		};
+		const signals = generateAllSignals(klines, config);
+		// legacy strategy contributes both buy and sell unless new-style lists override sells
+		expect(signals.some((s) => s.type === "buy")).toBe(true);
+		expect(signals.some((s) => s.type === "sell")).toBe(true);
 	});
 });

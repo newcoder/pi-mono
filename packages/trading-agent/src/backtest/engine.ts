@@ -17,29 +17,60 @@ import type {
 	Trade,
 } from "./types.js";
 
-function combineSignals(entrySignals: Signal[], exitSignals?: Signal[]): Signal[] {
-	const buys = entrySignals.filter((s) => s.type === "buy");
-	const sells = entrySignals.filter((s) => s.type === "sell");
-	const extraSells = exitSignals?.filter((s) => s.type === "sell") ?? [];
-	const combined = [...buys, ...sells, ...extraSells];
-	combined.sort((a, b) => {
+function sortSignals(signals: Signal[]): Signal[] {
+	const copy = [...signals];
+	copy.sort((a, b) => {
 		if (a.index !== b.index) return a.index - b.index;
 		// Within the same candle, process buys before sells to avoid same-day churn
 		return a.type === "buy" ? -1 : 1;
 	});
-	return combined;
+	return copy;
 }
 
-function generateStrategySignals(
+function resolveStrategyLabel(
+	config: Pick<BacktestConfig, "strategy" | "buyStrategies" | "sellStrategies">,
+): StrategyType {
+	return config.strategy ?? config.buyStrategies?.[0]?.strategy ?? config.sellStrategies?.[0]?.strategy ?? "ma_cross";
+}
+
+export function generateAllSignals(
 	klines: KlineRow[],
-	strategy: StrategyType,
-	strategyParams?: Record<string, number>,
-	exitStrategy?: StrategyType,
-	exitStrategyParams?: Record<string, number>,
+	config: Pick<
+		BacktestConfig,
+		"strategy" | "exitStrategy" | "buyStrategies" | "sellStrategies" | "strategyParams" | "exitStrategyParams"
+	>,
 ): Signal[] {
-	const entrySignals = generateSignals(klines, strategy, strategyParams);
-	const exitSignals = exitStrategy ? generateSignals(klines, exitStrategy, exitStrategyParams) : undefined;
-	return combineSignals(entrySignals, exitSignals);
+	const hasNewStyle = (config.buyStrategies?.length ?? 0) > 0 || (config.sellStrategies?.length ?? 0) > 0;
+
+	const buys: Signal[] = [];
+	const sells: Signal[] = [];
+
+	if (hasNewStyle) {
+		for (const source of config.buyStrategies ?? []) {
+			const sigs = generateSignals(klines, source.strategy, source.params);
+			buys.push(...sigs.filter((s) => s.type === "buy"));
+		}
+		for (const source of config.sellStrategies ?? []) {
+			const sigs = generateSignals(klines, source.strategy, source.params);
+			sells.push(...sigs.filter((s) => s.type === "sell"));
+		}
+	}
+
+	// Legacy fields always contribute if present
+	if (config.strategy) {
+		const legacy = generateSignals(klines, config.strategy, config.strategyParams);
+		buys.push(...legacy.filter((s) => s.type === "buy"));
+		// Legacy strategy's sell signals are included unless new-style sell list is explicitly provided
+		if (!hasNewStyle) {
+			sells.push(...legacy.filter((s) => s.type === "sell"));
+		}
+	}
+	if (config.exitStrategy) {
+		const extra = generateSignals(klines, config.exitStrategy, config.exitStrategyParams);
+		sells.push(...extra.filter((s) => s.type === "sell"));
+	}
+
+	return sortSignals([...buys, ...sells]);
 }
 
 function localDateString(d = new Date()): string {
@@ -93,14 +124,8 @@ export async function runBacktest(config: BacktestConfig): Promise<BacktestResul
 		throw new Error("No kline data available for the specified stock and date range.");
 	}
 
-	// 2. Generate signals (entry + optional exit strategy)
-	const signals = generateStrategySignals(
-		klines,
-		config.strategy,
-		config.strategyParams,
-		config.exitStrategy,
-		config.exitStrategyParams,
-	);
+	// 2. Generate signals (legacy strategy / exitStrategy + new buy/sell strategy lists)
+	const signals = generateAllSignals(klines, config);
 
 	// 3. Simulate trades
 	const initialCapital = config.initialCapital ?? 100_000;
@@ -394,7 +419,7 @@ export async function runPoolBacktest(
 
 		return {
 			stocks,
-			strategy: config.strategy,
+			strategy: resolveStrategyLabel(config),
 			startDate: valid[0].startDate,
 			endDate: valid[0].endDate,
 			initialCapital,
@@ -473,13 +498,7 @@ export async function runPoolBacktest(
 			}
 		}
 
-		const signals = generateStrategySignals(
-			adjustedKlines,
-			config.strategy,
-			config.strategyParams,
-			config.exitStrategy,
-			config.exitStrategyParams,
-		);
+		const signals = generateAllSignals(adjustedKlines, config);
 
 		// Pre-compute execution events: signal at index i executes at index i+1 open
 		const execMap = new Map<string, { type: "buy" | "sell"; price: number; signalDate: string }>();
@@ -1370,7 +1389,7 @@ export async function runPoolBacktest(
 
 	return {
 		stocks,
-		strategy: config.strategy,
+		strategy: resolveStrategyLabel(config),
 		startDate: allDates[0] ?? "",
 		endDate: allDates[allDates.length - 1] ?? "",
 		initialCapital,

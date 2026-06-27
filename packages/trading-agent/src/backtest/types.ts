@@ -19,11 +19,18 @@ export type StrategyType =
 	| "three_crows"
 	| "rsi_overbought_sell";
 
+export interface SignalSource {
+	strategy: StrategyType;
+	params?: Record<string, number>;
+}
+
 export interface BacktestConfig {
 	code: string;
 	market: number;
-	strategy: StrategyType;
+	strategy?: StrategyType;
 	exitStrategy?: StrategyType;
+	buyStrategies?: SignalSource[];
+	sellStrategies?: SignalSource[];
 	start?: string;
 	end?: string;
 	period?: string;
@@ -114,8 +121,10 @@ export interface PoolSizeFilterConfig {
 }
 
 export interface PoolBacktestConfig {
-	strategy: StrategyType;
+	strategy?: StrategyType;
 	exitStrategy?: StrategyType;
+	buyStrategies?: SignalSource[];
+	sellStrategies?: SignalSource[];
 	start?: string;
 	end?: string;
 	period?: string;

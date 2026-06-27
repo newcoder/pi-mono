@@ -71,6 +71,48 @@ const backtestParams = Type.Object({
 			description: "退出策略参数，如 {fast:5, slow:10} 或 {period:14, overbought:70}",
 		}),
 	),
+	buy_strategies: Type.Optional(
+		Type.Array(
+			Type.Object({
+				strategy: Type.Union([
+					Type.Literal("ma_cross"),
+					Type.Literal("macd_cross"),
+					Type.Literal("rsi_reversal"),
+					Type.Literal("bollinger_breakout"),
+					Type.Literal("supertrend"),
+					Type.Literal("hammer"),
+					Type.Literal("bullish_engulf"),
+					Type.Literal("morning_star"),
+					Type.Literal("three_soldiers"),
+					Type.Literal("tech_composite"),
+					Type.Literal("breakout"),
+					Type.Literal("volume_contraction"),
+				]),
+				params: Type.Optional(Type.Record(Type.String(), Type.Number())),
+			}),
+			{ description: "买入信号源列表，任意一个触发即买入；自动双向指标只取买入信号" },
+		),
+	),
+	sell_strategies: Type.Optional(
+		Type.Array(
+			Type.Object({
+				strategy: Type.Union([
+					Type.Literal("ma_cross"),
+					Type.Literal("macd_cross"),
+					Type.Literal("rsi_reversal"),
+					Type.Literal("bollinger_breakout"),
+					Type.Literal("supertrend"),
+					Type.Literal("shooting_star"),
+					Type.Literal("bearish_engulf"),
+					Type.Literal("evening_star"),
+					Type.Literal("three_crows"),
+					Type.Literal("rsi_overbought_sell"),
+				]),
+				params: Type.Optional(Type.Record(Type.String(), Type.Number())),
+			}),
+			{ description: "卖出信号源列表，任意一个触发即卖出；自动双向指标只取卖出信号" },
+		),
+	),
 	start: Type.Optional(Type.String({ description: "起始日期 YYYYMMDD，默认一年前" })),
 	end: Type.Optional(Type.String({ description: "结束日期 YYYYMMDD，默认今天" })),
 	period: Type.Optional(
@@ -269,7 +311,7 @@ export const backtestStrategyTool: AgentTool<typeof backtestParams, BacktestTool
 	name: "backtest_strategy",
 	label: "回测策略",
 	description:
-		"对单只股票或股票池运行技术指标回测，验证策略历史表现。支持MA均线金叉/死叉、MACD金叉/死叉、RSI超卖买入/超买卖出、布林带下轨反弹/上轨回落、Supertrend趋势跟踪、锤子线反转、阳包阴、晨星、红三兵、技术综合打分、突破买入、缩量调整、流星线、阴包阳、暮星、三只乌鸦、RSI超买回落共17种策略。可通过 exit_strategy 指定独立的卖出信号策略作为退出条件（例如买入用 hammer，卖出用 shooting_star）。提供 code 回测单只股票，或提供 pool_id 对股票池中所有股票批量回测（共享资金池、动态仓位分配、100股整数倍）。数据从本地数据库读取。可通过 save_to_portfolio 将回测交易记录保存到组合中；通过 benchmark_index 生成带指数对比的 HTML 报告；通过 save_holdings_as_pool 将回测终点持仓保存为新股池。",
+		"对单只股票或股票池运行技术指标回测，验证策略历史表现。支持MA均线金叉/死叉、MACD金叉/死叉、RSI超卖买入/超买卖出、布林带下轨反弹/上轨回落、Supertrend趋势跟踪、锤子线反转、阳包阴、晨星、红三兵、技术综合打分、突破买入、缩量调整、流星线、阴包阳、暮星、三只乌鸦、RSI超买回落共17种策略。可通过 buy_strategies/sell_strategies 分别配置多个买入/卖出信号源，任意一个触发即买卖；自动双向指标（ma_cross/macd_cross/rsi_reversal/bollinger_breakout/supertrend/tech_composite）在买入列表里只取买入信号，在卖出列表里只取卖出信号。旧的 strategy/exit_strategy 仍兼容。提供 code 回测单只股票，或提供 pool_id 对股票池中所有股票批量回测（共享资金池、动态仓位分配、100股整数倍）。数据从本地数据库读取。可通过 save_to_portfolio 将回测交易记录保存到组合中；通过 benchmark_index 生成带指数对比的 HTML 报告；通过 save_holdings_as_pool 将回测终点持仓保存为新股池。",
 	parameters: backtestParams,
 	execute: async (_id, params) => {
 		const isPool = params.pool_id != null;
@@ -302,6 +344,8 @@ export const backtestStrategyTool: AgentTool<typeof backtestParams, BacktestTool
 				strategy: params.strategy as StrategyType,
 				exitStrategy: params.exit_strategy as StrategyType | undefined,
 				exitStrategyParams: params.exit_params,
+				buyStrategies: params.buy_strategies?.map((s) => ({ strategy: s.strategy, params: s.params })),
+				sellStrategies: params.sell_strategies?.map((s) => ({ strategy: s.strategy, params: s.params })),
 				start: params.start,
 				end: params.end,
 				period: params.period ?? "daily",
@@ -533,6 +577,8 @@ export const backtestStrategyTool: AgentTool<typeof backtestParams, BacktestTool
 			strategy: params.strategy as StrategyType,
 			exitStrategy: params.exit_strategy as StrategyType | undefined,
 			exitStrategyParams: params.exit_params,
+			buyStrategies: params.buy_strategies?.map((s) => ({ strategy: s.strategy, params: s.params })),
+			sellStrategies: params.sell_strategies?.map((s) => ({ strategy: s.strategy, params: s.params })),
 			start: params.start,
 			end: params.end,
 			period: params.period ?? "daily",
