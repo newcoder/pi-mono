@@ -25,7 +25,7 @@ import {
 	verifyConceptStocksTool,
 } from "./tools/concept-analysis.js";
 import { getConceptStocksTool, listConceptsTool } from "./tools/concept-stocks.js";
-import { syncFundamentalsTool, syncKlineTool, syncNewsTool } from "./tools/data-sync.js";
+import { syncFundamentalsTool, syncHotStocksTool, syncKlineTool, syncNewsTool } from "./tools/data-sync.js";
 import { discoverTradingIdeasTool } from "./tools/discover-trading-ideas.js";
 import { getIndustryStocksTool, getStockIndustriesTool, listIndustriesTool } from "./tools/industry-classification.js";
 import { analyzeCalendarImpactTool, refreshCalendarTool } from "./tools/investment-calendar.js";
@@ -138,7 +138,7 @@ async function handleSyncCommands(): Promise<boolean> {
 	// --sync-quotes
 	if (args.includes("--sync-quotes")) {
 		console.log("Syncing all A-share quotes...");
-		const count = await sync.syncStockList("all");
+		const count = await sync.syncStockList();
 		console.log(`Synced ${count} stocks.`);
 		store.close();
 		return true;
@@ -285,6 +285,7 @@ const BUILTIN_TOOLS = new Map<string, AgentTool<any>>([
 	["get_market_news", getMarketNewsTool],
 	["sync_kline", syncKlineTool],
 	["sync_fundamentals", syncFundamentalsTool],
+	["sync_hot_stocks", syncHotStocksTool],
 	["sync_news", syncNewsTool],
 	["refresh_calendar", refreshCalendarTool],
 	["analyze_calendar_impact", analyzeCalendarImpactTool],

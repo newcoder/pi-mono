@@ -9,6 +9,7 @@ import type {
 	FactorIcRow,
 	FundamentalIndicatorsRow,
 	FundamentalsRow,
+	HotStockRow,
 	IndustryIndexRow,
 	IndustryIndicatorRow,
 	IndustryKlineRow,
@@ -109,6 +110,25 @@ CREATE TABLE IF NOT EXISTS quotes (
     updated_at TEXT,
     PRIMARY KEY (code, market, snapshot_date)
 );
+
+CREATE TABLE IF NOT EXISTS hot_stocks (
+    date TEXT NOT NULL,
+    code TEXT NOT NULL,
+    market INTEGER NOT NULL,
+    name TEXT,
+    reason TEXT,
+    price REAL,
+    change_pct REAL,
+    turnover_pct REAL,
+    amount REAL,
+    pe_ttm REAL,
+    pb REAL,
+    mcap_yi REAL,
+    updated_at TEXT,
+    PRIMARY KEY (date, code, market)
+);
+
+CREATE INDEX IF NOT EXISTS idx_hot_stocks_date ON hot_stocks(date);
 
 CREATE TABLE IF NOT EXISTS fundamentals (
     code TEXT NOT NULL,
@@ -772,6 +792,30 @@ export class DataStore {
 		return promisifyQuery(this.db, `SELECT * FROM sectors ORDER BY change_pct DESC`);
 	}
 
+	// ─── Hot Stocks ─────────────────────────────────────────────────
+
+	async saveHotStocks(rows: HotStockRow[]): Promise<void> {
+		if (rows.length === 0 || !this.db) return;
+		const now = new Date().toISOString();
+		const f = (v: number | null | undefined) => (v == null || Number.isNaN(v) ? "NULL" : String(v));
+		for (const row of rows) {
+			const sql = `
+				INSERT OR REPLACE INTO hot_stocks
+				(date, code, market, name, reason, price, change_pct, turnover_pct, amount, pe_ttm, pb, mcap_yi, updated_at)
+				VALUES (${s(row.date)}, ${s(row.code)}, ${row.market}, ${s(row.name)}, ${s(row.reason)},
+					${f(row.price)}, ${f(row.change_pct)}, ${f(row.turnover_pct)}, ${f(row.amount)},
+					${f(row.pe_ttm)}, ${f(row.pb)}, ${f(row.mcap_yi)}, ${s(row.updated_at ?? now)})
+			`;
+			await promisifyExec(this.db, sql);
+		}
+	}
+
+	async getHotStocks(date?: string): Promise<HotStockRow[]> {
+		if (!this.db) return [];
+		const targetDate = date ?? new Date().toISOString().slice(0, 10);
+		return promisifyQuery(this.db, `SELECT * FROM hot_stocks WHERE date = ${s(targetDate)} ORDER BY change_pct DESC`);
+	}
+
 	// ─── Concept Stocks ─────────────────────────────────────────────
 
 	async saveConceptStocks(items: ConceptStockRow[]): Promise<void> {
@@ -1185,6 +1229,7 @@ export class DataStore {
 			"fundamentals",
 			"fundamental_indicators",
 			"sectors",
+			"hot_stocks",
 			"concept_stocks",
 			"business_composition",
 			"macro",

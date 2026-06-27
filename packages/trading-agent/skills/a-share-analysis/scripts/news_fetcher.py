@@ -5,6 +5,7 @@ Fetches news from Eastmoney (东方财富), Securities Times (证券时报), and
 Supports both individual stock news and market-wide news scanning.
 """
 import argparse
+import importlib.util
 import json
 import sys
 import os
@@ -22,16 +23,61 @@ _SCRIPT_DIR = os.path.dirname(os.path.abspath(__file__))
 if _SCRIPT_DIR not in sys.path:
     sys.path.insert(0, _SCRIPT_DIR)
 
+_A_STOCK_DATA_DIR = os.path.normpath(os.path.join(_SCRIPT_DIR, "..", "..", "a-stock-data", "scripts"))
+
+
+def _load_astockdata_news_fetcher():
+    """Load a-stock-data news_fetcher module by path to avoid name collision."""
+    module_path = os.path.join(_A_STOCK_DATA_DIR, "news_fetcher.py")
+    spec = importlib.util.spec_from_file_location("astockdata_news_fetcher", module_path)
+    module = importlib.util.module_from_spec(spec)
+    sys.modules[spec.name] = module
+    spec.loader.exec_module(module)
+    return module
+
 # Retry-enabled session
 _SESSION = requests.Session()
 _SESSION.mount("https://", HTTPAdapter(max_retries=Retry(total=3, backoff_factor=1.0)))
 _SESSION.mount("http://", HTTPAdapter(max_retries=Retry(total=3, backoff_factor=1.0)))
 
 
-# ── Eastmoney (akshare) ──────────────────────────────────────────────────────
+# ── a-stock-data Eastmoney stock news (rich content + source URL) ────────────
+
+def fetch_astockdata_eastmoney_news(code: str, limit: int = 10) -> List[Dict]:
+    """Fetch individual stock news from a-stock-data news_fetcher (Eastmoney search-api-web)."""
+    try:
+        module = _load_astockdata_news_fetcher()
+        result = module.fetch_news(code=code, sources=["eastmoney_stock"], limit_per_source=limit)
+        items = []
+        for it in result.get("items", []):
+            if "error" in it:
+                continue
+            items.append({
+                "code": code,
+                "title": it.get("title", ""),
+                "content": it.get("content", ""),
+                "source": it.get("source", ""),
+                "source_type": it.get("source_type", "eastmoney_stock"),
+                "pub_time": it.get("time", ""),
+                "url": it.get("url", ""),
+            })
+        return items
+    except Exception as e:
+        print(f"a-stock-data eastmoney news error for {code}: {e}", file=sys.stderr)
+        return []
+
+
+# ── Eastmoney (akshare fallback) ─────────────────────────────────────────────
 
 def fetch_eastmoney_news(code: str, limit: int = 20) -> List[Dict]:
-    """Fetch news for a single stock from Eastmoney via akshare."""
+    """Fetch news for a single stock from Eastmoney (a-stock-data first, akshare fallback)."""
+    try:
+        items = fetch_astockdata_eastmoney_news(code, limit=limit)
+        if items:
+            return items
+    except Exception as e:
+        print(f"Eastmoney a-stock-data fetch error for {code}: {e}", file=sys.stderr)
+
     try:
         import akshare as ak
         df = ak.stock_news_em(symbol=code)
@@ -48,10 +94,10 @@ def fetch_eastmoney_news(code: str, limit: int = 20) -> List[Dict]:
                     "code": code,
                     "title": str(row.iloc[2]) if len(cols) > 2 else "",
                     "content": "",  # akshare 只返回标题
-                    "source": "eastmoney",
+                    "source": str(row.iloc[4]) if len(cols) > 4 else "eastmoney",
+                    "source_type": "eastmoney_akshare",
                     "pub_time": pub_time,
                     "url": str(row.iloc[5]) if len(cols) > 5 else "",
-                    "raw_source_name": str(row.iloc[4]) if len(cols) > 4 else "",
                 })
             except Exception:
                 continue
@@ -94,9 +140,9 @@ def fetch_stcn_news(code: str, name: str, limit: int = 10) -> List[Dict]:
                 "title": item.get("title", ""),
                 "content": item.get("summary", item.get("description", "")),
                 "source": "stcn",
+                "source_type": "stcn_search",
                 "pub_time": pub_time,
                 "url": item.get("url", ""),
-                "raw_source_name": "证券时报",
             })
         return results
     except Exception as e:
@@ -138,9 +184,9 @@ def fetch_cls_news(code: str, name: str, limit: int = 10) -> List[Dict]:
                 "title": item.get("title", ""),
                 "content": item.get("brief", ""),
                 "source": "cls",
+                "source_type": "cls_search",
                 "pub_time": pub_time,
                 "url": f"https://www.cls.cn/detail/{item.get('id', '')}",
-                "raw_source_name": "财联社",
             })
         return results
     except Exception as e:
@@ -156,7 +202,7 @@ def fetch_stock_news(code: str, name: str = "", sources: List[str] = None, limit
     Returns list of news dicts.
     """
     if sources is None:
-        sources = ["eastmoney", "stcn", "cls"]
+        sources = ["eastmoney", "cls"]
 
     all_news = []
     for source in sources:

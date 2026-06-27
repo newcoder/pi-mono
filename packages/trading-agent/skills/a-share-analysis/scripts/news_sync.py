@@ -29,7 +29,9 @@ def ensure_news_table(conn: sqlite3.Connection):
             id INTEGER PRIMARY KEY AUTOINCREMENT,
             code TEXT NOT NULL,
             title TEXT NOT NULL,
+            content TEXT,
             source TEXT NOT NULL,
+            source_type TEXT,
             pub_time TEXT NOT NULL,
             url TEXT,
             event_type TEXT,
@@ -37,11 +39,20 @@ def ensure_news_table(conn: sqlite3.Connection):
             impact_level TEXT
         )
     """)
+    # Migrate legacy schema
+    cols = {r[1] for r in conn.execute("PRAGMA table_info(stock_news)").fetchall()}
+    if "content" not in cols:
+        conn.execute("ALTER TABLE stock_news ADD COLUMN content TEXT")
+    if "source_type" not in cols:
+        conn.execute("ALTER TABLE stock_news ADD COLUMN source_type TEXT")
+    conn.commit()
+
     # Create indexes
     conn.execute("CREATE INDEX IF NOT EXISTS idx_news_code_time ON stock_news(code, pub_time)")
     conn.execute("CREATE INDEX IF NOT EXISTS idx_news_event_type ON stock_news(event_type)")
     conn.execute("CREATE INDEX IF NOT EXISTS idx_news_sentiment ON stock_news(sentiment)")
     conn.execute("CREATE INDEX IF NOT EXISTS idx_news_pub_time ON stock_news(pub_time)")
+    conn.execute("CREATE INDEX IF NOT EXISTS idx_news_source_type ON stock_news(source_type)")
     conn.commit()
 
 
@@ -91,13 +102,15 @@ def save_news(conn: sqlite3.Connection, news_list: List[Dict]) -> int:
 
     conn.executemany(
         """INSERT INTO stock_news
-           (code, title, source, pub_time, url, event_type, sentiment, impact_level)
-           VALUES (?, ?, ?, ?, ?, ?, ?, ?)""",
+           (code, title, content, source, source_type, pub_time, url, event_type, sentiment, impact_level)
+           VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)""",
         [
             (
                 item.get("code"),
                 item.get("title", ""),
+                item.get("content", ""),
                 item.get("source", ""),
+                item.get("source_type", ""),
                 item.get("pub_time", ""),
                 item.get("url", ""),
                 item.get("event_type"),

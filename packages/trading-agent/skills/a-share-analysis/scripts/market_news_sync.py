@@ -23,7 +23,9 @@ def ensure_market_news_table(conn: sqlite3.Connection):
         CREATE TABLE IF NOT EXISTS market_news (
             id INTEGER PRIMARY KEY AUTOINCREMENT,
             title TEXT NOT NULL,
+            content TEXT,
             source TEXT NOT NULL,
+            source_type TEXT,
             pub_time TEXT,
             url TEXT,
             news_type TEXT,
@@ -32,9 +34,18 @@ def ensure_market_news_table(conn: sqlite3.Connection):
             affected_sectors TEXT
         )
     """)
+    # Migrate legacy schema
+    cols = {r[1] for r in conn.execute("PRAGMA table_info(market_news)").fetchall()}
+    if "content" not in cols:
+        conn.execute("ALTER TABLE market_news ADD COLUMN content TEXT")
+    if "source_type" not in cols:
+        conn.execute("ALTER TABLE market_news ADD COLUMN source_type TEXT")
+    conn.commit()
+
     conn.execute("CREATE INDEX IF NOT EXISTS idx_mnews_type ON market_news(news_type)")
     conn.execute("CREATE INDEX IF NOT EXISTS idx_mnews_sentiment ON market_news(sentiment)")
     conn.execute("CREATE INDEX IF NOT EXISTS idx_mnews_time ON market_news(pub_time)")
+    conn.execute("CREATE INDEX IF NOT EXISTS idx_mnews_source_type ON market_news(source_type)")
     conn.commit()
 
 
@@ -69,11 +80,13 @@ def save_market_news(conn: sqlite3.Connection, news_list: List[Dict]) -> int:
         affected = item.get("affected_sectors", {})
         conn.execute(
             """INSERT INTO market_news
-               (title, source, pub_time, url, news_type, sentiment, impact_scope, affected_sectors)
-               VALUES (?, ?, ?, ?, ?, ?, ?, ?)""",
+               (title, content, source, source_type, pub_time, url, news_type, sentiment, impact_scope, affected_sectors)
+               VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)""",
             (
                 item.get("title", ""),
+                item.get("content", ""),
                 item.get("source", ""),
+                item.get("source_type", ""),
                 item.get("pub_time", ""),
                 item.get("url", ""),
                 item.get("news_type"),
@@ -126,7 +139,7 @@ def sync_market_news(sources: List[str] = None, limit: int = 100) -> Dict:
 
 def main():
     parser = argparse.ArgumentParser(description="Sync market news to DB")
-    parser.add_argument("--sources", default="cls", help="Comma-separated sources")
+    parser.add_argument("--sources", default="cls_telegraph,eastmoney_global", help="Comma-separated sources")
     parser.add_argument("--limit", type=int, default=100, help="Limit per source")
     parser.add_argument("--output", help="Output JSON file")
     args = parser.parse_args()

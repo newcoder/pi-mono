@@ -107,6 +107,41 @@ export const syncFundamentalsTool: AgentTool<typeof syncFundamentalsParams, { sy
 	},
 };
 
+// ── sync_hot_stocks tool ───────────────────────────────────────────────────
+
+const syncHotStocksParams = Type.Object({
+	date: Type.Optional(Type.String({ description: "日期 YYYY-MM-DD，默认今天" })),
+});
+
+export const syncHotStocksTool: AgentTool<typeof syncHotStocksParams, { synced: number; date: string }> = {
+	name: "sync_hot_stocks",
+	label: "同步强势股",
+	description:
+		"同步同花顺当日热点强势股（含题材归因 reason tags）到本地数据库 hot_stocks 表。如指定日期无数据，会返回空。",
+	parameters: syncHotStocksParams,
+	execute: async (_id, params) => {
+		const sync = getDataSync();
+		if (!sync) {
+			return {
+				content: [{ type: "text", text: "[错误] DataSyncService 未初始化。" }],
+				details: { synced: 0, date: params.date || "" },
+			};
+		}
+
+		const date = params.date;
+		const startTime = Date.now();
+		const count = await sync.syncHotStocks(date);
+		const elapsed = ((Date.now() - startTime) / 1000).toFixed(1);
+		const targetDate = date || new Date().toISOString().slice(0, 10);
+
+		const text = `【强势股同步完成】\n日期: ${targetDate}\n同步数量: ${count} 只\n耗时: ${elapsed} 秒`;
+		return {
+			content: [{ type: "text", text }],
+			details: { synced: count, date: targetDate },
+		};
+	},
+};
+
 // ── sync_news tool ──────────────────────────────────────────────────────────
 
 const syncNewsParams = Type.Object({
@@ -119,8 +154,8 @@ const syncNewsParams = Type.Object({
 	),
 	sources: Type.Optional(
 		Type.String({
-			description: "新闻来源，如 cls, sina, eastmoney。多个用逗号分隔",
-			default: "cls",
+			description: "新闻来源，如 eastmoney, cls, stcn。多个用逗号分隔",
+			default: "eastmoney,cls",
 		}),
 	),
 	limit: Type.Optional(Type.Number({ description: "每来源最大抓取数量", default: 20 })),
@@ -134,7 +169,7 @@ export const syncNewsTool: AgentTool<typeof syncNewsParams, { marketNews: string
 	parameters: syncNewsParams,
 	execute: async (_id, params) => {
 		const scope = params.scope || "watchlist";
-		const sources = params.sources || "cls";
+		const sources = params.sources || "eastmoney,cls";
 		const limit = params.limit || 20;
 		const results: string[] = [];
 

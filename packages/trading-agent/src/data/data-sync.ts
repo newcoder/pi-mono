@@ -5,6 +5,7 @@ import type { DataStore } from "./data-store.js";
 import type {
 	ConceptStockRow,
 	FundamentalsRow,
+	HotStockRow,
 	IndustryIndexRow,
 	IndustryKlineRow,
 	IndustryQuoteRow,
@@ -48,6 +49,13 @@ function isFresh(updatedAt: string | undefined, ttlMinutes: number): boolean {
 
 function todayStr(): string {
 	return new Date().toISOString().slice(0, 10);
+}
+
+function _marketFromCode(code: string): number {
+	if (code.startsWith("8") || code.startsWith("4") || code.startsWith("92") || code.startsWith("43")) {
+		return 2;
+	}
+	return code.startsWith("6") || code.startsWith("9") || code.startsWith("689") ? 1 : 0;
 }
 
 export class DataSyncService {
@@ -146,7 +154,7 @@ export class DataSyncService {
 	 */
 	async fetchAllAshareList(): Promise<Array<{ code: string; market: number; name: string }>> {
 		try {
-			const data = await runJsonScript("get_all_stocks.py", []);
+			const data = await runJsonScript("get_all_stocks.py", [], 120_000);
 			return data as Array<{ code: string; market: number; name: string }>;
 		} catch (e) {
 			console.warn(
@@ -829,33 +837,53 @@ export class DataSyncService {
 		return total;
 	}
 
+	// ─── Hot Stocks Sync ────────────────────────────────────────────
+
+	async syncHotStocks(date?: string): Promise<number> {
+		const targetDate = date || todayStr();
+		const args: string[] = [];
+		if (date) args.push("--date", date);
+		const data = await runAStockDataJsonScript("get_hot_stocks.py", args, 120_000);
+		const rows: HotStockRow[] = (data.rows || []).map((r: any) => ({
+			date: targetDate,
+			code: String(r.code || ""),
+			market: _marketFromCode(String(r.code || "")),
+			name: r.name ?? null,
+			reason: r.reason ?? null,
+			price: r.price ?? null,
+			change_pct: r.change_pct ?? null,
+			turnover_pct: r.turnover_pct ?? null,
+			amount: r.amount_wan ?? null,
+			pe_ttm: r.pe_ttm ?? null,
+			pb: r.pb ?? null,
+			mcap_yi: r.mcap_yi ?? null,
+			updated_at: new Date().toISOString(),
+		}));
+		await this.store.saveHotStocks(rows);
+		console.log(`[syncHotStocks] Saved ${rows.length} hot stocks for ${targetDate}`);
+		return rows.length;
+	}
+
+	async getHotStocksWithCache(date?: string): Promise<HotStockRow[]> {
+		const targetDate = date || todayStr();
+		const cached = await this.store.getHotStocks(targetDate);
+		if (cached.length > 0) return cached;
+		return this.syncHotStocks(targetDate).then(() => this.store.getHotStocks(targetDate));
+	}
+
 	// ─── Concept Stocks Sync ────────────────────────────────────────
 
 	async syncConceptStocks(concept: string): Promise<ConceptStockRow[]> {
-		// Use Eastmoney/akshare (no JoinQuant dependency)
-		try {
-			const result = await runJsonScript("sync_concepts_jq.py", ["--concept", concept], 120_000);
-			const actualConcept = result.concept || concept;
-			return this.store.getConceptStocks(actualConcept);
-		} catch (e) {
-			console.warn("[syncConceptStocks] Concept sync failed:", e);
-		}
-
-		// Fallback to Eastmoney API via Python script
-		const data = await runJsonScript("get_concept_stocks.py", [concept], 60_000);
-		const stocks: ConceptStockRow[] = (data.stocks || []).map((s: any) => ({
-			concept: data.concept || concept,
-			code: s.code,
-			name: s.name,
-			updated_at: new Date().toISOString(),
-		}));
-		await this.store.saveConceptStocks(stocks);
-		return stocks;
+		// Single concept: akshare primary (reliable for arbitrary concept names)
+		const result = await runJsonScript("sync_concepts.py", ["--concept", concept], 180_000);
+		const actualConcept = result.concept || concept;
+		return this.store.getConceptStocks(actualConcept);
 	}
 
 	async syncAllConcepts(): Promise<number> {
-		console.log("[syncAllConcepts] Starting full concept sync via Eastmoney/akshare...");
-		await runJsonScript("sync_concepts_jq.py", ["--all"], 600_000);
+		// Full sync: Tonghuashun (daily_sync also uses this source)
+		console.log("[syncAllConcepts] Starting full concept sync via Tonghuashun...");
+		await runJsonScript("sync_concept_stocks_ths.py", [], 600_000);
 		const concepts = await this.store.getAllConcepts();
 		console.log(`[syncAllConcepts] Done. ${concepts.length} concepts in local DB.`);
 		return concepts.length;
@@ -863,7 +891,7 @@ export class DataSyncService {
 
 	async syncIndustries(): Promise<{ standards: number; industries: number; mappings: number; errors: string[] }> {
 		console.log("[syncIndustries] Syncing all industry classifications via Eastmoney/akshare...");
-		const result = await runJsonScript("sync_industries_jq.py", ["--all"], 600_000);
+		const result = await runJsonScript("sync_industries.py", ["--all"], 600_000);
 
 		const results = result.results || [];
 		let totalIndustries = 0;
@@ -942,14 +970,14 @@ export class DataSyncService {
 
 	// ─── Stock List Sync ────────────────────────────────────────────
 
-	async syncStockList(scope = "all"): Promise<number> {
-		const data = await runJsonScript("stock_screener.py", ["--scope", scope, "--top", "5000"]);
-		const results = data.results || [];
+	async syncStockList(): Promise<number> {
+		const data = await runJsonScript("get_all_stocks.py", [], 120_000);
+		const results = Array.isArray(data) ? data : data.results || [];
 
 		const rows: StockRow[] = results.map((r: any) => ({
-			code: r.代码,
-			name: r.名称,
-			market: r.代码?.startsWith("6") ? 1 : 0,
+			code: r.code,
+			name: r.name,
+			market: r.market ?? (r.code?.startsWith("6") ? 1 : 0),
 			updated_at: new Date().toISOString(),
 		}));
 

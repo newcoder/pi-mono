@@ -1,108 +1,69 @@
 #!/usr/bin/env python3
 """
 Market-wide news fetcher.
-Fetches macro/market news from CLS (财联社) and Eastmoney (东方财富要闻).
+Fetches macro/market news from a-stock-data sources:
+- CLS telegraph (财联社电报)
+- Eastmoney global 7x24 (东方财富全球资讯)
 """
 import argparse
 import json
 import sys
 import os
-import re
 import time
 from datetime import datetime
-from typing import Dict, List, Optional
-from urllib.parse import urlparse
+from typing import Dict, List
 
-import requests
-from requests.adapters import HTTPAdapter
-from urllib3.util.retry import Retry
+_SCRIPT_DIR = os.path.dirname(os.path.abspath(__file__))
+_A_STOCK_DATA_DIR = os.path.normpath(os.path.join(_SCRIPT_DIR, "..", "..", "a-stock-data", "scripts"))
+if _A_STOCK_DATA_DIR not in sys.path:
+    sys.path.insert(0, _A_STOCK_DATA_DIR)
 
-_SESSION = requests.Session()
-_SESSION.mount("https://", HTTPAdapter(max_retries=Retry(total=3, backoff_factor=1.0)))
-_SESSION.mount("http://", HTTPAdapter(max_retries=Retry(total=3, backoff_factor=1.0)))
+from news_fetcher import fetch_news
 
 
-# ── CLS (财联社) ────────────────────────────────────────────────────────────
+def _map_time(item: Dict) -> str:
+    """Normalize a-stock-data 'time' field to pub_time format."""
+    t = item.get("time", "")
+    if not t:
+        return datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+    if len(t) == 10 and t[4] == "-":
+        return f"{t} 00:00:00"
+    return t
 
-def fetch_cls_market_news(limit: int = 100) -> List[Dict]:
-    """Fetch market news from CLS via akshare."""
-    try:
-        import akshare as ak
-        df = ak.stock_news_main_cx()
-        if df is None or df.empty:
-            return []
-
-        results = []
-        for _, row in df.head(limit).iterrows():
-            tag = str(row.get("tag", ""))
-            summary = str(row.get("summary", ""))
-            url = str(row.get("url", ""))
-
-            # Try to extract date from URL
-            pub_time = ""
-            url_match = re.search(r'/(\d{4}-\d{2}-\d{2})/', url)
-            if url_match:
-                pub_time = url_match.group(1)
-            else:
-                pub_time = datetime.now().strftime("%Y-%m-%d")
-
-            results.append({
-                "title": summary,
-                "source": "cls",
-                "pub_time": pub_time,
-                "url": url,
-                "raw_tag": tag,
-            })
-        return results
-    except Exception as e:
-        print(f"CLS market news fetch error: {e}", file=sys.stderr)
-        return []
-
-
-# ── Eastmoney (东方财富要闻) ───────────────────────────────────────────────
-
-def fetch_eastmoney_market_news(limit: int = 50) -> List[Dict]:
-    """Fetch market news from Eastmoney focus news page."""
-    try:
-        import akshare as ak
-        # Try to get eastmoney focus news if available
-        # Fallback to general search
-        url = "https://np-anotice-stock.eastmoney.com/api/security/ann"
-        return []
-    except Exception as e:
-        print(f"Eastmoney market news fetch error: {e}", file=sys.stderr)
-        return []
-
-
-# ── Unified fetch ───────────────────────────────────────────────────────────
 
 def fetch_market_news(sources: List[str] = None, limit_per_source: int = 100) -> List[Dict]:
     """Fetch market-wide news from multiple sources."""
     if sources is None:
-        sources = ["cls"]
+        sources = ["cls_telegraph", "eastmoney_global"]
 
-    all_news = []
-    for source in sources:
-        if source == "cls":
-            news = fetch_cls_market_news(limit=limit_per_source)
-        elif source == "eastmoney":
-            news = fetch_eastmoney_market_news(limit=limit_per_source)
-        else:
-            continue
-        all_news.extend(news)
-        if source != sources[-1]:
-            time.sleep(0.3)
+    valid_sources = [s for s in sources if s in ("cls_telegraph", "eastmoney_global")]
+    if not valid_sources:
+        return []
+
+    result = fetch_news(code="", sources=valid_sources, limit_per_source=limit_per_source)
+    items = result.get("items", []) if result.get("success") else []
+
+    news = []
+    for item in items:
+        news.append({
+            "title": item.get("title", ""),
+            "content": item.get("content", ""),
+            "source": item.get("source", ""),
+            "source_type": item.get("source_type", ""),
+            "pub_time": _map_time(item),
+            "url": item.get("url", ""),
+        })
 
     # Sort by pub_time descending
-    all_news.sort(key=lambda x: x.get("pub_time", ""), reverse=True)
-    return all_news
+    news.sort(key=lambda x: x.get("pub_time", ""), reverse=True)
+    return news
 
 
 # ── CLI ─────────────────────────────────────────────────────────────────────
 
 def main():
     parser = argparse.ArgumentParser(description="Fetch market news")
-    parser.add_argument("--sources", default="cls", help="Comma-separated sources")
+    parser.add_argument("--sources", default="cls_telegraph,eastmoney_global", help="Comma-separated sources")
     parser.add_argument("--limit", type=int, default=100, help="Limit per source")
     parser.add_argument("--output", help="Output JSON file")
     args = parser.parse_args()

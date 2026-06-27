@@ -15,6 +15,7 @@ import os
 import sys
 import io
 import sqlite3
+import subprocess
 import time
 import traceback
 import logging
@@ -41,6 +42,8 @@ os.makedirs(_LOG_DIR, exist_ok=True)
 # ── Logging setup ──────────────────────────────────────────────────────────
 _TODAY = datetime.now().strftime('%Y%m%d')
 _LOG_FILE = os.path.join(_LOG_DIR, f"sync_{_TODAY}.log")
+# Date used for historical-aware phases like hot_stocks; set via --date
+SYNC_DATE: Optional[str] = None
 
 logging.basicConfig(
     level=logging.INFO,
@@ -52,6 +55,28 @@ logging.basicConfig(
 )
 logger = logging.getLogger('daily_sync')
 
+# ── a-stock-data script runner ─────────────────────────────────────────────
+
+def _run_astockdata_script(script_name: str, args: List[str], timeout: int = 60) -> dict:
+    """Run an a-stock-data Python script and parse its JSON output."""
+    script_path = os.path.normpath(os.path.join(_SCRIPT_DIR, "..", "..", "a-stock-data", "scripts", script_name))
+    proc = subprocess.run(
+        [sys.executable, script_path, *args],
+        capture_output=True,
+        text=True,
+        encoding="utf-8",
+        timeout=timeout,
+        env={**os.environ, "PYTHONIOENCODING": "utf-8"},
+    )
+    if proc.returncode != 0:
+        raise RuntimeError(f"{script_name} failed: {proc.stderr[:500]}")
+    stdout = proc.stdout.strip()
+    start = stdout.find("{")
+    if start == -1:
+        raise RuntimeError(f"No JSON found in {script_name} output")
+    return json.loads(stdout[start:])
+
+
 # ── Result tracking ────────────────────────────────────────────────────────
 _sync_results = {
     "start_time": datetime.now().isoformat(),
@@ -59,6 +84,15 @@ _sync_results = {
     "errors": [],
     "warnings": [],
 }
+
+
+def _safe_float(v):
+    if v is None or v == "" or v == "-":
+        return None
+    try:
+        return float(v)
+    except (ValueError, TypeError):
+        return None
 
 
 def _phase(name: str):
@@ -301,6 +335,32 @@ def ensure_tables():
         ON industry_synthetic_klines(code, standard, date)
     """)
 
+    # hot_stocks: daily snapshot of Tonghuashun hot strong stocks with reason tags
+    cur.execute("""
+        CREATE TABLE IF NOT EXISTS hot_stocks (
+            date TEXT NOT NULL,
+            code TEXT NOT NULL,
+            market INTEGER NOT NULL,
+            name TEXT,
+            reason TEXT,
+            price REAL,
+            change_pct REAL,
+            turnover_pct REAL,
+            amount REAL,
+            pe_ttm REAL,
+            pb REAL,
+            mcap_yi REAL,
+            updated_at TEXT,
+            PRIMARY KEY (date, code, market)
+        )
+    """)
+    cur.execute("""
+        CREATE INDEX IF NOT EXISTS idx_hot_stocks_date ON hot_stocks(date)
+    """)
+    cur.execute("""
+        CREATE INDEX IF NOT EXISTS idx_hot_stocks_reason ON hot_stocks(reason)
+    """)
+
     conn.commit()
     conn.close()
     logger.info("Database tables ensured.")
@@ -330,39 +390,41 @@ def sync_stocks() -> dict:
         now = datetime.now().isoformat()
         count = 0
 
-        # Try akshare first
+        # Primary: mootdx stock_all (TCP direct, fast)
         stocks = []
         try:
-            import akshare as ak
-            df = ak.stock_zh_a_spot_em()
-            for _, row in df.iterrows():
-                code = str(row.get("代码", "")).strip()
-                name = str(row.get("名称", "")).strip()
-                if not _is_a_share(code):
-                    continue
-                market = 1 if code.startswith(("60", "68")) else 0
-                stocks.append({"code": code, "market": market, "name": name})
-            logger.info(f"Fetched {len(stocks)} stocks from akshare.")
+            from mootdx.quotes import Quotes
+            client = Quotes.factory(market="std")
+            df = client.stock_all()
+            if df is not None and not df.empty:
+                for _, row in df.iterrows():
+                    code = str(row.get("code", "")).strip()
+                    if not _is_a_share(code):
+                        continue
+                    market = 1 if code.startswith(("60", "68")) else 0
+                    name = str(row.get("name", "") or "").replace("\x00", "").replace("\x01", "").strip()
+                    if "退市" in name or name.endswith("退"):
+                        continue
+                    stocks.append({"code": code, "market": market, "name": name or "(unknown)"})
+                logger.info(f"Fetched {len(stocks)} stocks from mootdx.")
         except Exception as e:
-            logger.warning(f"akshare stock list failed: {e}")
+            logger.warning(f"mootdx stock list failed: {e}")
 
-        # Fallback: mootdx stock_all (includes non-A-shares, needs filtering)
+        # Fallback: akshare (slow but complete)
         if not stocks:
             try:
-                from mootdx.quotes import Quotes
-                client = Quotes.factory(market="std")
-                df = client.stock_all()
-                if df is not None and not df.empty:
-                    for _, row in df.iterrows():
-                        code = str(row.get("code", "")).strip()
-                        if not _is_a_share(code):
-                            continue
-                        market = 1 if code.startswith(("60", "68")) else 0
-                        name = str(row.get("name", "") or "").strip()
-                        stocks.append({"code": code, "market": market, "name": name})
-                    logger.info(f"Fetched {len(stocks)} stocks from mootdx.")
+                import akshare as ak
+                df = ak.stock_zh_a_spot_em()
+                for _, row in df.iterrows():
+                    code = str(row.get("代码", "")).strip()
+                    name = str(row.get("名称", "")).strip()
+                    if not _is_a_share(code):
+                        continue
+                    market = 1 if code.startswith(("60", "68")) else 0
+                    stocks.append({"code": code, "market": market, "name": name})
+                logger.info(f"Fetched {len(stocks)} stocks from akshare.")
             except Exception as e:
-                logger.warning(f"mootdx stock list failed: {e}")
+                logger.warning(f"akshare stock list failed: {e}")
 
         if not stocks:
             raise RuntimeError("Failed to fetch stock list from all sources")
@@ -1029,10 +1091,10 @@ def sync_size_ic() -> dict:
 
 @_phase("industries")
 def sync_industries() -> dict:
-    """Sync industry classifications via existing sync_industries_jq.py."""
+    """Sync industry classifications via existing sync_industries.py."""
     try:
-        import sync_industries_jq
-        result = sync_industries_jq.sync_all_standards()
+        import sync_industries
+        result = sync_industries.sync_all_standards()
         return {"detail": result}
     except Exception as e:
         raise RuntimeError(f"Industry sync failed: {e}")
@@ -1051,7 +1113,65 @@ def sync_concepts() -> dict:
         raise RuntimeError(f"Concept sync failed: {e}")
 
 
-# ── Phase 7: Sync Stock News ───────────────────────────────────────────────
+# ── Phase 7: Sync Hot Stocks ─────────────────────────────────────────────────
+
+@_phase("hot_stocks")
+def sync_hot_stocks() -> dict:
+    """Sync Tonghuashun hot strong stocks snapshot via a-stock-data."""
+    target_date = SYNC_DATE or datetime.now().strftime('%Y-%m-%d')
+    now = datetime.now().isoformat()
+
+    script_args = ["--date", target_date] if SYNC_DATE else []
+    data = _run_astockdata_script("get_hot_stocks.py", script_args, timeout=120)
+    rows = data.get("rows", []) or data.get("data", [])
+    if not rows:
+        logger.info(f"No hot stocks returned for {target_date}.")
+        return {"count": 0, "date": target_date}
+
+    def _market_from_code(code: str) -> int:
+        if code.startswith(("8", "4", "92", "43")):
+            return 2
+        return 1 if code.startswith(("60", "68", "90", "689")) else 0
+
+    conn = get_db()
+    try:
+        cur = conn.cursor()
+        inserted = 0
+        for row in rows:
+            code = str(row.get("code", "")).strip()
+            if not code or not code.isdigit() or len(code) != 6:
+                continue
+            market = _market_from_code(code)
+            cur.execute(
+                """INSERT OR REPLACE INTO hot_stocks
+                   (date, code, market, name, reason, price, change_pct, turnover_pct, amount,
+                    pe_ttm, pb, mcap_yi, updated_at)
+                   VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)""",
+                (
+                    target_date,
+                    code,
+                    market,
+                    row.get("name"),
+                    row.get("reason"),
+                    _safe_float(row.get("price")),
+                    _safe_float(row.get("change_pct")),
+                    _safe_float(row.get("turnover_pct")),
+                    _safe_float(row.get("amount_wan")),
+                    _safe_float(row.get("pe_ttm")),
+                    _safe_float(row.get("pb")),
+                    _safe_float(row.get("mcap_yi")),
+                    now,
+                ),
+            )
+            inserted += 1
+        conn.commit()
+        logger.info(f"Synced {inserted} hot stocks for {target_date}.")
+        return {"count": inserted, "date": target_date}
+    finally:
+        conn.close()
+
+
+# ── Phase 8: Sync Stock News ───────────────────────────────────────────────
 
 @_phase("stock_news")
 def sync_stock_news() -> dict:
@@ -1198,6 +1318,7 @@ def run_all_phases(phases: Optional[List[str]] = None):
         ("size_ic", sync_size_ic),
         ("industries", sync_industries),
         ("concepts", sync_concepts),
+        ("hot_stocks", sync_hot_stocks),
         ("stock_news", sync_stock_news),
         ("market_news", sync_market_news),
         ("validation", run_validation),
@@ -1248,7 +1369,12 @@ def main():
     parser.add_argument("--phase", action="append", help="Run specific phase(s)")
     parser.add_argument("--validate-only", action="store_true", help="Only run validation")
     parser.add_argument("--skip-fundamentals", action="store_true", help="Skip fundamentals (slow)")
+    parser.add_argument("--date", help="Historical date for hot_stocks phase (YYYY-MM-DD)")
     args = parser.parse_args()
+
+    if args.date:
+        global SYNC_DATE
+        SYNC_DATE = args.date
 
     if args.validate_only:
         ensure_tables()
@@ -1262,7 +1388,7 @@ def main():
         for p in args.phase:
             phases.extend([s.strip() for s in p.split(",") if s.strip()])
     if args.skip_fundamentals and not phases:
-        phases = ["stocks", "quotes", "klines", "industry_momentum", "size_ic", "industries", "concepts", "stock_news", "market_news", "validation"]
+        phases = ["stocks", "quotes", "klines", "industry_momentum", "size_ic", "industries", "concepts", "hot_stocks", "stock_news", "market_news", "validation"]
 
     run_all_phases(phases)
 
