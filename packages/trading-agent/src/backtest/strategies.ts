@@ -1,5 +1,6 @@
 import type { KlineRow } from "../data/types.js";
-import { computeMA, computeMACD, computeRSI, computeSupertrend, getCloses, getVolumes } from "../indicators/engine.js";
+import { getCloses, getVolumes } from "../indicators/engine.js";
+import { cachedMA, cachedMACD, cachedRSI, cachedSupertrend } from "./indicator-cache.js";
 import type { Signal, StrategyType } from "./types.js";
 
 export interface StrategyParams {
@@ -63,6 +64,10 @@ export function generateSignals(klines: KlineRow[], strategy: StrategyType, para
 			return threeCrowsSignals(klines, params);
 		case "rsi_overbought_sell":
 			return rsiOverboughtSellSignals(klines, params);
+		case "time_exit":
+			return timeExitSignals(klines, params);
+		case "always_buy":
+			return alwaysBuySignals(klines);
 		default:
 			return [];
 	}
@@ -73,9 +78,8 @@ function maCrossSignals(klines: KlineRow[], params: StrategyParams): Signal[] {
 	const slow = params.slow ?? 10;
 	if (klines.length < slow + 1) return [];
 
-	const closes = getCloses(klines);
-	const maFast = computeMA(closes, fast).values;
-	const maSlow = computeMA(closes, slow).values;
+	const maFast = cachedMA(klines, fast).values;
+	const maSlow = cachedMA(klines, slow).values;
 	const signals: Signal[] = [];
 
 	for (let i = 1; i < klines.length; i++) {
@@ -112,8 +116,7 @@ function macdCrossSignals(klines: KlineRow[], params: StrategyParams): Signal[] 
 	const signalPeriod = params.signal ?? 9;
 	if (klines.length < slow + signalPeriod + 1) return [];
 
-	const closes = getCloses(klines);
-	const macd = computeMACD(closes, { fast, slow, signal: signalPeriod });
+	const macd = cachedMACD(klines, { fast, slow, signal: signalPeriod });
 	const signals: Signal[] = [];
 
 	for (let i = 1; i < klines.length; i++) {
@@ -150,8 +153,7 @@ function rsiReversalSignals(klines: KlineRow[], params: StrategyParams): Signal[
 	const overbought = params.overbought ?? 70;
 	if (klines.length < period + 1) return [];
 
-	const closes = getCloses(klines);
-	const rsi = computeRSI(closes, { period }).values;
+	const rsi = cachedRSI(klines, { period }).values;
 	const signals: Signal[] = [];
 	let inPosition = false;
 
@@ -251,7 +253,7 @@ function supertrendSignals(klines: KlineRow[], params: StrategyParams): Signal[]
 	const drawdownSellPct = params.drawdownSellPct ?? 0;
 	if (klines.length < period + 1) return [];
 
-	const st = computeSupertrend(klines, { period, multiplier });
+	const st = cachedSupertrend(klines, { period, multiplier });
 	const signals: Signal[] = [];
 	let inPosition = false;
 	let highestCloseSinceEntry: number | null = null;
@@ -471,8 +473,7 @@ function rsiOverboughtSellSignals(klines: KlineRow[], params: StrategyParams): S
 	const overbought = params.overbought ?? 70;
 	if (klines.length < period + 1) return [];
 
-	const closes = getCloses(klines);
-	const rsi = computeRSI(closes, { period }).values;
+	const rsi = cachedRSI(klines, { period }).values;
 	const signals: Signal[] = [];
 
 	for (let i = 1; i < klines.length; i++) {
@@ -489,6 +490,41 @@ function rsiOverboughtSellSignals(klines: KlineRow[], params: StrategyParams): S
 				reason: `RSI${period}超买回落(${curr.toFixed(1)})`,
 			});
 		}
+	}
+	return signals;
+}
+
+function alwaysBuySignals(klines: KlineRow[]): Signal[] {
+	const signals: Signal[] = [];
+	for (let i = 0; i < klines.length; i++) {
+		const close = klines[i].close;
+		if (close == null) continue;
+		signals.push({
+			index: i,
+			date: klines[i].date,
+			type: "buy",
+			price: close,
+			reason: "AlwaysBuy",
+		});
+	}
+	return signals;
+}
+
+function timeExitSignals(klines: KlineRow[], params: StrategyParams): Signal[] {
+	const period = params.period ?? 5;
+	if (klines.length < period) return [];
+
+	const signals: Signal[] = [];
+	for (let i = period - 1; i < klines.length; i += period) {
+		const close = klines[i].close;
+		if (close == null) continue;
+		signals.push({
+			index: i,
+			date: klines[i].date,
+			type: "sell",
+			price: close,
+			reason: `TimeExit(${period}天)`,
+		});
 	}
 	return signals;
 }
@@ -616,7 +652,7 @@ function techCompositeSignals(klines: KlineRow[], params: StrategyParams): Signa
 		const vr = (volumes[i] ?? 0) / (vavg || 1);
 		const volScore = Math.min(100, Math.max(0, vr * 40 + 20));
 
-		const rets = winC.slice(1).map((c, j) => (winC[j + 1] - c) / c);
+		const rets = winC.slice(0, -1).map((c, j) => (winC[j + 1] - c) / c);
 		const sq = (arr: number[]) => {
 			const m = arr.reduce((a, b) => a + b, 0) / arr.length;
 			return arr.reduce((s, v) => s + (v - m) ** 2, 0);

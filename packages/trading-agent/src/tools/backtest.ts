@@ -3,7 +3,7 @@ import { join } from "node:path";
 import type { AgentTool } from "@mariozechner/pi-agent-core";
 import { Type } from "@sinclair/typebox";
 import { buildBenchmarkCurve, fetchIndexCurve } from "../backtest/benchmark.js";
-import { runBacktest, runPoolBacktest } from "../backtest/engine.js";
+import { runBacktest, runDynamicPoolBacktest, runPoolBacktest } from "../backtest/engine.js";
 import {
 	formatBacktestResult,
 	formatPoolBacktestResult,
@@ -25,7 +25,10 @@ const backtestParams = Type.Object({
 		}),
 	),
 	pool_id: Type.Optional(
-		Type.Number({ description: "股票池编号。提供 pool_id 时，对池中所有股票批量回测，code 参数被忽略。" }),
+		Type.Number({ description: "静态股票池编号。提供 pool_id 时，对池中所有股票批量回测，code 参数被忽略。" }),
+	),
+	dynamic_pool_id: Type.Optional(
+		Type.Number({ description: "动态股票池编号。成分股按交易日变化；与 pool_id、code 互斥。" }),
 	),
 	strategy: Type.Union(
 		[
@@ -46,6 +49,8 @@ const backtestParams = Type.Object({
 			Type.Literal("evening_star", { description: "暮星：大阳→小星→大阴，顶部反转卖出信号" }),
 			Type.Literal("three_crows", { description: "三只乌鸦：连续三阴，逐步下跌，卖出信号" }),
 			Type.Literal("rsi_overbought_sell", { description: "RSI超买回落：RSI从超买区下穿，卖出信号" }),
+			Type.Literal("time_exit", { description: "定时换仓：每N个交易日强制卖出，用作固定周期再平衡" }),
+			Type.Literal("always_buy", { description: "每日全买入：用于排序测试，每天给所有股票发买入信号" }),
 		],
 		{ description: "回测策略类型" },
 	),
@@ -62,6 +67,7 @@ const backtestParams = Type.Object({
 				Type.Literal("evening_star", { description: "暮星" }),
 				Type.Literal("three_crows", { description: "三只乌鸦" }),
 				Type.Literal("rsi_overbought_sell", { description: "RSI超买回落" }),
+				Type.Literal("time_exit", { description: "定时换仓：每N个交易日强制卖出" }),
 			],
 			{ description: "独立的卖出信号策略，与主策略买入信号配合作为退出条件；不生成买入信号" },
 		),
@@ -87,6 +93,7 @@ const backtestParams = Type.Object({
 					Type.Literal("tech_composite"),
 					Type.Literal("breakout"),
 					Type.Literal("volume_contraction"),
+					Type.Literal("always_buy"),
 				]),
 				params: Type.Optional(Type.Record(Type.String(), Type.Number())),
 			}),
@@ -107,6 +114,7 @@ const backtestParams = Type.Object({
 					Type.Literal("evening_star"),
 					Type.Literal("three_crows"),
 					Type.Literal("rsi_overbought_sell"),
+					Type.Literal("time_exit"),
 				]),
 				params: Type.Optional(Type.Record(Type.String(), Type.Number())),
 			}),
@@ -156,6 +164,20 @@ const backtestParams = Type.Object({
 			default: 0,
 		}),
 	),
+	rebalance_frequency: Type.Optional(
+		Type.Number({
+			description:
+				"调仓频率（交易日）。如 5 表示每 5 个交易日才根据排名调仓一次，期间只处理卖出信号/强制平仓/调出股池，不平换仓。用于配合 always_buy 做固定周期排序测试。默认 1（每天调仓）。",
+			default: 1,
+		}),
+	),
+	rebalance_full_portfolio: Type.Optional(
+		Type.Boolean({
+			description:
+				"配合 rebalance_frequency 使用。为 true 时，在调仓日先强制卖出全部持仓，再按排名重新买入目标组合，实现固定周期的全仓换仓。默认 false。",
+			default: false,
+		}),
+	),
 	max_position_weight: Type.Optional(
 		Type.Number({
 			description: "单个标的最大权重上限，如 0.1 表示最多 10%。防止目标集合过小时 all-in 单只股票。默认 0.1。",
@@ -170,6 +192,11 @@ const backtestParams = Type.Object({
 	),
 	slippage: Type.Optional(Type.Number({ description: "滑点比例，默认0.001(0.1%)", default: 0.001 })),
 	commission: Type.Optional(Type.Number({ description: "手续费比例，默认0.0003(0.03%)", default: 0.0003 })),
+	tax_rate: Type.Optional(Type.Number({ description: "印花税比例，仅卖出时扣除，默认0", default: 0 })),
+	transfer_fee: Type.Optional(Type.Number({ description: "过户费比例，买卖双向，默认0", default: 0 })),
+	skip_no_volume: Type.Optional(
+		Type.Boolean({ description: "是否跳过成交量为0或价格缺失的交易日（停牌），默认true", default: true }),
+	),
 	maxHoldingDays: Type.Optional(Type.Number({ description: "最大持仓天数，超出强制平仓" })),
 	min_lot: Type.Optional(Type.Number({ description: "最小交易单位（股），默认100", default: 100 })),
 	params: Type.Optional(
@@ -311,10 +338,12 @@ export const backtestStrategyTool: AgentTool<typeof backtestParams, BacktestTool
 	name: "backtest_strategy",
 	label: "回测策略",
 	description:
-		"对单只股票或股票池运行技术指标回测，验证策略历史表现。支持MA均线金叉/死叉、MACD金叉/死叉、RSI超卖买入/超买卖出、布林带下轨反弹/上轨回落、Supertrend趋势跟踪、锤子线反转、阳包阴、晨星、红三兵、技术综合打分、突破买入、缩量调整、流星线、阴包阳、暮星、三只乌鸦、RSI超买回落共17种策略。可通过 buy_strategies/sell_strategies 分别配置多个买入/卖出信号源，任意一个触发即买卖；自动双向指标（ma_cross/macd_cross/rsi_reversal/bollinger_breakout/supertrend/tech_composite）在买入列表里只取买入信号，在卖出列表里只取卖出信号。旧的 strategy/exit_strategy 仍兼容。提供 code 回测单只股票，或提供 pool_id 对股票池中所有股票批量回测（共享资金池、动态仓位分配、100股整数倍）。数据从本地数据库读取。可通过 save_to_portfolio 将回测交易记录保存到组合中；通过 benchmark_index 生成带指数对比的 HTML 报告；通过 save_holdings_as_pool 将回测终点持仓保存为新股池。",
+		"对单只股票或股票池运行技术指标回测，验证策略历史表现。支持MA均线金叉/死叉、MACD金叉/死叉、RSI超卖买入/超买卖出、布林带下轨反弹/上轨回落、Supertrend趋势跟踪、锤子线反转、阳包阴、晨星、红三兵、技术综合打分、突破买入、缩量调整、流星线、阴包阳、暮星、三只乌鸦、RSI超买回落、定时换仓、每日全买入共19种策略。可通过 buy_strategies/sell_strategies 分别配置多个买入/卖出信号源，任意一个触发即买卖；自动双向指标（ma_cross/macd_cross/rsi_reversal/bollinger_breakout/supertrend/tech_composite）在买入列表里只取买入信号，在卖出列表里只取卖出信号。time_exit 为纯卖出策略，每 period 个交易日强制卖出，可用于固定周期再平衡；always_buy 每天给所有股票发出买入信号，常用于排序能力测试。旧的 strategy/exit_strategy 仍兼容。提供 code 回测单只股票，或提供 pool_id 对股票池中所有股票批量回测（共享资金池、动态仓位分配、100股整数倍）。数据从本地数据库读取。可通过 save_to_portfolio 将回测交易记录保存到组合中；通过 benchmark_index 生成带指数对比的 HTML 报告；通过 save_holdings_as_pool 将回测终点持仓保存为新股池。",
 	parameters: backtestParams,
 	execute: async (_id, params) => {
-		const isPool = params.pool_id != null;
+		const isStaticPool = params.pool_id != null;
+		const isDynamicPool = params.dynamic_pool_id != null;
+		const isPool = isStaticPool || isDynamicPool;
 
 		if (isPool) {
 			// ─── Pool backtest path ─────────────────────────────────────
@@ -325,19 +354,23 @@ export const backtestStrategyTool: AgentTool<typeof backtestParams, BacktestTool
 					details: { error: "DataStore not initialized" },
 				};
 			}
-			const pool = await store.getStockPoolById(params.pool_id!);
+			const poolId = isDynamicPool ? params.dynamic_pool_id! : params.pool_id!;
+			const pool = await store.getStockPoolById(poolId);
 			if (!pool) {
 				return {
-					content: [{ type: "text", text: `股票池编号 ${params.pool_id} 不存在。` }],
+					content: [{ type: "text", text: `股票池编号 ${poolId} 不存在。` }],
 					details: { error: "pool not found" },
 				};
 			}
-			const items = await store.getStockPoolItems(pool.id);
-			if (items.length === 0) {
-				return {
-					content: [{ type: "text", text: `股票池 "${pool.name}" 中没有股票。` }],
-					details: { error: "pool empty" },
-				};
+			let items: Array<{ code: string; market: number; name: string | null; added_at: string }> = [];
+			if (isStaticPool) {
+				items = await store.getStockPoolItems(pool.id);
+				if (items.length === 0) {
+					return {
+						content: [{ type: "text", text: `股票池 "${pool.name}" 中没有股票。` }],
+						details: { error: "pool empty" },
+					};
+				}
 			}
 
 			const poolConfig = {
@@ -355,11 +388,16 @@ export const backtestStrategyTool: AgentTool<typeof backtestParams, BacktestTool
 				fullPosition: params.full_position ?? true,
 				fullPositionMode: params.full_position_mode ?? "equal_weight",
 				rebalanceThreshold: params.rebalance_threshold ?? 0,
+				rebalanceFrequency: params.rebalance_frequency ?? 1,
+				rebalanceFullPortfolio: params.rebalance_full_portfolio ?? false,
 				maxPositionWeight: params.max_position_weight ?? 0.1,
 				minTradeAmount: params.min_trade_amount ?? 0,
 				slippage: params.slippage ?? 0.001,
 				commission: params.commission ?? 0.0003,
+				taxRate: params.tax_rate ?? 0,
+				transferFee: params.transfer_fee ?? 0,
 				maxHoldingDays: params.maxHoldingDays,
+				skipNoVolume: params.skip_no_volume ?? true,
 				minLot: params.min_lot,
 				strategyParams: params.params,
 				industryFilter: params.industry_filter
@@ -394,8 +432,12 @@ export const backtestStrategyTool: AgentTool<typeof backtestParams, BacktestTool
 				volatilityLookbackDays: params.volatility_lookback_days,
 			};
 
-			const stocks = items.map((item) => ({ code: item.code, market: item.market, name: item.name ?? undefined }));
-			const result = await runPoolBacktest(stocks, poolConfig);
+			const result = isDynamicPool
+				? await runDynamicPoolBacktest(pool.id, poolConfig)
+				: await runPoolBacktest(
+						items.map((item) => ({ code: item.code, market: item.market, name: item.name ?? undefined })),
+						poolConfig,
+					);
 
 			let portfolioNote = "";
 			if (params.save_to_portfolio) {
@@ -415,6 +457,8 @@ export const backtestStrategyTool: AgentTool<typeof backtestParams, BacktestTool
 					}
 
 					const commissionRate = params.commission ?? 0.0003;
+					const transferFeeRate = params.transfer_fee ?? 0;
+					const taxRate = params.tax_rate ?? 0;
 					for (const trade of result.trades) {
 						await store.addPortfolioTrade({
 							portfolio_id: portfolioId,
@@ -425,8 +469,8 @@ export const backtestStrategyTool: AgentTool<typeof backtestParams, BacktestTool
 							quantity: trade.shares,
 							price: trade.price,
 							adjust: params.adjust ?? "bfq",
-							commission: (trade.amount ?? 0) * commissionRate,
-							tax: 0,
+							commission: (trade.amount ?? 0) * (commissionRate + transferFeeRate),
+							tax: trade.direction === "sell" ? (trade.amount ?? 0) * taxRate : 0,
 							memo: trade.memo ?? `${params.strategy} ${trade.direction === "buy" ? "买入" : "卖出"}`,
 						});
 					}
@@ -507,12 +551,18 @@ export const backtestStrategyTool: AgentTool<typeof backtestParams, BacktestTool
 					}
 
 					const holdings: Array<{ code: string; market: number; name?: string }> = [];
+					// Build a name lookup from both static pool items and result stocks (covers dynamic pools)
+					const nameMap = new Map<string, string | null | undefined>();
+					for (const item of items) nameMap.set(`${item.code}_${item.market}`, item.name);
+					for (const s of result.stocks) {
+						const key = `${s.code}_${s.market}`;
+						if (!nameMap.has(key)) nameMap.set(key, s.name);
+					}
 					for (const [key, shares] of positions.entries()) {
 						if (shares <= 0) continue;
 						const [code, marketStr] = key.split("_");
 						const market = Number(marketStr);
-						const item = items.find((i) => i.code === code && i.market === market);
-						holdings.push({ code, market, name: item?.name ?? undefined });
+						holdings.push({ code, market, name: nameMap.get(key) ?? undefined });
 					}
 
 					if (holdings.length > 0) {
@@ -566,7 +616,12 @@ export const backtestStrategyTool: AgentTool<typeof backtestParams, BacktestTool
 		// ─── Single-stock backtest path ───────────────────────────────
 		if (!params.code) {
 			return {
-				content: [{ type: "text", text: "请提供 code（股票代码）或 pool_id（股票池编号）。" }],
+				content: [
+					{
+						type: "text",
+						text: "请提供 code（股票代码）、pool_id（静态股票池编号）或 dynamic_pool_id（动态股票池编号）。",
+					},
+				],
 				details: { error: "missing code or pool_id" },
 			};
 		}
@@ -587,7 +642,10 @@ export const backtestStrategyTool: AgentTool<typeof backtestParams, BacktestTool
 			positionSize: params.positionSize ?? 1.0,
 			slippage: params.slippage ?? 0.001,
 			commission: params.commission ?? 0.0003,
+			taxRate: params.tax_rate ?? 0,
+			transferFee: params.transfer_fee ?? 0,
 			maxHoldingDays: params.maxHoldingDays,
+			skipNoVolume: params.skip_no_volume ?? true,
 			strategyParams: params.params,
 		};
 
@@ -613,6 +671,8 @@ export const backtestStrategyTool: AgentTool<typeof backtestParams, BacktestTool
 					}
 
 					const commissionRate = params.commission ?? 0.0003;
+					const transferFeeRate = params.transfer_fee ?? 0;
+					const taxRate = params.tax_rate ?? 0;
 					for (const trade of result.trades) {
 						await store.addPortfolioTrade({
 							portfolio_id: portfolioId,
@@ -623,7 +683,7 @@ export const backtestStrategyTool: AgentTool<typeof backtestParams, BacktestTool
 							quantity: trade.shares,
 							price: trade.entryPrice,
 							adjust: params.adjust ?? "bfq",
-							commission: trade.shares * trade.entryPrice * commissionRate,
+							commission: trade.shares * trade.entryPrice * (commissionRate + transferFeeRate),
 							tax: 0,
 							memo: `${params.strategy} 策略买入`,
 						});
@@ -636,8 +696,8 @@ export const backtestStrategyTool: AgentTool<typeof backtestParams, BacktestTool
 							quantity: trade.shares,
 							price: trade.exitPrice,
 							adjust: params.adjust ?? "bfq",
-							commission: trade.shares * trade.exitPrice * commissionRate,
-							tax: 0,
+							commission: trade.shares * trade.exitPrice * (commissionRate + transferFeeRate),
+							tax: trade.shares * trade.exitPrice * taxRate,
 							memo: `${params.strategy} 策略卖出 | 持仓${trade.daysHeld}天 | 盈亏${trade.pnl >= 0 ? "+" : ""}${trade.pnl.toFixed(2)}`,
 						});
 					}
