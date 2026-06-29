@@ -241,9 +241,9 @@ All tools use `AgentTool` from `pi-agent-core` with TypeBox schemas.
 
 | Tool | Source | Purpose |
 |------|--------|---------|
-| `get_quote` | akshare / local SQLite | Real-time price, PE, market cap, 52w range |
-| `get_kline` | JoinQuant / local SQLite | Historical OHLCV (daily/weekly/monthly/minute) |
-| `get_fundamentals` | Eastmoney / local SQLite | 3-statement financials (39 fields) |
+| `get_quote` | mootdx / Eastmoney / local SQLite | Real-time price, PE, market cap, 52w range |
+| `get_kline` | mootdx / akshare / local SQLite | Historical OHLCV (daily/weekly/monthly/minute) |
+| `get_fundamentals` | mootdx / Eastmoney / local SQLite | 3-statement financials (39 fields) |
 
 ### 4.2 Analysis Tools — ✅ Implemented
 
@@ -497,7 +497,7 @@ Post-market routine → AnalysisMemory.dailyCompaction()
 
 ### Phase 2: Data Infrastructure ✅ COMPLETE
 - [x] SQLite DataStore with 11 tables
-- [x] Incremental kline sync from JoinQuant
+- [x] Incremental kline sync from mootdx / akshare
 - [x] Full-market fundamentals sync (5,207 stocks, 62,332 rows)
 - [x] Quote caching, sector sync, macro sync
 - [x] Adjustment factor handling (bfq storage + dynamic qfq/hfq)
@@ -556,7 +556,7 @@ Post-market routine → AnalysisMemory.dailyCompaction()
 
 ## 11. Open Questions
 
-1. **Futures data source**: JoinQuant supports futures klines. Do we reuse the kline sync infrastructure or build a separate pipeline?
+1. **Futures data source**: Futures klines are not currently supported. Do we reuse the kline sync infrastructure or build a separate pipeline?
 2. **Factor calculation performance**: Large-universe factor calc (5,500 stocks x 10 factors) may be slow. Consider caching daily factor snapshots in `factor_values` table.
 3. **Sentiment data source**: Advance/decline and limit-up/down counts can be computed from quote table. Northbound flow requires external API (akshare).
 4. **NL backtest ambiguity**: How to handle ambiguous strategy descriptions? Clarifying questions vs. best-effort defaults?

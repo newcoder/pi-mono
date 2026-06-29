@@ -1,0 +1,62 @@
+- generic [ref=e3] [box=0,0,1920,893]:
+  - generic [ref=e4] [box=0,0,1920,62]:
+    - generic [ref=e5] [box=16,16,160,28]:
+      - generic [ref=e6] [box=16,16,28,28]: π
+      - generic [ref=e7] [box=52,17,124,27]: Trading Agent
+    - generic [ref=e8] [box=192,8,1207,45]:
+      - generic [ref=e254] [cursor=pointer] [box=208,16,192,28]:
+        - generic [ref=e255] [box=218,20,52,20]: 上证指数
+        - generic [ref=e256] [box=276,20,52,20]: "4135.13"
+        - generic [ref=e257] [box=334,22,10,15]: ▼
+        - generic [ref=e258] [box=350,21,40,18]: "-0.25%"
+      - generic [ref=e259] [cursor=pointer] [box=412,16,183,28]:
+        - generic [ref=e260] [box=422,20,49,20]: 沪深300
+        - generic [ref=e261] [box=477,20,52,20]: "4962.41"
+        - generic [ref=e262] [box=535,22,10,15]: ▲
+        - generic [ref=e263] [box=551,21,35,18]: 0.29%
+      - generic [ref=e264] [cursor=pointer] [box=607,16,176,28]:
+        - generic [ref=e265] [box=617,20,41,20]: 科创50
+        - generic [ref=e266] [box=665,20,52,20]: "1895.75"
+        - generic [ref=e267] [box=722,22,10,15]: ▲
+        - generic [ref=e268] [box=738,21,35,18]: 1.50%
+      - generic [ref=e269] [cursor=pointer] [box=795,16,183,28]:
+        - generic [ref=e270] [box=805,20,49,20]: 中证500
+        - generic [ref=e271] [box=860,20,52,20]: "8695.53"
+        - generic [ref=e272] [box=918,22,10,15]: ▲
+        - generic [ref=e273] [box=934,21,35,18]: 0.43%
+      - generic [ref=e274] [cursor=pointer] [box=990,16,194,28]:
+        - generic [ref=e275] [box=1000,20,52,20]: 深证成指
+        - generic [ref=e276] [box=1058,20,60,20]: "16013.91"
+        - generic [ref=e277] [box=1124,22,10,15]: ▲
+        - generic [ref=e278] [box=1140,21,35,18]: 0.87%
+      - generic [ref=e279] [cursor=pointer] [box=1197,16,186,28]:
+        - generic [ref=e280] [box=1207,20,52,20]: 创业板指
+        - generic [ref=e281] [box=1265,20,52,20]: "4130.98"
+        - generic [ref=e282] [box=1323,22,10,15]: ▲
+        - generic [ref=e283] [box=1339,21,35,18]: 2.17%
+  - generic [ref=e10] [box=0,62,1920,47]:
+    - generic [ref=e11] [box=16,75,70,18]: RESEARCH
+    - textbox "搜索股票 (代码/名称/拼音)" [ref=e13] [box=98,68,220,34]
+  - generic [ref=e14] [box=0,108,1920,785]:
+    - generic [ref=e15] [box=0,108,384,785]:
+      - generic [ref=e17] [box=14,118,36,17]: 股票池
+      - generic [ref=e18] [box=0,146,383,748]:
+        - generic [ref=e19] [box=0,146,191,748]
+        - generic [ref=e86] [box=198,154,179,147]
+    - generic [ref=e90] [box=384,108,1264,785]:
+      - generic [ref=e94] [box=1361,108,287,41]:
+        - generic [ref=e95] [box=1375,120,48,17]: 工具调用
+        - button "收起" [ref=e96] [cursor=pointer] [box=1614,118,20,20]
+      - generic [ref=e101] [box=632,830,768,47]:
+        - button "设置" [ref=e102] [cursor=pointer] [box=632,833,44,44]
+        - button "附件" [ref=e106] [cursor=pointer] [box=688,833,44,44]
+        - button "Choose File" [box=632,877,0,0]
+        - textbox "输入消息..." [ref=e109] [box=744,830,600,47]
+        - button "发送" [ref=e110] [cursor=pointer] [box=1356,833,44,44]
+    - generic [ref=e114] [box=1648,108,272,785]:
+      - generic [ref=e115] [box=1649,108,271,385]:
+        - generic [ref=e116] [cursor=pointer] [box=1649,108,271,42]
+        - generic [ref=e126] [box=1649,150,271,342]
+      - generic [ref=e245] [box=1649,493,271,401]:
+        - generic [ref=e246] [cursor=pointer] [box=1649,493,271,40]
+        - generic [ref=e251] [box=1657,540,245,2185]

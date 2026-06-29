@@ -1,0 +1,313 @@
+- generic [ref=e3]:
+  - generic [ref=e4]:
+    - generic [ref=e5]:
+      - generic [ref=e6]: π
+      - generic [ref=e7]: Trading Agent
+    - generic [ref=e8]:
+      - generic [ref=e59] [cursor=pointer]:
+        - generic [ref=e60]: 上证指数
+        - generic [ref=e61]: "4145.37"
+        - generic [ref=e62]: ▼
+        - generic [ref=e63]: "-0.17%"
+      - generic [ref=e64] [cursor=pointer]:
+        - generic [ref=e65]: 沪深300
+        - generic [ref=e66]: "4947.85"
+        - generic [ref=e67]: ▲
+        - generic [ref=e68]: 0.53%
+      - generic [ref=e69] [cursor=pointer]:
+        - generic [ref=e70]: 科创50
+        - generic [ref=e71]: "1867.71"
+        - generic [ref=e72]: ▼
+        - generic [ref=e73]: "-1.49%"
+      - generic [ref=e74] [cursor=pointer]:
+        - generic [ref=e75]: 中证500
+        - generic [ref=e76]: "8658.62"
+        - generic [ref=e77]: ▼
+        - generic [ref=e78]: "-0.52%"
+      - generic [ref=e79] [cursor=pointer]:
+        - generic [ref=e80]: 深证成指
+        - generic [ref=e81]: "15876.16"
+        - generic [ref=e82]: ▲
+        - generic [ref=e83]: 0.12%
+      - generic [ref=e84] [cursor=pointer]:
+        - generic [ref=e85]: 创业板指
+        - generic [ref=e86]: "4043.07"
+        - generic [ref=e87]: ▲
+        - generic [ref=e88]: 0.55%
+  - generic [ref=e11]: "市场情绪: 加载中..."
+  - generic [ref=e12]:
+    - generic [ref=e13]: RESEARCH
+    - textbox "搜索股票 (代码/名称/拼音)" [ref=e15]
+  - generic [ref=e16]:
+    - generic [ref=e17]:
+      - generic [ref=e19]: 股票池
+      - generic [ref=e20]:
+        - generic [ref=e89] [cursor=pointer]:
+          - generic [ref=e90]:
+            - generic [ref=e91]: 同花顺强势股_20260526
+            - button "×" [ref=e92]
+          - generic [ref=e93]: 50 只
+        - generic [ref=e94] [cursor=pointer]:
+          - generic [ref=e95]:
+            - generic [ref=e96]: DoubleEnsemble_Top30_Prob
+            - button "×" [ref=e97]
+          - generic [ref=e98]: 30 只
+        - generic [ref=e99] [cursor=pointer]:
+          - generic [ref=e100]:
+            - generic [ref=e101]: lgbm_40_60
+            - button "×" [ref=e102]
+          - generic [ref=e103]: 21 只
+        - generic [ref=e104] [cursor=pointer]:
+          - generic [ref=e105]:
+            - generic [ref=e106]: LGBM Rank 40-60
+            - button "×" [ref=e107]
+          - generic [ref=e108]: 21 只
+        - generic [ref=e109] [cursor=pointer]:
+          - generic [ref=e110]:
+            - generic [ref=e111]: 周线多头日线缩量回调_202605
+            - button "×" [ref=e112]
+          - generic [ref=e113]: 30 只
+        - generic [ref=e114] [cursor=pointer]:
+          - generic [ref=e115]:
+            - generic [ref=e116]: 最近访问
+            - button "×" [ref=e117]
+          - generic [ref=e118]: 118 只
+        - generic [ref=e119] [cursor=pointer]:
+          - generic [ref=e120]:
+            - generic [ref=e121]: 未来关注股池
+            - button "×" [ref=e122]
+          - generic [ref=e123]: 50 只
+        - generic [ref=e124] [cursor=pointer]:
+          - generic [ref=e125]:
+            - generic [ref=e126]: 周线多头日线回调缩量
+            - button "×" [ref=e127]
+          - generic [ref=e128]: 50 只
+        - generic [ref=e129] [cursor=pointer]:
+          - generic [ref=e130]:
+            - generic [ref=e131]: 前期强势缩量调整
+            - button "×" [ref=e132]
+          - generic [ref=e133]: 50 只
+        - generic [ref=e134] [cursor=pointer]:
+          - generic [ref=e135]:
+            - generic [ref=e136]: 营收连续两年增长超50%
+            - button "×" [ref=e137]
+          - generic [ref=e138]: 45 只
+        - generic [ref=e139] [cursor=pointer]:
+          - generic [ref=e140]:
+            - generic [ref=e141]: 日线多头排列市值TOP10
+            - button "×" [ref=e142]
+          - generic [ref=e143]: 10 只
+    - generic [ref=e21]:
+      - generic [ref=e25]:
+        - button "附件" [ref=e26] [cursor=pointer]:
+          - img [ref=e27]
+        - button "Choose File"
+        - textbox "输入消息..." [ref=e29]
+        - button "发送" [ref=e30] [cursor=pointer]:
+          - img [ref=e31]
+      - generic [ref=e35]: 工具调用
+    - generic [ref=e37]:
+      - generic [ref=e38]:
+        - generic [ref=e39] [cursor=pointer]:
+          - generic [ref=e40]: 📅 投资日历
+          - generic [ref=e41]:
+            - button "刷新日历数据" [ref=e42]:
+              - img [ref=e43]
+            - img [ref=e46]
+        - generic [ref=e49]:
+          - generic [ref=e144]:
+            - button "<" [ref=e145] [cursor=pointer]
+            - generic [ref=e146]: 2026年5月
+            - button ">" [ref=e147] [cursor=pointer]
+          - generic [ref=e148]:
+            - generic [ref=e149]: 日
+            - generic [ref=e150]: 一
+            - generic [ref=e151]: 二
+            - generic [ref=e152]: 三
+            - generic [ref=e153]: 四
+            - generic [ref=e154]: 五
+            - generic [ref=e155]: 六
+          - generic [ref=e156]:
+            - generic [ref=e163] [cursor=pointer]: "1"
+            - generic [ref=e165] [cursor=pointer]: "2"
+            - generic [ref=e167] [cursor=pointer]: "3"
+            - generic [ref=e169] [cursor=pointer]: "4"
+            - generic [ref=e171] [cursor=pointer]: "5"
+            - generic [ref=e173] [cursor=pointer]: "6"
+            - generic [ref=e175] [cursor=pointer]: "7"
+            - generic [ref=e177] [cursor=pointer]: "8"
+            - generic [ref=e179] [cursor=pointer]: "9"
+            - generic [ref=e181] [cursor=pointer]: "10"
+            - generic [ref=e183] [cursor=pointer]: "11"
+            - generic [ref=e185] [cursor=pointer]: "12"
+            - generic [ref=e187] [cursor=pointer]: "13"
+            - generic [ref=e189] [cursor=pointer]: "14"
+            - generic [ref=e191] [cursor=pointer]: "15"
+            - generic [ref=e193] [cursor=pointer]: "16"
+            - generic [ref=e195] [cursor=pointer]: "17"
+            - generic [ref=e197] [cursor=pointer]: "18"
+            - generic [ref=e201] [cursor=pointer]: "19"
+            - generic [ref=e203] [cursor=pointer]: "20"
+            - generic [ref=e205] [cursor=pointer]: "21"
+            - generic [ref=e209] [cursor=pointer]: "22"
+            - generic [ref=e211] [cursor=pointer]: "23"
+            - generic [ref=e213] [cursor=pointer]: "24"
+            - generic [ref=e215] [cursor=pointer]: "25"
+            - generic [ref=e219] [cursor=pointer]: "26"
+            - generic [ref=e221] [cursor=pointer]: "27"
+            - generic [ref=e223] [cursor=pointer]: "28"
+            - generic [ref=e225] [cursor=pointer]: "29"
+            - generic [ref=e227] [cursor=pointer]: "30"
+            - generic [ref=e229] [cursor=pointer]: "31"
+          - generic [ref=e230]:
+            - generic [ref=e231]: 本月重点关注
+            - generic [ref=e232] [cursor=pointer]:
+              - generic [ref=e233]:
+                - generic [ref=e235]: 05-18
+                - generic [ref=e236]: 新天力 业绩预告
+              - generic [ref=e237]: "公告日期: 20260518; 报告期[20260331]: 2026年一季报"
+            - generic [ref=e238] [cursor=pointer]:
+              - generic [ref=e239]:
+                - generic [ref=e241]: 05-21
+                - generic [ref=e242]: 高特电子 业绩预告
+              - generic [ref=e243]: "公告日期: 20260521; 报告期[20260331]: 2026年一季报"
+            - generic [ref=e244] [cursor=pointer]:
+              - generic [ref=e245]:
+                - generic [ref=e247]: 05-21
+                - generic [ref=e248]: 惠康科技 业绩预告
+              - generic [ref=e249]: "最新价: 89.18; 最新涨跌幅: 0.314961; 公告日期: 20260521; 报告期[20260331]: 2026年一季报; 净利润增长率上限[20260331]: 9.8"
+            - generic [ref=e250] [cursor=pointer]:
+              - generic [ref=e251]:
+                - generic [ref=e253]: 05-21
+                - generic [ref=e254]: 新睿电子 业绩预告
+              - generic [ref=e255]: "公告日期: 20260521; 报告期[20260331]: 2026年一季报"
+            - generic [ref=e256] [cursor=pointer]:
+              - generic [ref=e257]:
+                - generic [ref=e259]: 05-25
+                - generic [ref=e260]: 彩客科技 业绩预告
+              - generic [ref=e261]: "公告日期: 20260525; 报告期[20260331]: 2026年一季报"
+      - generic [ref=e50]:
+        - generic [ref=e51] [cursor=pointer]:
+          - generic [ref=e52]: 📰 财经新闻
+          - img [ref=e53]
+        - generic [ref=e56]:
+          - generic "木林森：控股股东及实控人计划增持1亿元至1.5亿元股份" [ref=e262] [cursor=pointer]:
+            - generic [ref=e263]:
+              - generic [ref=e264]: 财联社
+              - generic [ref=e265]: 05-26 17:30
+            - generic [ref=e266]: 木林森：控股股东及实控人计划增持1亿元至1.5亿元股份
+            - generic [ref=e267]: 【木林森：控股股东及实控人计划增持1亿元至1.5亿元股份】财联社5月26日电，木林森(002745.SZ)公告称，公司控股股东及实际控制人孙清焕计划自公告披露之日起6个月内，通过集中竞价方式增持公司股份，增持金额不低于1亿元且不超过1.5亿...
+          - generic "工信部：重点围绕驾驶自动化、汽车数据、“车路云一体化”等领域加速标准研制与迭代" [ref=e268] [cursor=pointer]:
+            - generic [ref=e269]:
+              - generic [ref=e270]: 财联社
+              - generic [ref=e271]: 05-26 17:29
+            - generic [ref=e272]: 工信部：重点围绕驾驶自动化、汽车数据、“车路云一体化”等领域加速标准研制与迭代
+            - generic [ref=e273]: 【工信部：重点围绕驾驶自动化、汽车数据、“车路云一体化”等领域加速标准研制与迭代】财联社5月26日电，工信部发布2026年汽车标准化工作要点。其中包括，促进新兴领域创新发展。聚焦智能网联汽车、汽车电子、汽车芯片等领域，开展标准引领行动，鼓励...
+          - generic "工信部：持续提升电动汽车及动力电池安全标准要求 优化动力电池、驱动电机等核心部件系统性能标准" [ref=e274] [cursor=pointer]:
+            - generic [ref=e275]:
+              - generic [ref=e276]: 财联社
+              - generic [ref=e277]: 05-26 17:28
+            - generic [ref=e278]: 工信部：持续提升电动汽车及动力电池安全标准要求 优化动力电池、驱动电机等核心部件系统性能标准
+            - generic [ref=e279]: 【工信部：持续提升电动汽车及动力电池安全标准要求 优化动力电池、驱动电机等核心部件系统性能标准】财联社5月26日电，工信部发布2026年汽车标准化工作要点。其中包括，引领行业绿色低碳转型。聚焦新能源汽车安全、性能与兼容等关键领域，持续提升电...
+          - generic "大食代回应内地门店关闭情况" [ref=e280]:
+            - generic [ref=e281]:
+              - generic [ref=e282]: 东财7x24
+              - generic [ref=e283]: 05-26 17:27
+            - generic [ref=e284]: 大食代回应内地门店关闭情况
+            - generic [ref=e285]: 【大食代回应内地门店关闭情况】5月26日，美食广场品牌大食代对界面新闻回应中国区域闭店情况时称：“因租约到期，大食代北京东方广场店将于2026年6月15日暂停营业。目前大食代中国区域含内地、香港、台湾合计运营门店近20家店，整体经营稳定有序...
+          - generic "工信部发布2026年汽车标准化工作要点" [ref=e286] [cursor=pointer]:
+            - generic [ref=e287]:
+              - generic [ref=e288]: 财联社
+              - generic [ref=e289]: 05-26 17:27
+            - generic [ref=e290]: 工信部发布2026年汽车标准化工作要点
+            - generic [ref=e291]: 【工信部发布2026年汽车标准化工作要点】财联社5月26日电，工信部发布2026年汽车标准化工作要点。其中包括，完善汽车标准体系规划。完成汽车行业“十五五”技术标准体系建设方案编制，扎实开展标准“推转强”可行性试点研究，科学评估汽车强制性国...
+          - generic "工信部发布2026年汽车标准化工作要点" [ref=e292]:
+            - generic [ref=e293]:
+              - generic [ref=e294]: 东财7x24
+              - generic [ref=e295]: 05-26 17:27
+            - generic [ref=e296]: 工信部发布2026年汽车标准化工作要点
+            - generic [ref=e297]: 【工信部发布2026年汽车标准化工作要点】工信部发布2026年汽车标准化工作要点。其中包括，完善汽车标准体系规划。完成汽车行业“十五五”技术标准体系建设方案编制，扎实开展标准“推转强”可行性试点研究，科学评估汽车强制性国家标准路线图实施成效...
+          - generic "小米Q1财报：手机ASP同比提升8.2%创新高 核心业务经营利润环比涨近2倍" [ref=e298] [cursor=pointer]:
+            - generic [ref=e299]:
+              - generic [ref=e300]: 财联社
+              - generic [ref=e301]: 05-26 17:27
+            - generic [ref=e302]: 小米Q1财报：手机ASP同比提升8.2%创新高 核心业务经营利润环比涨近2倍
+            - generic [ref=e303]: 【小米Q1财报：手机ASP同比提升8.2%创新高 核心业务经营利润环比涨近2倍】财联社5月26日电，小米集团（HK01810）发布2026年第一季度业绩公告。本季度营业收入991亿元，略高于市场预期的988.5亿元，维持高规模。经调整净利润...
+          - generic "小米Q1财报：手机ASP同比提升8.2%创新高 核心业务经营利润环比涨近2倍" [ref=e304]:
+            - generic [ref=e305]:
+              - generic [ref=e306]: 东财7x24
+              - generic [ref=e307]: 05-26 17:27
+            - generic [ref=e308]: 小米Q1财报：手机ASP同比提升8.2%创新高 核心业务经营利润环比涨近2倍
+            - generic [ref=e309]: 【小米Q1财报：手机ASP同比提升8.2%创新高 核心业务经营利润环比涨近2倍】小米集团（HK01810）发布2026年第一季度业绩公告。本季度营业收入991亿元，维持高规模。经调整净利润61亿元，核心业务经营利润环比增长近2倍。手机×AI...
+          - generic "中仑新材：第二条BOPP新能源膜材生产线预计下半年投产" [ref=e310]:
+            - generic [ref=e311]:
+              - generic [ref=e312]: 东财7x24
+              - generic [ref=e313]: 05-26 17:26
+            - generic [ref=e314]: 中仑新材：第二条BOPP新能源膜材生产线预计下半年投产
+            - generic [ref=e315]: 【中仑新材：第二条BOPP新能源膜材生产线预计下半年投产】中仑新材在接受机构调研时表示，公司的新能源BOPP膜材项目整体规划九条产线，项目总投资预算为人民币25亿元。项目一期规划两条产线，后续将结合市场需求变化分阶段推进投资建设工作。首条B...
+          - generic "禾赛费米C500成为首个通过ISO26262功能安全认证的RISC-V激光雷达主控芯片" [ref=e316]:
+            - generic [ref=e317]:
+              - generic [ref=e318]: 东财7x24
+              - generic [ref=e319]: 05-26 17:26
+            - generic [ref=e320]: 禾赛费米C500成为首个通过ISO26262功能安全认证的RISC-V激光雷达主控芯片
+            - generic [ref=e321]: 【禾赛费米C500成为首个通过ISO26262功能安全认证的RISC-V激光雷达主控芯片】近日，禾赛科技-W宣布，其自研费米C500芯片正式通过国际公认的测试、检验和认证机构SGS的ISO26262 ASILB功能安全产品认证，成为全球首款...
+          - generic "百诚医药：筹划控制权变更事项 股票继续停牌" [ref=e322]:
+            - generic [ref=e323]:
+              - generic [ref=e324]: 东财7x24
+              - generic [ref=e325]: 05-26 17:24
+            - generic [ref=e326]: 百诚医药：筹划控制权变更事项 股票继续停牌
+            - generic [ref=e327]: 【百诚医药：筹划控制权变更事项 股票继续停牌】百诚医药5月26日公告，公司控股股东、实际控制人邵春能、楼金芳及其一致行动人正在筹划涉及公司控制权变更的重大事项，该事宜可能导致公司控制权发生变更。截止本公告日，相关各方正在积极推进上述事项的工...
+          - generic "招商证券：选举朱江涛为董事长" [ref=e328] [cursor=pointer]:
+            - generic [ref=e329]:
+              - generic [ref=e330]: 财联社
+              - generic [ref=e331]: 05-26 17:23
+            - generic [ref=e332]: 招商证券：选举朱江涛为董事长
+            - generic [ref=e333]: 【招商证券：选举朱江涛为董事长】财联社5月26日电，招商证券(600999.SH)公告称，公司第八届董事会第三十二次会议审议通过，选举朱江涛为第八届董事会董事长，任期至本届董事会届满。同时，补选朱江涛为董事会提名委员会委员。
+          - generic "天阳科技今日大宗交易折价成交866.2万股 成交额1.53亿元" [ref=e334]:
+            - generic [ref=e335]:
+              - generic [ref=e336]: 东财7x24
+              - generic [ref=e337]: 05-26 17:22
+            - generic [ref=e338]: 天阳科技今日大宗交易折价成交866.2万股 成交额1.53亿元
+            - generic [ref=e339]: 【天阳科技今日大宗交易折价成交866.2万股 成交额1.53亿元】5月26日，天阳科技大宗交易成交866.2万股，成交额1.53亿元，占当日总成交额的32.84%，成交价17.68元，较市场收盘价20.22元折价12.56%。
+          - generic "科瑞技术：目前海外半导体和光模块业务收入规模及营收占比较小" [ref=e340] [cursor=pointer]:
+            - generic [ref=e341]:
+              - generic [ref=e342]: 财联社
+              - generic [ref=e343]: 05-26 17:21
+            - generic [ref=e344]: 科瑞技术：目前海外半导体和光模块业务收入规模及营收占比较小
+            - generic [ref=e345]: 【科瑞技术：目前海外半导体和光模块业务收入规模及营收占比较小】财联社5月26日电，科瑞技术(002957)公告称，公司股票连续三个交易日(2026年5月22日、25日、26日)收盘价累计涨跌幅偏离值超过20%，属于股票交易异常波动。公司关注...
+          - generic "科瑞技术：目前海外半导体和光模块业务收入规模及营收占比较小" [ref=e346]:
+            - generic [ref=e347]:
+              - generic [ref=e348]: 东财7x24
+              - generic [ref=e349]: 05-26 17:21
+            - generic [ref=e350]: 科瑞技术：目前海外半导体和光模块业务收入规模及营收占比较小
+            - generic [ref=e351]: 【科瑞技术：目前海外半导体和光模块业务收入规模及营收占比较小】科瑞技术(002957)公告称，公司目前海外半导体和光模块业务收入规模及营收占比较小，敬请广大投资者理性投资，注意投资风险。
+          - generic "熹联光芯获亿元B5轮融资 发力硅光芯片" [ref=e352]:
+            - generic [ref=e353]:
+              - generic [ref=e354]: 东财7x24
+              - generic [ref=e355]: 05-26 17:21
+            - generic [ref=e356]: 熹联光芯获亿元B5轮融资 发力硅光芯片
+            - generic [ref=e357]: 【熹联光芯获亿元B5轮融资 发力硅光芯片】熹联光芯于近日完成数亿人民币B5轮融资，永鑫方舟和产业资本、头部人民币基金、头部美元基金等多家知名机构参与本轮融资。熹联光芯成立于2020年7月，是一家专注于全集成化硅光芯片核心技术研发的高新技术企...
+          - generic "上期能源对部分客户采取限制开仓监管措施" [ref=e358] [cursor=pointer]:
+            - generic [ref=e359]:
+              - generic [ref=e360]: 财联社
+              - generic [ref=e361]: 05-26 17:19
+            - generic [ref=e362]: 上期能源对部分客户采取限制开仓监管措施
+            - generic [ref=e363]: 【上期能源对部分客户采取限制开仓监管措施】财联社5月26日电，2026年5月26日，1组实际控制关系账户在相关合约上账户组日内开仓交易量超限达到上海国际能源交易中心（以下简称上期能源）处理标准。上述客户交易行为违反《上海国际能源交易中心异常...
+          - generic "上交所举办中国-巴西ETF互通国际路演推广活动" [ref=e364] [cursor=pointer]:
+            - generic [ref=e365]:
+              - generic [ref=e366]: 财联社
+              - generic [ref=e367]: 05-26 17:18
+            - generic [ref=e368]: 上交所举办中国-巴西ETF互通国际路演推广活动
+            - generic [ref=e369]: 【上交所举办中国-巴西ETF互通国际路演推广活动】财联社5月26日电，上交所与巴西证券期货交易所近日联合举办了“聚焦上交所：巴西专场”线上国际路演活动，吸引了来自巴西的资管公司、金融中介、养老金、银行等40余家机构参与。下一步，上交所将在中...
+          - generic "深圳宝中又一稀缺海景宅地52.8亿元挂牌 紧邻2025年深圳总价地王" [ref=e370] [cursor=pointer]:
+            - generic [ref=e371]:
+              - generic [ref=e372]: 财联社
+              - generic [ref=e373]: 05-26 17:17
+            - generic [ref=e374]: 深圳宝中又一稀缺海景宅地52.8亿元挂牌 紧邻2025年深圳总价地王
+            - generic [ref=e375]: 【深圳宝中又一稀缺海景宅地52.8亿元挂牌 紧邻2025年深圳总价地王】财联社5月26日电，从深圳公共资源交易中心网站获悉，深圳宝安中心片区的北街坊A002—0113地块已正式挂牌出让。据网站拍卖信息，该地块起拍价为52.8亿元，起始楼面地...
+          - generic "深圳宝中又一稀缺海景宅地52.8亿元挂牌 紧邻2025年深圳总价地王" [ref=e376]:
+            - generic [ref=e377]:
+              - generic [ref=e378]: 东财7x24
+              - generic [ref=e379]: 05-26 17:17
+            - generic [ref=e380]: 深圳宝中又一稀缺海景宅地52.8亿元挂牌 紧邻2025年深圳总价地王
+            - generic [ref=e381]: 【深圳宝中又一稀缺海景宅地52.8亿元挂牌 紧邻2025年深圳总价地王】5月26日，《每日经济新闻》记者从深圳公共资源交易中心网站获悉，深圳宝安中心片区的北街坊A002—0113地块已正式挂牌出让。据网站拍卖信息，该地块起拍价为52.8亿元...

@@ -1,0 +1,10 @@
+import { createDataStore } from "./src/data/index.js";
+const store = createDataStore(`${process.env.HOME || process.env.USERPROFILE || "."}/.trading-agent/data`);
+await store.init();
+const rows = await (store as any).db.all("SELECT standard, COUNT(DISTINCT code) as c, COUNT(*) as total FROM industry_synthetic_klines GROUP BY standard");
+console.log(rows);
+const k = await store.getIndustrySyntheticKlines("801120", "sw_l1");
+console.log("801120 sw_l1 klines", k.length, k[k.length-1]?.date);
+const s = await store.getIndustryStocks("801120", "sw_l1");
+console.log("801120 sw_l1 stocks", s.length);
+await store.close();

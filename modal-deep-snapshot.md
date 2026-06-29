@@ -1,0 +1,299 @@
+- generic [ref=e3] [box=0,0,1920,893]:
+  - generic [ref=e4] [box=0,0,1920,62]:
+    - generic [ref=e5] [box=16,16,160,28]:
+      - generic [ref=e6] [box=16,16,28,28]: π
+      - generic [ref=e7] [box=52,17,124,27]: Trading Agent
+    - generic [ref=e8] [box=192,8,1105,45]:
+      - generic [ref=e485] [cursor=pointer] [box=208,16,162,28]:
+        - generic [ref=e486] [box=218,20,52,20]: 上证指数
+        - generic [ref=e487] [box=276,20,28,20]: "0.00"
+        - generic [ref=e488] [box=310,22,10,15]: ▲
+        - generic [ref=e489] [box=326,21,35,18]: 0.00%
+      - generic [ref=e490] [cursor=pointer] [box=383,16,159,28]:
+        - generic [ref=e491] [box=393,20,49,20]: 沪深300
+        - generic [ref=e492] [box=448,20,28,20]: "0.00"
+        - generic [ref=e493] [box=481,22,10,15]: ▲
+        - generic [ref=e494] [box=497,21,35,18]: 0.00%
+      - generic [ref=e495] [cursor=pointer] [box=554,16,152,28]:
+        - generic [ref=e496] [box=564,20,41,20]: 科创50
+        - generic [ref=e497] [box=611,20,28,20]: "0.00"
+        - generic [ref=e498] [box=645,22,10,15]: ▲
+        - generic [ref=e499] [box=661,21,35,18]: 0.00%
+      - generic [ref=e500] [cursor=pointer] [box=718,16,159,28]:
+        - generic [ref=e501] [box=728,20,49,20]: 中证500
+        - generic [ref=e502] [box=783,20,28,20]: "0.00"
+        - generic [ref=e503] [box=816,22,10,15]: ▲
+        - generic [ref=e504] [box=832,21,35,18]: 0.00%
+      - generic [ref=e505] [cursor=pointer] [box=889,16,194,28]:
+        - generic [ref=e506] [box=899,20,52,20]: 深证成指
+        - generic [ref=e507] [box=957,20,60,20]: "15876.16"
+        - generic [ref=e508] [box=1023,22,10,15]: ▲
+        - generic [ref=e509] [box=1039,21,35,18]: 0.12%
+      - generic [ref=e510] [cursor=pointer] [box=1095,16,186,28]:
+        - generic [ref=e511] [box=1105,20,52,20]: 创业板指
+        - generic [ref=e512] [box=1163,20,52,20]: "4043.07"
+        - generic [ref=e513] [box=1221,22,10,15]: ▲
+        - generic [ref=e514] [box=1237,21,35,18]: 0.55%
+  - generic [ref=e10] [box=0,62,1920,47]:
+    - generic [ref=e11] [box=16,75,70,18]: RESEARCH
+    - textbox "搜索股票 (代码/名称/拼音)" [ref=e13] [box=98,68,220,34]
+  - generic [ref=e14] [box=0,108,1920,785]:
+    - generic [ref=e15] [box=0,108,384,785]:
+      - generic [ref=e17] [box=14,118,36,17]: 股票池
+      - generic [ref=e18] [box=0,146,383,748]:
+        - generic [ref=e19] [box=0,146,191,748]:
+          - generic [ref=e20] [cursor=pointer] [box=6,154,169,59]:
+            - generic [ref=e21] [box=17,163,147,20]
+            - generic [ref=e24] [box=17,185,147,19]: 0 只
+          - generic [ref=e25] [cursor=pointer] [box=6,212,169,59]:
+            - generic [ref=e26] [box=17,221,147,20]
+            - generic [ref=e29] [box=17,243,147,19]: 20 只
+          - generic [ref=e30] [cursor=pointer] [box=6,271,169,59]:
+            - generic [ref=e31] [box=17,280,147,20]
+            - generic [ref=e34] [box=17,302,147,19]: 64 只
+          - generic [ref=e35] [cursor=pointer] [box=6,329,169,59]:
+            - generic [ref=e36] [box=17,338,147,20]
+            - generic [ref=e39] [box=17,360,147,19]: 50 只
+          - generic [ref=e40] [cursor=pointer] [box=6,388,169,59]:
+            - generic [ref=e41] [box=17,397,147,20]
+            - generic [ref=e44] [box=17,419,147,19]: 30 只
+          - generic [ref=e45] [cursor=pointer] [box=6,446,169,59]:
+            - generic [ref=e46] [box=17,455,147,20]
+            - generic [ref=e49] [box=17,477,147,19]: 21 只
+          - generic [ref=e50] [cursor=pointer] [box=6,505,169,59]:
+            - generic [ref=e51] [box=17,514,147,20]
+            - generic [ref=e54] [box=17,536,147,19]: 21 只
+          - generic [ref=e55] [cursor=pointer] [box=6,563,169,59]:
+            - generic [ref=e56] [box=17,572,147,20]
+            - generic [ref=e59] [box=17,594,147,19]: 30 只
+          - generic [ref=e60] [cursor=pointer] [box=6,622,169,59]:
+            - generic [ref=e61] [box=17,631,147,20]
+            - generic [ref=e64] [box=17,653,147,19]: 50 只
+          - generic [ref=e65] [cursor=pointer] [box=6,680,169,59]:
+            - generic [ref=e66] [box=17,689,147,20]
+            - generic [ref=e69] [box=17,711,147,19]: 50 只
+          - generic [ref=e70] [cursor=pointer] [box=6,739,169,59]:
+            - generic [ref=e71] [box=17,748,147,20]
+            - generic [ref=e74] [box=17,770,147,19]: 50 只
+          - generic [ref=e75] [cursor=pointer] [box=6,797,169,59]:
+            - generic [ref=e76] [box=17,806,147,20]
+            - generic [ref=e79] [box=17,828,147,19]: 45 只
+          - generic [ref=e80] [cursor=pointer] [box=6,856,169,59]:
+            - generic [ref=e81] [box=17,865,147,20]
+            - generic [ref=e84] [box=17,887,147,19]: 10 只
+        - generic [ref=e86] [box=198,154,179,147]:
+          - generic [ref=e87] [box=271,186,33,36]: 📂
+          - generic [ref=e88] [box=230,230,115,39]: 选择股票池查看个股
+    - generic [ref=e90] [box=384,108,1264,785]:
+      - generic [ref=e94] [box=1361,108,287,41]:
+        - generic [ref=e95] [box=1375,120,48,17]: 工具调用
+        - button "收起" [ref=e96] [cursor=pointer] [box=1614,118,20,20]:
+          - img [ref=e97] [box=1617,121,14,14]
+      - generic [ref=e101] [box=632,830,768,47]:
+        - button "设置" [ref=e102] [cursor=pointer] [box=632,833,44,44]:
+          - img [ref=e103] [box=645,846,18,18]
+        - button "附件" [ref=e106] [cursor=pointer] [box=688,833,44,44]:
+          - img [ref=e107] [box=701,846,18,18]
+        - button "Choose File" [box=632,877,0,0]
+        - textbox "输入消息..." [ref=e109] [box=744,830,600,47]
+        - button "发送" [ref=e110] [cursor=pointer] [box=1356,833,44,44]:
+          - img [ref=e111] [box=1369,846,18,18]
+    - generic [ref=e405] [box=736,177,448,540]:
+      - generic [ref=e406] [box=737,178,446,73]:
+        - heading "模型配置" [level=3] [ref=e407] [box=761,200,72,27]
+        - button "×" [ref=e408] [cursor=pointer] [box=1133,198,26,32]
+      - generic [ref=e409] [box=737,251,446,465]:
+        - generic [ref=e410] [box=761,275,398,71]:
+          - generic [ref=e411] [box=761,275,398,21]: 提供商
+          - combobox "提供商" [ref=e412] [box=761,304,398,42]:
+            - option "选择提供商" [box=0,0,0,0]
+            - option "amazon-bedrock" [box=0,0,0,0]
+            - option "anthropic" [box=0,0,0,0]
+            - option "azure-openai-responses" [box=0,0,0,0]
+            - option "cerebras" [box=0,0,0,0]
+            - option "cloudflare-workers-ai" [box=0,0,0,0]
+            - option "deepseek" [box=0,0,0,0]
+            - option "fireworks" [box=0,0,0,0]
+            - option "github-copilot" [box=0,0,0,0]
+            - option "google" [box=0,0,0,0]
+            - option "google-antigravity" [box=0,0,0,0]
+            - option "google-gemini-cli" [box=0,0,0,0]
+            - option "google-vertex" [box=0,0,0,0]
+            - option "groq" [box=0,0,0,0]
+            - option "huggingface" [box=0,0,0,0]
+            - option "kimi-coding" [selected] [box=0,0,0,0]
+            - option "minimax" [box=0,0,0,0]
+            - option "minimax-cn" [box=0,0,0,0]
+            - option "mistral" [box=0,0,0,0]
+            - option "openai" [box=0,0,0,0]
+            - option "openai-codex" [box=0,0,0,0]
+            - option "opencode" [box=0,0,0,0]
+            - option "opencode-go" [box=0,0,0,0]
+            - option "openrouter" [box=0,0,0,0]
+            - option "vercel-ai-gateway" [box=0,0,0,0]
+            - option "xai" [box=0,0,0,0]
+            - option "zai" [box=0,0,0,0]
+        - generic [ref=e413] [box=761,366,398,71]:
+          - generic [ref=e414] [box=761,366,398,21]: 模型
+          - combobox "模型" [ref=e415] [box=761,395,398,42]:
+            - option "选择模型" [box=0,0,0,0]
+            - option "Kimi K2.6" [box=0,0,0,0]
+            - option "kimi-for-coding" [selected] [box=0,0,0,0]
+            - option "Kimi K2 Thinking" [box=0,0,0,0]
+            - option "kimi-k2-turbo-preview" [box=0,0,0,0]
+        - generic [ref=e416] [box=761,457,398,72]:
+          - generic [ref=e417] [box=761,457,398,21]: API Key
+          - textbox "API Key" [ref=e418] [box=761,486,398,43]:
+            - /placeholder: 输入 API Key (可选)
+            - text: sk-4eabf1d92b824440b2350152537a4ba1
+        - generic [ref=e419] [box=761,549,398,72]:
+          - generic [ref=e420] [box=761,549,398,21]: Base URL
+          - textbox "Base URL" [ref=e421] [box=761,578,398,43]:
+            - /placeholder: 输入 Base URL (可选)
+        - generic [ref=e422] [box=761,641,398,51]:
+          - button "保存" [ref=e423] [cursor=pointer] [box=1009,649,68,43]
+          - button "取消" [ref=e424] [cursor=pointer] [box=1089,649,70,43]
+    - generic [ref=e114] [box=1648,108,272,785]:
+      - generic [ref=e115] [box=1649,108,271,385]:
+        - generic [ref=e116] [cursor=pointer] [box=1649,108,271,42]:
+          - generic [ref=e117] [box=1663,119,74,20]: 📅 投资日历
+          - generic [ref=e118] [box=1852,118,54,22]:
+            - button "刷新日历数据" [ref=e119] [box=1852,118,30,22]
+            - img [ref=e123] [box=1890,121,16,16]
+        - generic [ref=e126] [box=1649,150,271,342]:
+          - generic [ref=e166] [box=1661,162,237,24]:
+            - button "<" [ref=e167] [cursor=pointer] [box=1665,162,24,24]
+            - generic [ref=e168] [box=1744,164,71,21]: 2026年5月
+            - button ">" [ref=e169] [cursor=pointer] [box=1870,162,24,24]
+          - generic [ref=e170] [box=1661,198,237,23]:
+            - generic [ref=e171] [box=1661,198,30,23]: 日
+            - generic [ref=e172] [box=1695,198,30,23]: 一
+            - generic [ref=e173] [box=1730,198,30,23]: 二
+            - generic [ref=e174] [box=1764,198,30,23]: 三
+            - generic [ref=e175] [box=1799,198,30,23]: 四
+            - generic [ref=e176] [box=1833,198,30,23]: 五
+            - generic [ref=e177] [box=1868,198,30,23]: 六
+          - generic [ref=e178] [box=1661,225,237,236]:
+            - generic [ref=e185] [cursor=pointer] [box=1876,236,6,11]: "1"
+            - generic [ref=e187] [cursor=pointer] [box=1916,236,6,11]: "2"
+            - generic [ref=e189] [cursor=pointer] [box=1676,276,6,11]: "3"
+            - generic [ref=e191] [cursor=pointer] [box=1716,276,6,11]: "4"
+            - generic [ref=e193] [cursor=pointer] [box=1756,276,6,11]: "5"
+            - generic [ref=e195] [cursor=pointer] [box=1796,276,6,11]: "6"
+            - generic [ref=e197] [cursor=pointer] [box=1836,276,6,11]: "7"
+            - generic [ref=e199] [cursor=pointer] [box=1876,276,6,11]: "8"
+            - generic [ref=e201] [cursor=pointer] [box=1916,276,6,11]: "9"
+            - generic [ref=e203] [cursor=pointer] [box=1673,316,13,11]: "10"
+            - generic [ref=e205] [cursor=pointer] [box=1713,316,13,11]: "11"
+            - generic [ref=e207] [cursor=pointer] [box=1753,316,13,11]: "12"
+            - generic [ref=e209] [cursor=pointer] [box=1793,316,13,11]: "13"
+            - generic [ref=e211] [cursor=pointer] [box=1833,316,13,11]: "14"
+            - generic [ref=e213] [cursor=pointer] [box=1873,316,13,11]: "15"
+            - generic [ref=e215] [cursor=pointer] [box=1913,316,13,11]: "16"
+            - generic [ref=e217] [cursor=pointer] [box=1673,356,13,11]: "17"
+            - generic [ref=e219] [cursor=pointer] [box=1713,354,13,11]: "18"
+            - generic [ref=e223] [cursor=pointer] [box=1753,356,13,11]: "19"
+            - generic [ref=e225] [cursor=pointer] [box=1793,356,13,11]: "20"
+            - generic [ref=e227] [cursor=pointer] [box=1833,354,13,11]: "21"
+            - generic [ref=e231] [cursor=pointer] [box=1873,356,13,11]: "22"
+            - generic [ref=e233] [cursor=pointer] [box=1913,356,13,11]: "23"
+            - generic [ref=e235] [cursor=pointer] [box=1673,396,13,11]: "24"
+            - generic [ref=e237] [cursor=pointer] [box=1713,394,13,11]: "25"
+            - generic [ref=e241] [cursor=pointer] [box=1753,396,13,11]: "26"
+            - generic [ref=e243] [cursor=pointer] [box=1792,396,14,11]: "27"
+            - generic [ref=e245] [cursor=pointer] [box=1833,396,13,11]: "28"
+            - generic [ref=e247] [cursor=pointer] [box=1873,396,13,11]: "29"
+            - generic [ref=e249] [cursor=pointer] [box=1913,396,13,11]: "30"
+            - generic [ref=e251] [cursor=pointer] [box=1673,436,13,11]: "31"
+          - generic [ref=e252] [box=1661,473,237,317]:
+            - generic [ref=e253] [box=1661,486,237,15]: 本月重点关注
+            - generic [ref=e254] [cursor=pointer] [box=1661,509,237,53]
+            - generic [ref=e260] [cursor=pointer] [box=1661,566,237,53]
+            - generic [ref=e266] [cursor=pointer] [box=1661,623,237,53]
+            - generic [ref=e272] [cursor=pointer] [box=1661,680,237,53]
+            - generic [ref=e278] [cursor=pointer] [box=1661,737,237,53]
+      - generic [ref=e127] [box=1649,493,271,401]:
+        - generic [ref=e128] [cursor=pointer] [box=1649,493,271,40]:
+          - generic [ref=e129] [box=1663,503,74,20]: 📰 财经新闻
+          - img [ref=e130] [box=1890,504,16,16]
+        - generic [ref=e133] [box=1657,540,245,2155]:
+          - generic "首批AI训练推理芯片通过国家安全可靠测评" [ref=e284] [cursor=pointer] [box=1657,540,245,105]:
+            - generic [ref=e285] [box=1666,549,227,19]
+            - generic [ref=e288] [box=1666,572,227,31]: 首批AI训练推理芯片通过国家安全可靠测评
+            - generic [ref=e289] [box=1666,607,227,29]: 【首批AI训练推理芯片通过国家安全可靠测评】《科创板日报》27日讯，中国信息安全测评中心与国家保密科技测评中心发布了《安全可靠测评结果公告（2026年第2号）》，根据《安全可靠测评工作指南V3.0》要求，公布了新一批测评结果。海思半导体昇腾...
+          - generic "伊朗总统：毫不动摇捍卫领土与国家主权" [ref=e290] [cursor=pointer] [box=1657,653,245,89]:
+            - generic [ref=e291] [box=1666,662,227,19]
+            - generic [ref=e294] [box=1666,685,227,16]: 伊朗总统：毫不动摇捍卫领土与国家主权
+            - generic [ref=e295] [box=1666,704,227,29]: 【伊朗总统：毫不动摇捍卫领土与国家主权】当地时间5月26日，伊朗总统佩泽希齐扬发表讲话时表示，伊朗向伊斯兰国家伸出了“兄弟般的友谊之手”。与此同时，伊朗在捍卫自身领土和国家主权上没有丝毫动摇。当天晚些时候，佩泽希齐扬在社交媒体上发文表示，当...
+          - generic "绿盟科技成立网络安全技术公司 含AI业务" [ref=e296] [box=1657,750,245,89]:
+            - generic [ref=e297] [box=1666,759,227,19]
+            - generic [ref=e300] [box=1666,782,227,16]: 绿盟科技成立网络安全技术公司 含AI业务
+            - generic [ref=e301] [box=1666,802,227,29]: 【绿盟科技成立网络安全技术公司 含AI业务】企查查APP显示，近日，绿盟（海口）网络安全技术有限公司成立，注册资本1000万元，经营范围包含：区块链技术相关软件和服务；软件销售；人工智能应用软件开发；软件开发等。企查查股权穿透显示，该公司由...
+          - generic "日本参议院表决通过设立“国家情报会议”法案" [ref=e302] [box=1657,847,245,105]:
+            - generic [ref=e303] [box=1666,856,227,19]
+            - generic [ref=e306] [box=1666,879,227,31]: 日本参议院表决通过设立“国家情报会议”法案
+            - generic [ref=e307] [box=1666,914,227,29]: 【日本参议院表决通过设立“国家情报会议”法案】日本国会参议院全体会议5月27日表决通过设立“国家情报会议”的法案。该法案由高市早苗政府推动，意在整合、强化情报力量，此前已在日本国会众议院获得通过。相关法案持续引发日本各界担忧。
+          - generic "智谱等在上海成立人工智能产业创投合伙企业" [ref=e308] [cursor=pointer] [box=1657,960,245,105]:
+            - generic [ref=e309] [box=1666,969,227,19]
+            - generic [ref=e312] [box=1666,992,227,31]: 智谱等在上海成立人工智能产业创投合伙企业
+            - generic [ref=e313] [box=1666,1027,227,29]: 【智谱等在上海成立人工智能产业创投合伙企业】财联社5月27日电，企查查显示，近日，上海智谱国泰海通人工智能产业创业投资合伙企业（有限合伙）成立，经营范围包含：创业投资（限投资未上市企业）。企查查股权穿透显示，该企业由智谱全资子公司北京智谱未...
+          - generic "英矽智能与Human Longevity达成合作 共同开发业内首个面向长寿科学的AI基础模型" [ref=e314] [cursor=pointer] [box=1657,1073,245,120]:
+            - generic [ref=e315] [box=1666,1082,227,19]
+            - generic [ref=e318] [box=1666,1105,227,47]: 英矽智能与Human Longevity达成合作 共同开发业内首个面向长寿科学的AI基础模型
+            - generic [ref=e319] [box=1666,1156,227,29]: 【英矽智能与Human Longevity达成合作 共同开发业内首个面向长寿科学的AI基础模型】财联社5月27日电，英矽智能与Human Longevity旗下新成立的公司Human Life Foundation Models宣布达成一项...
+          - generic "【电报解读】大涨超19%！美光科技总市值突破1万亿美元，快速整理供应商名单（附表）" [ref=e320] [cursor=pointer] [box=1657,1201,245,120]:
+            - generic [ref=e321] [box=1666,1210,227,19]
+            - generic [ref=e324] [box=1666,1233,227,47]: 【电报解读】大涨超19%！美光科技总市值突破1万亿美元，快速整理供应商名单（附表）
+            - generic [ref=e325] [box=1666,1284,227,29]: 大涨超19%！美光科技总市值突破1万亿美元，快速整理供应商名单（附表），这家公司半导体材料领域客户包括美光、三星。
+          - generic "日本国会通过法案设立“国家情报会议”" [ref=e326] [cursor=pointer] [box=1657,1329,245,89]:
+            - generic [ref=e327] [box=1666,1338,227,19]
+            - generic [ref=e330] [box=1666,1361,227,16]: 日本国会通过法案设立“国家情报会议”
+            - generic [ref=e331] [box=1666,1381,227,29]: 【日本国会通过法案设立“国家情报会议”】财联社5月27日电，日本国会参议院全体会议27日表决通过设立“国家情报会议”的法案。该法案由高市早苗政府推动，意在整合、强化情报力量，此前已在日本国会众议院获得通过。相关法案持续引发日本各界担忧。 (...
+          - generic "两市融资余额增加73.41亿元" [ref=e332] [cursor=pointer] [box=1657,1427,245,89]:
+            - generic [ref=e333] [box=1666,1436,227,19]
+            - generic [ref=e336] [box=1666,1459,227,16]: 两市融资余额增加73.41亿元
+            - generic [ref=e337] [box=1666,1478,227,29]: 【两市融资余额增加73.41亿元】财联社5月27日电，截至5月26日，上交所融资余额报14846.78亿元，较前一交易日增加38.21亿元；深交所融资余额报14172.03亿元，较前一交易日增加35.2亿元；两市合计29018.81亿元，较...
+          - generic "两市融资余额增加73.41亿元" [ref=e338] [box=1657,1524,245,89]:
+            - generic [ref=e339] [box=1666,1533,227,19]
+            - generic [ref=e342] [box=1666,1556,227,16]: 两市融资余额增加73.41亿元
+            - generic [ref=e343] [box=1666,1575,227,29]: 【两市融资余额增加73.41亿元】截至5月26日，上交所融资余额报14846.78亿元，较前一交易日增加38.21亿元；深交所融资余额报14172.03亿元，较前一交易日增加35.2亿元；两市合计29018.81亿元，较前一交易日增加73....
+          - generic "日本东证指数日内转跌" [ref=e344] [box=1657,1621,245,75]:
+            - generic [ref=e345] [box=1666,1630,227,19]
+            - generic [ref=e348] [box=1666,1653,227,16]: 日本东证指数日内转跌
+            - generic [ref=e349] [box=1666,1673,227,14]: 日本东证指数回吐涨幅，日内转跌。
+          - generic "伊朗总统：已准备好达成“有尊严的”框架协议" [ref=e350] [cursor=pointer] [box=1657,1704,245,105]:
+            - generic [ref=e351] [box=1666,1713,227,19]
+            - generic [ref=e354] [box=1666,1736,227,31]: 伊朗总统：已准备好达成“有尊严的”框架协议
+            - generic [ref=e355] [box=1666,1771,227,29]: 【伊朗总统：已准备好达成“有尊严的”框架协议】当地时间5月26日，伊朗总统佩泽希齐扬与卡塔尔埃米尔（国家元首）塔米姆通电话。佩泽希齐扬表示， 伊朗已准备好达成一个“有尊严的”框架协议，以结束地区内正在持续的战争与紧张局势。塔米姆表示，卡塔尔...
+          - generic "特朗普任命美前司法部长邦迪加入白宫人工智能顾问委员会" [ref=e356] [box=1657,1817,245,105]:
+            - generic [ref=e357] [box=1666,1826,227,19]
+            - generic [ref=e360] [box=1666,1849,227,31]: 特朗普任命美前司法部长邦迪加入白宫人工智能顾问委员会
+            - generic [ref=e361] [box=1666,1884,227,29]: 【特朗普任命美前司法部长邦迪加入白宫人工智能顾问委员会】当地时间5月26日，美国总统特朗普已任命前司法部长帕姆·邦迪加入白宫人工智能政策顾问委员会。
+          - generic "环旭电子将于PCIM Europe 2026展示先进碳化硅芯片预埋封装技术" [ref=e362] [box=1657,1929,245,105]:
+            - generic [ref=e363] [box=1666,1938,227,19]
+            - generic [ref=e366] [box=1666,1961,227,31]: 环旭电子将于PCIM Europe 2026展示先进碳化硅芯片预埋封装技术
+            - generic [ref=e367] [box=1666,1997,227,29]: 【环旭电子将于PCIM Europe 2026展示先进碳化硅芯片预埋封装技术】环旭电子今日宣布，其于新世代功率解决方案领域所开发的先进功率半导体封装技术取得重大突破。环旭电子成功将碳化硅（SiC）晶粒预埋于多层ABF基板之中，并创新采用单面...
+          - generic "建设银行A股股价创历史新高 大行为何轮番“起舞”" [ref=e368] [box=1657,2042,245,105]:
+            - generic [ref=e369] [box=1666,2051,227,19]
+            - generic [ref=e372] [box=1666,2074,227,31]: 建设银行A股股价创历史新高 大行为何轮番“起舞”
+            - generic [ref=e373] [box=1666,2109,227,29]: 【建设银行A股股价创历史新高 大行为何轮番“起舞”】5月26日，建设银行A股股价续创新高。截至收盘，建行涨1.68%，股价报10.31元，总市值约2.05万亿元。拉长时间来看，建设银行是唯一一家年内涨幅超过10%的国有大行，其余表现靠前银行...
+          - generic "“在美国等绿卡”不再可行？美国最新移民政策调整引争议 科技行业最受伤" [ref=e374] [box=1657,2155,245,105]:
+            - generic [ref=e375] [box=1666,2164,227,19]
+            - generic [ref=e378] [box=1666,2187,227,31]: “在美国等绿卡”不再可行？美国最新移民政策调整引争议 科技行业最受伤
+            - generic [ref=e379] [box=1666,2222,227,29]: 【“在美国等绿卡”不再可行？美国最新移民政策调整引争议 科技行业最受伤】“这个周末我接了好几个身边朋友的电话，都对这个政策非常担心。它的打击面非常广。”美国陆律师事务所（LawOfficeofLu&Associates）的管理律师陆颖26日...
+          - generic "财联社5月27日电，日本东证指数回吐涨幅，日内转跌。" [ref=e380] [cursor=pointer] [box=1657,2268,245,105]:
+            - generic [ref=e381] [box=1666,2277,227,19]
+            - generic [ref=e384] [box=1666,2300,227,31]: 财联社5月27日电，日本东证指数回吐涨幅，日内转跌。
+            - generic [ref=e385] [box=1666,2335,227,29]: 财联社5月27日电，日本东证指数回吐涨幅，日内转跌。
+          - generic "在美日资企业工厂爆炸致多人死伤" [ref=e386] [cursor=pointer] [box=1657,2381,245,89]:
+            - generic [ref=e387] [box=1666,2390,227,19]
+            - generic [ref=e390] [box=1666,2413,227,16]: 在美日资企业工厂爆炸致多人死伤
+            - generic [ref=e391] [box=1666,2432,227,29]: 【在美日资企业工厂爆炸致多人死伤】财联社5月27日电，据美国媒体26日报道，日本制纸集团旗下企业位于美国华盛顿州的造纸厂当天发生化学储罐内爆事故，目前已造成至少1人死亡、10人受伤，另有9人下落不明。 (新华社)
+          - generic "AIDC供电架构变革 超级电容有望成为结构性必需品" [ref=e392] [box=1657,2478,245,105]:
+            - generic [ref=e393] [box=1666,2487,227,19]
+            - generic [ref=e396] [box=1666,2510,227,31]: AIDC供电架构变革 超级电容有望成为结构性必需品
+            - generic [ref=e397] [box=1666,2545,227,29]: 【AIDC供电架构变革 超级电容有望成为结构性必需品】机构指出，AIDC算力密度跃迁驱动供电架构变革，超级电容成为结构性必需品。超级电容已从实验室方案走向机柜级标配，2026年下半年Rubin平台放量将是相关产业链业绩兑现的关键窗口。
+          - generic "5月27日投资避雷针：3连板人气股提示风险 MLCC产品营收占比未达1%" [ref=e398] [box=1657,2591,245,105]:
+            - generic [ref=e399] [box=1666,2600,227,19]
+            - generic [ref=e402] [box=1666,2623,227,31]: 5月27日投资避雷针：3连板人气股提示风险 MLCC产品营收占比未达1%
+            - generic [ref=e403] [box=1666,2658,227,29]: 【5月27日投资避雷针：3连板人气股提示风险 MLCC产品营收占比未达1%】近日A股及海外市场潜在风险事件如下。国内经济信息方面包括：1）客户备货谨慎下采购意愿偏低，行业DDR4内存条价格跌幅扩大；2）千禾味业伍超群表示，原材料涨价压力将在...

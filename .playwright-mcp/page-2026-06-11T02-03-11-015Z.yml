@@ -1,0 +1,635 @@
+- generic [ref=e3]:
+  - generic [ref=e4]:
+    - generic [ref=e5]:
+      - generic [ref=e6]: π
+      - generic [ref=e7]: Trading Agent
+    - generic [ref=e8]:
+      - generic [ref=e652] [cursor=pointer]:
+        - generic [ref=e653]: 上证指数
+        - generic [ref=e654]: "3980.28"
+        - generic [ref=e655]: ▼
+        - generic [ref=e656]: "-0.32%"
+      - generic [ref=e657] [cursor=pointer]:
+        - generic [ref=e658]: 沪深300
+        - generic [ref=e659]: "4736.63"
+        - generic [ref=e660]: ▼
+        - generic [ref=e661]: "-0.25%"
+      - generic [ref=e662] [cursor=pointer]:
+        - generic [ref=e663]: 科创50
+        - generic [ref=e664]: "1653.67"
+        - generic [ref=e665]: ▲
+        - generic [ref=e666]: 0.09%
+      - generic [ref=e667] [cursor=pointer]:
+        - generic [ref=e668]: 中证500
+        - generic [ref=e669]: "8026.92"
+        - generic [ref=e670]: ▼
+        - generic [ref=e671]: "-0.46%"
+      - generic [ref=e672] [cursor=pointer]:
+        - generic [ref=e673]: 深证成指
+        - generic [ref=e674]: "14920.45"
+        - generic [ref=e675]: ▼
+        - generic [ref=e676]: "-0.23%"
+      - generic [ref=e677] [cursor=pointer]:
+        - generic [ref=e678]: 创业板指
+        - generic [ref=e679]: "3853.84"
+        - generic [ref=e680]: ▼
+        - generic [ref=e681]: "-0.03%"
+  - generic [ref=e10]:
+    - generic [ref=e11]: RESEARCH
+    - textbox "搜索股票 (代码/名称/拼音)" [ref=e13]
+  - generic [ref=e14]:
+    - generic [ref=e15]:
+      - generic [ref=e17]: 股票池
+      - generic [ref=e18]:
+        - generic [ref=e19]:
+          - generic [ref=e20] [cursor=pointer]:
+            - generic [ref=e21]:
+              - generic [ref=e22]: "[62] 最近访问"
+              - button "×" [ref=e23]
+            - generic [ref=e24]: 21 只
+          - generic [ref=e25] [cursor=pointer]:
+            - generic [ref=e26]:
+              - generic [ref=e27]: "[61] 53号股池_Alpha5D_Top20"
+              - button "×" [ref=e28]
+            - generic [ref=e29]: 20 只
+          - generic [ref=e30] [cursor=pointer]:
+            - generic [ref=e31]:
+              - generic [ref=e32]: "[60] 物理AI核心股池"
+              - button "×" [ref=e33]
+            - generic [ref=e34]: 18 只
+          - generic [ref=e35] [cursor=pointer]:
+            - generic [ref=e36]:
+              - generic [ref=e37]: "[58] 周线多头排列+日线金叉"
+              - button "×" [ref=e38]
+            - generic [ref=e39]: 25 只
+          - generic [ref=e40] [cursor=pointer]:
+            - generic [ref=e41]:
+              - generic [ref=e42]: "[57] 东方财富人气飙升榜TOP30"
+              - button "×" [ref=e43]
+            - generic [ref=e44]: 26 只
+          - generic [ref=e45] [cursor=pointer]:
+            - generic [ref=e46]:
+              - generic [ref=e47]: "[56] 东方财富人气榜TOP30"
+              - button "×" [ref=e48]
+            - generic [ref=e49]: 30 只
+          - generic [ref=e50] [cursor=pointer]:
+            - generic [ref=e51]:
+              - generic [ref=e52]: "[55] 雷达机会榜_20260609"
+              - button "×" [ref=e53]
+            - generic [ref=e54]: 20 只
+          - generic [ref=e55] [cursor=pointer]:
+            - generic [ref=e56]:
+              - generic [ref=e57]: "[54] ML_自选股"
+              - button "×" [ref=e58]
+            - generic [ref=e59]: 50 只
+          - generic [ref=e60] [cursor=pointer]:
+            - generic [ref=e61]:
+              - generic [ref=e62]: "[53] 自选股"
+              - button "×" [ref=e63]
+            - generic [ref=e64]: 276 只
+          - generic [ref=e65] [cursor=pointer]:
+            - generic [ref=e66]:
+              - generic [ref=e67]: "[51] 周线金叉股_市值TOP20"
+              - button "×" [ref=e68]
+            - generic [ref=e69]: 20 只
+          - generic [ref=e70] [cursor=pointer]:
+            - generic [ref=e71]:
+              - generic [ref=e72]: "[50] 周线多头排列_调整缩量_市值TOP9"
+              - button "×" [ref=e73]
+            - generic [ref=e74]: 9 只
+          - generic [ref=e75] [cursor=pointer]:
+            - generic [ref=e76]:
+              - generic [ref=e77]: "[49] ML_算力概念股核心池_预测排序"
+              - button "×" [ref=e78]
+            - generic [ref=e79]: 13 只
+          - generic [ref=e80] [cursor=pointer]:
+            - generic [ref=e81]:
+              - generic [ref=e82]: "[48] 算力概念股核心池"
+              - button "×" [ref=e83]
+            - generic [ref=e84]: 13 只
+          - generic [ref=e85] [cursor=pointer]:
+            - generic [ref=e86]:
+              - generic [ref=e87]: "[23] 周线多头日线缩量回调_202605"
+              - button "×" [ref=e88]
+            - generic [ref=e89]: 30 只
+        - generic [ref=e91]:
+          - generic [ref=e92]: 📂
+          - generic [ref=e93]: 选择股票池查看个股
+    - generic [ref=e95]:
+      - generic [ref=e96]:
+        - generic [ref=e97]:
+          - generic [ref=e447]:
+            - generic [ref=e448]: 你
+            - generic [ref=e450]: 请帮我对600519运行MA金叉策略回测，时间范围2024年1月到2024年12月，并将结果保存到组合"MA策略测试"中
+          - generic [ref=e451]:
+            - generic [ref=e452]: AI
+            - generic [ref=e454]: 我来对贵州茅台(600519)运行MA金叉策略回测。
+          - generic [ref=e455]:
+            - generic [ref=e456]: AI
+            - generic [ref=e457]:
+              - text: 回测结果已生成，并已保存到组合
+              - strong [ref=e546]: "\"MA策略测试\""
+              - text: "（ID: 1）。以下是详细报告："
+              - text: "---"
+              - generic [ref=e547]: "## 📊 贵州茅台(600519) — MA5/MA10金叉策略回测报告"
+              - text: "| 项目 | 数值 |"
+              - text: "|------|------|"
+              - text: "|"
+              - strong [ref=e548]: 回测区间
+              - text: "| 2024-01-02 ~ 2024-12-31 |"
+              - text: "|"
+              - strong [ref=e549]: 初始资金
+              - text: "| 100,000 元 |"
+              - text: "|"
+              - strong [ref=e550]: 策略
+              - text: "| MA5金叉买入 → MA5死叉卖出 |"
+              - text: "|"
+              - strong [ref=e551]: 数据条数
+              - text: "| 242 个交易日 |"
+              - text: "### 绩效指标"
+              - text: "| 指标 | 数值 | 评价 |"
+              - text: "|------|------|------|"
+              - text: "|"
+              - strong [ref=e552]: 总收益率
+              - text: "|"
+              - strong [ref=e553]: "-18.50%"
+              - text: "| ❌ 亏损 |"
+              - text: "|"
+              - strong [ref=e554]: 年化收益率
+              - text: "| -19.18% | 跑输大盘 |"
+              - text: "|"
+              - strong [ref=e555]: 夏普比率
+              - text: "| -2.62 | 风险调整后收益差 |"
+              - text: "|"
+              - strong [ref=e556]: 最大回撤
+              - text: "| 19.05% | 可控范围内 |"
+              - text: "|"
+              - strong [ref=e557]: 交易次数
+              - text: "|"
+              - strong [ref=e558]: 12次
+              - text: "| 较活跃 |"
+              - text: "|"
+              - strong [ref=e559]: 胜率
+              - text: "|"
+              - strong [ref=e560]: 16.7%
+              - text: "| 🔴 仅2胜10负 |"
+              - text: "|"
+              - strong [ref=e561]: 盈亏比
+              - text: "| 0.14 | 平均亏损远大于盈利 |"
+              - text: "|"
+              - strong [ref=e562]: 平均持仓
+              - text: "| 7.6天 | 短线交易为主 |"
+              - text: "### 交易明细"
+              - text: "| # | 买入日 | 卖出日 | 持仓 | 盈亏 | 收益率 |"
+              - text: "|---|--------|--------|------|------|--------|"
+              - text: "| 1 | 01-26 | 02-02 | 5天 | -1,164 | -1.17% |"
+              - text: "| 2 | 02-08 | 02-29 | 9天 | -2,415 | -2.46% |"
+              - text: "| 3 | 03-13 | 03-22 | 7天 | -2,139 | -2.23% |"
+              - text: "| 4 | 04-02 | 04-10 | 4天 | -3,435 | -3.69% |"
+              - text: "| 5 |"
+              - strong [ref=e563]: 04-22
+              - text: "|"
+              - strong [ref=e564]: 05-16
+              - text: "|"
+              - strong [ref=e565]: 15天
+              - text: "|"
+              - strong [ref=e566]: +2,545
+              - text: "|"
+              - strong [ref=e567]: +2.85%
+              - text: ✅ |
+              - text: "| 6 | 07-17 | 07-26 | 7天 | -3,084 | -3.31% |"
+              - text: "| 7 | 08-09 | 08-20 | 7天 | -2,040 | -2.29% |"
+              - text: "| 8 | 09-05 | 09-09 | 2天 | -1,468 | -1.69% |"
+              - text: "| 9 | 09-27 | 10-16 | 8天 | -3,387 | -3.92% |"
+              - text: "| 10 | 10-28 | 11-01 | 4天 | -2,254 | -2.72% |"
+              - text: "| 11 | 11-07 | 11-18 | 7天 | -207 | -0.26% |"
+              - text: "| 12 |"
+              - strong [ref=e568]: 12-04
+              - text: "|"
+              - strong [ref=e569]: 12-26
+              - text: "|"
+              - strong [ref=e570]: 16天
+              - text: "|"
+              - strong [ref=e571]: "+552"
+              - text: "|"
+              - strong [ref=e572]: +0.68%
+              - text: ✅ |
+              - text: "### 策略诊断"
+              - strong [ref=e573]: 为什么会亏损？
+              - text: "1."
+              - strong [ref=e574]: 胜率极低(16.7%)
+              - text: — 2024年茅台整体呈下行趋势（从~1650跌至~1500区间），MA金叉信号多在下跌中继的短暂反弹中出现，形成
+              - strong [ref=e575]: 假金叉陷阱
+              - text: "2."
+              - strong [ref=e576]: 盈亏比不佳(0.14)
+              - text: — 盈利时只赚一点点(平均+1549)，亏损时却亏得更多(平均-2159)，这跟下行的趋势环境有关
+              - text: "3."
+              - strong [ref=e577]: 只有2笔盈利
+              - text: — 分别是4-5月的反弹行情和12月的横盘微涨
+              - strong [ref=e578]: 结论
+              - generic [ref=e579]: ：MA5/MA10金叉策略在单边下跌或震荡下行环境中表现糟糕。对于贵州茅台这样的大盘蓝筹股，简单短期均线策略容易频繁进出、反复止损。建议考虑：
+              - text: "- 改用"
+              - strong [ref=e580]: 更长周期均线
+              - text: （如MA20/MA60金叉）
+              - text: "- 或引入"
+              - strong [ref=e581]: MACD/RSI等辅助指标
+              - text: 过滤假信号
+              - text: "- 或在上升趋势中才启用该策略"
+          - generic [ref=e612]:
+            - generic [ref=e613]: 你
+            - generic [ref=e614]: 请查看组合"MA策略测试"的当前持仓和回测表现
+          - generic [ref=e616]: AI
+          - generic [ref=e618]:
+            - generic [ref=e619]: AI
+            - generic [ref=e620]:
+              - text: 以下是组合
+              - strong [ref=e621]: "\"MA策略测试\""
+              - text: 的当前状态：
+              - text: "---"
+              - text: "## 📊 组合：MA策略测试"
+              - text: "| 项目 | 数值 |"
+              - text: "|------|------|"
+              - text: "|"
+              - strong [ref=e622]: 初始资金
+              - text: "| 100,000 元 |"
+              - text: "|"
+              - strong [ref=e623]: 当前现金
+              - text: "|"
+              - strong [ref=e624]: 81,819.94 元
+              - text: "|"
+              - text: "|"
+              - strong [ref=e625]: 当前持仓
+              - text: "|"
+              - strong [ref=e626]: 空仓
+              - text: （无持仓） |
+              - text: "|"
+              - strong [ref=e627]: 已平仓盈亏
+              - text: "|"
+              - strong [ref=e628]: "-18,180.06 元（-18.18%）"
+              - text: "|"
+              - text: "### 组合状态说明"
+              - text: 回测在2024-12-26最后一笔交易全部平仓后已完成全部交易，所以组合当前是空仓状态，资金已退回现金账户。
+              - strong [ref=e629]: 最终资金曲线走势
+              - text: ：初始10万 → 最终8.18万，亏损约18.18%。
+              - text: 这12笔交易的完整明细已在上一轮展示过。组合目前没有活跃持仓，所有交易记录已存档可供查阅。
+              - text: "### 后续可以做什么？"
+              - text: 如果您想进一步分析：
+              - text: "1."
+              - strong [ref=e630]: 查看交易历史
+              - text: — 用
+              - code [ref=e631]: manage_portfolio
+              - text: 调 history 查看每笔详细记录
+              - text: "2."
+              - strong [ref=e632]: 修改策略参数
+              - text: — 例如用MA10/MA20金叉、或加入MACD过滤再回测
+              - text: "3."
+              - strong [ref=e633]: 对比不同策略
+              - text: — 可将新策略结果保存到另一个组合名称中对比
+          - generic [ref=e682]:
+            - generic [ref=e683]: 你
+            - generic [ref=e684]: 对组合"MA策略测试"运行组合级回测分析
+          - generic [ref=e685]:
+            - generic [ref=e686]: AI
+            - generic [ref=e687]: 好的，让我先查看组合的交易历史，然后运行回测分析。
+          - generic [ref=e688]:
+            - generic [ref=e689]: AI
+            - generic [ref=e690]:
+              - text: 回测的权益曲线数据暂不可用，但基于完整的交易历史记录，我可以为您做详尽的组合级回测分析：
+              - text: "---"
+              - text: "## 📊 组合 \"MA策略测试\" — 组合级详细回测分析"
+              - text: ">"
+              - strong [ref=e691]: 标的
+              - generic [ref=e692]: ：贵州茅台(600519) |
+              - strong [ref=e693]: 策略
+              - text: ：MA5金叉买/MA5死叉卖
+              - text: "---"
+              - text: "### 一、整体绩效总览"
+              - text: "| 指标 | 数值 |"
+              - text: "|------|------|"
+              - text: "|"
+              - strong [ref=e694]: 初始资金
+              - text: "| 💰 100,000 元 |"
+              - text: "|"
+              - strong [ref=e695]: 最终现金
+              - text: "| 💰 81,819.94 元 |"
+              - text: "|"
+              - strong [ref=e696]: 总盈亏
+              - text: "|"
+              - strong [ref=e697]: "-18,180.06 元"
+              - text: "|"
+              - text: "|"
+              - strong [ref=e698]: 总收益率
+              - text: "|"
+              - strong [ref=e699]: "-18.18%"
+              - text: "|"
+              - text: "|"
+              - strong [ref=e700]: 交易周期
+              - text: "| 2024-01-26 → 2024-12-26（11个月） |"
+              - text: "|"
+              - strong [ref=e701]: 交易次数
+              - text: "| 12次（6次买入+6次卖出轮次）|"
+              - text: "---"
+              - text: "### 二、交易绩效分析"
+              - text: "#### 2.1 盈亏分布"
+              - code [ref=e703]:
+                - text: 盈利交易 ██░░░░░░░░░░ 2笔 (16.7%)
+                - text: 亏损交易 ████████████ 10笔 (83.3%)
+              - text: "| 分类 | 笔数 | 占比 | 平均盈亏 |"
+              - text: "|------|:----:|:----:|:--------:|"
+              - text: "| ✅"
+              - strong [ref=e704]: 盈利交易
+              - text: "| 2 | 16.7% | +1,548.54 |"
+              - text: "| ❌"
+              - strong [ref=e705]: 亏损交易
+              - text: "| 10 | 83.3% | -2,261.29 |"
+              - text: "|"
+              - strong [ref=e706]: 合计
+              - text: "|"
+              - strong [ref=e707]: "12"
+              - text: "|"
+              - strong [ref=e708]: 100%
+              - text: "|"
+              - strong [ref=e709]: "-1,515.01/笔"
+              - text: "|"
+              - text: "#### 2.2 盈利交易明细（仅2笔）"
+              - text: "| 序号 | 区间 | 持仓天数 | 盈亏 | 收益率 | 获胜原因 |"
+              - text: "|:---:|------|:-------:|:----:|:------:|---------|"
+              - text: "| 🥇 | 04-22→05-16 |"
+              - strong [ref=e710]: 15天
+              - text: "|"
+              - strong [ref=e711]: +2,545
+              - text: "|"
+              - strong [ref=e712]: +2.85%
+              - text: "| 唯一一波持续反弹行情 |"
+              - text: "| 🥈 | 12-04→12-26 |"
+              - strong [ref=e713]: 16天
+              - text: "|"
+              - strong [ref=e714]: "+552"
+              - text: "|"
+              - strong [ref=e715]: +0.68%
+              - text: "| 年末横盘微涨 |"
+              - text: "| |"
+              - strong [ref=e716]: 合计
+              - text: "|"
+              - strong [ref=e717]: 31天
+              - text: "|"
+              - strong [ref=e718]: +3,097
+              - text: "| — | |"
+              - text: "#### 2.3 亏损最严重的交易（TOP 5）"
+              - text: "| 序号 | 区间 | 持仓天数 | 盈亏 | 亏损率 |"
+              - text: "|:---:|------|:-------:|:----:|:-----:|"
+              - text: "| 🔴 | 09-27→10-16 | 8天 |"
+              - strong [ref=e719]: "-3,387"
+              - text: "| -3.92% |"
+              - text: "| 🔴 | 04-02→04-10 | 4天 |"
+              - strong [ref=e720]: "-3,435"
+              - text: "|▌"
+        - generic [ref=e98]:
+          - generic [ref=e99]:
+            - generic [ref=e100]: 工具调用
+            - button "收起" [ref=e101] [cursor=pointer]:
+              - img [ref=e102]
+          - generic [ref=e104]:
+            - generic [ref=e721]:
+              - generic [ref=e722]:
+                - generic [ref=e723]: ✓
+                - generic [ref=e724]: backtest_strategy
+                - generic [ref=e725]: 09:58:54
+              - generic [ref=e726]: "【回测报告】600519 ma_cross 区间: 2024-01-02 ~ 2024-12-31 初始资金: 100,000 数据条数: 242 --- 绩效指标 --- 总收益率: -18.50% 年化收益率: -19.18% 夏普比率: -2.62 最大回撤: 19.05% 交易次数: 12 胜率: 16.7% 盈亏比: 0.14 平均盈利: 1549 平均亏损: 2159 平均持仓天数: 7.6 --- 最近5笔交易 --- 2024-09-05 → 2024-09-09 | 持仓2天 | -1468 (-1.69%) 2024-09-27 → 2024-10-16 | 持仓"
+            - generic [ref=e727]:
+              - generic [ref=e728]:
+                - generic [ref=e729]: ✓
+                - generic [ref=e730]: manage_portfolio
+                - generic [ref=e731]: 10:01:49
+              - generic [ref=e732]: "【MA策略测试】 初始资金: 100,000 当前现金: 81,819.936 暂无持仓。"
+            - generic [ref=e733]:
+              - generic [ref=e734]:
+                - generic [ref=e735]: ✓
+                - generic [ref=e736]: manage_portfolio
+                - generic [ref=e737]: 10:01:49
+              - generic [ref=e738]: 该时间段内无权益曲线数据。请确认组合有交易记录且日期范围内有行情数据。
+            - generic [ref=e739]:
+              - generic [ref=e740]:
+                - generic [ref=e741]: ✓
+                - generic [ref=e742]: manage_portfolio
+                - generic [ref=e743]: 10:02:43
+              - generic [ref=e744]: "【交易历史】 [2024-01-26] 买入 600519.SH — 61股 @ 1631.99 (费用: 0.00) — ma_cross 策略买入 [2024-02-02] 卖出 600519.SH — 61股 @ 1613.38 (费用: 0.00) — ma_cross 策略卖出 | 持仓5天 | 盈亏-1164.45 [2024-02-08] 买入 600519.SH — 57股 @ 1721.73 (费用: 0.00) — ma_cross 策略买入 [2024-02-29] 卖出 600519.SH — 57股 @ 1679.87 (费用: 0.00) — ma_cross 策"
+            - generic [ref=e745]:
+              - generic [ref=e746]:
+                - generic [ref=e747]: ✓
+                - generic [ref=e748]: manage_portfolio
+                - generic [ref=e749]: 10:02:43
+              - generic [ref=e750]: 该时间段内无权益曲线数据。请确认组合有交易记录且日期范围内有行情数据。
+      - generic [ref=e106]:
+        - button "设置" [ref=e107] [cursor=pointer]:
+          - img [ref=e108]
+        - button "附件" [ref=e111] [cursor=pointer]:
+          - img [ref=e112]
+        - button "Choose File"
+        - textbox "输入消息..." [active] [ref=e114]
+        - button "发送" [ref=e115] [cursor=pointer]:
+          - img [ref=e116]
+    - generic [ref=e119]:
+      - generic [ref=e120]:
+        - generic [ref=e121] [cursor=pointer]:
+          - generic [ref=e122]: 📅 投资日历
+          - generic [ref=e123]:
+            - button "刷新日历数据" [ref=e124]:
+              - img [ref=e125]
+            - img [ref=e128]
+        - generic [ref=e131]:
+          - generic [ref=e132]:
+            - button "<" [ref=e133] [cursor=pointer]
+            - generic [ref=e134]: 2026年6月
+            - button ">" [ref=e135] [cursor=pointer]
+          - generic [ref=e136]:
+            - generic [ref=e137]: 日
+            - generic [ref=e138]: 一
+            - generic [ref=e139]: 二
+            - generic [ref=e140]: 三
+            - generic [ref=e141]: 四
+            - generic [ref=e142]: 五
+            - generic [ref=e143]: 六
+          - generic [ref=e144]:
+            - generic [ref=e147] [cursor=pointer]: "1"
+            - generic [ref=e153] [cursor=pointer]: "2"
+            - generic [ref=e157] [cursor=pointer]: "3"
+            - generic [ref=e159] [cursor=pointer]: "4"
+            - generic [ref=e163] [cursor=pointer]: "5"
+            - generic [ref=e165] [cursor=pointer]: "6"
+            - generic [ref=e167] [cursor=pointer]: "7"
+            - generic [ref=e169] [cursor=pointer]: "8"
+            - generic [ref=e171] [cursor=pointer]: "9"
+            - generic [ref=e175] [cursor=pointer]: "10"
+            - generic [ref=e179] [cursor=pointer]: "11"
+            - generic [ref=e181] [cursor=pointer]: "12"
+            - generic [ref=e183] [cursor=pointer]: "13"
+            - generic [ref=e185] [cursor=pointer]: "14"
+            - generic [ref=e187] [cursor=pointer]: "15"
+            - generic [ref=e191] [cursor=pointer]: "16"
+            - generic [ref=e193] [cursor=pointer]: "17"
+            - generic [ref=e195] [cursor=pointer]: "18"
+            - generic [ref=e197] [cursor=pointer]: "19"
+            - generic [ref=e199] [cursor=pointer]: "20"
+            - generic [ref=e201] [cursor=pointer]: "21"
+            - generic [ref=e203] [cursor=pointer]: "22"
+            - generic [ref=e205] [cursor=pointer]: "23"
+            - generic [ref=e207] [cursor=pointer]: "24"
+            - generic [ref=e209] [cursor=pointer]: "25"
+            - generic [ref=e211] [cursor=pointer]: "26"
+            - generic [ref=e213] [cursor=pointer]: "27"
+            - generic [ref=e215] [cursor=pointer]: "28"
+            - generic [ref=e217] [cursor=pointer]: "29"
+            - generic [ref=e219] [cursor=pointer]: "30"
+          - generic [ref=e220]:
+            - generic [ref=e221]: 本月重点关注
+            - generic [ref=e222] [cursor=pointer]:
+              - generic [ref=e223]:
+                - generic [ref=e225]: 预计
+                - generic [ref=e226]: OPEC+产量会议
+              - generic [ref=e227]: 决定下半年原油产量政策 (2026年6月1-5日)
+            - generic [ref=e228] [cursor=pointer]:
+              - generic [ref=e229]:
+                - generic [ref=e231]: 06-01
+                - generic [ref=e232]: 永大股份 业绩预告
+              - generic [ref=e233]: "公告日期: 20260601; 报告期[20260331]: 2026年一季报"
+            - generic [ref=e234] [cursor=pointer]:
+              - generic [ref=e235]:
+                - generic [ref=e237]: 预计
+                - generic [ref=e238]: 618购物节
+              - generic [ref=e239]: 年中电商大促 (2026年6月1-18日)
+            - generic [ref=e240] [cursor=pointer]:
+              - generic [ref=e241]:
+                - generic [ref=e243]: 预计
+                - generic [ref=e244]: 苹果WWDC
+              - generic [ref=e245]: 苹果年度开发者大会，iOS/macOS新系统发布 (2026年6月2-13日)
+            - generic [ref=e246] [cursor=pointer]:
+              - generic [ref=e247]:
+                - generic [ref=e249]: 预计
+                - generic [ref=e250]: Computex台北电脑展
+              - generic [ref=e251]: 全球第二大电脑展，AI PC新品发布 (2026年6月2-5日)
+            - generic [ref=e252] [cursor=pointer]:
+              - generic [ref=e253]:
+                - generic [ref=e255]: 06-04
+                - generic [ref=e256]: 臻宝科技 业绩预告
+              - generic [ref=e257]: "公告日期: 20260604; 报告期[20260331]: 2026年一季报"
+            - generic [ref=e258] [cursor=pointer]:
+              - generic [ref=e259]:
+                - generic [ref=e261]: 06-04
+                - generic [ref=e262]: 惠科股份 业绩预告
+              - generic [ref=e263]: "公告日期: 20260604; 报告期[20260331]: 2026年一季报"
+            - generic [ref=e264] [cursor=pointer]:
+              - generic [ref=e265]:
+                - generic [ref=e267]: 06-04
+                - generic [ref=e268]: 科莱瑞迪 业绩预告
+              - generic [ref=e269]: "公告日期: 20260604; 报告期[20260331]: 2026年一季报"
+            - generic [ref=e270] [cursor=pointer]:
+              - generic [ref=e271]:
+                - generic [ref=e273]: 06-09
+                - generic [ref=e274]: 环旭电子 业绩预告
+              - generic [ref=e275]: "最新价: 40.74; 最新涨跌幅: 5.054152; 公告日期: 20260609; 报告期[20260331]: 2026年一季报; 变动类型[20260331]: 不确定"
+            - generic [ref=e276] [cursor=pointer]:
+              - generic [ref=e277]:
+                - generic [ref=e279]: 预计
+                - generic [ref=e280]: SNEC光伏展
+              - generic [ref=e281]: 全球最大光伏展 (2026年6月10-12日)
+            - generic [ref=e282] [cursor=pointer]:
+              - generic [ref=e283]:
+                - generic [ref=e285]: 预计
+                - generic [ref=e286]: 迎峰度夏
+              - generic [ref=e287]: 夏季用电高峰，电力保供政策密集 (2026年6月15-30日)
+      - generic [ref=e288]:
+        - generic [ref=e289] [cursor=pointer]:
+          - generic [ref=e290]: 📰 财经新闻
+          - img [ref=e291]
+        - generic [ref=e294]:
+          - generic "SK海力士尝试“以钼代钨” 或助力NAND性能提升" [ref=e327]:
+            - generic [ref=e328]:
+              - generic [ref=e329]: 东财7x24
+              - generic [ref=e330]: 06-11 09:55
+            - generic [ref=e331]: SK海力士尝试“以钼代钨” 或助力NAND性能提升
+            - generic [ref=e332]: 【SK海力士尝试“以钼代钨” 或助力NAND性能提升】SK海力士已完成375层NAND闪存的生产验证，并正准备将其量产线转移至清州M15工厂。该产品计划在今年年底前正式量产。此次迭代最大的技术亮点，在于使用钼材料替代传统钨材料制作字线。在同...
+          - generic "广东翔鹭钨业钨原料长单采购价大幅上调 黑钨、白钨精矿涨幅均超25%" [ref=e333]:
+            - generic [ref=e334]:
+              - generic [ref=e335]: 东财7x24
+              - generic [ref=e336]: 06-11 09:53
+            - generic [ref=e337]: 广东翔鹭钨业钨原料长单采购价大幅上调 黑钨、白钨精矿涨幅均超25%
+            - generic [ref=e338]: 【广东翔鹭钨业钨原料长单采购价大幅上调 黑钨、白钨精矿涨幅均超25%】6月10日，广东翔鹭钨业股份有限公司公布2026年6月上半月钨原料长单含税采购价，多项钨原料价格较5月下半月大幅上调。
+          - generic "A股三大指数集体翻红" [ref=e339]:
+            - generic [ref=e340]:
+              - generic [ref=e341]: 东财7x24
+              - generic [ref=e342]: 06-11 09:52
+            - generic [ref=e343]: A股三大指数集体翻红
+            - generic [ref=e344]: A股三大指数集体翻红，小金属、光刻机、半导体板块涨幅居前。
+          - generic "MLCC概念再度走强 风华高科触及涨停创历史新高" [ref=e345]:
+            - generic [ref=e346]:
+              - generic [ref=e347]: 东财7x24
+              - generic [ref=e348]: 06-11 09:50
+            - generic [ref=e349]: MLCC概念再度走强 风华高科触及涨停创历史新高
+            - generic [ref=e350]: MLCC概念再度走强，风华高科触及涨停，昀冢科技涨超10%，双双创历史新高，火炬电子、三环集团、国瓷材料、洁美科技等跟涨。
+          - generic "SK海力士计划到2034年将晶圆产能提高两倍" [ref=e351]:
+            - generic [ref=e352]:
+              - generic [ref=e353]: 东财7x24
+              - generic [ref=e354]: 06-11 09:49
+            - generic [ref=e355]: SK海力士计划到2034年将晶圆产能提高两倍
+            - generic [ref=e356]: 【SK海力士计划到2034年将晶圆产能提高两倍】据媒体报道，SK集团董事长崔泰源表示，SK海力士计划到2034年将晶圆产能提高两倍，以满足日益增长的由人工智能驱动的内存芯片需求。
+          - generic "PCB概念反复活跃 方邦股份涨超14%续创历史新高" [ref=e357]:
+            - generic [ref=e358]:
+              - generic [ref=e359]: 东财7x24
+              - generic [ref=e360]: 06-11 09:48
+            - generic [ref=e361]: PCB概念反复活跃 方邦股份涨超14%续创历史新高
+            - generic [ref=e362]: PCB概念反复活跃，方邦股份涨超14%，续创历史新高，金安国纪、国际复材、中国巨石、宏和科技跟涨。
+          - generic "中国电信、华为完成多节点MESH化WSON光网络50毫秒确定性恢复验证" [ref=e363]:
+            - generic [ref=e364]:
+              - generic [ref=e365]: 东财7x24
+              - generic [ref=e366]: 06-11 09:47
+            - generic [ref=e367]: 中国电信、华为完成多节点MESH化WSON光网络50毫秒确定性恢复验证
+            - generic [ref=e368]: 【中国电信、华为完成多节点MESH化WSON光网络50毫秒确定性恢复验证】中国电信与华为发布“业界首次实现多节点MESH组网50msWSON确定性恢复”成果。围绕中国电信“下一代光网络”原创技术策源地建设方向，双方共同研发的“高可靠WSON...
+          - generic "诺德股份投资成立光储新能源公司" [ref=e369]:
+            - generic [ref=e370]:
+              - generic [ref=e371]: 东财7x24
+              - generic [ref=e372]: 06-11 09:47
+            - generic [ref=e373]: 诺德股份投资成立光储新能源公司
+            - generic [ref=e374]: 【诺德股份投资成立光储新能源公司】企查查APP显示，近日，诺德光储新能源（厦门）有限公司成立，经营范围包含：合同能源管理；节能管理服务；太阳能发电技术服务；光伏发电设备租赁等。企查查股权穿透显示，该公司由诺德股份旗下诺德智慧能源管理有限公司...
+          - generic "创业板指涨逾1% 算力硬件方向领涨" [ref=e375]:
+            - generic [ref=e376]:
+              - generic [ref=e377]: 东财7x24
+              - generic [ref=e378]: 06-11 09:45
+            - generic [ref=e379]: 创业板指涨逾1% 算力硬件方向领涨
+            - generic [ref=e380]: 【创业板指涨逾1% 算力硬件方向领涨】指数分化，创业板指拉升涨逾1.02%，沪指跌0.15%，深成指涨0.27%，小金属、算力硬件、半导体等板块指数涨幅居前，权重股阳光电源、新易盛双双涨逾4%。
+          - generic "港交所陈翊庭：前五个月10家公司根据18C章机制上市 融资超250亿港元" [ref=e381]:
+            - generic [ref=e382]:
+              - generic [ref=e383]: 东财7x24
+              - generic [ref=e384]: 06-11 09:45
+            - generic [ref=e385]: 港交所陈翊庭：前五个月10家公司根据18C章机制上市 融资超250亿港元
+            - generic [ref=e386]: 【港交所陈翊庭：前五个月10家公司根据18C章机制上市 融资超250亿港元】6月11日，2026年香港交易所未来科技峰会上，香港交易所集团行政总裁陈翊庭在致辞环节透露，今年前五个月共有10家公司根据第18C章机制上市，融资超过250亿港元，...
+          - generic "有色·钨概念异动拉升 翔鹭钨业涨停" [ref=e387]:
+            - generic [ref=e388]:
+              - generic [ref=e389]: 东财7x24
+              - generic [ref=e390]: 06-11 09:44
+            - generic [ref=e391]: 有色·钨概念异动拉升 翔鹭钨业涨停
+            - generic [ref=e392]: 有色·钨概念异动拉升，翔鹭钨业涨停、中钨高新、厦门钨业、章源钨业跟涨。
+          - generic "超硬材料概念表现活跃 惠丰钻石涨近10%" [ref=e393]:
+            - generic [ref=e394]:
+              - generic [ref=e395]: 东财7x24
+              - generic [ref=e396]: 06-11 09:43
+            - generic [ref=e397]: 超硬材料概念表现活跃 惠丰钻石涨近10%
+            - generic [ref=e398]: 超硬材料概念表现活跃，惠丰钻石涨近10%，力量钻石、四方达、黄河旋风、沃尔德跟涨。
+          - generic "深证成指翻红" [ref=e399]:
+            - generic [ref=e400]:
+              - generic [ref=e401]: 东财7x24
+              - generic [ref=e402]: 06-11 09:42
+            - generic [ref=e403]: 深证成指翻红
+            - generic [ref=e404]: 深证成指拉升翻红，此前一度跌超0.49%，上证指数跌0.23%，创业板指涨0.56%，MLCC、被动元件概念、湖北自贸等板块涨幅居前。
+          - generic "港交所陈翊庭：香港市场正逐渐转型为以科技与新经济驱动的资本市场" [ref=e405]:
+            - generic [ref=e406]:
+              - generic [ref=e407]: 东财7x24
+              - generic [ref=e408]: 06-11 09:41
+            - generic [ref=e409]: 港交所陈翊庭：香港市场正逐渐转型为以科技与新经济驱动的资本市场
+            - generic [ref=e410]: 【港交所陈翊庭：香港市场正逐渐转型为以科技与新经济驱动的资本市场】6月11日，在2026年香港交易所未来科技峰会上，香港交易所集团行政总裁陈翊庭在致辞环节表示：今年以来，香港市场热潮丝毫未减，前5个月首次公开融招股的融资额达到1600亿港元...
+          - generic "光刻机板块拉升 炬光科技20cm涨停" [ref=e411]:
+            - generic [ref=e412]:
+              - generic [ref=e413]: 东财7x24
+              - generic [ref=e414]: 06-11 09:41
+            - generic [ref=e415]: 光刻机板块拉升 炬光科技20cm涨停
+            - generic [ref=e416]: 光刻机板块拉升，炬光科技20cm涨停，中船特气一度涨超10%，先锋精科、富创精密、美埃科技、凯美特气、华特气体跟涨。

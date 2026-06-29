@@ -1,0 +1,345 @@
+- generic [ref=e3]:
+  - generic [ref=e4]:
+    - generic [ref=e5]:
+      - generic [ref=e6]: π
+      - generic [ref=e7]: Trading Agent
+    - generic [ref=e8]:
+      - generic [ref=e68] [cursor=pointer]:
+        - generic [ref=e69]: 上证指数
+        - generic [ref=e70]: "3993.23"
+        - generic [ref=e71]: ▼
+        - generic [ref=e72]: "-0.42%"
+      - generic [ref=e73] [cursor=pointer]:
+        - generic [ref=e74]: 沪深300
+        - generic [ref=e75]: "4748.59"
+        - generic [ref=e76]: ▼
+        - generic [ref=e77]: "-1.11%"
+      - generic [ref=e78] [cursor=pointer]:
+        - generic [ref=e79]: 科创50
+        - generic [ref=e80]: "1652.22"
+        - generic [ref=e81]: ▼
+        - generic [ref=e82]: "-0.65%"
+      - generic [ref=e83] [cursor=pointer]:
+        - generic [ref=e84]: 中证500
+        - generic [ref=e85]: "8063.86"
+        - generic [ref=e86]: ▼
+        - generic [ref=e87]: "-1.37%"
+      - generic [ref=e88] [cursor=pointer]:
+        - generic [ref=e89]: 深证成指
+        - generic [ref=e90]: "14954.10"
+        - generic [ref=e91]: ▼
+        - generic [ref=e92]: "-2.06%"
+      - generic [ref=e93] [cursor=pointer]:
+        - generic [ref=e94]: 创业板指
+        - generic [ref=e95]: "3854.79"
+        - generic [ref=e96]: ▼
+        - generic [ref=e97]: "-2.70%"
+  - generic [ref=e10]:
+    - generic [ref=e11]: RESEARCH
+    - textbox "搜索股票 (代码/名称/拼音)" [ref=e13]
+  - generic [ref=e14]:
+    - generic [ref=e15]:
+      - generic [ref=e17]: 股票池
+      - generic [ref=e18]:
+        - generic [ref=e19]:
+          - generic [ref=e412] [cursor=pointer]:
+            - generic [ref=e413]:
+              - generic [ref=e414]: "[59] 最近访问"
+              - button "×" [ref=e415]
+            - generic [ref=e416]: 4 只
+          - generic [ref=e417] [cursor=pointer]:
+            - generic [ref=e418]:
+              - generic [ref=e419]: "[58] 周线多头排列+日线金叉"
+              - button "×" [ref=e420]
+            - generic [ref=e421]: 25 只
+          - generic [ref=e422] [cursor=pointer]:
+            - generic [ref=e423]:
+              - generic [ref=e424]: "[57] 东方财富人气飙升榜TOP30"
+              - button "×" [ref=e425]
+            - generic [ref=e426]: 26 只
+          - generic [ref=e427] [cursor=pointer]:
+            - generic [ref=e428]:
+              - generic [ref=e429]: "[56] 东方财富人气榜TOP30"
+              - button "×" [ref=e430]
+            - generic [ref=e431]: 30 只
+          - generic [ref=e432] [cursor=pointer]:
+            - generic [ref=e433]:
+              - generic [ref=e434]: "[55] 雷达机会榜_20260609"
+              - button "×" [ref=e435]
+            - generic [ref=e436]: 20 只
+          - generic [ref=e437] [cursor=pointer]:
+            - generic [ref=e438]:
+              - generic [ref=e439]: "[54] ML_自选股"
+              - button "×" [ref=e440]
+            - generic [ref=e441]: 50 只
+          - generic [ref=e442] [cursor=pointer]:
+            - generic [ref=e443]:
+              - generic [ref=e444]: "[53] 自选股"
+              - button "×" [ref=e445]
+            - generic [ref=e446]: 276 只
+          - generic [ref=e447] [cursor=pointer]:
+            - generic [ref=e448]:
+              - generic [ref=e449]: "[52] 物理AI核心股池"
+              - button "×" [ref=e450]
+            - generic [ref=e451]: 15 只
+          - generic [ref=e452] [cursor=pointer]:
+            - generic [ref=e453]:
+              - generic [ref=e454]: "[51] 周线金叉股_市值TOP20"
+              - button "×" [ref=e455]
+            - generic [ref=e456]: 20 只
+          - generic [ref=e457] [cursor=pointer]:
+            - generic [ref=e458]:
+              - generic [ref=e459]: "[50] 周线多头排列_调整缩量_市值TOP9"
+              - button "×" [ref=e460]
+            - generic [ref=e461]: 9 只
+          - generic [ref=e462] [cursor=pointer]:
+            - generic [ref=e463]:
+              - generic [ref=e464]: "[49] ML_算力概念股核心池_预测排序"
+              - button "×" [ref=e465]
+            - generic [ref=e466]: 13 只
+          - generic [ref=e467] [cursor=pointer]:
+            - generic [ref=e468]:
+              - generic [ref=e469]: "[48] 算力概念股核心池"
+              - button "×" [ref=e470]
+            - generic [ref=e471]: 13 只
+          - generic [ref=e472] [cursor=pointer]:
+            - generic [ref=e473]:
+              - generic [ref=e474]: "[23] 周线多头日线缩量回调_202605"
+              - button "×" [ref=e475]
+            - generic [ref=e476]: 30 只
+        - generic [ref=e20]:
+          - generic [ref=e477]: 最近访问
+          - generic [ref=e478] [cursor=pointer]:
+            - generic [ref=e479]: "300331"
+            - generic [ref=e480]: 苏大维格
+            - generic [ref=e481]: +11.92%
+          - generic [ref=e482] [cursor=pointer]:
+            - generic [ref=e483]: "301669"
+            - generic [ref=e484]: 高特电子
+            - generic [ref=e485]: "-1.81%"
+          - generic [ref=e486] [cursor=pointer]:
+            - generic [ref=e487]: "301630"
+            - generic [ref=e488]: 同宇新材
+            - generic [ref=e489]: +8.25%
+          - generic [ref=e490] [cursor=pointer]:
+            - generic [ref=e491]: "688665"
+            - generic [ref=e492]: 四方光电
+            - generic [ref=e493]: "-2.18%"
+    - generic [ref=e22]:
+      - generic [ref=e26]:
+        - generic [ref=e27]: 工具调用
+        - button "收起" [ref=e28] [cursor=pointer]:
+          - img [ref=e29]
+      - generic [ref=e33]:
+        - button "设置" [ref=e34] [cursor=pointer]:
+          - img [ref=e35]
+        - button "附件" [ref=e38] [cursor=pointer]:
+          - img [ref=e39]
+        - button "Choose File"
+        - textbox "输入消息..." [ref=e41]
+        - button "发送" [ref=e42] [cursor=pointer]:
+          - img [ref=e43]
+    - generic [ref=e46]:
+      - generic [ref=e47]:
+        - generic [ref=e48] [cursor=pointer]:
+          - generic [ref=e49]: 📅 投资日历
+          - generic [ref=e50]:
+            - button "刷新日历数据" [ref=e51]:
+              - img [ref=e52]
+            - img [ref=e55]
+        - generic [ref=e58]:
+          - generic [ref=e166]:
+            - button "<" [ref=e167] [cursor=pointer]
+            - generic [ref=e168]: 2026年6月
+            - button ">" [ref=e169] [cursor=pointer]
+          - generic [ref=e170]:
+            - generic [ref=e171]: 日
+            - generic [ref=e172]: 一
+            - generic [ref=e173]: 二
+            - generic [ref=e174]: 三
+            - generic [ref=e175]: 四
+            - generic [ref=e176]: 五
+            - generic [ref=e177]: 六
+          - generic [ref=e178]:
+            - generic [ref=e181] [cursor=pointer]: "1"
+            - generic [ref=e187] [cursor=pointer]: "2"
+            - generic [ref=e191] [cursor=pointer]: "3"
+            - generic [ref=e193] [cursor=pointer]: "4"
+            - generic [ref=e197] [cursor=pointer]: "5"
+            - generic [ref=e199] [cursor=pointer]: "6"
+            - generic [ref=e201] [cursor=pointer]: "7"
+            - generic [ref=e203] [cursor=pointer]: "8"
+            - generic [ref=e205] [cursor=pointer]: "9"
+            - generic [ref=e209] [cursor=pointer]: "10"
+            - generic [ref=e213] [cursor=pointer]: "11"
+            - generic [ref=e215] [cursor=pointer]: "12"
+            - generic [ref=e217] [cursor=pointer]: "13"
+            - generic [ref=e219] [cursor=pointer]: "14"
+            - generic [ref=e221] [cursor=pointer]: "15"
+            - generic [ref=e225] [cursor=pointer]: "16"
+            - generic [ref=e227] [cursor=pointer]: "17"
+            - generic [ref=e229] [cursor=pointer]: "18"
+            - generic [ref=e231] [cursor=pointer]: "19"
+            - generic [ref=e233] [cursor=pointer]: "20"
+            - generic [ref=e235] [cursor=pointer]: "21"
+            - generic [ref=e237] [cursor=pointer]: "22"
+            - generic [ref=e239] [cursor=pointer]: "23"
+            - generic [ref=e241] [cursor=pointer]: "24"
+            - generic [ref=e243] [cursor=pointer]: "25"
+            - generic [ref=e245] [cursor=pointer]: "26"
+            - generic [ref=e247] [cursor=pointer]: "27"
+            - generic [ref=e249] [cursor=pointer]: "28"
+            - generic [ref=e251] [cursor=pointer]: "29"
+            - generic [ref=e253] [cursor=pointer]: "30"
+          - generic [ref=e254]:
+            - generic [ref=e255]: 本月重点关注
+            - generic [ref=e256] [cursor=pointer]:
+              - generic [ref=e257]:
+                - generic [ref=e259]: 预计
+                - generic [ref=e260]: OPEC+产量会议
+              - generic [ref=e261]: 决定下半年原油产量政策 (2026年6月1-5日)
+            - generic [ref=e262] [cursor=pointer]:
+              - generic [ref=e263]:
+                - generic [ref=e265]: 06-01
+                - generic [ref=e266]: 永大股份 业绩预告
+              - generic [ref=e267]: "公告日期: 20260601; 报告期[20260331]: 2026年一季报"
+            - generic [ref=e268] [cursor=pointer]:
+              - generic [ref=e269]:
+                - generic [ref=e271]: 预计
+                - generic [ref=e272]: 618购物节
+              - generic [ref=e273]: 年中电商大促 (2026年6月1-18日)
+            - generic [ref=e274] [cursor=pointer]:
+              - generic [ref=e275]:
+                - generic [ref=e277]: 预计
+                - generic [ref=e278]: 苹果WWDC
+              - generic [ref=e279]: 苹果年度开发者大会，iOS/macOS新系统发布 (2026年6月2-13日)
+            - generic [ref=e280] [cursor=pointer]:
+              - generic [ref=e281]:
+                - generic [ref=e283]: 预计
+                - generic [ref=e284]: Computex台北电脑展
+              - generic [ref=e285]: 全球第二大电脑展，AI PC新品发布 (2026年6月2-5日)
+            - generic [ref=e286] [cursor=pointer]:
+              - generic [ref=e287]:
+                - generic [ref=e289]: 06-04
+                - generic [ref=e290]: 臻宝科技 业绩预告
+              - generic [ref=e291]: "公告日期: 20260604; 报告期[20260331]: 2026年一季报"
+            - generic [ref=e292] [cursor=pointer]:
+              - generic [ref=e293]:
+                - generic [ref=e295]: 06-04
+                - generic [ref=e296]: 惠科股份 业绩预告
+              - generic [ref=e297]: "公告日期: 20260604; 报告期[20260331]: 2026年一季报"
+            - generic [ref=e298] [cursor=pointer]:
+              - generic [ref=e299]:
+                - generic [ref=e301]: 06-04
+                - generic [ref=e302]: 科莱瑞迪 业绩预告
+              - generic [ref=e303]: "公告日期: 20260604; 报告期[20260331]: 2026年一季报"
+            - generic [ref=e304] [cursor=pointer]:
+              - generic [ref=e305]:
+                - generic [ref=e307]: 06-09
+                - generic [ref=e308]: 环旭电子 业绩预告
+              - generic [ref=e309]: "最新价: 40.74; 最新涨跌幅: 5.054152; 公告日期: 20260609; 报告期[20260331]: 2026年一季报; 变动类型[20260331]: 不确定"
+            - generic [ref=e310] [cursor=pointer]:
+              - generic [ref=e311]:
+                - generic [ref=e313]: 预计
+                - generic [ref=e314]: SNEC光伏展
+              - generic [ref=e315]: 全球最大光伏展 (2026年6月10-12日)
+            - generic [ref=e316] [cursor=pointer]:
+              - generic [ref=e317]:
+                - generic [ref=e319]: 预计
+                - generic [ref=e320]: 迎峰度夏
+              - generic [ref=e321]: 夏季用电高峰，电力保供政策密集 (2026年6月15-30日)
+      - generic [ref=e59]:
+        - generic [ref=e60] [cursor=pointer]:
+          - generic [ref=e61]: 📰 财经新闻
+          - img [ref=e62]
+        - generic [ref=e65]:
+          - generic "首批4所疏解高校雄安校区预计明年开门办学" [ref=e322]:
+            - generic [ref=e323]:
+              - generic [ref=e324]: 东财7x24
+              - generic [ref=e325]: 06-10 16:59
+            - generic [ref=e326]: 首批4所疏解高校雄安校区预计明年开门办学
+            - generic [ref=e327]: 【首批4所疏解高校雄安校区预计明年开门办学】“雄安发布”消息，2023年11月，首批疏解到雄安的4所高校北京交通大学、北京科技大学、北京林业大学、中国地质大学（北京）开工建设。2025年12月，第一组团首批建筑主体结构封顶。目前，首批4所疏...
+          - generic "以军称打死哈马斯资金运营负责人" [ref=e328]:
+            - generic [ref=e329]:
+              - generic [ref=e330]: 东财7x24
+              - generic [ref=e331]: 06-10 16:59
+            - generic [ref=e332]: 以军称打死哈马斯资金运营负责人
+            - generic [ref=e333]: 【以军称打死哈马斯资金运营负责人】以色列国防军和以色列国家安全总局（辛贝特）10日发表联合声明称，以军日前在加沙地带北部打死巴勒斯坦伊斯兰抵抗运动（哈马斯）资金运营负责人卡德尔·贾马西及其副手穆罕默德·哈拉津。
+          - generic "埃及苏伊士运河油轮通行量增长 成为霍尔木兹海峡关闭的意外受益者" [ref=e334]:
+            - generic [ref=e335]:
+              - generic [ref=e336]: 东财7x24
+              - generic [ref=e337]: 06-10 16:58
+            - generic [ref=e338]: 埃及苏伊士运河油轮通行量增长 成为霍尔木兹海峡关闭的意外受益者
+            - generic [ref=e339]: 【埃及苏伊士运河油轮通行量增长 成为霍尔木兹海峡关闭的意外受益者】霍尔木兹海峡关闭促使能源运输改道至红海替代航线，受此影响，今年4月通过埃及苏伊士运河的油轮数量激增近三分之一，带动运河收入升至2024年初以来最高水平。埃及国家统计局数据显示...
+          - generic "大北农：前5月商品肥猪销售收入23.13亿元 同比下降8.40%" [ref=e340]:
+            - generic [ref=e341]:
+              - generic [ref=e342]: 东财7x24
+              - generic [ref=e343]: 06-10 16:56
+            - generic [ref=e344]: 大北农：前5月商品肥猪销售收入23.13亿元 同比下降8.40%
+            - generic [ref=e345]: 【大北农：前5月商品肥猪销售收入23.13亿元 同比下降8.40%】大北农6月10日公告，2026年1-5月，公司累计销售商品肥猪178.83万头，同比变动29.29%。累计销售收入23.13亿元，同比变动-8.40%。
+          - generic "填补云计算在我国GLP实验室合规应用领域标准空白 这项新国标发布" [ref=e346]:
+            - generic [ref=e347]:
+              - generic [ref=e348]: 东财7x24
+              - generic [ref=e349]: 06-10 16:56
+            - generic [ref=e350]: 填补云计算在我国GLP实验室合规应用领域标准空白 这项新国标发布
+            - generic [ref=e351]: 【填补云计算在我国GLP实验室合规应用领域标准空白 这项新国标发布】记者今天了解到，市场监管总局近日批准发布《良好实验室规范实施要求第8部分：云计算在良好实验室规范试验机构中的应用》国家标准。该标准是我国良好实验室规范（GLP）系列标准的重...
+          - generic "智库称韩国散户的杠杆股票投资已达到券商设定的上限" [ref=e352]:
+            - generic [ref=e353]:
+              - generic [ref=e354]: 东财7x24
+              - generic [ref=e355]: 06-10 16:54
+            - generic [ref=e356]: 智库称韩国散户的杠杆股票投资已达到券商设定的上限
+            - generic [ref=e357]: 【智库称韩国散户的杠杆股票投资已达到券商设定的上限】韩国智库资本市场研究院院长周三表示，韩国散户的杠杆股票投资已经达到当地券商设定的上限。韩国每家券商都有融资上限，并受到严格监管。目前各券商的贷款上限均已达到，意味着散户投资者很难从券商处借...
+          - generic "通威股份：部分低银化浆料方案已在特定产品和客户需求中进行小批量验证与导入尝试" [ref=e358]:
+            - generic [ref=e359]:
+              - generic [ref=e360]: 东财7x24
+              - generic [ref=e361]: 06-10 16:54
+            - generic [ref=e362]: 通威股份：部分低银化浆料方案已在特定产品和客户需求中进行小批量验证与导入尝试
+            - generic [ref=e363]: 【通威股份：部分低银化浆料方案已在特定产品和客户需求中进行小批量验证与导入尝试】通威股份在互动平台表示，公司持续一直高度重视产品低银化、无银化的研发，并已形成了覆盖浆料端与工艺技术端的多元化、梯次化技术储备。目前，部分低银化浆料方案已在特定...
+          - generic "伊朗外交部：美国破坏外交进程 伊方需重新评估局势" [ref=e364]:
+            - generic [ref=e365]:
+              - generic [ref=e366]: 东财7x24
+              - generic [ref=e367]: 06-10 16:54
+            - generic [ref=e368]: 伊朗外交部：美国破坏外交进程 伊方需重新评估局势
+            - generic [ref=e369]: 【伊朗外交部：美国破坏外交进程 伊方需重新评估局势】伊朗外交部发言人巴加埃6月10日在谈及伊美会谈相关问题时表示，9日冲突后，伊方需要重新评估局势。巴加埃说，美国持续违反停火，破坏了外交进程。
+          - generic "澳企Core Lithium与嘉能可达成第二笔锂矿细粉销售协议" [ref=e370]:
+            - generic [ref=e371]:
+              - generic [ref=e372]: 东财7x24
+              - generic [ref=e373]: 06-10 16:52
+            - generic [ref=e374]: 澳企Core Lithium与嘉能可达成第二笔锂矿细粉销售协议
+            - generic [ref=e375]: 【澳企Core Lithium与嘉能可达成第二笔锂矿细粉销售协议】澳大利亚硬岩锂矿企业CoreLithium公告，公司已与嘉能可国际签订一份具有约束力的销售采购协议，将向其出售25,000吨来自Finniss锂矿的细粉。这是继今年4月首笔约...
+          - generic "伊朗说美国损害外交进程" [ref=e376]:
+            - generic [ref=e377]:
+              - generic [ref=e378]: 东财7x24
+              - generic [ref=e379]: 06-10 16:51
+            - generic [ref=e380]: 伊朗说美国损害外交进程
+            - generic [ref=e381]: 【伊朗说美国损害外交进程】据CCTV国际时讯，今天（6月10日），伊朗外交部发言人巴加埃指出，10日发生的事情证明，伊朗将毫不犹豫地保卫祖国。美国自相矛盾的信息和持续违反停火协议的行为损害了外交进程。
+          - generic "壳牌首席执行官：石油市场至少需要一年时间才能重新平衡" [ref=e382]:
+            - generic [ref=e383]:
+              - generic [ref=e384]: 东财7x24
+              - generic [ref=e385]: 06-10 16:50
+            - generic [ref=e386]: 壳牌首席执行官：石油市场至少需要一年时间才能重新平衡
+            - generic [ref=e387]: 壳牌首席执行官称，石油市场至少需要一年时间才能重新平衡。
+          - generic "中汽协：5月汽车产销环比分别增长1.6%和4.1%" [ref=e388]:
+            - generic [ref=e389]:
+              - generic [ref=e390]: 东财7x24
+              - generic [ref=e391]: 06-10 16:50
+            - generic [ref=e392]: 中汽协：5月汽车产销环比分别增长1.6%和4.1%
+            - generic [ref=e393]: 【中汽协：5月汽车产销环比分别增长1.6%和4.1%】6月10日，中国汽车工业协会数据显示，5月，汽车产销分别完成261.6万辆和262.9万辆，环比分别增长1.6%和4.1%，同比分别下降1.2%和2.1%。1-5月，汽车产销分别完成12...
+          - generic "兰花科创：子公司拟投资2.86亿元建设15号下组煤层项目" [ref=e394]:
+            - generic [ref=e395]:
+              - generic [ref=e396]: 东财7x24
+              - generic [ref=e397]: 06-10 16:50
+            - generic [ref=e398]: 兰花科创：子公司拟投资2.86亿元建设15号下组煤层项目
+            - generic [ref=e399]: 【兰花科创：子公司拟投资2.86亿元建设15号下组煤层项目】兰花科创(600123.SH)公告称，公司董事会审议通过子公司兰花百盛煤业实施15号下组煤层项目及项目概算的议案，项目概算总投资2.86亿元，建设总工期34个月，资金全部为企业自筹...
+          - generic "美股纳斯达克100指数期货跌超1%" [ref=e400]:
+            - generic [ref=e401]:
+              - generic [ref=e402]: 东财7x24
+              - generic [ref=e403]: 06-10 16:47
+            - generic [ref=e404]: 美股纳斯达克100指数期货跌超1%
+            - generic [ref=e405]: 美股纳斯达克100指数期货跌超1%，标普500指数期货跌0.6%，道琼斯指数期货跌0.5%。
+          - generic "新五丰：5月生猪销售48.97万头" [ref=e406]:
+            - generic [ref=e407]:
+              - generic [ref=e408]: 东财7x24
+              - generic [ref=e409]: 06-10 16:47
+            - generic [ref=e410]: 新五丰：5月生猪销售48.97万头
+            - generic [ref=e411]: 【新五丰：5月生猪销售48.97万头】新五丰公告，2026年5月销售生猪48.97万头，商品猪销价9.41元/公斤；其中销售商品猪24.34万头。1月至5月累计销售生猪238.82万头，累计销售商品猪138.4万头。

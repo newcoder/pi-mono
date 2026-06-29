@@ -1,0 +1,156 @@
+- generic [ref=e3]:
+  - generic [ref=e4]:
+    - generic [ref=e5]:
+      - generic [ref=e6]: π
+      - generic [ref=e7]: Trading Agent
+    - generic [ref=e9]: 加载中...
+  - generic [ref=e11]: "市场情绪: 加载中..."
+  - generic [ref=e12]:
+    - generic [ref=e13]: RESEARCH
+    - textbox "搜索股票 (代码/名称/拼音)" [ref=e15]
+  - generic [ref=e16]:
+    - generic [ref=e17]:
+      - generic [ref=e19]: 股票池
+      - generic [ref=e20]:
+        - generic [ref=e21] [cursor=pointer]:
+          - generic [ref=e22]:
+            - generic [ref=e23]: lgbm_40_60
+            - button "×" [ref=e24]
+          - generic [ref=e25]: 21 只
+        - generic [ref=e26] [cursor=pointer]:
+          - generic [ref=e27]:
+            - generic [ref=e28]: 周线多头日线缩量回调_202605
+            - button "×" [ref=e29]
+          - generic [ref=e30]: 30 只
+        - generic [ref=e31] [cursor=pointer]:
+          - generic [ref=e32]:
+            - generic [ref=e33]: 最近访问
+            - button "×" [ref=e34]
+          - generic [ref=e35]: 40 只
+        - generic [ref=e36] [cursor=pointer]:
+          - generic [ref=e37]:
+            - generic [ref=e38]: 未来关注股池
+            - button "×" [ref=e39]
+          - generic [ref=e40]: 50 只
+        - generic [ref=e41] [cursor=pointer]:
+          - generic [ref=e42]:
+            - generic [ref=e43]: 周线多头日线回调缩量
+            - button "×" [ref=e44]
+          - generic [ref=e45]: 50 只
+        - generic [ref=e46] [cursor=pointer]:
+          - generic [ref=e47]:
+            - generic [ref=e48]: 前期强势缩量调整
+            - button "×" [ref=e49]
+          - generic [ref=e50]: 50 只
+        - generic [ref=e51] [cursor=pointer]:
+          - generic [ref=e52]:
+            - generic [ref=e53]: 营收连续两年增长超50%
+            - button "×" [ref=e54]
+          - generic [ref=e55]: 45 只
+        - generic [ref=e56] [cursor=pointer]:
+          - generic [ref=e57]:
+            - generic [ref=e58]: 日线多头排列市值TOP10
+            - button "×" [ref=e59]
+          - generic [ref=e60]: 10 只
+    - generic [ref=e61]:
+      - generic [ref=e65]:
+        - textbox "输入消息..." [ref=e66]
+        - button "发送" [ref=e67] [cursor=pointer]:
+          - img [ref=e68]
+      - generic [ref=e72]: 工具调用
+    - generic [ref=e74]:
+      - generic [ref=e76] [cursor=pointer]:
+        - generic [ref=e77]: 📈 强势股
+        - img [ref=e78]
+      - generic [ref=e84]:
+        - generic [ref=e85] [cursor=pointer]:
+          - generic [ref=e86]: 📅 投资日历
+          - generic [ref=e87]:
+            - button "刷新日历数据" [ref=e88]:
+              - img [ref=e89]
+            - img [ref=e92]
+        - generic [ref=e95]:
+          - generic [ref=e96]:
+            - button "<" [ref=e97] [cursor=pointer]
+            - generic [ref=e98]: 2026年5月
+            - button ">" [ref=e99] [cursor=pointer]
+          - generic [ref=e100]:
+            - generic [ref=e101]: 日
+            - generic [ref=e102]: 一
+            - generic [ref=e103]: 二
+            - generic [ref=e104]: 三
+            - generic [ref=e105]: 四
+            - generic [ref=e106]: 五
+            - generic [ref=e107]: 六
+          - generic [ref=e108]:
+            - generic [ref=e115] [cursor=pointer]: "1"
+            - generic [ref=e117] [cursor=pointer]: "2"
+            - generic [ref=e119] [cursor=pointer]: "3"
+            - generic [ref=e121] [cursor=pointer]: "4"
+            - generic [ref=e123] [cursor=pointer]: "5"
+            - generic [ref=e125] [cursor=pointer]: "6"
+            - generic [ref=e127] [cursor=pointer]: "7"
+            - generic [ref=e129] [cursor=pointer]: "8"
+            - generic [ref=e131] [cursor=pointer]: "9"
+            - generic [ref=e133] [cursor=pointer]: "10"
+            - generic [ref=e135] [cursor=pointer]: "11"
+            - generic [ref=e137] [cursor=pointer]: "12"
+            - generic [ref=e139] [cursor=pointer]: "13"
+            - generic [ref=e141] [cursor=pointer]: "14"
+            - generic [ref=e145] [cursor=pointer]: "15"
+            - generic [ref=e149] [cursor=pointer]: "16"
+            - generic [ref=e151] [cursor=pointer]: "17"
+            - generic [ref=e153] [cursor=pointer]: "18"
+            - generic [ref=e157] [cursor=pointer]: "19"
+            - generic [ref=e159] [cursor=pointer]: "20"
+            - generic [ref=e161] [cursor=pointer]: "21"
+            - generic [ref=e165] [cursor=pointer]: "22"
+            - generic [ref=e167] [cursor=pointer]: "23"
+            - generic [ref=e169] [cursor=pointer]: "24"
+            - generic [ref=e171] [cursor=pointer]: "25"
+            - generic [ref=e173] [cursor=pointer]: "26"
+            - generic [ref=e175] [cursor=pointer]: "27"
+            - generic [ref=e177] [cursor=pointer]: "28"
+            - generic [ref=e179] [cursor=pointer]: "29"
+            - generic [ref=e181] [cursor=pointer]: "30"
+            - generic [ref=e183] [cursor=pointer]: "31"
+          - generic [ref=e184]:
+            - generic [ref=e185]: 本月重点关注
+            - generic [ref=e186] [cursor=pointer]:
+              - generic [ref=e187]:
+                - generic [ref=e189]: 05-14
+                - generic [ref=e190]: 维通利 业绩预告
+              - generic [ref=e191]: "最新价: 83.07; 最新涨跌幅: -9.578752999999999; 公告日期: 20260514; 报告期[20260331]: 2026年一季报; 净利润增长率上限[20260331]: -6.859999999999999"
+            - generic [ref=e192] [cursor=pointer]:
+              - generic [ref=e193]:
+                - generic [ref=e195]: 05-14
+                - generic [ref=e196]: 龙辰科技 业绩预告
+              - generic [ref=e197]: "公告日期: 20260514; 报告期[20260331]: 2026年一季报"
+            - generic [ref=e198] [cursor=pointer]:
+              - generic [ref=e199]:
+                - generic [ref=e201]: 05-15
+                - generic [ref=e202]: 天海电子 业绩预告
+              - generic [ref=e203]: "最新价: 58.7; 最新涨跌幅: -8.266917; 公告日期: 20260515; 报告期[20260331]: 2026年一季报; 净利润增长率上限[20260331]: 7.16"
+            - generic [ref=e204] [cursor=pointer]:
+              - generic [ref=e205]:
+                - generic [ref=e207]: 05-18
+                - generic [ref=e208]: 新天力 业绩预告
+              - generic [ref=e209]: "公告日期: 20260518; 报告期[20260331]: 2026年一季报"
+            - generic [ref=e210] [cursor=pointer]:
+              - generic [ref=e211]:
+                - generic [ref=e213]: 05-21
+                - generic [ref=e214]: 高特电子 业绩预告
+              - generic [ref=e215]: "公告日期: 20260521; 报告期[20260331]: 2026年一季报"
+            - generic [ref=e216] [cursor=pointer]:
+              - generic [ref=e217]:
+                - generic [ref=e219]: 05-21
+                - generic [ref=e220]: 惠康科技 业绩预告
+              - generic [ref=e221]: "最新价: 111.8; 最新涨跌幅: 109.913631; 公告日期: 20260521; 报告期[20260331]: 2026年一季报; 净利润增长率上限[20260331]: 9.8"
+            - generic [ref=e222] [cursor=pointer]:
+              - generic [ref=e223]:
+                - generic [ref=e225]: 05-21
+                - generic [ref=e226]: 新睿电子 业绩预告
+              - generic [ref=e227]: "公告日期: 20260521; 报告期[20260331]: 2026年一季报"
+      - generic [ref=e229] [cursor=pointer]:
+        - generic [ref=e230]: 📰 财经新闻
+        - img [ref=e231]

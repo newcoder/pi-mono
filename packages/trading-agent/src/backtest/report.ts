@@ -16,6 +16,7 @@ export function formatBacktestResult(result: BacktestResult): string {
 		`盈亏比: ${metrics.profitFactor.toFixed(2)}`,
 		`平均盈利: ${metrics.avgWin.toFixed(0)}  平均亏损: ${metrics.avgLoss.toFixed(0)}`,
 		`平均持仓天数: ${metrics.avgHoldingDays.toFixed(1)}`,
+		`停牌/零成交量过滤交易: ${result.filteredTradeCount}`,
 		"",
 	];
 
@@ -107,6 +108,7 @@ export function formatPoolBacktestResult(result: PoolBacktestResult): string {
 		`盈亏比: ${metrics.profitFactor.toFixed(2)}`,
 		`平均盈利: ${metrics.avgWin.toFixed(0)}  平均亏损: ${metrics.avgLoss.toFixed(0)}`,
 		`平均持仓天数: ${metrics.avgHoldingDays.toFixed(1)}`,
+		`停牌/零成交量过滤交易: ${result.filteredTradeCount}`,
 		"",
 	];
 

@@ -113,23 +113,8 @@ def _get_quote_from_local(code: str, market: int) -> dict:
     return {"error": "No local data available"}
 
 
-def get_stock_real_quote(stock_code: str, market: int = 1) -> dict:
-    """
-    Fetch stock quote.
-    Priority: mootdx (TCP direct) -> Eastmoney HTTP -> local SQLite fallback.
-    """
-    is_trading = _is_a_share_trading_hours()
-
-    # 1. Primary: mootdx TCP direct (fast, ~15ms)
-    try:
-        from mootdx_data import get_quote
-        result = get_quote(stock_code, market)
-        if result:
-            return result
-    except Exception:
-        pass  # fallback to next source
-
-    # 2. Fallback: Eastmoney HTTP API
+def _fetch_eastmoney_quote(stock_code: str, market: int) -> dict | None:
+    """Fetch full-field quote from Eastmoney HTTP API."""
     try:
         import requests
         secid = f"{market}.{stock_code}"
@@ -144,39 +129,68 @@ def get_stock_real_quote(stock_code: str, market: int = 1) -> dict:
         r.encoding = "utf-8"
         data = r.json()
         d = data.get("data", {})
-        if d:
-            return {
-                "name": d.get("f58"),
-                "code": d.get("f57") or stock_code,
-                "latest": d.get("f43"),
-                "open": d.get("f46"),
-                "high": d.get("f44"),
-                "low": d.get("f45"),
-                "prev_close": d.get("f60"),
-                "volume": d.get("f47"),
-                "turnover": d.get("f48"),
-                "change_pct": d.get("f170"),
-                "total_cap": d.get("f116"),
-                "float_cap": d.get("f117"),
-                "pe": d.get("f162"),
-                "52w_high": d.get("f51"),
-                "52w_low": d.get("f52"),
-                "_source": "eastmoney",
-            }
-    except Exception as e:
-        if not is_trading:
-            # Non-trading + network fail -> return local fallback error
-            return {"error": f"Non-trading hours, no local data: {e}"}
-        return {"error": str(e)}
+        if not d:
+            return None
+        return {
+            "name": d.get("f58"),
+            "code": d.get("f57") or stock_code,
+            "latest": d.get("f43"),
+            "open": d.get("f46"),
+            "high": d.get("f44"),
+            "low": d.get("f45"),
+            "prev_close": d.get("f60"),
+            "volume": d.get("f47"),
+            "turnover": d.get("f48"),
+            "change_pct": d.get("f170"),
+            "total_cap": d.get("f116"),
+            "float_cap": d.get("f117"),
+            "pe": d.get("f162"),
+            "pb": d.get("f163"),
+            "52w_high": d.get("f51"),
+            "52w_low": d.get("f52"),
+            "_source": "eastmoney",
+        }
+    except Exception:
+        return None
+
+
+def get_stock_real_quote(stock_code: str, market: int = 1) -> dict:
+    """
+    Fetch stock quote.
+    Priority: mootdx (TCP direct, fast) -> enrich with Eastmoney HTTP -> local SQLite fallback.
+    """
+    is_trading = _is_a_share_trading_hours()
+    result: dict | None = None
+
+    # 1. Primary: mootdx TCP direct (fast, ~15ms)
+    try:
+        from mootdx_data import get_quote
+        result = get_quote(stock_code, market)
+    except Exception:
+        result = None
+
+    # 2. Enrich / fallback with Eastmoney HTTP API for fields mootdx lacks
+    em = _fetch_eastmoney_quote(stock_code, market)
+    if em:
+        if result and "error" not in result:
+            # Merge: mootdx has fresh price/volume; Eastmoney has name, turnover, cap, pe, pb, 52w
+            for key in ("name", "turnover", "total_cap", "float_cap", "pe", "pb", "52w_high", "52w_low"):
+                if result.get(key) is None and em.get(key) is not None:
+                    result[key] = em[key]
+            result["_source"] = f"{result.get('_source', 'mootdx')} + eastmoney"
+        else:
+            result = em
+
+    if result and "error" not in result:
+        return result
 
     # 3. Last resort: local SQLite (non-trading hours)
     if not is_trading:
-        result = _get_quote_from_local(stock_code, market)
-        if "error" not in result:
-            return result
+        local = _get_quote_from_local(stock_code, market)
+        if "error" not in local:
+            return local
 
-    # Should not reach here normally
-    return {"error": "Unable to fetch quote"}
+    return result if result else {"error": "Unable to fetch quote"}
 
 
 if __name__ == "__main__":

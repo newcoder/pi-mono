@@ -17,7 +17,9 @@ export type StrategyType =
 	| "bearish_engulf"
 	| "evening_star"
 	| "three_crows"
-	| "rsi_overbought_sell";
+	| "rsi_overbought_sell"
+	| "time_exit"
+	| "always_buy";
 
 export interface SignalSource {
 	strategy: StrategyType;
@@ -39,7 +41,10 @@ export interface BacktestConfig {
 	positionSize?: number; // percent of capital per trade, 0-1
 	slippage?: number; // percent, e.g. 0.001 = 0.1%
 	commission?: number; // percent per side, e.g. 0.0003 = 0.03%
+	taxRate?: number; // percent charged on sell side only, e.g. 0.001 = 0.1% stamp duty
+	transferFee?: number; // percent per side, e.g. 0.00002 = 0.002% transfer fee
 	maxHoldingDays?: number;
+	skipNoVolume?: boolean; // skip trading on days with zero or missing volume (suspended)
 	minLot?: number; // minimum lot size, e.g. 100 for A-shares
 	strategyParams?: Record<string, number>;
 	exitStrategyParams?: Record<string, number>;
@@ -95,6 +100,7 @@ export interface BacktestResult {
 	trades: Trade[];
 	equityCurve: EquityPoint[];
 	metrics: BacktestMetrics;
+	filteredTradeCount: number;
 	elapsedMs: number;
 }
 
@@ -138,7 +144,10 @@ export interface PoolBacktestConfig {
 	minTradeAmount?: number; // 忽略小于该金额的交易，默认 0
 	slippage?: number;
 	commission?: number;
+	taxRate?: number;
+	transferFee?: number;
 	maxHoldingDays?: number;
+	skipNoVolume?: boolean;
 	minLot?: number;
 	strategyParams?: Record<string, number>;
 	exitStrategyParams?: Record<string, number>;
@@ -157,6 +166,11 @@ export interface PoolBacktestConfig {
 	maxPositions?: number;
 	randomRuns?: number;
 	volatilityLookbackDays?: number;
+	dynamicPoolId?: number;
+	/** If set, ranking-based rebalancing only happens every N trading days. Existing positions are held on off days unless a sell signal fires. */
+	rebalanceFrequency?: number;
+	/** If true and rebalanceFrequency > 1, force-sell all existing positions on rebalance days before rebuilding the target portfolio. */
+	rebalanceFullPortfolio?: boolean;
 }
 
 // ─── Pool Backtest Types ──────────────────────────────────────────
@@ -185,5 +199,6 @@ export interface PoolBacktestResult {
 	trades: PoolTrade[];
 	equityCurve: EquityPoint[];
 	metrics: BacktestMetrics;
+	filteredTradeCount: number;
 	elapsedMs: number;
 }

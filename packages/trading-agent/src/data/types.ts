@@ -108,6 +108,22 @@ export interface SectorRow {
 	updated_at?: string;
 }
 
+export interface HotStockRow {
+	date: string;
+	code: string;
+	market: number;
+	name?: string | null;
+	reason?: string | null;
+	price?: number | null;
+	change_pct?: number | null;
+	turnover_pct?: number | null;
+	amount?: number | null;
+	pe_ttm?: number | null;
+	pb?: number | null;
+	mcap_yi?: number | null;
+	updated_at?: string;
+}
+
 export interface ConceptStockRow {
 	concept: string;
 	code: string;
@@ -162,6 +178,7 @@ export interface StockPoolRow {
 	id?: number;
 	name: string;
 	description?: string;
+	is_dynamic?: number;
 	created_at?: string;
 	updated_at?: string;
 }
@@ -172,6 +189,16 @@ export interface StockPoolItemRow {
 	market: number;
 	name?: string;
 	added_at?: string;
+}
+
+export interface DynamicPoolItemRow {
+	pool_id: number;
+	date: string;
+	code: string;
+	market: number;
+	name?: string | null;
+	weight?: number | null;
+	created_at?: string;
 }
 
 export interface AdjustFactorRow {

@@ -1,0 +1,162 @@
+- generic [ref=e3]:
+  - generic [ref=e4]:
+    - button "股票池" [ref=e5] [cursor=pointer]:
+      - img [ref=e6]
+    - generic [ref=e8]: π
+    - button "投资日历" [ref=e9] [cursor=pointer]:
+      - img [ref=e10]
+  - generic [ref=e12]:
+    - generic [ref=e13]: RESEARCH
+    - textbox "搜索股票 (代码/名称/拼音)" [ref=e15]
+  - generic [ref=e16]:
+    - generic [ref=e17]:
+      - generic [ref=e18]:
+        - generic [ref=e19]: 股票池
+        - button "关闭" [ref=e20] [cursor=pointer]:
+          - img [ref=e21]
+      - generic [ref=e24]:
+        - generic [ref=e25]:
+          - generic [ref=e26] [cursor=pointer]:
+            - generic [ref=e27]:
+              - generic [ref=e28]: "[42] LGB预测_雷达机会股_2026-05-29"
+              - button "×" [ref=e29]
+            - generic [ref=e30]: 28 只
+          - generic [ref=e31] [cursor=pointer]:
+            - generic [ref=e32]:
+              - generic [ref=e33]: "[41] DE预测_同花顺强势股_2026-05-29"
+              - button "×" [ref=e34]
+            - generic [ref=e35]: 20 只
+          - generic [ref=e36] [cursor=pointer]:
+            - generic [ref=e37]:
+              - generic [ref=e38]: "[40] 同花顺强势股_2026-05-29"
+              - button "×" [ref=e39]
+            - generic [ref=e40]: 50 只
+          - generic [ref=e41] [cursor=pointer]:
+            - generic [ref=e42]:
+              - generic [ref=e43]: "[39] DE预测_LGB股池_2026-05-29"
+              - button "×" [ref=e44]
+            - generic [ref=e45]: 10 只
+          - generic [ref=e46] [cursor=pointer]:
+            - generic [ref=e47]:
+              - generic [ref=e48]: "[38] DE预测_最近访问_2026-05-29"
+              - button "×" [ref=e49]
+            - generic [ref=e50]: 28 只
+          - generic [ref=e51] [cursor=pointer]:
+            - generic [ref=e52]:
+              - generic [ref=e53]: "[37] LGB预测Top5_2026-05-29"
+              - button "×" [ref=e54]
+            - generic [ref=e55]: 5 只
+          - generic [ref=e56] [cursor=pointer]:
+            - generic [ref=e57]:
+              - generic [ref=e58]: "[36] LGB预测Top10_2026-05-28"
+              - button "×" [ref=e59]
+            - generic [ref=e60]: 10 只
+          - generic [ref=e61] [cursor=pointer]:
+            - generic [ref=e62]:
+              - generic [ref=e63]: "[35] 雷达风险股_2026-05-28"
+              - button "×" [ref=e64]
+            - generic [ref=e65]: 23 只
+          - generic [ref=e66] [cursor=pointer]:
+            - generic [ref=e67]:
+              - generic [ref=e68]: "[34] 雷达机会股_2026-05-28"
+              - button "×" [ref=e69]
+            - generic [ref=e70]: 29 只
+          - generic [ref=e71] [cursor=pointer]:
+            - generic [ref=e72]:
+              - generic [ref=e73]: "[33] DE模型预测股池TOP50_2026-05-27"
+              - button "×" [ref=e74]
+            - generic [ref=e75]: 50 只
+          - generic [ref=e76] [cursor=pointer]:
+            - generic [ref=e77]:
+              - generic [ref=e78]: "[32] DE模型预测股池_2026-05-27"
+              - button "×" [ref=e79]
+            - generic [ref=e80]: 7 只
+          - generic [ref=e81] [cursor=pointer]:
+            - generic [ref=e82]:
+              - generic [ref=e83]: "[31] 最近访问"
+              - button "×" [ref=e84]
+            - generic [ref=e85]: 57 只
+          - generic [ref=e86] [cursor=pointer]:
+            - generic [ref=e87]:
+              - generic [ref=e88]: "[30] 周线多头日线缩量调整市值TOP20"
+              - button "×" [ref=e89]
+            - generic [ref=e90]: 20 只
+          - generic [ref=e91] [cursor=pointer]:
+            - generic [ref=e92]:
+              - generic [ref=e93]: "[29] 同花顺强势股_2026-05-26"
+              - button "×" [ref=e94]
+            - generic [ref=e95]: 64 只
+          - generic [ref=e96] [cursor=pointer]:
+            - generic [ref=e97]:
+              - generic [ref=e98]: "[28] 同花顺强势股_20260526"
+              - button "×" [ref=e99]
+            - generic [ref=e100]: 50 只
+          - generic [ref=e101] [cursor=pointer]:
+            - generic [ref=e102]:
+              - generic [ref=e103]: "[27] DoubleEnsemble_Top30_Prob"
+              - button "×" [ref=e104]
+            - generic [ref=e105]: 30 只
+          - generic [ref=e106] [cursor=pointer]:
+            - generic [ref=e107]:
+              - generic [ref=e108]: "[24] lgbm_40_60"
+              - button "×" [ref=e109]
+            - generic [ref=e110]: 21 只
+          - generic [ref=e111] [cursor=pointer]:
+            - generic [ref=e112]:
+              - generic [ref=e113]: "[25] LGBM Rank 40-60"
+              - button "×" [ref=e114]
+            - generic [ref=e115]: 21 只
+          - generic [ref=e116] [cursor=pointer]:
+            - generic [ref=e117]:
+              - generic [ref=e118]: "[23] 周线多头日线缩量回调_202605"
+              - button "×" [ref=e119]
+            - generic [ref=e120]: 30 只
+          - generic [ref=e121] [cursor=pointer]:
+            - generic [ref=e122]:
+              - generic [ref=e123]: "[21] 未来关注股池"
+              - button "×" [ref=e124]
+            - generic [ref=e125]: 50 只
+          - generic [ref=e126] [cursor=pointer]:
+            - generic [ref=e127]:
+              - generic [ref=e128]: "[19] 周线多头日线回调缩量"
+              - button "×" [ref=e129]
+            - generic [ref=e130]: 50 只
+          - generic [ref=e131] [cursor=pointer]:
+            - generic [ref=e132]:
+              - generic [ref=e133]: "[18] 前期强势缩量调整"
+              - button "×" [ref=e134]
+            - generic [ref=e135]: 50 只
+          - generic [ref=e136] [cursor=pointer]:
+            - generic [ref=e137]:
+              - generic [ref=e138]: "[17] 营收连续两年增长超50%"
+              - button "×" [ref=e139]
+            - generic [ref=e140]: 45 只
+          - generic [ref=e141] [cursor=pointer]:
+            - generic [ref=e142]:
+              - generic [ref=e143]: "[7] 日线多头排列市值TOP10"
+              - button "×" [ref=e144]
+            - generic [ref=e145]: 10 只
+        - generic [ref=e147]:
+          - generic [ref=e148]: 📂
+          - generic [ref=e149]: 选择股票池查看个股
+    - generic [ref=e155]:
+      - button "设置" [ref=e156] [cursor=pointer]:
+        - img [ref=e157]
+      - button "附件" [ref=e160] [cursor=pointer]:
+        - img [ref=e161]
+      - button "Choose File"
+      - textbox "输入消息..." [ref=e163]
+      - button "发送" [ref=e164] [cursor=pointer]:
+        - img [ref=e165]
+    - generic [ref=e168]:
+      - generic [ref=e170] [cursor=pointer]:
+        - generic [ref=e171]: 📅 投资日历
+        - generic [ref=e172]:
+          - button "刷新日历数据" [ref=e173]:
+            - img [ref=e174]
+          - img [ref=e177]
+      - generic [ref=e182] [cursor=pointer]:
+        - generic [ref=e183]: 📰 财经新闻
+        - img [ref=e184]
+      - button "关闭" [ref=e190] [cursor=pointer]:
+        - img [ref=e191]

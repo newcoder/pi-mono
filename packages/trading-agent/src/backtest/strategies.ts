@@ -2,6 +2,7 @@ import type { KlineRow } from "../data/types.js";
 import { getCloses, getVolumes } from "../indicators/engine.js";
 import { cachedMA, cachedMACD, cachedRSI, cachedSupertrend } from "./indicator-cache.js";
 import type { Signal, StrategyType } from "./types.js";
+import { average } from "./utils.js";
 
 export interface StrategyParams {
 	fast?: number;
@@ -191,23 +192,15 @@ function bollingerSignals(klines: KlineRow[], params: StrategyParams): Signal[] 
 	if (klines.length < period + 1) return [];
 
 	const closes = getCloses(klines);
+	const maValues = cachedMA(klines, period).values; // O(1) per access via cache
 	const signals: Signal[] = [];
 	let inPosition = false;
 
 	for (let i = period; i < klines.length; i++) {
-		// Compute SMA and std dev for window [i-period+1, i]
-		let sum = 0;
-		let count = 0;
-		for (let j = i - period + 1; j <= i; j++) {
-			const c = closes[j];
-			if (c != null) {
-				sum += c;
-				count++;
-			}
-		}
-		if (count < period * 0.8) continue; // skip if too many nulls
-		const sma = sum / count;
+		const sma = maValues[i];
+		if (sma == null) continue;
 
+		// Compute std dev for window [i-period+1, i]
 		let sqSum = 0;
 		let sqCount = 0;
 		for (let j = i - period + 1; j <= i; j++) {
@@ -217,6 +210,7 @@ function bollingerSignals(klines: KlineRow[], params: StrategyParams): Signal[] 
 				sqCount++;
 			}
 		}
+		if (sqCount < period * 0.8) continue;
 		const std = Math.sqrt(sqSum / sqCount);
 		const upper = sma + stdDev * std;
 		const lower = sma - stdDev * std;
@@ -246,7 +240,6 @@ function bollingerSignals(klines: KlineRow[], params: StrategyParams): Signal[] 
 	}
 	return signals;
 }
-
 function supertrendSignals(klines: KlineRow[], params: StrategyParams): Signal[] {
 	const period = params.period ?? 10;
 	const multiplier = params.multiplier ?? 3;
@@ -588,12 +581,6 @@ function volumeContractionSignals(klines: KlineRow[], params: StrategyParams): S
 	}
 
 	return signals;
-}
-
-function average(values: (number | null | undefined)[]): number {
-	const valid = values.filter((v): v is number => v != null && !Number.isNaN(v));
-	if (valid.length === 0) return 0;
-	return valid.reduce((a, b) => a + b, 0) / valid.length;
 }
 
 function realizedVolatility(window: KlineRow[]): number {

@@ -1,0 +1,19 @@
+- generic [ref=e3]:
+  - generic [ref=e5]: 加载中...
+  - generic [ref=e7]: "市场情绪: 加载中..."
+  - generic [ref=e8]:
+    - generic [ref=e9]: 休市
+    - generic [ref=e10]: 已连接
+  - generic [ref=e11]:
+    - generic [ref=e13]:
+      - generic [ref=e14]: 股票池
+      - generic [ref=e15]:
+        - generic [ref=e16] [cursor=pointer]:
+          - generic [ref=e17]: 2025年报营收利润双增长Top10
+          - generic [ref=e18]: 10 只
+        - generic [ref=e19] [cursor=pointer]:
+          - generic [ref=e20]: PE小于20且市值大于100亿
+          - generic [ref=e21]: 50 只
+    - generic [ref=e25]:
+      - textbox "输入消息..." [ref=e26]
+      - button "发送" [ref=e27]

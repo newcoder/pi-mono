@@ -330,7 +330,9 @@ async function main() {
 	const args = process.argv.slice(2);
 	const quickMode = args.includes("--quick");
 	const verifyMode = args.includes("--verify");
-	const singlePool = args.includes("--pool") ? Number(args[args.indexOf("--pool") + 1]) : undefined;
+	const singlePoolRaw = args.includes("--pool") ? args[args.indexOf("--pool") + 1] : undefined;
+	const singlePoolId = singlePoolRaw ? Number(singlePoolRaw) : undefined;
+	const singlePoolName = singlePoolRaw && Number.isNaN(singlePoolId) ? singlePoolRaw : undefined;
 
 	// Ensure output dir
 	await mkdir(BASELINE_DIR, { recursive: true });
@@ -358,7 +360,8 @@ async function main() {
 	// Resolve pools
 	const resolvedPools: Array<{ name: string; stocks: Array<{ code: string; market: number; name?: string }> }> = [];
 	for (const def of POOLS) {
-		if (singlePool !== undefined && typeof def.lookup === "number" && def.lookup !== singlePool) continue;
+		if (singlePoolId !== undefined && typeof def.lookup === "number" && def.lookup !== singlePoolId) continue;
+		if (singlePoolName !== undefined && def.name !== singlePoolName) continue;
 		const resolved = await resolvePool(store, def);
 		if (resolved) {
 			resolvedPools.push({ name: resolved.name, stocks: resolved.stocks });

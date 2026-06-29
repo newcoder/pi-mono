@@ -1,0 +1,317 @@
+- generic [ref=e3]:
+  - generic [ref=e4]:
+    - generic [ref=e5]:
+      - generic [ref=e6]: π
+      - generic [ref=e7]: Trading Agent
+    - generic [ref=e8]:
+      - generic [ref=e57] [cursor=pointer]:
+        - generic [ref=e58]: 上证指数
+        - generic [ref=e59]: "4145.37"
+        - generic [ref=e60]: ▼
+        - generic [ref=e61]: "-0.17%"
+      - generic [ref=e62] [cursor=pointer]:
+        - generic [ref=e63]: 沪深300
+        - generic [ref=e64]: "4947.85"
+        - generic [ref=e65]: ▲
+        - generic [ref=e66]: 0.53%
+      - generic [ref=e67] [cursor=pointer]:
+        - generic [ref=e68]: 科创50
+        - generic [ref=e69]: "1867.71"
+        - generic [ref=e70]: ▼
+        - generic [ref=e71]: "-1.49%"
+      - generic [ref=e72] [cursor=pointer]:
+        - generic [ref=e73]: 中证500
+        - generic [ref=e74]: "8658.62"
+        - generic [ref=e75]: ▼
+        - generic [ref=e76]: "-0.52%"
+      - generic [ref=e77] [cursor=pointer]:
+        - generic [ref=e78]: 深证成指
+        - generic [ref=e79]: "15876.16"
+        - generic [ref=e80]: ▲
+        - generic [ref=e81]: 0.12%
+      - generic [ref=e82] [cursor=pointer]:
+        - generic [ref=e83]: 创业板指
+        - generic [ref=e84]: "4043.07"
+        - generic [ref=e85]: ▲
+        - generic [ref=e86]: 0.55%
+  - generic [ref=e10]:
+    - generic [ref=e11]: RESEARCH
+    - textbox "搜索股票 (代码/名称/拼音)" [ref=e13]
+  - generic [ref=e14]:
+    - generic [ref=e15]:
+      - generic [ref=e17]: 股票池
+      - generic [ref=e18]:
+        - generic [ref=e87] [cursor=pointer]:
+          - generic [ref=e88]:
+            - generic [ref=e89]: 同花顺强势股_2026-05-26
+            - button "×" [ref=e90]
+          - generic [ref=e91]: 64 只
+        - generic [ref=e92] [cursor=pointer]:
+          - generic [ref=e93]:
+            - generic [ref=e94]: 同花顺强势股_20260526
+            - button "×" [ref=e95]
+          - generic [ref=e96]: 50 只
+        - generic [ref=e97] [cursor=pointer]:
+          - generic [ref=e98]:
+            - generic [ref=e99]: DoubleEnsemble_Top30_Prob
+            - button "×" [ref=e100]
+          - generic [ref=e101]: 30 只
+        - generic [ref=e102] [cursor=pointer]:
+          - generic [ref=e103]:
+            - generic [ref=e104]: lgbm_40_60
+            - button "×" [ref=e105]
+          - generic [ref=e106]: 21 只
+        - generic [ref=e107] [cursor=pointer]:
+          - generic [ref=e108]:
+            - generic [ref=e109]: LGBM Rank 40-60
+            - button "×" [ref=e110]
+          - generic [ref=e111]: 21 只
+        - generic [ref=e112] [cursor=pointer]:
+          - generic [ref=e113]:
+            - generic [ref=e114]: 周线多头日线缩量回调_202605
+            - button "×" [ref=e115]
+          - generic [ref=e116]: 30 只
+        - generic [ref=e117] [cursor=pointer]:
+          - generic [ref=e118]:
+            - generic [ref=e119]: 最近访问
+            - button "×" [ref=e120]
+          - generic [ref=e121]: 118 只
+        - generic [ref=e122] [cursor=pointer]:
+          - generic [ref=e123]:
+            - generic [ref=e124]: 未来关注股池
+            - button "×" [ref=e125]
+          - generic [ref=e126]: 50 只
+        - generic [ref=e127] [cursor=pointer]:
+          - generic [ref=e128]:
+            - generic [ref=e129]: 周线多头日线回调缩量
+            - button "×" [ref=e130]
+          - generic [ref=e131]: 50 只
+        - generic [ref=e132] [cursor=pointer]:
+          - generic [ref=e133]:
+            - generic [ref=e134]: 前期强势缩量调整
+            - button "×" [ref=e135]
+          - generic [ref=e136]: 50 只
+        - generic [ref=e137] [cursor=pointer]:
+          - generic [ref=e138]:
+            - generic [ref=e139]: 营收连续两年增长超50%
+            - button "×" [ref=e140]
+          - generic [ref=e141]: 45 只
+        - generic [ref=e142] [cursor=pointer]:
+          - generic [ref=e143]:
+            - generic [ref=e144]: 日线多头排列市值TOP10
+            - button "×" [ref=e145]
+          - generic [ref=e146]: 10 只
+    - generic [ref=e19]:
+      - generic [ref=e23]:
+        - button "附件" [ref=e24] [cursor=pointer]:
+          - img [ref=e25]
+        - button "Choose File"
+        - textbox "输入消息..." [ref=e27]
+        - button "发送" [ref=e28] [cursor=pointer]:
+          - img [ref=e29]
+      - generic [ref=e33]: 工具调用
+    - generic [ref=e35]:
+      - generic [ref=e36]:
+        - generic [ref=e37] [cursor=pointer]:
+          - generic [ref=e38]: 📅 投资日历
+          - generic [ref=e39]:
+            - button "刷新日历数据" [ref=e40]:
+              - img [ref=e41]
+            - img [ref=e44]
+        - generic [ref=e47]:
+          - generic [ref=e147]:
+            - button "<" [ref=e148] [cursor=pointer]
+            - generic [ref=e149]: 2026年5月
+            - button ">" [ref=e150] [cursor=pointer]
+          - generic [ref=e151]:
+            - generic [ref=e152]: 日
+            - generic [ref=e153]: 一
+            - generic [ref=e154]: 二
+            - generic [ref=e155]: 三
+            - generic [ref=e156]: 四
+            - generic [ref=e157]: 五
+            - generic [ref=e158]: 六
+          - generic [ref=e159]:
+            - generic [ref=e166] [cursor=pointer]: "1"
+            - generic [ref=e168] [cursor=pointer]: "2"
+            - generic [ref=e170] [cursor=pointer]: "3"
+            - generic [ref=e172] [cursor=pointer]: "4"
+            - generic [ref=e174] [cursor=pointer]: "5"
+            - generic [ref=e176] [cursor=pointer]: "6"
+            - generic [ref=e178] [cursor=pointer]: "7"
+            - generic [ref=e180] [cursor=pointer]: "8"
+            - generic [ref=e182] [cursor=pointer]: "9"
+            - generic [ref=e184] [cursor=pointer]: "10"
+            - generic [ref=e186] [cursor=pointer]: "11"
+            - generic [ref=e188] [cursor=pointer]: "12"
+            - generic [ref=e190] [cursor=pointer]: "13"
+            - generic [ref=e192] [cursor=pointer]: "14"
+            - generic [ref=e194] [cursor=pointer]: "15"
+            - generic [ref=e196] [cursor=pointer]: "16"
+            - generic [ref=e198] [cursor=pointer]: "17"
+            - generic [ref=e200] [cursor=pointer]: "18"
+            - generic [ref=e204] [cursor=pointer]: "19"
+            - generic [ref=e206] [cursor=pointer]: "20"
+            - generic [ref=e208] [cursor=pointer]: "21"
+            - generic [ref=e212] [cursor=pointer]: "22"
+            - generic [ref=e214] [cursor=pointer]: "23"
+            - generic [ref=e216] [cursor=pointer]: "24"
+            - generic [ref=e218] [cursor=pointer]: "25"
+            - generic [ref=e222] [cursor=pointer]: "26"
+            - generic [ref=e224] [cursor=pointer]: "27"
+            - generic [ref=e226] [cursor=pointer]: "28"
+            - generic [ref=e228] [cursor=pointer]: "29"
+            - generic [ref=e230] [cursor=pointer]: "30"
+            - generic [ref=e232] [cursor=pointer]: "31"
+          - generic [ref=e233]:
+            - generic [ref=e234]: 本月重点关注
+            - generic [ref=e235] [cursor=pointer]:
+              - generic [ref=e236]:
+                - generic [ref=e238]: 05-18
+                - generic [ref=e239]: 新天力 业绩预告
+              - generic [ref=e240]: "公告日期: 20260518; 报告期[20260331]: 2026年一季报"
+            - generic [ref=e241] [cursor=pointer]:
+              - generic [ref=e242]:
+                - generic [ref=e244]: 05-21
+                - generic [ref=e245]: 高特电子 业绩预告
+              - generic [ref=e246]: "公告日期: 20260521; 报告期[20260331]: 2026年一季报"
+            - generic [ref=e247] [cursor=pointer]:
+              - generic [ref=e248]:
+                - generic [ref=e250]: 05-21
+                - generic [ref=e251]: 惠康科技 业绩预告
+              - generic [ref=e252]: "最新价: 89.18; 最新涨跌幅: 0.314961; 公告日期: 20260521; 报告期[20260331]: 2026年一季报; 净利润增长率上限[20260331]: 9.8"
+            - generic [ref=e253] [cursor=pointer]:
+              - generic [ref=e254]:
+                - generic [ref=e256]: 05-21
+                - generic [ref=e257]: 新睿电子 业绩预告
+              - generic [ref=e258]: "公告日期: 20260521; 报告期[20260331]: 2026年一季报"
+            - generic [ref=e259] [cursor=pointer]:
+              - generic [ref=e260]:
+                - generic [ref=e262]: 05-25
+                - generic [ref=e263]: 彩客科技 业绩预告
+              - generic [ref=e264]: "公告日期: 20260525; 报告期[20260331]: 2026年一季报"
+      - generic [ref=e48]:
+        - generic [ref=e49] [cursor=pointer]:
+          - generic [ref=e50]: 📰 财经新闻
+          - img [ref=e51]
+        - generic [ref=e54]:
+          - generic "永安期货：股东浙江东方拟减持不超3%股份" [ref=e265] [cursor=pointer]:
+            - generic [ref=e266]:
+              - generic [ref=e267]: 财联社
+              - generic [ref=e268]: 05-26 18:27
+            - generic [ref=e269]: 永安期货：股东浙江东方拟减持不超3%股份
+            - generic [ref=e270]: 【永安期货：股东浙江东方拟减持不超3%股份】财联社5月26日电，永安期货(600927.SH)公告称，持股5%以上股东浙江东方控股集团股份有限公司因自身经营发展需要，拟自2026年6月18日起3个月内通过集中竞价和大宗交易方式合计减持公司股...
+          - generic "国台办：大陆海警在金门附近海域开展执法巡查合理合法" [ref=e271] [cursor=pointer]:
+            - generic [ref=e272]:
+              - generic [ref=e273]: 财联社
+              - generic [ref=e274]: 05-26 18:27
+            - generic [ref=e275]: 国台办：大陆海警在金门附近海域开展执法巡查合理合法
+            - generic [ref=e276]: 【国台办：大陆海警在金门附近海域开展执法巡查合理合法】财联社5月26日电，福建海警5月26日位金门附近海域依法开展执法巡查。国务院台办发言人陈斌华当天表示，台、澎、金、马都是中国的一部分。大陆海警部门在相关海域开展执法巡查行动合理合法，有利...
+          - generic "柏诚股份：拟募资不超过12亿元 用于高科技产业专项工程建设项目等" [ref=e277] [cursor=pointer]:
+            - generic [ref=e278]:
+              - generic [ref=e279]: 财联社
+              - generic [ref=e280]: 05-26 18:25
+            - generic [ref=e281]: 柏诚股份：拟募资不超过12亿元 用于高科技产业专项工程建设项目等
+            - generic [ref=e282]: 【柏诚股份：拟募资不超过12亿元 用于高科技产业专项工程建设项目等】财联社5月26日电，柏诚股份(601133.SH)公告称，拟募集资金不超过12亿元，扣除发行费用后用于高科技产业专项工程建设项目及补充流动资金。
+          - generic "财联社5月26日电，印度国家证券存管有限公司(NSDL)数据显示，全球基金在上一个交易日净买入219亿卢比印度股票。" [ref=e283] [cursor=pointer]:
+            - generic [ref=e284]:
+              - generic [ref=e285]: 财联社
+              - generic [ref=e286]: 05-26 18:24
+            - generic [ref=e287]: 财联社5月26日电，印度国家证券存管有限公司(NSDL)数据显示，全球基金在上一个交易日净买入219亿卢比印度股票。
+            - generic [ref=e288]: 财联社5月26日电，印度国家证券存管有限公司(NSDL)数据显示，全球基金在上一个交易日净买入219亿卢比印度股票。
+          - generic "财联社5月26日电，利弗莫尔证券显示，北京君正集成电路股份有限公司在港交所提交上市申请，独家保荐人为国泰海通。" [ref=e289] [cursor=pointer]:
+            - generic [ref=e290]:
+              - generic [ref=e291]: 财联社
+              - generic [ref=e292]: 05-26 18:24
+            - generic [ref=e293]: 财联社5月26日电，利弗莫尔证券显示，北京君正集成电路股份有限公司在港交所提交上市申请，独家保荐人为国泰海通。
+            - generic [ref=e294]: 财联社5月26日电，利弗莫尔证券显示，北京君正集成电路股份有限公司在港交所提交上市申请，独家保荐人为国泰海通。
+          - generic "盛视科技：全资子公司签署60亿元算力产业合作协议" [ref=e295] [cursor=pointer]:
+            - generic [ref=e296]:
+              - generic [ref=e297]: 财联社
+              - generic [ref=e298]: 05-26 18:24
+            - generic [ref=e299]: 盛视科技：全资子公司签署60亿元算力产业合作协议
+            - generic [ref=e300]: 【盛视科技：全资子公司签署60亿元算力产业合作协议】财联社5月26日电，盛视科技(002990.SZ)公告称，公司全资子公司深圳市盛视技术有限公司近日与某公司签署《算力产业合作协议》，双方围绕算电协同、AIDC智能算力中心运营、算力产业资源...
+          - generic "盛视科技：全资子公司签署60亿元算力产业合作协议" [ref=e301]:
+            - generic [ref=e302]:
+              - generic [ref=e303]: 东财7x24
+              - generic [ref=e304]: 05-26 18:24
+            - generic [ref=e305]: 盛视科技：全资子公司签署60亿元算力产业合作协议
+            - generic [ref=e306]: 【盛视科技：全资子公司签署60亿元算力产业合作协议】盛视科技(002990.SZ)公告称，公司全资子公司深圳市盛视技术有限公司近日与某公司签署《算力产业合作协议》，双方围绕算电协同、AIDC智能算力中心运营、算力产业资源整合、算力服务采购交...
+          - generic "财联社5月26日电，据江西省纪委监委消息，江西省人大常委会原委员、省人大法制委员会原副主任委员郭兵接受纪律审查和监察调查。" [ref=e307] [cursor=pointer]:
+            - generic [ref=e308]:
+              - generic [ref=e309]: 财联社
+              - generic [ref=e310]: 05-26 18:22
+            - generic [ref=e311]: 财联社5月26日电，据江西省纪委监委消息，江西省人大常委会原委员、省人大法制委员会原副主任委员郭兵接受纪律审查和监察调查。
+            - generic [ref=e312]: 财联社5月26日电，据江西省纪委监委消息，江西省人大常委会原委员、省人大法制委员会原副主任委员郭兵接受纪律审查和监察调查。
+          - generic "3连板双星新材：MLCC产品的营业收入占公司整体营业收入比例未达1%" [ref=e313]:
+            - generic [ref=e314]:
+              - generic [ref=e315]: 东财7x24
+              - generic [ref=e316]: 05-26 18:21
+            - generic [ref=e317]: 3连板双星新材：MLCC产品的营业收入占公司整体营业收入比例未达1%
+            - generic [ref=e318]: 【3连板双星新材：MLCC产品的营业收入占公司整体营业收入比例未达1%】5月26日，双星新材(002585)公告称，目前公司MLCC产品的营业收入占公司整体营业收入比例未达1%，公司MLCC离型膜主要应用于消费电子和汽车电子用领域，暂未应用...
+          - generic "3连板双星新材：MLCC产品的营业收入占公司整体营业收入比例未达1%" [ref=e319] [cursor=pointer]:
+            - generic [ref=e320]:
+              - generic [ref=e321]: 财联社
+              - generic [ref=e322]: 05-26 18:20
+            - generic [ref=e323]: 3连板双星新材：MLCC产品的营业收入占公司整体营业收入比例未达1%
+            - generic [ref=e324]: 【3连板双星新材：MLCC产品的营业收入占公司整体营业收入比例未达1%】财联社5月26日电，双星新材(002585)公告称，公司股票连续两个交易日(5月25日、26日)收盘价格涨幅偏离值累计超过20%，属于股票交易异常波动。目前公司MLCC...
+          - generic "八亿时空：光刻胶树脂实现规模化生产 已在晶圆厂验证通过并量产" [ref=e325] [cursor=pointer]:
+            - generic [ref=e326]:
+              - generic [ref=e327]: 财联社
+              - generic [ref=e328]: 05-26 18:20
+            - generic [ref=e329]: 八亿时空：光刻胶树脂实现规模化生产 已在晶圆厂验证通过并量产
+            - generic [ref=e330]: 【八亿时空：光刻胶树脂实现规模化生产 已在晶圆厂验证通过并量产】《科创板日报》26日讯，八亿时空(688181.SH)发布投资者关系活动记录表公告，公司光刻胶树脂已率先实现规模化生产，服务头部光刻胶客户，并已在晶圆厂验证通过实现量产。依托顺...
+          - generic "八亿时空：光刻胶树脂实现规模化生产 已在晶圆厂验证通过并量产" [ref=e331]:
+            - generic [ref=e332]:
+              - generic [ref=e333]: 东财7x24
+              - generic [ref=e334]: 05-26 18:20
+            - generic [ref=e335]: 八亿时空：光刻胶树脂实现规模化生产 已在晶圆厂验证通过并量产
+            - generic [ref=e336]: 【八亿时空：光刻胶树脂实现规模化生产 已在晶圆厂验证通过并量产】八亿时空(688181.SH)发布投资者关系活动记录表公告，公司光刻胶树脂已率先实现规模化生产，服务头部光刻胶客户，并已在晶圆厂验证通过实现量产。依托顺利的客户认证与订单放量，...
+          - generic "财联社5月26日电，伦敦ICE可可期货价格上涨近4%，至每吨2,968英镑。" [ref=e337] [cursor=pointer]:
+            - generic [ref=e338]:
+              - generic [ref=e339]: 财联社
+              - generic [ref=e340]: 05-26 18:19
+            - generic [ref=e341]: 财联社5月26日电，伦敦ICE可可期货价格上涨近4%，至每吨2,968英镑。
+            - generic [ref=e342]: 财联社5月26日电，伦敦ICE可可期货价格上涨近4%，至每吨2,968英镑。
+          - generic "财联社5月26日电，纳指科技ETF景顺(159509)将于2026年5月27日开市起停牌，自2026年5月27日10:30起复牌，停牌期间赎回业务照常办理。" [ref=e343] [cursor=pointer]:
+            - generic [ref=e344]:
+              - generic [ref=e345]: 财联社
+              - generic [ref=e346]: 05-26 18:17
+            - generic [ref=e347]: 财联社5月26日电，纳指科技ETF景顺(159509)将于2026年5月27日开市起停牌，自2026年5月27日10:30起复牌，停牌期间赎回业务照常办理。
+            - generic [ref=e348]: 财联社5月26日电，纳指科技ETF景顺(159509)将于2026年5月27日开市起停牌，自2026年5月27日10:30起复牌，停牌期间赎回业务照常办理。
+          - generic "财联社5月26日电，小马智行美股盘前涨超10%。消息面上，公司第一季度的收入总额为3430万美元，同比增长145%。" [ref=e349] [cursor=pointer]:
+            - generic [ref=e350]:
+              - generic [ref=e351]: 财联社
+              - generic [ref=e352]: 05-26 18:17
+            - generic [ref=e353]: 财联社5月26日电，小马智行美股盘前涨超10%。消息面上，公司第一季度的收入总额为3430万美元，同比增长145%。
+            - generic [ref=e354]: 财联社5月26日电，小马智行美股盘前涨超10%。消息面上，公司第一季度的收入总额为3430万美元，同比增长145%。
+          - generic "3天2板播恩集团：不存在违反信息公平披露的情形" [ref=e355] [cursor=pointer]:
+            - generic [ref=e356]:
+              - generic [ref=e357]: 财联社
+              - generic [ref=e358]: 05-26 18:16
+            - generic [ref=e359]: 3天2板播恩集团：不存在违反信息公平披露的情形
+            - generic [ref=e360]: 【3天2板播恩集团：不存在违反信息公平披露的情形】财联社5月26日电，播恩集团(001366)公告称，公司股票连续三个交易日收盘价涨幅偏离值累计超过20%，属于股票交易异常波动。经自查，公司不存在违反信息公平披露的情形。公司本次交易的市场关...
+          - generic "3天2板播恩集团：不存在违反信息公平披露的情形" [ref=e361]:
+            - generic [ref=e362]:
+              - generic [ref=e363]: 东财7x24
+              - generic [ref=e364]: 05-26 18:16
+            - generic [ref=e365]: 3天2板播恩集团：不存在违反信息公平披露的情形
+            - generic [ref=e366]: 【3天2板播恩集团：不存在违反信息公平披露的情形】播恩集团(001366)公告称，经自查，公司不存在违反信息公平披露的情形。公司本次交易的市场关注度较高，再次提示该收购事项尚处于初步意向阶段，最终能否完成尚存在不确定性。
+          - generic "工信部：把科技决策咨询摆在更加突出的战略位置" [ref=e367] [cursor=pointer]:
+            - generic [ref=e368]:
+              - generic [ref=e369]: 财联社
+              - generic [ref=e370]: 05-26 18:14
+            - generic [ref=e371]: 工信部：把科技决策咨询摆在更加突出的战略位置
+            - generic [ref=e372]: 【工信部：把科技决策咨询摆在更加突出的战略位置】财联社5月26日电，工业和信息化部科技咨询委员会召开全体会议。会议指出，科技决策咨询制度是新时代加强党对科技工作统一领导、完善国家科技治理体系的重大举措。要深入学习贯彻习近平总书记重要指示批示...
+          - generic "以军称打击黎巴嫩境内超100个真主党目标" [ref=e373] [cursor=pointer]:
+            - generic [ref=e374]:
+              - generic [ref=e375]: 财联社
+              - generic [ref=e376]: 05-26 18:13
+            - generic [ref=e377]: 以军称打击黎巴嫩境内超100个真主党目标
+            - generic [ref=e378]: 【以军称打击黎巴嫩境内超100个真主党目标】财联社5月26日电，以色列国防军当地时间26日发布消息称，25日夜间至26日凌晨，以军打击了黎巴嫩贝卡谷地及黎南部地区超100个真主党基础设施，并打死多名武装人员。 (央视新闻)
+          - generic "Melius Research上调苹果目标价" [ref=e379]:
+            - generic [ref=e380]:
+              - generic [ref=e381]: 东财7x24
+              - generic [ref=e382]: 05-26 18:11
+            - generic [ref=e383]: Melius Research上调苹果目标价
+            - generic [ref=e384]: 【Melius Research上调苹果目标价】MeliusResearch将苹果目标价从355美元上调至385美元。

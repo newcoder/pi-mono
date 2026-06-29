@@ -8,13 +8,13 @@
 
 | 数据类型 | 目标表 | 数据来源 |
 |---------|--------|---------|
-| 股票列表 | `stocks` | JoinQuant (聚宽) |
-| 实时行情 | `quotes` | akshare (东方财富批量接口) |
-| K线数据 | `klines` | JoinQuant (日K增量同步) |
-| 财务报表 | `fundamentals` | 东方财富 F10 (多线程逐个获取) |
-| 行业分类 | `industries`, `stock_industries` | JoinQuant |
-| 概念板块 | `concept_stocks` | JoinQuant |
-| 个股新闻 | `stock_news` | 东方财富/akshare |
+| 股票列表 | `stocks` | mootdx TCP / akshare fallback |
+| 实时行情 | `quotes` | mootdx TCP + 东方财富 |
+| K线数据 | `klines` | mootdx TCP / akshare fallback |
+| 财务报表 | `fundamentals` | mootdx 财务快照 + 东方财富 F10 |
+| 行业分类 | `industries`, `stock_industries` | 东方财富 / akshare |
+| 概念板块 | `concept_stocks` | 东方财富 / akshare |
+| 个股新闻 | `stock_news` | 东方财富 / akshare |
 | 市场新闻 | `market_news` | 财联社等 |
 
 ## 安装步骤
@@ -31,7 +31,7 @@ ls "$env:USERPROFILE\.agents\skills\a-share-analysis\scripts\setup_task.ps1"
 ### 2. 安装依赖
 
 ```bash
-pip install akshare pandas requests beautifulsoup4 jqdatasdk
+pip install akshare pandas requests beautifulsoup4 mootdx
 ```
 
 ### 3. 配置 Windows 定时任务
@@ -111,13 +111,6 @@ python sync_validator.py --output report.json
 - `FAIL`: 记录到日志和错误摘要，脚本退出码 1（便于任务计划程序触发重试或告警）
 
 ## 常见问题
-
-### Q: JoinQuant 认证失败
-确保 `jq_data.py` 中的账号密码正确，或设置环境变量：
-```powershell
-$env:JQ_USERNAME = "13758103948"
-$env:JQ_PASSWORD = "DingPanBao2021"
-```
 
 ### Q: fundamentals 阶段非常慢
 全市场 5000+ 只股票逐个调用东方财富 F10 接口约 30-60 分钟。日常可 `--skip-fundamentals`，财报每季度才更新一次。

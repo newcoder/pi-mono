@@ -21,6 +21,8 @@ const iwencaiScreenParams = Type.Object({
 				Type.Literal("行业资金"),
 				Type.Literal("热门概念"),
 				Type.Literal("概念资金"),
+				Type.Literal("热门板块"),
+				Type.Literal("板块资金"),
 			],
 			{ description: "预设模板（query 和 preset 二选一）" },
 		),

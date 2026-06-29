@@ -1,0 +1,382 @@
+- generic [ref=e3]:
+  - generic [ref=e4]:
+    - generic [ref=e5]:
+      - generic [ref=e6]: π
+      - generic [ref=e7]: Trading Agent
+    - generic [ref=e8]:
+      - generic [ref=e401] [cursor=pointer]:
+        - generic [ref=e402]: 上证指数
+        - generic [ref=e403]: "4145.37"
+        - generic [ref=e404]: ▼
+        - generic [ref=e405]: "-0.17%"
+      - generic [ref=e406] [cursor=pointer]:
+        - generic [ref=e407]: 沪深300
+        - generic [ref=e408]: "4947.85"
+        - generic [ref=e409]: ▲
+        - generic [ref=e410]: 0.53%
+      - generic [ref=e411] [cursor=pointer]:
+        - generic [ref=e412]: 科创50
+        - generic [ref=e413]: "1867.71"
+        - generic [ref=e414]: ▼
+        - generic [ref=e415]: "-1.49%"
+      - generic [ref=e416] [cursor=pointer]:
+        - generic [ref=e417]: 中证500
+        - generic [ref=e418]: "8658.62"
+        - generic [ref=e419]: ▼
+        - generic [ref=e420]: "-0.52%"
+      - generic [ref=e421] [cursor=pointer]:
+        - generic [ref=e422]: 深证成指
+        - generic [ref=e423]: "15876.16"
+        - generic [ref=e424]: ▲
+        - generic [ref=e425]: 0.12%
+      - generic [ref=e426] [cursor=pointer]:
+        - generic [ref=e427]: 创业板指
+        - generic [ref=e428]: "4043.07"
+        - generic [ref=e429]: ▲
+        - generic [ref=e430]: 0.55%
+  - generic [ref=e39]:
+    - generic [ref=e40]: RESEARCH
+    - textbox "搜索股票 (代码/名称/拼音)" [ref=e42]
+  - generic [ref=e43]:
+    - generic [ref=e44]:
+      - generic [ref=e46]: 股票池
+      - generic [ref=e47]:
+        - generic [ref=e48]:
+          - generic [ref=e49] [cursor=pointer]:
+            - generic [ref=e50]:
+              - generic [ref=e51]: 周线多头日线缩量调整市值TOP20
+              - button "×" [ref=e52]
+            - generic [ref=e53]: 20 只
+          - generic [ref=e54] [cursor=pointer]:
+            - generic [ref=e55]:
+              - generic [ref=e56]: 同花顺强势股_2026-05-26
+              - button "×" [ref=e57]
+            - generic [ref=e58]: 64 只
+          - generic [ref=e59] [cursor=pointer]:
+            - generic [ref=e60]:
+              - generic [ref=e61]: 同花顺强势股_20260526
+              - button "×" [ref=e62]
+            - generic [ref=e63]: 50 只
+          - generic [ref=e64] [cursor=pointer]:
+            - generic [ref=e65]:
+              - generic [ref=e66]: DoubleEnsemble_Top30_Prob
+              - button "×" [ref=e67]
+            - generic [ref=e68]: 30 只
+          - generic [ref=e69] [cursor=pointer]:
+            - generic [ref=e70]:
+              - generic [ref=e71]: lgbm_40_60
+              - button "×" [ref=e72]
+            - generic [ref=e73]: 21 只
+          - generic [ref=e74] [cursor=pointer]:
+            - generic [ref=e75]:
+              - generic [ref=e76]: LGBM Rank 40-60
+              - button "×" [ref=e77]
+            - generic [ref=e78]: 21 只
+          - generic [ref=e79] [cursor=pointer]:
+            - generic [ref=e80]:
+              - generic [ref=e81]: 周线多头日线缩量回调_202605
+              - button "×" [ref=e82]
+            - generic [ref=e83]: 30 只
+          - generic [ref=e84] [cursor=pointer]:
+            - generic [ref=e85]:
+              - generic [ref=e86]: 最近访问
+              - button "×" [ref=e87]
+            - generic [ref=e88]: 135 只
+          - generic [ref=e89] [cursor=pointer]:
+            - generic [ref=e90]:
+              - generic [ref=e91]: 未来关注股池
+              - button "×" [ref=e92]
+            - generic [ref=e93]: 50 只
+          - generic [ref=e94] [cursor=pointer]:
+            - generic [ref=e95]:
+              - generic [ref=e96]: 周线多头日线回调缩量
+              - button "×" [ref=e97]
+            - generic [ref=e98]: 50 只
+          - generic [ref=e99] [cursor=pointer]:
+            - generic [ref=e100]:
+              - generic [ref=e101]: 前期强势缩量调整
+              - button "×" [ref=e102]
+            - generic [ref=e103]: 50 只
+          - generic [ref=e104] [cursor=pointer]:
+            - generic [ref=e105]:
+              - generic [ref=e106]: 营收连续两年增长超50%
+              - button "×" [ref=e107]
+            - generic [ref=e108]: 45 只
+          - generic [ref=e109] [cursor=pointer]:
+            - generic [ref=e110]:
+              - generic [ref=e111]: 日线多头排列市值TOP10
+              - button "×" [ref=e112]
+            - generic [ref=e113]: 10 只
+        - generic [ref=e115]:
+          - generic [ref=e116]: 📂
+          - generic [ref=e117]: 选择股票池查看个股
+    - generic [ref=e119]:
+      - generic [ref=e123]:
+        - generic [ref=e124]: 工具调用
+        - button "收起" [ref=e125] [cursor=pointer]:
+          - img [ref=e126]
+      - generic [ref=e130]:
+        - button "设置" [active] [ref=e131] [cursor=pointer]:
+          - img [ref=e132]
+        - button "附件" [ref=e135] [cursor=pointer]:
+          - img [ref=e136]
+        - button "Choose File"
+        - textbox "输入消息..." [ref=e138]
+        - button "发送" [ref=e139] [cursor=pointer]:
+          - img [ref=e140]
+    - generic [ref=e432]:
+      - generic [ref=e433]:
+        - heading "模型配置" [level=3] [ref=e434]
+        - button "×" [ref=e435] [cursor=pointer]
+      - generic [ref=e436]:
+        - generic [ref=e437]:
+          - generic [ref=e438]: 提供商
+          - combobox "提供商" [ref=e439]:
+            - option "选择提供商" [selected]
+            - option "amazon-bedrock"
+            - option "anthropic"
+            - option "azure-openai-responses"
+            - option "cerebras"
+            - option "cloudflare-workers-ai"
+            - option "deepseek"
+            - option "fireworks"
+            - option "github-copilot"
+            - option "google"
+            - option "google-antigravity"
+            - option "google-gemini-cli"
+            - option "google-vertex"
+            - option "groq"
+            - option "huggingface"
+            - option "kimi-coding"
+            - option "minimax"
+            - option "minimax-cn"
+            - option "mistral"
+            - option "openai"
+            - option "openai-codex"
+            - option "opencode"
+            - option "opencode-go"
+            - option "openrouter"
+            - option "vercel-ai-gateway"
+            - option "xai"
+            - option "zai"
+        - generic [ref=e440]:
+          - generic [ref=e441]: 模型
+          - combobox "模型" [ref=e442]:
+            - option "先选择提供商" [selected]
+        - generic [ref=e443]:
+          - generic [ref=e444]: API Key
+          - textbox "API Key" [ref=e445]:
+            - /placeholder: 输入 API Key (可选)
+            - text: sk-4eabf1d92b824440b2350152537a4ba1
+        - generic [ref=e446]:
+          - generic [ref=e447]: Base URL
+          - textbox "Base URL" [ref=e448]:
+            - /placeholder: 输入 Base URL (可选)
+        - generic [ref=e449]:
+          - button "保存" [ref=e450] [cursor=pointer]
+          - button "取消" [ref=e451] [cursor=pointer]
+    - generic [ref=e143]:
+      - generic [ref=e144]:
+        - generic [ref=e145] [cursor=pointer]:
+          - generic [ref=e146]: 📅 投资日历
+          - generic [ref=e147]:
+            - button "刷新日历数据" [ref=e148]:
+              - img [ref=e149]
+            - img [ref=e152]
+        - generic [ref=e155]:
+          - generic [ref=e156]:
+            - button "<" [ref=e157] [cursor=pointer]
+            - generic [ref=e158]: 2026年5月
+            - button ">" [ref=e159] [cursor=pointer]
+          - generic [ref=e160]:
+            - generic [ref=e161]: 日
+            - generic [ref=e162]: 一
+            - generic [ref=e163]: 二
+            - generic [ref=e164]: 三
+            - generic [ref=e165]: 四
+            - generic [ref=e166]: 五
+            - generic [ref=e167]: 六
+          - generic [ref=e168]:
+            - generic [ref=e175] [cursor=pointer]: "1"
+            - generic [ref=e177] [cursor=pointer]: "2"
+            - generic [ref=e179] [cursor=pointer]: "3"
+            - generic [ref=e181] [cursor=pointer]: "4"
+            - generic [ref=e183] [cursor=pointer]: "5"
+            - generic [ref=e185] [cursor=pointer]: "6"
+            - generic [ref=e187] [cursor=pointer]: "7"
+            - generic [ref=e189] [cursor=pointer]: "8"
+            - generic [ref=e191] [cursor=pointer]: "9"
+            - generic [ref=e193] [cursor=pointer]: "10"
+            - generic [ref=e195] [cursor=pointer]: "11"
+            - generic [ref=e197] [cursor=pointer]: "12"
+            - generic [ref=e199] [cursor=pointer]: "13"
+            - generic [ref=e201] [cursor=pointer]: "14"
+            - generic [ref=e203] [cursor=pointer]: "15"
+            - generic [ref=e205] [cursor=pointer]: "16"
+            - generic [ref=e207] [cursor=pointer]: "17"
+            - generic [ref=e209] [cursor=pointer]: "18"
+            - generic [ref=e213] [cursor=pointer]: "19"
+            - generic [ref=e215] [cursor=pointer]: "20"
+            - generic [ref=e217] [cursor=pointer]: "21"
+            - generic [ref=e221] [cursor=pointer]: "22"
+            - generic [ref=e223] [cursor=pointer]: "23"
+            - generic [ref=e225] [cursor=pointer]: "24"
+            - generic [ref=e227] [cursor=pointer]: "25"
+            - generic [ref=e231] [cursor=pointer]: "26"
+            - generic [ref=e233] [cursor=pointer]: "27"
+            - generic [ref=e235] [cursor=pointer]: "28"
+            - generic [ref=e237] [cursor=pointer]: "29"
+            - generic [ref=e239] [cursor=pointer]: "30"
+            - generic [ref=e241] [cursor=pointer]: "31"
+          - generic [ref=e242]:
+            - generic [ref=e243]: 本月重点关注
+            - generic [ref=e244] [cursor=pointer]:
+              - generic [ref=e245]:
+                - generic [ref=e247]: 05-18
+                - generic [ref=e248]: 新天力 业绩预告
+              - generic [ref=e249]: "公告日期: 20260518; 报告期[20260331]: 2026年一季报"
+            - generic [ref=e250] [cursor=pointer]:
+              - generic [ref=e251]:
+                - generic [ref=e253]: 05-21
+                - generic [ref=e254]: 高特电子 业绩预告
+              - generic [ref=e255]: "公告日期: 20260521; 报告期[20260331]: 2026年一季报"
+            - generic [ref=e256] [cursor=pointer]:
+              - generic [ref=e257]:
+                - generic [ref=e259]: 05-21
+                - generic [ref=e260]: 惠康科技 业绩预告
+              - generic [ref=e261]: "最新价: 89.18; 最新涨跌幅: 0.314961; 公告日期: 20260521; 报告期[20260331]: 2026年一季报; 净利润增长率上限[20260331]: 9.8"
+            - generic [ref=e262] [cursor=pointer]:
+              - generic [ref=e263]:
+                - generic [ref=e265]: 05-21
+                - generic [ref=e266]: 新睿电子 业绩预告
+              - generic [ref=e267]: "公告日期: 20260521; 报告期[20260331]: 2026年一季报"
+            - generic [ref=e268] [cursor=pointer]:
+              - generic [ref=e269]:
+                - generic [ref=e271]: 05-25
+                - generic [ref=e272]: 彩客科技 业绩预告
+              - generic [ref=e273]: "公告日期: 20260525; 报告期[20260331]: 2026年一季报"
+      - generic [ref=e274]:
+        - generic [ref=e275] [cursor=pointer]:
+          - generic [ref=e276]: 📰 财经新闻
+          - img [ref=e277]
+        - generic [ref=e280]:
+          - generic "财联社5月26日电，利弗莫尔中概股龙头指数盘初涨2.13%。" [ref=e281] [cursor=pointer]:
+            - generic [ref=e282]:
+              - generic [ref=e283]: 财联社
+              - generic [ref=e284]: 05-26 21:31
+            - generic [ref=e285]: 财联社5月26日电，利弗莫尔中概股龙头指数盘初涨2.13%。
+            - generic [ref=e286]: 财联社5月26日电，利弗莫尔中概股龙头指数盘初涨2.13%。成分股中，富途涨14.82%，联电涨14.82%，小马智行涨12.01%，欢聚涨11.71%，信也科技涨10.24%。
+          - generic "美股三大指数集体高开 太空股大涨" [ref=e287] [cursor=pointer]:
+            - generic [ref=e288]:
+              - generic [ref=e289]: 财联社
+              - generic [ref=e290]: 05-26 21:30
+            - generic [ref=e291]: 美股三大指数集体高开 太空股大涨
+            - generic [ref=e292]: 【美股三大指数集体高开 太空股大涨】财联社5月26日电，美股三大指数集体高开，道指涨0.28%，纳指涨0.95%，标普500指数涨0.59%。太空股大涨，Momentus涨超75%，Redwire涨超11%，MDA Space涨超7%；半导...
+          - generic "第十四届中英政党对话举行" [ref=e293] [cursor=pointer]:
+            - generic [ref=e294]:
+              - generic [ref=e295]: 财联社
+              - generic [ref=e296]: 05-26 21:28
+            - generic [ref=e297]: 第十四届中英政党对话举行
+            - generic [ref=e298]: 【第十四届中英政党对话举行】财联社5月26日电，第十四届中英政党对话5月26日在江苏扬州举行，主题是“发挥政党作用，构建中英长期稳定的全面战略伙伴关系”。中共中央对外联络部部长刘海星出席并作主旨讲话。中方有关部委、地方和高校代表，英国前首席...
+          - generic "晨丰科技：拟投资13.15亿元建设两个储能电站项目" [ref=e299] [cursor=pointer]:
+            - generic [ref=e300]:
+              - generic [ref=e301]: 财联社
+              - generic [ref=e302]: 05-26 21:26
+            - generic [ref=e303]: 晨丰科技：拟投资13.15亿元建设两个储能电站项目
+            - generic [ref=e304]: 【晨丰科技：拟投资13.15亿元建设两个储能电站项目】财联社5月26日电，晨丰科技(603685.SH)公告称，公司拟投资建设北网新能开鲁县800MWh电网侧独立新型储能电站示范项目，项目总投资6.60亿元；以及通辽市科左中旗200MW/8...
+          - generic "晨丰科技：拟投资13.15亿元建设两个储能电站项目" [ref=e305]:
+            - generic [ref=e306]:
+              - generic [ref=e307]: 东财7x24
+              - generic [ref=e308]: 05-26 21:26
+            - generic [ref=e309]: 晨丰科技：拟投资13.15亿元建设两个储能电站项目
+            - generic [ref=e310]: 【晨丰科技：拟投资13.15亿元建设两个储能电站项目】晨丰科技(603685.SH)公告称，公司拟投资建设北网新能开鲁县800MWh电网侧独立新型储能电站示范项目，项目总投资6.60亿元；以及通辽市科左中旗200MW/800MWh储能电站示...
+          - generic "塔吉克斯坦总统呼吁全球加强水资源领域合作" [ref=e311] [cursor=pointer]:
+            - generic [ref=e312]:
+              - generic [ref=e313]: 财联社
+              - generic [ref=e314]: 05-26 21:24
+            - generic [ref=e315]: 塔吉克斯坦总统呼吁全球加强水资源领域合作
+            - generic [ref=e316]: 【塔吉克斯坦总统呼吁全球加强水资源领域合作】财联社5月26日电，塔吉克斯坦总统拉赫蒙26日表示，为应对当前水资源领域一系列挑战，全球亟需加强相关合作。拉赫蒙当天出席在首都杜尚别举行的“水促进可持续发展”2018－2028十年行动第四届高级别...
+          - generic "消息人士：解冻伊朗海外资金成伊美谈判主要分歧" [ref=e317]:
+            - generic [ref=e318]:
+              - generic [ref=e319]: 东财7x24
+              - generic [ref=e320]: 05-26 21:22
+            - generic [ref=e321]: 消息人士：解冻伊朗海外资金成伊美谈判主要分歧
+            - generic [ref=e322]: 【消息人士：解冻伊朗海外资金成伊美谈判主要分歧】据伊朗法尔斯通讯社26日报道，一名接近伊朗谈判团队的消息人士表示，目前伊美谈判的主要分歧之一，是伊朗海外资金解冻问题。
+          - generic "消息人士：解冻伊朗海外资金成伊美谈判主要分歧" [ref=e323] [cursor=pointer]:
+            - generic [ref=e324]:
+              - generic [ref=e325]: 财联社
+              - generic [ref=e326]: 05-26 21:22
+            - generic [ref=e327]: 消息人士：解冻伊朗海外资金成伊美谈判主要分歧
+            - generic [ref=e328]: 【消息人士：解冻伊朗海外资金成伊美谈判主要分歧】财联社5月26日电，据伊朗法尔斯通讯社26日报道，一名接近伊朗谈判团队的消息人士表示，目前伊美谈判的主要分歧之一，是伊朗海外资金解冻问题。这名消息人士称，美国一度在履行相关承诺问题上“后退”，...
+          - generic "晶瑞电材：ArF光刻胶已向多家客户批量供应 整体销量及收入占比较小" [ref=e329]:
+            - generic [ref=e330]:
+              - generic [ref=e331]: 东财7x24
+              - generic [ref=e332]: 05-26 21:20
+            - generic [ref=e333]: 晶瑞电材：ArF光刻胶已向多家客户批量供应 整体销量及收入占比较小
+            - generic [ref=e334]: 【晶瑞电材：ArF光刻胶已向多家客户批量供应，整体销量及收入占比较小】晶瑞电材在互动平台表示，公司销售的光刻胶产品为半导体用光刻胶、平板显示用光刻胶；公司ArF光刻胶已向多家客户批量供应，但目前整体销量及收入占比较小，对公司财务状况和经营成...
+          - generic "科创板创新药企多项研究亮相2026年ASCO年会" [ref=e335] [cursor=pointer]:
+            - generic [ref=e336]:
+              - generic [ref=e337]: 财联社
+              - generic [ref=e338]: 05-26 21:18
+            - generic [ref=e339]: 科创板创新药企多项研究亮相2026年ASCO年会
+            - generic [ref=e340]: 【科创板创新药企多项研究亮相2026年ASCO年会】财联社5月26日电，5月29日至6月2日，2026年美国临床肿瘤学会（ASCO）年会将于芝加哥举行。作为全球肿瘤学领域最具影响力的学术盛会之一，本届年会汇聚世界各地的顶尖学者与前沿研究成果...
+          - generic "财联社5月26日电，欧盟委员会主席冯德莱恩表示，没有理由解除对俄罗斯的制裁。" [ref=e341] [cursor=pointer]:
+            - generic [ref=e342]:
+              - generic [ref=e343]: 财联社
+              - generic [ref=e344]: 05-26 21:17
+            - generic [ref=e345]: 财联社5月26日电，欧盟委员会主席冯德莱恩表示，没有理由解除对俄罗斯的制裁。
+            - generic [ref=e346]: 财联社5月26日电，欧盟委员会主席冯德莱恩表示，没有理由解除对俄罗斯的制裁。正在准备下一个俄罗斯制裁方案。
+          - generic "冯德莱恩：没有理由解除对俄罗斯的制裁" [ref=e347]:
+            - generic [ref=e348]:
+              - generic [ref=e349]: 东财7x24
+              - generic [ref=e350]: 05-26 21:17
+            - generic [ref=e351]: 冯德莱恩：没有理由解除对俄罗斯的制裁
+            - generic [ref=e352]: 【冯德莱恩：没有理由解除对俄罗斯的制裁】欧盟委员会主席冯德莱恩表示，没有理由解除对俄罗斯的制裁。正在准备下一个俄罗斯制裁方案。
+          - generic "*ST汇科：撤销退市风险警示及其他风险警示 股票简称变更为“汇金科技”" [ref=e353] [cursor=pointer]:
+            - generic [ref=e354]:
+              - generic [ref=e355]: 财联社
+              - generic [ref=e356]: 05-26 21:17
+            - generic [ref=e357]: "*ST汇科：撤销退市风险警示及其他风险警示 股票简称变更为“汇金科技”"
+            - generic [ref=e358]: 【*ST汇科：撤销退市风险警示及其他风险警示 股票简称变更为“汇金科技”】财联社5月26日电，*ST汇科(300561.SZ)公告称，公司撤销退市风险警示及其他风险警示的申请已获得深圳证券交易所审核同意。根据相关规定，公司股票将于2026年...
+          - generic "*ST汇科：撤销退市风险警示及其他风险警示 股票简称变更为“汇金科技”" [ref=e359]:
+            - generic [ref=e360]:
+              - generic [ref=e361]: 东财7x24
+              - generic [ref=e362]: 05-26 21:17
+            - generic [ref=e363]: "*ST汇科：撤销退市风险警示及其他风险警示 股票简称变更为“汇金科技”"
+            - generic [ref=e364]: 【*ST汇科：撤销退市风险警示及其他风险警示 股票简称变更为“汇金科技”】*ST汇科(300561.SZ)公告称，公司撤销退市风险警示及其他风险警示的申请已获得深圳证券交易所审核同意。根据相关规定，公司股票将于2026年5月27日开市起停牌...
+          - generic "欧盟将向波罗的海三国提供120亿欧元安全援助" [ref=e365] [cursor=pointer]:
+            - generic [ref=e366]:
+              - generic [ref=e367]: 财联社
+              - generic [ref=e368]: 05-26 21:14
+            - generic [ref=e369]: 欧盟将向波罗的海三国提供120亿欧元安全援助
+            - generic [ref=e370]: 【欧盟将向波罗的海三国提供120亿欧元安全援助】财联社5月26日电，欧盟委员会主席冯德莱恩当地时间5月26日在访问立陶宛时表示，将通过“欧洲安全行动”计划向波罗的海三国立陶宛、拉脱维亚和爱沙尼亚提供120亿欧元安全援助。 (央视新闻)
+          - generic "【财联社早知道】刚刚！工信部发文要求加速汽车芯片标准发布实施，机构预计2035年全球汽车芯片市场规模将达2000亿美元，这家公司专注于汽车智能驱动芯片及汽车电源管理芯片" [ref=e371] [cursor=pointer]:
+            - generic [ref=e372]:
+              - generic [ref=e373]: 财联社
+              - generic [ref=e374]: 05-26 21:12
+            - generic [ref=e375]: 【财联社早知道】刚刚！工信部发文要求加速汽车芯片标准发布实施，机构预计2035年全球汽车芯片市场规模将达2000亿美元，这家公司专注于汽车智能驱动芯片及汽车电源管理芯片
+            - generic [ref=e376]: ①工信部要求加速汽车芯片标准发布实施，机构预计2035年全球汽车芯片市场规模将达2000亿美元，这家公司专注于汽车智能驱动芯片及汽车电源管理芯片，已构建起品类齐全的智能驱动产品矩阵； ②国家能源局召开全国“人工智能+”能源现场推进会，机构称...
+          - generic "上海：锚定培育优质种源大IP 孵化农业龙头科技企业" [ref=e377] [cursor=pointer]:
+            - generic [ref=e378]:
+              - generic [ref=e379]: 财联社
+              - generic [ref=e380]: 05-26 21:12
+            - generic [ref=e381]: 上海：锚定培育优质种源大IP 孵化农业龙头科技企业
+            - generic [ref=e382]: 【上海：锚定培育优质种源大IP 孵化农业龙头科技企业】财联社5月26日电，上海市实施乡村振兴战略现场推进会今天（5月26日）举行。上海市委书记陈吉宁指出，要聚焦科技农业，深化体制改革，提升农业创新体系整体效能。锚定培育优质种源大IP、孵化农...
+          - generic "上海：锚定培育优质种源大IP 孵化农业龙头科技企业" [ref=e383]:
+            - generic [ref=e384]:
+              - generic [ref=e385]: 东财7x24
+              - generic [ref=e386]: 05-26 21:12
+            - generic [ref=e387]: 上海：锚定培育优质种源大IP 孵化农业龙头科技企业
+            - generic [ref=e388]: 【上海：锚定培育优质种源大IP 孵化农业龙头科技企业】上海市实施乡村振兴战略现场推进会今天（5月26日）举行。上海市委书记陈吉宁指出，要聚焦科技农业，深化体制改革，提升农业创新体系整体效能。锚定培育优质种源大IP、孵化农业龙头科技企业、打造...
+          - generic "一油轮在阿曼首都附近海域遭遇事故 部分燃油泄漏入海" [ref=e389]:
+            - generic [ref=e390]:
+              - generic [ref=e391]: 东财7x24
+              - generic [ref=e392]: 05-26 21:07
+            - generic [ref=e393]: 一油轮在阿曼首都附近海域遭遇事故 部分燃油泄漏入海
+            - generic [ref=e394]: 【一油轮在阿曼首都附近海域遭遇事故 部分燃油泄漏入海】当地时间5月26日，英国海上贸易行动办公室称，当天上午，一艘油轮在阿曼首都马斯喀特以东约60海里海域遭遇外部爆炸事故。目前暂无人员伤亡报告，但部分燃油泄漏入海。
+          - generic "一油轮在阿曼首都附近海域遭遇事故 部分燃油泄漏入海" [ref=e395] [cursor=pointer]:
+            - generic [ref=e396]:
+              - generic [ref=e397]: 财联社
+              - generic [ref=e398]: 05-26 21:07
+            - generic [ref=e399]: 一油轮在阿曼首都附近海域遭遇事故 部分燃油泄漏入海
+            - generic [ref=e400]: 【一油轮在阿曼首都附近海域遭遇事故 部分燃油泄漏入海】财联社5月26日电，英国海上贸易行动办公室当地时间5月26日称，当天上午，一艘油轮在阿曼首都马斯喀特以东约60海里海域遭遇外部爆炸事故。目前暂无人员伤亡报告，但部分燃油泄漏入海。油轮船长...

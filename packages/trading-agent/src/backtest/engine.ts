@@ -17,6 +17,7 @@ import type {
 	StrategyType,
 	Trade,
 } from "./types.js";
+import { round } from "./utils.js";
 
 function sortSignals(signals: Signal[]): Signal[] {
 	const copy = [...signals];
@@ -156,6 +157,7 @@ export async function runBacktest(config: BacktestConfig): Promise<BacktestResul
 		taxRate,
 		transferFee,
 		config.skipNoVolume ?? true,
+		config.maxHoldingDays ?? Infinity,
 	);
 
 	// 4. Compute metrics
@@ -237,11 +239,6 @@ async function loadKlines(config: BacktestConfig): Promise<KlineRow[]> {
 	});
 }
 
-function round(v: number, digits = 4): number {
-	const mult = 10 ** digits;
-	return Math.round(v * mult) / mult;
-}
-
 export function simulateTrades(
 	klines: KlineRow[],
 	signals: Signal[],
@@ -253,6 +250,7 @@ export function simulateTrades(
 	taxRate = 0,
 	transferFee = 0,
 	skipNoVolume = true,
+	maxHoldingDays = Infinity,
 ): { trades: Trade[]; equityCurve: EquityPoint[]; filteredTradeCount: number } {
 	const trades: Trade[] = [];
 	const equityCurve: EquityPoint[] = [];
@@ -348,6 +346,37 @@ export function simulateTrades(
 				shares = 0;
 			}
 			signalIdx++;
+		}
+
+		// Force-sell if holding period exceeded maxHoldingDays
+		if (entryIndex >= 0 && maxHoldingDays !== Infinity) {
+			const daysHeld = i - entryIndex;
+			if (daysHeld >= maxHoldingDays) {
+				const k = klines[i];
+				if (k && (k.open != null || k.close != null)) {
+					const exitPrice = (k.open ?? k.close!) * (1 - slippage);
+					const proceeds = shares * exitPrice * (1 - commission - transferFee - taxRate);
+					const costBasis = shares * entryPrice * (1 + commission + transferFee);
+					const pnl = proceeds - costBasis;
+					const pnlPct = costBasis > 0 ? (pnl / costBasis) * 100 : 0;
+					trades.push({
+						entryIndex,
+						entryDate: klines[entryIndex].date,
+						entryPrice,
+						exitIndex: i,
+						exitDate: k.date,
+						exitPrice,
+						shares,
+						pnl,
+						pnlPct,
+						daysHeld,
+						result: pnl > 0 ? "win" : pnl < 0 ? "loss" : "breakeven",
+					});
+					capital += proceeds;
+					entryIndex = -1;
+					shares = 0;
+				}
+			}
 		}
 
 		// Mark position to market at today's close
@@ -607,16 +636,26 @@ export async function runPoolBacktest(
 		if (!filter) return undefined;
 
 		const stockIndustry = new Map<string, string>();
-		for (const s of stockData) {
-			const industries = await store!.getStockIndustries(s.code, s.market);
-			const match = industries.find((i) => i.standard === filter.standard);
-			if (match) stockIndustry.set(`${s.code}_${s.market}`, match.industry_code);
+		const industryResults = await Promise.all(
+			stockData.map(async (s) => {
+				const industries = await store!.getStockIndustries(s.code, s.market);
+				const match = industries.find((i) => i.standard === filter.standard);
+				return { key: `${s.code}_${s.market}`, code: match?.industry_code };
+			}),
+		);
+		for (const { key, code } of industryResults) {
+			if (code) stockIndustry.set(key, code);
 		}
 
-		const industryMomentum = new Map<string, IndustryMomentumInfo>();
 		const uniqueIndustries = [...new Set(stockIndustry.values())];
-		for (const indCode of uniqueIndustries) {
-			const rows = await store!.getIndustryIndicators(indCode, filter.periodDays, defaultStart, defaultEnd);
+		const momentumResults = await Promise.all(
+			uniqueIndustries.map(async (indCode) => {
+				const rows = await store!.getIndustryIndicators(indCode, filter.periodDays, defaultStart, defaultEnd);
+				return { indCode, rows };
+			}),
+		);
+		const industryMomentum = new Map<string, IndustryMomentumInfo>();
+		for (const { indCode, rows } of momentumResults) {
 			for (const r of rows) {
 				industryMomentum.set(`${indCode}_${r.date}`, {
 					momentum_return: r.momentum_return ?? null,
@@ -676,10 +715,15 @@ export async function runPoolBacktest(
 	): Promise<SizeFilterContext | undefined> {
 		if (!filter) return undefined;
 
+		const sizeResults = await Promise.all(
+			stockData.map(async (s) => {
+				const rows = await store!.getStockIndicators(s.code, s.market, "size_mcap", defaultStart, defaultEnd);
+				return { s, rows };
+			}),
+		);
 		const stockSize = new Map<string, number>();
 		const maxRankByDate = new Map<string, number>();
-		for (const s of stockData) {
-			const rows = await store!.getStockIndicators(s.code, s.market, "size_mcap", defaultStart, defaultEnd);
+		for (const { s, rows } of sizeResults) {
 			for (const r of rows) {
 				if (r.indicator_rank == null) continue;
 				const key = `${s.code}_${s.market}_${r.date}`;
@@ -851,448 +895,403 @@ export async function runPoolBacktest(
 		}
 	}
 
-	// 4. Simulation state
-	let cash = initialCapital;
-	const positions = new Map<
-		string,
-		{ shares: number; entryPrice: number; entryDate: string; daysHeld: number; lastClose: number }
-	>();
-	const trades: PoolTrade[] = [];
-	const equityCurve: EquityPoint[] = [];
-	let filteredTradeCount = 0;
+	// 4. Run simulation (single pass or multi-run for random rankBy)
+	function runOneSimulation(): {
+		trades: PoolTrade[];
+		equityCurve: EquityPoint[];
+		filteredTradeCount: number;
+		rankLoopTime: number;
+		execLoopTime: number;
+	} {
+		// 4. Simulation state
+		let cash = initialCapital;
+		const positions = new Map<
+			string,
+			{ shares: number; entryPrice: number; entryDate: string; daysHeld: number; lastClose: number }
+		>();
+		const trades: PoolTrade[] = [];
+		const equityCurve: EquityPoint[] = [];
+		let filteredTradeCount = 0;
 
-	function checkTradeable(kline: KlineRow | undefined): boolean {
-		if (!skipNoVolume) return true;
-		if (!kline || !isTradeable(kline)) {
-			filteredTradeCount++;
-			return false;
+		function checkTradeable(kline: KlineRow | undefined): boolean {
+			if (!skipNoVolume) return true;
+			if (!kline || !isTradeable(kline)) {
+				filteredTradeCount++;
+				return false;
+			}
+			return true;
 		}
-		return true;
-	}
 
-	const tSimStart = performance.now();
+		// 5. Day-by-day simulation
+		for (let dateIdx = 0; dateIdx < allDates.length; dateIdx++) {
+			const date = allDates[dateIdx];
+			const prevDate = dateIdx > 0 ? allDates[dateIdx - 1] : undefined;
+			const allowedCodes = getAllowedCodes(date);
 
-	// 5. Day-by-day simulation
-	for (let dateIdx = 0; dateIdx < allDates.length; dateIdx++) {
-		const date = allDates[dateIdx];
-		const prevDate = dateIdx > 0 ? allDates[dateIdx - 1] : undefined;
-		const allowedCodes = getAllowedCodes(date);
+			// 5.1 Increment holding days
+			for (const pos of positions.values()) pos.daysHeld++;
 
-		// 5.1 Increment holding days
-		for (const pos of positions.values()) pos.daysHeld++;
+			// 5.1b Force-sell positions that dropped out of the dynamic pool
+			if (isDynamic) {
+				for (const code of [...positions.keys()].sort()) {
+					if (allowedCodes.has(code)) continue;
+					const pos = positions.get(code)!;
+					const stock = stockMap.get(code);
+					if (!stock) continue;
 
-		// 5.1b Force-sell positions that dropped out of the dynamic pool
-		if (isDynamic) {
-			for (const code of [...positions.keys()].sort()) {
-				if (allowedCodes.has(code)) continue;
-				const pos = positions.get(code)!;
-				const stock = stockMap.get(code);
-				if (!stock) continue;
-
-				const klineMap = klineMapByCode.get(code);
-				const kline = klineMap?.get(date);
-				if (!checkTradeable(kline)) continue;
-				const sellPrice = (kline?.open ?? pos.lastClose) * (1 - slippage);
-				const sellAmount = pos.shares * sellPrice;
-				if (!isTradeAmountValid(sellAmount, minTradeAmount)) {
-					continue;
+					const klineMap = klineMapByCode.get(code);
+					const kline = klineMap?.get(date);
+					if (!checkTradeable(kline)) continue;
+					const sellPrice = (kline?.open ?? pos.lastClose) * (1 - slippage);
+					const sellAmount = pos.shares * sellPrice;
+					if (!isTradeAmountValid(sellAmount, minTradeAmount)) {
+						continue;
+					}
+					const proceeds = sellAmount * (1 - commission - transferFee - taxRate);
+					const costBasis = pos.shares * pos.entryPrice * (1 + commission + transferFee);
+					const pnl = proceeds - costBasis;
+					trades.push({
+						code,
+						market: stock.market,
+						direction: "sell",
+						date,
+						price: sellPrice,
+						shares: pos.shares,
+						amount: sellAmount,
+						pnl,
+						pnlPct: costBasis > 0 ? (pnl / costBasis) * 100 : 0,
+						daysHeld: pos.daysHeld,
+						result: pnl > 0 ? "win" : pnl < 0 ? "loss" : "breakeven",
+						memo: "调出动态池",
+					});
+					cash += proceeds;
+					positions.delete(code);
 				}
-				const proceeds = sellAmount * (1 - commission - transferFee - taxRate);
-				const costBasis = pos.shares * pos.entryPrice * (1 + commission + transferFee);
-				const pnl = proceeds - costBasis;
-				trades.push({
-					code,
-					market: stock.market,
-					direction: "sell",
-					date,
-					price: sellPrice,
-					shares: pos.shares,
-					amount: sellAmount,
-					pnl,
-					pnlPct: costBasis > 0 ? (pnl / costBasis) * 100 : 0,
-					daysHeld: pos.daysHeld,
-					result: pnl > 0 ? "win" : pnl < 0 ? "loss" : "breakeven",
-					memo: "调出动态池",
-				});
-				cash += proceeds;
-				positions.delete(code);
 			}
-		}
 
-		// 5.2 Sell phase (sorted by code for determinism)
-		const sortedHoldings = [...positions.keys()].sort();
-		for (const code of sortedHoldings) {
-			const pos = positions.get(code)!;
-			const stock = stockMap.get(code);
-			if (!stock) continue;
-
-			const exec = stock.execMap.get(date);
-			if (exec?.type === "sell") {
-				// Skip if at limit-down
-				const execKline = klineMapByCode.get(code)?.get(date);
-				if (execKline && isLimitDown(execKline)) continue;
-				if (!checkTradeable(execKline)) continue;
-				const sellPrice = exec.price * (1 - slippage);
-				const sellAmount = pos.shares * sellPrice;
-				if (!isTradeAmountValid(sellAmount, minTradeAmount)) {
-					continue;
-				}
-				const proceeds = sellAmount * (1 - commission - transferFee - taxRate);
-				const costBasis = pos.shares * pos.entryPrice * (1 + commission + transferFee);
-				const pnl = proceeds - costBasis;
-				trades.push({
-					code,
-					market: stock.market,
-					direction: "sell",
-					date,
-					price: sellPrice,
-					shares: pos.shares,
-					amount: sellAmount,
-					pnl,
-					pnlPct: costBasis > 0 ? (pnl / costBasis) * 100 : 0,
-					daysHeld: pos.daysHeld,
-					result: pnl > 0 ? "win" : pnl < 0 ? "loss" : "breakeven",
-					memo: "策略卖出",
-				});
-				cash += proceeds;
-				positions.delete(code);
-			}
-		}
-
-		// 5.2b Force-sell stale positions (held longer than maxHoldingDays)
-		if (maxHoldingDays !== Infinity) {
-			const staleCodes = [...positions.entries()]
-				.filter(([, pos]) => pos.daysHeld >= maxHoldingDays)
-				.map(([code]) => code)
-				.sort();
-			for (const code of staleCodes) {
+			// 5.2 Sell phase (sorted by code for determinism)
+			const sortedHoldings = [...positions.keys()].sort();
+			for (const code of sortedHoldings) {
 				const pos = positions.get(code)!;
-				const stock = stockMap.get(code);
-				if (!stock) continue;
-
-				const klineMap = klineMapByCode.get(code);
-				const kline = klineMap?.get(date);
-				if (!checkTradeable(kline)) continue;
-				const sellPrice = (kline?.open ?? pos.lastClose) * (1 - slippage);
-				const proceeds = pos.shares * sellPrice * (1 - commission - transferFee - taxRate);
-				const costBasis = pos.shares * pos.entryPrice * (1 + commission + transferFee);
-				const pnl = proceeds - costBasis;
-
-				trades.push({
-					code,
-					market: stock.market,
-					direction: "sell",
-					date,
-					price: sellPrice,
-					shares: pos.shares,
-					amount: pos.shares * sellPrice,
-					pnl,
-					pnlPct: costBasis > 0 ? (pnl / costBasis) * 100 : 0,
-					daysHeld: pos.daysHeld,
-					result: pnl > 0 ? "win" : pnl < 0 ? "loss" : "breakeven",
-					memo: `强制平仓（持仓${pos.daysHeld}天，超过${maxHoldingDays}天上限）`,
-				});
-				cash += proceeds;
-				positions.delete(code);
-			}
-		}
-
-		const tRankStart = performance.now();
-
-		// 5.3 Build target holdings from existing positions + today's buy candidates
-		const buyCandidates = stockData
-			.filter((s) => allowedCodes.has(s.code))
-			.filter((s) => !positions.has(s.code))
-			.filter((s) => passesIndustryFilter(s, s.execMap.get(date), industryFilter))
-			.filter((s) => passesSizeFilter(s, s.execMap.get(date), sizeFilter))
-			.map((s) => {
-				const exec = s.execMap.get(date);
-				if (exec?.type !== "buy") return null;
-				// Use signal date for scoring to avoid lookahead bias
-				const scoreDate = exec.signalDate;
-				const signalDateIdx = dateIndex.get(exec.signalDate);
-				const currentDateIdx = dateIndex.get(date);
-				const recencyDays = signalDateIdx != null && currentDateIdx != null ? currentDateIdx - signalDateIdx : 0;
-				const rankScore =
-					config.rankBy === "random" ? Math.random() : computeRankScore(s, scoreDate, config.rankBy, recencyDays);
-				return { code: s.code, stock: s, score: rankScore };
-			})
-			.filter((c): c is NonNullable<typeof c> => c !== null)
-			.sort((a, b) => {
-				if (b.score !== a.score) return b.score - a.score;
-				return a.code.localeCompare(b.code);
-			});
-
-		// Score existing positions too so maxPositions applies to total holdings
-		const scoredHoldings: Array<{ code: string; score: number; stock: (typeof stockData)[number] }> = [];
-		for (const code of [...positions.keys()].sort()) {
-			const stock = stockMap.get(code);
-			if (!stock) continue;
-			// Use previous trading day for scoring to avoid lookahead bias
-			const scoreDate = prevDate ?? date;
-			const pos = positions.get(code)!;
-			const recencyDays = pos.daysHeld;
-			const score =
-				config.rankBy === "random" ? Math.random() : computeRankScore(stock, scoreDate, config.rankBy, recencyDays);
-			scoredHoldings.push({ code, score, stock });
-		}
-		for (const c of buyCandidates) {
-			if (!scoredHoldings.some((h) => h.code === c.code)) {
-				scoredHoldings.push({ code: c.code, score: c.score, stock: c.stock });
-			}
-		}
-		scoredHoldings.sort((a, b) => {
-			if (b.score !== a.score) return b.score - a.score;
-			return a.code.localeCompare(b.code);
-		});
-		const maxHoldings = config.maxPositions ?? scoredHoldings.length;
-		const targetCodes = new Set<string>();
-		for (const h of scoredHoldings) {
-			if (targetCodes.size >= maxHoldings) break;
-			// Existing positions can be kept even if limit-up; new candidates must be buyable today
-			if (positions.has(h.code)) {
-				targetCodes.add(h.code);
-			} else {
-				const klineMap = klineMapByCode.get(h.code);
-				const kline = klineMap?.get(date);
-				if (kline && isLimitUp(kline)) continue;
-				targetCodes.add(h.code);
-			}
-		}
-
-		rankLoopTime += performance.now() - tRankStart;
-		const tExecStart = performance.now();
-
-		const isRebalanceDay = rebalanceFrequency <= 1 || dateIdx % rebalanceFrequency === 0;
-
-		// Force-sell all positions on full-rebalance days before rebuilding the portfolio
-		if (isRebalanceDay && config.rebalanceFullPortfolio) {
-			for (const code of [...positions.keys()].sort()) {
-				const pos = positions.get(code)!;
-				const stock = stockMap.get(code);
-				if (!stock) continue;
-
-				const klineMap = klineMapByCode.get(code);
-				const kline = klineMap?.get(date);
-				if (!checkTradeable(kline)) continue;
-				const sellPrice = (kline?.open ?? pos.lastClose) * (1 - slippage);
-				const sellAmount = pos.shares * sellPrice;
-				if (!isTradeAmountValid(sellAmount, minTradeAmount)) {
-					continue;
-				}
-				const proceeds = sellAmount * (1 - commission - transferFee - taxRate);
-				const costBasis = pos.shares * pos.entryPrice * (1 + commission + transferFee);
-				const pnl = proceeds - costBasis;
-				trades.push({
-					code,
-					market: stock.market,
-					direction: "sell",
-					date,
-					price: sellPrice,
-					shares: pos.shares,
-					amount: sellAmount,
-					pnl,
-					pnlPct: costBasis > 0 ? (pnl / costBasis) * 100 : 0,
-					daysHeld: pos.daysHeld,
-					result: pnl > 0 ? "win" : pnl < 0 ? "loss" : "breakeven",
-					memo: "周期强制换仓",
-				});
-				cash += proceeds;
-				positions.delete(code);
-			}
-		}
-
-		// Sell positions that dropped out of top maxPositions
-		if (isRebalanceDay) {
-			for (const code of [...positions.keys()].sort()) {
-				if (targetCodes.has(code)) continue;
-				const pos = positions.get(code)!;
-				const stock = stockMap.get(code);
-				if (!stock) continue;
-
-				const klineMap = klineMapByCode.get(code);
-				const kline = klineMap?.get(date);
-				if (!checkTradeable(kline)) continue;
-				const sellPrice = (kline?.open ?? pos.lastClose) * (1 - slippage);
-				const sellAmount = pos.shares * sellPrice;
-				if (!isTradeAmountValid(sellAmount, minTradeAmount)) {
-					continue;
-				}
-				const proceeds = sellAmount * (1 - commission - transferFee - taxRate);
-				const costBasis = pos.shares * pos.entryPrice * (1 + commission + transferFee);
-				const pnl = proceeds - costBasis;
-				trades.push({
-					code,
-					market: stock.market,
-					direction: "sell",
-					date,
-					price: sellPrice,
-					shares: pos.shares,
-					amount: sellAmount,
-					pnl,
-					pnlPct: costBasis > 0 ? (pnl / costBasis) * 100 : 0,
-					daysHeld: pos.daysHeld,
-					result: pnl > 0 ? "win" : pnl < 0 ? "loss" : "breakeven",
-					memo: "调出目标持仓",
-				});
-				cash += proceeds;
-				positions.delete(code);
-			}
-		}
-
-		// 5.4 Buy / rebalance target holdings
-		if (!isRebalanceDay) {
-			// do nothing on off days; hold existing positions
-		} else if (!fullPosition) {
-			// Non-full-position: buy new target holdings with available cash
-			for (const code of [...targetCodes].sort()) {
-				if (positions.has(code)) continue;
 				const stock = stockMap.get(code);
 				if (!stock) continue;
 
 				const exec = stock.execMap.get(date);
-				if (exec?.type !== "buy") continue;
-
-				const execKline = klineMapByCode.get(code)?.get(date);
-				if (execKline && isLimitUp(execKline)) continue;
-				if (!checkTradeable(execKline)) continue;
-
-				const buyPrice = exec.price * (1 + slippage);
-				const maxBuyAmount = computeMaxBuyAmount(initialCapital, cash, positions.size, allowedCodes.size);
-				const rawShares = Math.floor(maxBuyAmount / buyPrice);
-				const shares = Math.floor(rawShares / minLot) * minLot;
-
-				if (shares >= minLot) {
-					const amount = shares * buyPrice;
-					if (!isTradeAmountValid(amount, minTradeAmount)) {
+				if (exec?.type === "sell") {
+					// Skip if at limit-down
+					const execKline = klineMapByCode.get(code)?.get(date);
+					if (execKline && isLimitDown(execKline)) continue;
+					if (!checkTradeable(execKline)) continue;
+					const sellPrice = exec.price * (1 - slippage);
+					const sellAmount = pos.shares * sellPrice;
+					if (!isTradeAmountValid(sellAmount, minTradeAmount)) {
 						continue;
 					}
-					const cost = amount * (1 + commission + transferFee);
-					if (cost <= cash) {
-						cash -= cost;
-						positions.set(code, {
-							shares,
-							entryPrice: buyPrice,
-							entryDate: date,
-							daysHeld: 0,
-							lastClose: buyPrice,
-						});
-						trades.push({
-							code,
-							market: stock.market,
-							direction: "buy",
-							date,
-							price: buyPrice,
-							shares,
-							amount,
-							memo: "策略买入",
-						});
+					const proceeds = sellAmount * (1 - commission - transferFee - taxRate);
+					const costBasis = pos.shares * pos.entryPrice * (1 + commission + transferFee);
+					const pnl = proceeds - costBasis;
+					trades.push({
+						code,
+						market: stock.market,
+						direction: "sell",
+						date,
+						price: sellPrice,
+						shares: pos.shares,
+						amount: sellAmount,
+						pnl,
+						pnlPct: costBasis > 0 ? (pnl / costBasis) * 100 : 0,
+						daysHeld: pos.daysHeld,
+						result: pnl > 0 ? "win" : pnl < 0 ? "loss" : "breakeven",
+						memo: "策略卖出",
+					});
+					cash += proceeds;
+					positions.delete(code);
+				}
+			}
+
+			// 5.2b Force-sell stale positions (held longer than maxHoldingDays)
+			if (maxHoldingDays !== Infinity) {
+				const staleCodes = [...positions.entries()]
+					.filter(([, pos]) => pos.daysHeld >= maxHoldingDays)
+					.map(([code]) => code)
+					.sort();
+				for (const code of staleCodes) {
+					const pos = positions.get(code)!;
+					const stock = stockMap.get(code);
+					if (!stock) continue;
+
+					const klineMap = klineMapByCode.get(code);
+					const kline = klineMap?.get(date);
+					if (!checkTradeable(kline)) continue;
+					const sellPrice = (kline?.open ?? pos.lastClose) * (1 - slippage);
+					const proceeds = pos.shares * sellPrice * (1 - commission - transferFee - taxRate);
+					const costBasis = pos.shares * pos.entryPrice * (1 + commission + transferFee);
+					const pnl = proceeds - costBasis;
+
+					trades.push({
+						code,
+						market: stock.market,
+						direction: "sell",
+						date,
+						price: sellPrice,
+						shares: pos.shares,
+						amount: pos.shares * sellPrice,
+						pnl,
+						pnlPct: costBasis > 0 ? (pnl / costBasis) * 100 : 0,
+						daysHeld: pos.daysHeld,
+						result: pnl > 0 ? "win" : pnl < 0 ? "loss" : "breakeven",
+						memo: `强制平仓（持仓${pos.daysHeld}天，超过${maxHoldingDays}天上限）`,
+					});
+					cash += proceeds;
+					positions.delete(code);
+				}
+			}
+
+			const tRankStart = performance.now();
+
+			// 5.3 Build target holdings from existing positions + today's buy candidates
+			const buyCandidates = stockData
+				.filter((s) => allowedCodes.has(s.code))
+				.filter((s) => !positions.has(s.code))
+				.filter((s) => passesIndustryFilter(s, s.execMap.get(date), industryFilter))
+				.filter((s) => passesSizeFilter(s, s.execMap.get(date), sizeFilter))
+				.map((s) => {
+					const exec = s.execMap.get(date);
+					if (exec?.type !== "buy") return null;
+					// Use signal date for scoring to avoid lookahead bias
+					const scoreDate = exec.signalDate;
+					const signalDateIdx = dateIndex.get(exec.signalDate);
+					const currentDateIdx = dateIndex.get(date);
+					const recencyDays = signalDateIdx != null && currentDateIdx != null ? currentDateIdx - signalDateIdx : 0;
+					const rankScore =
+						config.rankBy === "random"
+							? Math.random()
+							: computeRankScore(s, scoreDate, config.rankBy, recencyDays);
+					return { code: s.code, stock: s, score: rankScore };
+				})
+				.filter((c): c is NonNullable<typeof c> => c !== null)
+				.sort((a, b) => {
+					if (b.score !== a.score) return b.score - a.score;
+					return a.code.localeCompare(b.code);
+				});
+
+			// Score existing positions too so maxPositions applies to total holdings
+			const scoredHoldings: Array<{ code: string; score: number; stock: (typeof stockData)[number] }> = [];
+			for (const code of [...positions.keys()].sort()) {
+				const stock = stockMap.get(code);
+				if (!stock) continue;
+				// Use previous trading day for scoring to avoid lookahead bias
+				const scoreDate = prevDate ?? date;
+				const pos = positions.get(code)!;
+				const recencyDays = pos.daysHeld;
+				const score =
+					config.rankBy === "random"
+						? Math.random()
+						: computeRankScore(stock, scoreDate, config.rankBy, recencyDays);
+				scoredHoldings.push({ code, score, stock });
+			}
+			for (const c of buyCandidates) {
+				if (!scoredHoldings.some((h) => h.code === c.code)) {
+					scoredHoldings.push({ code: c.code, score: c.score, stock: c.stock });
+				}
+			}
+			scoredHoldings.sort((a, b) => {
+				if (b.score !== a.score) return b.score - a.score;
+				return a.code.localeCompare(b.code);
+			});
+			const maxHoldings = config.maxPositions ?? scoredHoldings.length;
+			const targetCodes = new Set<string>();
+			for (const h of scoredHoldings) {
+				if (targetCodes.size >= maxHoldings) break;
+				// Existing positions can be kept even if limit-up; new candidates must be buyable today
+				if (positions.has(h.code)) {
+					targetCodes.add(h.code);
+				} else {
+					const klineMap = klineMapByCode.get(h.code);
+					const kline = klineMap?.get(date);
+					if (kline && isLimitUp(kline)) continue;
+					targetCodes.add(h.code);
+				}
+			}
+
+			rankLoopTime += performance.now() - tRankStart;
+			const tExecStart = performance.now();
+
+			const isRebalanceDay = rebalanceFrequency <= 1 || dateIdx % rebalanceFrequency === 0;
+
+			// Force-sell all positions on full-rebalance days before rebuilding the portfolio
+			if (isRebalanceDay && config.rebalanceFullPortfolio) {
+				for (const code of [...positions.keys()].sort()) {
+					const pos = positions.get(code)!;
+					const stock = stockMap.get(code);
+					if (!stock) continue;
+
+					const klineMap = klineMapByCode.get(code);
+					const kline = klineMap?.get(date);
+					if (!checkTradeable(kline)) continue;
+					const sellPrice = (kline?.open ?? pos.lastClose) * (1 - slippage);
+					const sellAmount = pos.shares * sellPrice;
+					if (!isTradeAmountValid(sellAmount, minTradeAmount)) {
+						continue;
+					}
+					const proceeds = sellAmount * (1 - commission - transferFee - taxRate);
+					const costBasis = pos.shares * pos.entryPrice * (1 + commission + transferFee);
+					const pnl = proceeds - costBasis;
+					trades.push({
+						code,
+						market: stock.market,
+						direction: "sell",
+						date,
+						price: sellPrice,
+						shares: pos.shares,
+						amount: sellAmount,
+						pnl,
+						pnlPct: costBasis > 0 ? (pnl / costBasis) * 100 : 0,
+						daysHeld: pos.daysHeld,
+						result: pnl > 0 ? "win" : pnl < 0 ? "loss" : "breakeven",
+						memo: "周期强制换仓",
+					});
+					cash += proceeds;
+					positions.delete(code);
+				}
+			}
+
+			// Sell positions that dropped out of top maxPositions
+			if (isRebalanceDay) {
+				for (const code of [...positions.keys()].sort()) {
+					if (targetCodes.has(code)) continue;
+					const pos = positions.get(code)!;
+					const stock = stockMap.get(code);
+					if (!stock) continue;
+
+					const klineMap = klineMapByCode.get(code);
+					const kline = klineMap?.get(date);
+					if (!checkTradeable(kline)) continue;
+					const sellPrice = (kline?.open ?? pos.lastClose) * (1 - slippage);
+					const sellAmount = pos.shares * sellPrice;
+					if (!isTradeAmountValid(sellAmount, minTradeAmount)) {
+						continue;
+					}
+					const proceeds = sellAmount * (1 - commission - transferFee - taxRate);
+					const costBasis = pos.shares * pos.entryPrice * (1 + commission + transferFee);
+					const pnl = proceeds - costBasis;
+					trades.push({
+						code,
+						market: stock.market,
+						direction: "sell",
+						date,
+						price: sellPrice,
+						shares: pos.shares,
+						amount: sellAmount,
+						pnl,
+						pnlPct: costBasis > 0 ? (pnl / costBasis) * 100 : 0,
+						daysHeld: pos.daysHeld,
+						result: pnl > 0 ? "win" : pnl < 0 ? "loss" : "breakeven",
+						memo: "调出目标持仓",
+					});
+					cash += proceeds;
+					positions.delete(code);
+				}
+			}
+
+			// 5.4 Buy / rebalance target holdings
+			if (!isRebalanceDay) {
+				// do nothing on off days; hold existing positions
+			} else if (!fullPosition) {
+				// Non-full-position: buy new target holdings with available cash
+				for (const code of [...targetCodes].sort()) {
+					if (positions.has(code)) continue;
+					const stock = stockMap.get(code);
+					if (!stock) continue;
+
+					const exec = stock.execMap.get(date);
+					if (exec?.type !== "buy") continue;
+
+					const execKline = klineMapByCode.get(code)?.get(date);
+					if (execKline && isLimitUp(execKline)) continue;
+					if (!checkTradeable(execKline)) continue;
+
+					const buyPrice = exec.price * (1 + slippage);
+					const maxBuyAmount = computeMaxBuyAmount(initialCapital, cash, positions.size, allowedCodes.size);
+					const rawShares = Math.floor(maxBuyAmount / buyPrice);
+					const shares = Math.floor(rawShares / minLot) * minLot;
+
+					if (shares >= minLot) {
+						const amount = shares * buyPrice;
+						if (!isTradeAmountValid(amount, minTradeAmount)) {
+							continue;
+						}
+						const cost = amount * (1 + commission + transferFee);
+						if (cost <= cash) {
+							cash -= cost;
+							positions.set(code, {
+								shares,
+								entryPrice: buyPrice,
+								entryDate: date,
+								daysHeld: 0,
+								lastClose: buyPrice,
+							});
+							trades.push({
+								code,
+								market: stock.market,
+								direction: "buy",
+								date,
+								price: buyPrice,
+								shares,
+								amount,
+								memo: "策略买入",
+							});
+						}
 					}
 				}
 			}
-		}
 
-		// 5.5 Full-position rebalance
-		else if (fullPosition) {
-			if (fullPositionMode === "add_to_holdings") {
-				// Buy new target positions first, then distribute remaining cash across held positions
-				const targetCodesArray = [...targetCodes].sort();
-				const heldTargetCodes = targetCodesArray.filter((code) => positions.has(code));
-				const newTargetCodes = targetCodesArray.filter((code) => !positions.has(code));
+			// 5.5 Full-position rebalance
+			else if (fullPosition) {
+				if (fullPositionMode === "add_to_holdings") {
+					// Buy new target positions first, then distribute remaining cash across held positions
+					const targetCodesArray = [...targetCodes].sort();
+					const heldTargetCodes = targetCodesArray.filter((code) => positions.has(code));
+					const newTargetCodes = targetCodesArray.filter((code) => !positions.has(code));
 
-				if (targetCodesArray.length > 0) {
-					let totalValue = cash;
-					for (const code of heldTargetCodes) {
-						const pos = positions.get(code)!;
-						const klineMap = klineMapByCode.get(code);
-						const kline = klineMap?.get(date);
-						const price = kline?.open ?? pos.lastClose;
-						if (price > 0) totalValue += pos.shares * price;
-					}
-					const targetValue = totalValue / targetCodes.size;
-					const maxTargetValue = totalValue * maxPositionWeight;
-					const effectiveTargetValue = Math.min(targetValue, maxTargetValue);
-
-					// Buy new target positions up to the target weight
-					for (const code of newTargetCodes) {
-						const stock = stockMap.get(code);
-						if (!stock) continue;
-						const klineMap = klineMapByCode.get(code);
-						const kline = klineMap?.get(date);
-						if (!kline || isLimitUp(kline)) continue;
-						if (!checkTradeable(kline)) continue;
-						const buyPrice = (kline.open ?? 0) * (1 + slippage);
-						if (buyPrice <= 0) continue;
-						const rawShares = Math.floor(effectiveTargetValue / buyPrice);
-						const shares = Math.floor(rawShares / minLot) * minLot;
-						if (shares >= minLot) {
-							const amount = shares * buyPrice;
-							if (!isTradeAmountValid(amount, minTradeAmount)) continue;
-							const cost = amount * (1 + commission + transferFee);
-							if (cost <= cash) {
-								cash -= cost;
-								positions.set(code, {
-									shares,
-									entryPrice: buyPrice,
-									entryDate: date,
-									daysHeld: 0,
-									lastClose: buyPrice,
-								});
-								trades.push({
-									code,
-									market: stock.market,
-									direction: "buy",
-									date,
-									price: buyPrice,
-									shares,
-									amount,
-									memo: "满仓买入",
-								});
-							}
-						}
-					}
-
-					// Distribute remaining cash evenly across all held target positions
-					const allHeldTargetCodes = targetCodesArray.filter((code) => positions.has(code));
-					if (allHeldTargetCodes.length > 0 && cash > 0) {
-						let remaining = allHeldTargetCodes.length;
-						for (const code of allHeldTargetCodes) {
+					if (targetCodesArray.length > 0) {
+						let totalValue = cash;
+						for (const code of heldTargetCodes) {
 							const pos = positions.get(code)!;
-							const stock = stockMap.get(code);
-							if (!stock) {
-								remaining--;
-								continue;
-							}
 							const klineMap = klineMapByCode.get(code);
 							const kline = klineMap?.get(date);
-							if (kline && isLimitUp(kline)) {
-								remaining--;
-								continue;
-							}
-							if (!checkTradeable(kline)) {
-								remaining--;
-								continue;
-							}
-							const buyPrice = (kline?.open ?? pos.lastClose) * (1 + slippage);
-							const currentValue = pos.shares * buyPrice;
-							const maxAddValue = Math.max(0, totalValue * maxPositionWeight - currentValue);
-							const cashPerStock = cash / remaining;
-							const cashToUse = Math.min(cashPerStock, maxAddValue);
-							const rawShares = Math.floor(cashToUse / buyPrice);
-							const shares = Math.floor(rawShares / minLot) * minLot;
+							const price = kline?.open ?? pos.lastClose;
+							if (price > 0) totalValue += pos.shares * price;
+						}
+						const targetValue = totalValue / targetCodes.size;
+						const maxTargetValue = totalValue * maxPositionWeight;
+						const effectiveTargetValue = Math.min(targetValue, maxTargetValue);
 
+						// Buy new target positions up to the target weight
+						for (const code of newTargetCodes) {
+							const stock = stockMap.get(code);
+							if (!stock) continue;
+							const klineMap = klineMapByCode.get(code);
+							const kline = klineMap?.get(date);
+							if (!kline || isLimitUp(kline)) continue;
+							if (!checkTradeable(kline)) continue;
+							const buyPrice = (kline.open ?? 0) * (1 + slippage);
+							if (buyPrice <= 0) continue;
+							const rawShares = Math.floor(effectiveTargetValue / buyPrice);
+							const shares = Math.floor(rawShares / minLot) * minLot;
 							if (shares >= minLot) {
 								const amount = shares * buyPrice;
-								if (!isTradeAmountValid(amount, minTradeAmount)) {
-									remaining--;
-									continue;
-								}
+								if (!isTradeAmountValid(amount, minTradeAmount)) continue;
 								const cost = amount * (1 + commission + transferFee);
 								if (cost <= cash) {
 									cash -= cost;
-									const totalCost = pos.entryPrice * pos.shares + amount;
-									pos.shares += shares;
-									pos.entryPrice = totalCost / pos.shares;
+									positions.set(code, {
+										shares,
+										entryPrice: buyPrice,
+										entryDate: date,
+										daysHeld: 0,
+										lastClose: buyPrice,
+									});
 									trades.push({
 										code,
 										market: stock.market,
@@ -1301,186 +1300,53 @@ export async function runPoolBacktest(
 										price: buyPrice,
 										shares,
 										amount,
-										memo: "满仓加仓",
+										memo: "满仓买入",
 									});
 								}
 							}
-							remaining--;
 						}
-					}
-				}
-			} else if (fullPositionMode === "equal_weight") {
-				// Target equal-weight rebalancing among target holdings
-				if (targetCodes.size > 0) {
-					// Total portfolio value at today's open
-					let totalValue = cash;
-					for (const code of targetCodes) {
-						const pos = positions.get(code);
-						const klineMap = klineMapByCode.get(code);
-						const kline = klineMap?.get(date);
-						const price = kline?.open ?? pos?.lastClose ?? 0;
-						if (pos && price > 0) totalValue += pos.shares * price;
-					}
 
-					const targetValue = totalValue / targetCodes.size;
-					const maxTargetValue = totalValue * maxPositionWeight;
-					const effectiveTargetValue = Math.min(targetValue, maxTargetValue);
-
-					// Sell overweight positions first (partial sells allowed)
-					for (const code of [...targetCodes].sort()) {
-						const pos = positions.get(code);
-						if (!pos) continue;
-
-						const stock = stockMap.get(code);
-						if (!stock) continue;
-
-						const klineMap = klineMapByCode.get(code);
-						const kline = klineMap?.get(date);
-						if (!checkTradeable(kline)) continue;
-						const sellPrice = (kline?.open ?? pos.lastClose) * (1 - slippage);
-						const currentValue = pos.shares * sellPrice;
-						if (currentValue <= effectiveTargetValue) continue;
-
-						const excessValue = currentValue - effectiveTargetValue;
-						if (excessValue <= effectiveTargetValue * rebalanceThreshold) continue;
-
-						const rawShares = Math.floor(excessValue / sellPrice);
-						const shares = Math.floor(rawShares / minLot) * minLot;
-
-						if (shares >= minLot && shares < pos.shares) {
-							const sellAmount = shares * sellPrice;
-							if (!isTradeAmountValid(sellAmount, minTradeAmount)) {
-								continue;
-							}
-							const proceeds = sellAmount * (1 - commission - transferFee - taxRate);
-							const costBasis = shares * pos.entryPrice * (1 + commission + transferFee);
-							const pnl = proceeds - costBasis;
-							trades.push({
-								code,
-								market: stock.market,
-								direction: "sell",
-								date,
-								price: sellPrice,
-								shares,
-								amount: sellAmount,
-								pnl,
-								pnlPct: costBasis > 0 ? (pnl / costBasis) * 100 : 0,
-								daysHeld: pos.daysHeld,
-								result: pnl > 0 ? "win" : pnl < 0 ? "loss" : "breakeven",
-								memo: "等权再平衡减仓",
-							});
-							cash += proceeds;
-							pos.shares -= shares;
-							if (pos.shares <= 0) positions.delete(code);
-						}
-					}
-
-					// Buy underweight positions
-					for (const code of [...targetCodes].sort()) {
-						const pos = positions.get(code);
-						const stock = stockMap.get(code);
-						if (!stock) continue;
-
-						const klineMap = klineMapByCode.get(code);
-						const kline = klineMap?.get(date);
-						// Skip rebalancing buy if at limit-up
-						if (kline && isLimitUp(kline)) continue;
-						if (!checkTradeable(kline)) continue;
-						const buyPrice = (kline?.open ?? pos?.lastClose ?? 0) * (1 + slippage);
-						if (buyPrice <= 0) continue;
-
-						const currentValue = pos ? pos.shares * buyPrice : 0;
-						const deficitValue = effectiveTargetValue - currentValue;
-						if (deficitValue <= effectiveTargetValue * rebalanceThreshold) continue;
-
-						const rawShares = Math.floor(deficitValue / buyPrice);
-						const shares = Math.floor(rawShares / minLot) * minLot;
-
-						if (shares >= minLot) {
-							const amount = shares * buyPrice;
-							if (!isTradeAmountValid(amount, minTradeAmount)) {
-								continue;
-							}
-							const cost = amount * (1 + commission + transferFee);
-							if (cost <= cash) {
-								cash -= cost;
-								if (pos) {
-									const totalCost = pos.entryPrice * pos.shares + amount;
-									pos.shares += shares;
-									pos.entryPrice = totalCost / pos.shares;
-								} else {
-									positions.set(code, {
-										shares,
-										entryPrice: buyPrice,
-										entryDate: date,
-										daysHeld: 0,
-										lastClose: buyPrice,
-									});
+						// Distribute remaining cash evenly across all held target positions
+						const allHeldTargetCodes = targetCodesArray.filter((code) => positions.has(code));
+						if (allHeldTargetCodes.length > 0 && cash > 0) {
+							let remaining = allHeldTargetCodes.length;
+							for (const code of allHeldTargetCodes) {
+								const pos = positions.get(code)!;
+								const stock = stockMap.get(code);
+								if (!stock) {
+									remaining--;
+									continue;
 								}
-								trades.push({
-									code,
-									market: stock.market,
-									direction: "buy",
-									date,
-									price: buyPrice,
-									shares,
-									amount,
-									memo: "等权再平衡买入",
-								});
-							}
-						}
-					}
+								const klineMap = klineMapByCode.get(code);
+								const kline = klineMap?.get(date);
+								if (kline && isLimitUp(kline)) {
+									remaining--;
+									continue;
+								}
+								if (!checkTradeable(kline)) {
+									remaining--;
+									continue;
+								}
+								const buyPrice = (kline?.open ?? pos.lastClose) * (1 + slippage);
+								const currentValue = pos.shares * buyPrice;
+								const maxAddValue = Math.max(0, totalValue * maxPositionWeight - currentValue);
+								const cashPerStock = cash / remaining;
+								const cashToUse = Math.min(cashPerStock, maxAddValue);
+								const rawShares = Math.floor(cashToUse / buyPrice);
+								const shares = Math.floor(rawShares / minLot) * minLot;
 
-					// Cash sweep: if some targets were limit-up, redistribute remaining cash
-					// evenly across the targets that are actually buyable today.
-					const buyableTargetCodes = [...targetCodes].filter((code) => {
-						const klineMap = klineMapByCode.get(code);
-						const kline = klineMap?.get(date);
-						if (kline && isLimitUp(kline)) return false;
-						return checkTradeable(kline);
-					});
-					if (buyableTargetCodes.length > 0 && cash > 0) {
-						let remaining = buyableTargetCodes.length;
-						for (const code of buyableTargetCodes) {
-							const pos = positions.get(code);
-							const stock = stockMap.get(code);
-							if (!stock) {
-								remaining--;
-								continue;
-							}
-							const klineMap = klineMapByCode.get(code);
-							const kline = klineMap?.get(date);
-							const buyPrice = (kline?.open ?? pos?.lastClose ?? 0) * (1 + slippage);
-							if (buyPrice <= 0) {
-								remaining--;
-								continue;
-							}
-							const currentValue = pos ? pos.shares * buyPrice : 0;
-							const maxAddValue = Math.max(0, totalValue * maxPositionWeight - currentValue);
-							const cashPerStock = cash / remaining;
-							const cashToUse = Math.min(cashPerStock, maxAddValue);
-							const rawShares = Math.floor(cashToUse / buyPrice);
-							const shares = Math.floor(rawShares / minLot) * minLot;
-
-							if (shares >= minLot) {
-								const amount = shares * buyPrice;
-								if (isTradeAmountValid(amount, minTradeAmount)) {
+								if (shares >= minLot) {
+									const amount = shares * buyPrice;
+									if (!isTradeAmountValid(amount, minTradeAmount)) {
+										remaining--;
+										continue;
+									}
 									const cost = amount * (1 + commission + transferFee);
 									if (cost <= cash) {
 										cash -= cost;
-										if (pos) {
-											const totalCost = pos.entryPrice * pos.shares + amount;
-											pos.shares += shares;
-											pos.entryPrice = totalCost / pos.shares;
-										} else {
-											positions.set(code, {
-												shares,
-												entryPrice: buyPrice,
-												entryDate: date,
-												daysHeld: 0,
-												lastClose: buyPrice,
-											});
-										}
+										const totalCost = pos.entryPrice * pos.shares + amount;
+										pos.shares += shares;
+										pos.entryPrice = totalCost / pos.shares;
 										trades.push({
 											code,
 											market: stock.market,
@@ -1489,39 +1355,268 @@ export async function runPoolBacktest(
 											price: buyPrice,
 											shares,
 											amount,
-											memo: "等权现金 sweep",
+											memo: "满仓加仓",
 										});
 									}
 								}
+								remaining--;
 							}
-							remaining--;
+						}
+					}
+				} else if (fullPositionMode === "equal_weight") {
+					// Target equal-weight rebalancing among target holdings
+					if (targetCodes.size > 0) {
+						// Total portfolio value at today's open
+						let totalValue = cash;
+						for (const code of targetCodes) {
+							const pos = positions.get(code);
+							const klineMap = klineMapByCode.get(code);
+							const kline = klineMap?.get(date);
+							const price = kline?.open ?? pos?.lastClose ?? 0;
+							if (pos && price > 0) totalValue += pos.shares * price;
+						}
+
+						const targetValue = totalValue / targetCodes.size;
+						const maxTargetValue = totalValue * maxPositionWeight;
+						const effectiveTargetValue = Math.min(targetValue, maxTargetValue);
+
+						// Sell overweight positions first (partial sells allowed)
+						for (const code of [...targetCodes].sort()) {
+							const pos = positions.get(code);
+							if (!pos) continue;
+
+							const stock = stockMap.get(code);
+							if (!stock) continue;
+
+							const klineMap = klineMapByCode.get(code);
+							const kline = klineMap?.get(date);
+							if (!checkTradeable(kline)) continue;
+							const sellPrice = (kline?.open ?? pos.lastClose) * (1 - slippage);
+							const currentValue = pos.shares * sellPrice;
+							if (currentValue <= effectiveTargetValue) continue;
+
+							const excessValue = currentValue - effectiveTargetValue;
+							if (excessValue <= effectiveTargetValue * rebalanceThreshold) continue;
+
+							const rawShares = Math.floor(excessValue / sellPrice);
+							const shares = Math.floor(rawShares / minLot) * minLot;
+
+							if (shares >= minLot && shares < pos.shares) {
+								const sellAmount = shares * sellPrice;
+								if (!isTradeAmountValid(sellAmount, minTradeAmount)) {
+									continue;
+								}
+								const proceeds = sellAmount * (1 - commission - transferFee - taxRate);
+								const costBasis = shares * pos.entryPrice * (1 + commission + transferFee);
+								const pnl = proceeds - costBasis;
+								trades.push({
+									code,
+									market: stock.market,
+									direction: "sell",
+									date,
+									price: sellPrice,
+									shares,
+									amount: sellAmount,
+									pnl,
+									pnlPct: costBasis > 0 ? (pnl / costBasis) * 100 : 0,
+									daysHeld: pos.daysHeld,
+									result: pnl > 0 ? "win" : pnl < 0 ? "loss" : "breakeven",
+									memo: "等权再平衡减仓",
+								});
+								cash += proceeds;
+								pos.shares -= shares;
+								if (pos.shares <= 0) positions.delete(code);
+							}
+						}
+
+						// Buy underweight positions
+						for (const code of [...targetCodes].sort()) {
+							const pos = positions.get(code);
+							const stock = stockMap.get(code);
+							if (!stock) continue;
+
+							const klineMap = klineMapByCode.get(code);
+							const kline = klineMap?.get(date);
+							// Skip rebalancing buy if at limit-up
+							if (kline && isLimitUp(kline)) continue;
+							if (!checkTradeable(kline)) continue;
+							const buyPrice = (kline?.open ?? pos?.lastClose ?? 0) * (1 + slippage);
+							if (buyPrice <= 0) continue;
+
+							const currentValue = pos ? pos.shares * buyPrice : 0;
+							const deficitValue = effectiveTargetValue - currentValue;
+							if (deficitValue <= effectiveTargetValue * rebalanceThreshold) continue;
+
+							const rawShares = Math.floor(deficitValue / buyPrice);
+							const shares = Math.floor(rawShares / minLot) * minLot;
+
+							if (shares >= minLot) {
+								const amount = shares * buyPrice;
+								if (!isTradeAmountValid(amount, minTradeAmount)) {
+									continue;
+								}
+								const cost = amount * (1 + commission + transferFee);
+								if (cost <= cash) {
+									cash -= cost;
+									if (pos) {
+										const totalCost = pos.entryPrice * pos.shares + amount;
+										pos.shares += shares;
+										pos.entryPrice = totalCost / pos.shares;
+									} else {
+										positions.set(code, {
+											shares,
+											entryPrice: buyPrice,
+											entryDate: date,
+											daysHeld: 0,
+											lastClose: buyPrice,
+										});
+									}
+									trades.push({
+										code,
+										market: stock.market,
+										direction: "buy",
+										date,
+										price: buyPrice,
+										shares,
+										amount,
+										memo: "等权再平衡买入",
+									});
+								}
+							}
+						}
+
+						// Cash sweep: if some targets were limit-up, redistribute remaining cash
+						// evenly across the targets that are actually buyable today.
+						const buyableTargetCodes = [...targetCodes].filter((code) => {
+							const klineMap = klineMapByCode.get(code);
+							const kline = klineMap?.get(date);
+							if (kline && isLimitUp(kline)) return false;
+							return checkTradeable(kline);
+						});
+						if (buyableTargetCodes.length > 0 && cash > 0) {
+							let remaining = buyableTargetCodes.length;
+							for (const code of buyableTargetCodes) {
+								const pos = positions.get(code);
+								const stock = stockMap.get(code);
+								if (!stock) {
+									remaining--;
+									continue;
+								}
+								const klineMap = klineMapByCode.get(code);
+								const kline = klineMap?.get(date);
+								const buyPrice = (kline?.open ?? pos?.lastClose ?? 0) * (1 + slippage);
+								if (buyPrice <= 0) {
+									remaining--;
+									continue;
+								}
+								const currentValue = pos ? pos.shares * buyPrice : 0;
+								const maxAddValue = Math.max(0, totalValue * maxPositionWeight - currentValue);
+								const cashPerStock = cash / remaining;
+								const cashToUse = Math.min(cashPerStock, maxAddValue);
+								const rawShares = Math.floor(cashToUse / buyPrice);
+								const shares = Math.floor(rawShares / minLot) * minLot;
+
+								if (shares >= minLot) {
+									const amount = shares * buyPrice;
+									if (isTradeAmountValid(amount, minTradeAmount)) {
+										const cost = amount * (1 + commission + transferFee);
+										if (cost <= cash) {
+											cash -= cost;
+											if (pos) {
+												const totalCost = pos.entryPrice * pos.shares + amount;
+												pos.shares += shares;
+												pos.entryPrice = totalCost / pos.shares;
+											} else {
+												positions.set(code, {
+													shares,
+													entryPrice: buyPrice,
+													entryDate: date,
+													daysHeld: 0,
+													lastClose: buyPrice,
+												});
+											}
+											trades.push({
+												code,
+												market: stock.market,
+												direction: "buy",
+												date,
+												price: buyPrice,
+												shares,
+												amount,
+												memo: "等权现金 sweep",
+											});
+										}
+									}
+								}
+								remaining--;
+							}
 						}
 					}
 				}
 			}
-		}
 
-		execLoopTime += performance.now() - tExecStart;
+			execLoopTime += performance.now() - tExecStart;
 
-		// 5.4 Compute equity at market close after all trades
-		let marketValue = 0;
-		for (const [code, pos] of positions) {
-			const klineMap = klineMapByCode.get(code);
-			const kline = klineMap?.get(date);
-			if (kline?.close != null) {
-				marketValue += pos.shares * kline.close;
-				pos.lastClose = kline.close;
-			} else {
-				marketValue += pos.shares * pos.lastClose;
+			// 5.4 Compute equity at market close after all trades
+			let marketValue = 0;
+			for (const [code, pos] of positions) {
+				const klineMap = klineMapByCode.get(code);
+				const kline = klineMap?.get(date);
+				if (kline?.close != null) {
+					marketValue += pos.shares * kline.close;
+					pos.lastClose = kline.close;
+				} else {
+					marketValue += pos.shares * pos.lastClose;
+				}
 			}
+			equityCurve.push({ date, equity: cash + marketValue });
 		}
-		equityCurve.push({ date, equity: cash + marketValue });
+
+		return { trades, equityCurve, filteredTradeCount, rankLoopTime, execLoopTime };
 	}
 
+	const isRandomMultiRun = config.rankBy === "random" && (config.randomRuns ?? 1) > 1;
+	const actualRuns = isRandomMultiRun ? (config.randomRuns ?? 1) : 1;
+	const passResults: Array<ReturnType<typeof runOneSimulation>> = [];
+	const tSimStart = performance.now();
+	for (let r = 0; r < actualRuns; r++) {
+		passResults.push(runOneSimulation());
+	}
 	const tSimEnd = performance.now();
 
+	// Aggregate across random runs if multi-run; otherwise use single pass
+	let allTrades: PoolTrade[];
+	let finalEquityCurve: EquityPoint[];
+	let finalFilteredCount: number;
+	let finalRankLoopTime: number;
+	let finalExecLoopTime: number;
+	if (isRandomMultiRun) {
+		allTrades = passResults.flatMap((p) => p.trades);
+		const maxEqLen = Math.max(...passResults.map((p) => p.equityCurve.length));
+		finalEquityCurve = [];
+		for (let d = 0; d < maxEqLen; d++) {
+			const vals = passResults.map((p) => p.equityCurve[d]?.equity).filter((e): e is number => e != null);
+			if (vals.length >= passResults.length / 2) {
+				finalEquityCurve.push({
+					date: passResults[0].equityCurve[Math.min(d, passResults[0].equityCurve.length - 1)].date,
+					equity: vals.sort((a, b) => a - b)[Math.floor(vals.length / 2)],
+				});
+			}
+		}
+		finalFilteredCount = passResults.reduce((sum, p) => sum + p.filteredTradeCount, 0);
+		finalRankLoopTime = passResults.reduce((sum, p) => sum + p.rankLoopTime, 0);
+		finalExecLoopTime = passResults.reduce((sum, p) => sum + p.execLoopTime, 0);
+	} else {
+		const single = passResults[0];
+		allTrades = single.trades;
+		finalEquityCurve = single.equityCurve;
+		finalFilteredCount = single.filteredTradeCount;
+		finalRankLoopTime = single.rankLoopTime;
+		finalExecLoopTime = single.execLoopTime;
+	}
+
 	// 6. Compute metrics (adapt PoolTrade sells to Trade shape)
-	const sellTrades: Trade[] = trades
+	const sellTrades: Trade[] = allTrades
 		.filter((t) => t.direction === "sell")
 		.map((t) => ({
 			entryIndex: 0,
@@ -1537,14 +1632,14 @@ export async function runPoolBacktest(
 			result: t.result ?? "breakeven",
 		}));
 
-	const metrics = computeMetrics(sellTrades, equityCurve, initialCapital, config.period);
+	const metrics = computeMetrics(sellTrades, finalEquityCurve, initialCapital, config.period);
 
 	if (profile) {
 		console.log(
 			`[profile] stocks=${stockData.length} dates=${allDates.length} setup=${(tLoadStart - t0).toFixed(0)}ms ` +
 				`db=${(tDbEnd - tLoadStart).toFixed(0)}ms signal=${signalGenTime.toFixed(0)}ms ` +
-				`filterCtx=${(tSimStart - tSignalEnd).toFixed(0)}ms rank=${rankLoopTime.toFixed(0)}ms ` +
-				`exec=${execLoopTime.toFixed(0)}ms sim=${(tSimEnd - tSimStart).toFixed(0)}ms ` +
+				`filterCtx=${(tSimStart - tSignalEnd).toFixed(0)}ms rank=${finalRankLoopTime.toFixed(0)}ms ` +
+				`exec=${finalExecLoopTime.toFixed(0)}ms sim=${(tSimEnd - tSimStart).toFixed(0)}ms ` +
 				`metrics=${(performance.now() - tSimEnd).toFixed(0)}ms total=${(performance.now() - t0).toFixed(0)}ms`,
 		);
 	}
@@ -1555,10 +1650,10 @@ export async function runPoolBacktest(
 		startDate: allDates[0] ?? "",
 		endDate: allDates[allDates.length - 1] ?? "",
 		initialCapital,
-		trades,
-		equityCurve,
+		trades: allTrades,
+		equityCurve: finalEquityCurve,
 		metrics,
-		filteredTradeCount,
+		filteredTradeCount: finalFilteredCount,
 		elapsedMs: Math.round(performance.now() - t0),
 	};
 }

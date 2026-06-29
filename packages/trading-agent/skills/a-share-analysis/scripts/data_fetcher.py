@@ -19,11 +19,6 @@ from typing import Optional, Callable
 from functools import wraps
 from concurrent.futures import ThreadPoolExecutor, as_completed
 
-# Add stock-data skill scripts to path for hybrid data sourcing
-_STOCK_DATA_SCRIPTS_DIR = os.path.join(os.path.dirname(__file__), "..", "..", "stock-data", "scripts")
-if _STOCK_DATA_SCRIPTS_DIR not in sys.path:
-    sys.path.insert(0, _STOCK_DATA_SCRIPTS_DIR)
-
 try:
     import akshare as ak
     import pandas as pd
@@ -43,12 +38,6 @@ try:
     HAS_BS4 = True
 except ImportError:
     HAS_BS4 = False
-
-try:
-    from jq_data import normalize_code, fetch_latest, get_kline_data
-    HAS_STOCK_DATA = True
-except Exception:
-    HAS_STOCK_DATA = False
 
 # Session-level in-memory cache (same-day only)
 _SESSION_CACHE = {}
@@ -575,37 +564,6 @@ def save_cache(code: str, data_type: str, data: dict):
         pass
 
 
-def _get_stock_info_from_stock_data(code: str) -> dict:
-    """Use JoinQuant fetch_latest for fast real-time quote data."""
-    if not HAS_STOCK_DATA:
-        return {"error": "stock-data skill not available"}
-    _ensure_auth()
-    try:
-        jq_code = normalize_code(code)
-        df = fetch_latest(jq_code, fq='pre')
-        if df is None or df.empty:
-            return {"error": "empty quote from stock-data"}
-        row = df.iloc[0]
-        close_p = safe_float(row.get("close"))
-        pre_close = safe_float(row.get("pre_close"))
-        change_pct = None
-        if close_p is not None and pre_close is not None and pre_close != 0:
-            change_pct = round((close_p - pre_close) / pre_close * 100, 4)
-        return {
-            "code": code,
-            "latest_price": close_p,
-            "change_pct": change_pct,
-            "open": safe_float(row.get("open")),
-            "high": safe_float(row.get("high")),
-            "low": safe_float(row.get("low")),
-            "volume": safe_float(row.get("volume")),
-            "turnover": safe_float(row.get("money")),
-            "_source": "stock-data"
-        }
-    except Exception as e:
-        return {"error": str(e)}
-
-
 def _get_stock_info_from_akshare(code: str) -> dict:
     """Use akshare for comprehensive basic info."""
     try:
@@ -628,36 +586,6 @@ def _get_stock_info_from_akshare(code: str) -> dict:
         }
     except Exception as e:
         return {"code": code, "error": str(e)}
-
-
-def _get_stock_info_from_jq_enrichment(code: str) -> dict:
-    """Use JoinQuant get_security_info/get_industry for fast static fields."""
-    if not HAS_STOCK_DATA:
-        return {"error": "stock-data skill not available"}
-    _ensure_auth()
-    try:
-        import jqdatasdk as jq
-        jq_code = normalize_code(code)
-        info = jq.get_security_info(jq_code)
-        result = {
-            "name": info.display_name if info and info.display_name else None,
-            "listing_date": info.start_date.strftime('%Y-%m-%d') if info and hasattr(info, 'start_date') and info.start_date else None,
-        }
-        # Industry info
-        try:
-            today = datetime.now().strftime('%Y-%m-%d')
-            ind = jq.get_industry(security=[jq_code], date=today)
-            jq_ind = ind.get(jq_code, {})
-            # Prefer sw_l1, fallback to jq_l1
-            for key in ['sw_l1', 'jq_l1', 'zjw']:
-                if key in jq_ind:
-                    result["industry"] = jq_ind[key].get('industry_name')
-                    break
-        except Exception:
-            pass
-        return result
-    except Exception as e:
-        return {"error": str(e)}
 
 
 @retry_on_failure(max_retries=2, delay=1.0)
@@ -1171,58 +1099,6 @@ def get_dividend_data(code: str) -> dict:
     return {"dividend_history": [], "dividend_count": 0}
 
 
-@retry_on_failure(max_retries=2, delay=1.0)
-def _get_price_data_from_stock_data(code: str, days: int = 60) -> dict:
-    """Use stock-data (JoinQuant) for K-line OHLCV data."""
-    if not HAS_STOCK_DATA:
-        return {"error": "stock-data skill not available"}
-    _ensure_auth()
-    try:
-        end_date = datetime.now().strftime('%Y%m%d')
-        start_date = (datetime.now() - timedelta(days=days + 5)).strftime('%Y%m%d')
-        jq_code = normalize_code(code)
-        df = get_kline_data(
-            jq_code,
-            start_date=start_date,
-            end_date=end_date,
-            frequency="daily",
-            fq="pre",
-        )
-        if df is None or df.empty:
-            return {"error": "empty klines from stock-data"}
-        klines = df.to_dict(orient='records')
-        if not klines:
-            return {"error": "empty klines from stock-data"}
-        for k in klines:
-            if "date" in k and hasattr(k["date"], "strftime"):
-                k["date"] = k["date"].strftime('%Y-%m-%d')
-        latest = klines[-1]
-        df_slice = klines[-days:] if len(klines) >= days else klines
-        highs = [k["high"] for k in df_slice if k.get("high") is not None]
-        lows = [k["low"] for k in df_slice if k.get("low") is not None]
-        tail_20 = klines[-20:] if len(klines) >= 20 else klines
-        tail_volumes = [k["volume"] for k in tail_20 if k.get("volume") is not None]
-        close_p = safe_float(latest.get("close"))
-        pre_close = safe_float(latest.get("pre_close"))
-        change_pct = None
-        if close_p is not None and pre_close is not None and pre_close != 0:
-            change_pct = round((close_p - pre_close) / pre_close * 100, 4)
-        return {
-            "latest_price": close_p,
-            "latest_date": str(latest.get("date", "")).split()[0],
-            "price_change_pct": change_pct,
-            "volume": safe_float(latest.get("volume")),
-            "turnover": safe_float(latest.get("money")),
-            "high_60d": max(highs) if highs else None,
-            "low_60d": min(lows) if lows else None,
-            "avg_volume_20d": sum(tail_volumes) / len(tail_volumes) if tail_volumes else None,
-            "price_data": klines[-30:] if len(klines) >= 30 else klines,
-            "_source": "stock-data"
-        }
-    except Exception as e:
-        return {"error": str(e)}
-
-
 def _get_price_data_from_akshare(code: str, days: int = 60) -> dict:
     """Use akshare for price data fallback."""
     try:
@@ -1252,16 +1128,13 @@ def _get_price_data_from_akshare(code: str, days: int = 60) -> dict:
 
 @retry_on_failure(max_retries=2, delay=1.0)
 def get_price_data(code: str, days: int = 60) -> dict:
-    """获取价格数据（优先本地 SQLite klines 表，fallback 东方财富/akshare）"""
+    """获取价格数据（优先本地 SQLite klines 表，fallback akshare）"""
     # 1. Primary: local SQLite klines table (~0.01s)
     result = _get_price_data_from_local_db(code, days)
     if "error" not in result:
         return result
 
-    # 2. Fallback: stock-data (JoinQuant) / akshare
-    result = _get_price_data_from_stock_data(code, days)
-    if "error" not in result:
-        return result
+    # 2. Fallback: akshare
     return _get_price_data_from_akshare(code, days)
 
 
@@ -1302,20 +1175,8 @@ def get_all_a_stocks() -> list:
         return []
 
 
-def _ensure_auth():
-    """Authenticate JoinQuant in current thread (jqdatasdk auth is thread-local)."""
-    if HAS_STOCK_DATA:
-        try:
-            import jqdatasdk as jq
-            if not jq.is_auth():
-                jq.auth('13758103948', 'DingPanBao2021')
-        except Exception:
-            pass
-
-
 def _fetch_group(name, code, years, data_type="all"):
     """Helper for parallel fetch groups."""
-    _ensure_auth()
     if name == "basic":
         return {"basic_info": get_stock_info(code)}
     elif name == "financial":
@@ -1366,11 +1227,7 @@ def fetch_stock_data(code: str, data_type: str = "all", years: int = 1, use_cach
     if data_type in ["complete", "holder"]:
         groups.append("holder")
 
-    _ensure_auth()
-
-    # Serial fetch: jqdatasdk has a 1-connection limit per account, so any
-    # groups that use JoinQuant (basic, valuation) must not run in parallel.
-    # Running all groups serially also avoids proxy/connection pool contention.
+    # Serial fetch to avoid connection pool contention.
     for g in groups:
         try:
             result.update(_fetch_group(g, code, years, data_type))

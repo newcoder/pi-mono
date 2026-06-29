@@ -1,0 +1,313 @@
+- generic [ref=e3]:
+  - generic [ref=e4]:
+    - generic [ref=e5]:
+      - generic [ref=e6]: π
+      - generic [ref=e7]: Trading Agent
+    - generic [ref=e8]:
+      - generic [ref=e9]:
+        - generic [ref=e10]: 上证指数
+        - generic [ref=e11]: "4132.46"
+        - generic [ref=e12]: ▲
+        - generic [ref=e13]: 0.02%
+      - generic [ref=e14]:
+        - generic [ref=e15]: 沪深300
+        - generic [ref=e16]: "4808.46"
+        - generic [ref=e17]: ▼
+        - generic [ref=e18]: "-0.52%"
+      - generic [ref=e19]:
+        - generic [ref=e20]: 科创50
+        - generic [ref=e21]: "1727.18"
+        - generic [ref=e22]: ▲
+        - generic [ref=e23]: 1.01%
+      - generic [ref=e24]:
+        - generic [ref=e25]: 中证500
+        - generic [ref=e26]: "8527.02"
+        - generic [ref=e27]: ▼
+        - generic [ref=e28]: "-0.32%"
+      - generic [ref=e29]:
+        - generic [ref=e30]: 深证成指
+        - generic [ref=e31]: "15408.72"
+        - generic [ref=e32]: ▼
+        - generic [ref=e33]: "-0.78%"
+      - generic [ref=e34]:
+        - generic [ref=e35]: 创业板指
+        - generic [ref=e36]: "3867.59"
+        - generic [ref=e37]: ▼
+        - generic [ref=e38]: "-1.21%"
+  - generic [ref=e40]: "市场情绪: 加载中..."
+  - generic [ref=e41]:
+    - generic [ref=e42]: research
+    - generic [ref=e45]: 已连接
+  - generic [ref=e46]:
+    - generic [ref=e47]:
+      - generic [ref=e49]: 股票池
+      - generic [ref=e50]:
+        - generic [ref=e51] [cursor=pointer]:
+          - generic [ref=e52]:
+            - generic [ref=e53]: 周线多头日线回调缩量
+            - button "×" [ref=e54]
+          - generic [ref=e55]: 50 只
+        - generic [ref=e56] [cursor=pointer]:
+          - generic [ref=e57]:
+            - generic [ref=e58]: 前期强势缩量调整
+            - button "×" [ref=e59]
+          - generic [ref=e60]: 50 只
+        - generic [ref=e61] [cursor=pointer]:
+          - generic [ref=e62]:
+            - generic [ref=e63]: 营收连续两年增长超50%
+            - button "×" [ref=e64]
+          - generic [ref=e65]: 45 只
+        - generic [ref=e66] [cursor=pointer]:
+          - generic [ref=e67]:
+            - generic [ref=e68]: 日线多头排列市值TOP10
+            - button "×" [ref=e69]
+          - generic [ref=e70]: 10 只
+        - generic [ref=e71]: 营收连续两年增长超50%
+        - generic [ref=e72] [cursor=pointer]:
+          - generic [ref=e73]: "301200"
+          - generic [ref=e74]: 大族数控
+        - generic [ref=e75] [cursor=pointer]:
+          - generic [ref=e76]: "600649"
+          - generic [ref=e77]: 城投控股
+        - generic [ref=e78] [cursor=pointer]:
+          - generic [ref=e79]: "603991"
+          - generic [ref=e80]: 至正股份
+        - generic [ref=e81] [cursor=pointer]:
+          - generic [ref=e82]: "688802"
+          - generic [ref=e83]: 沐曦股份
+        - generic [ref=e84] [cursor=pointer]:
+          - generic [ref=e85]: "300394"
+          - generic [ref=e86]: 天孚通信
+        - generic [ref=e87] [cursor=pointer]:
+          - generic [ref=e88]: "300972"
+          - generic [ref=e89]: 万辰集团
+        - generic [ref=e90] [cursor=pointer]:
+          - generic [ref=e91]: "301128"
+          - generic [ref=e92]: 强瑞技术
+        - generic [ref=e93] [cursor=pointer]:
+          - generic [ref=e94]: "601069"
+          - generic [ref=e95]: 西部黄金
+        - generic [ref=e96] [cursor=pointer]:
+          - generic [ref=e97]: "688213"
+          - generic [ref=e98]: 思特威
+        - generic [ref=e99] [cursor=pointer]:
+          - generic [ref=e100]: "688225"
+          - generic [ref=e101]: 亚信安全
+        - generic [ref=e102] [cursor=pointer]:
+          - generic [ref=e103]: "688525"
+          - generic [ref=e104]: 佰维存储
+        - generic [ref=e105] [cursor=pointer]:
+          - generic [ref=e106]: "688775"
+          - generic [ref=e107]: 影石创新
+        - generic [ref=e108] [cursor=pointer]:
+          - generic [ref=e109]: "300048"
+          - generic [ref=e110]: 合康新能
+        - generic [ref=e111] [cursor=pointer]:
+          - generic [ref=e112]: "688668"
+          - generic [ref=e113]: 鼎通科技
+        - generic [ref=e114] [cursor=pointer]:
+          - generic [ref=e115]: "688781"
+          - generic [ref=e116]: 视涯科技
+        - generic [ref=e117] [cursor=pointer]:
+          - generic [ref=e118]: "300502"
+          - generic [ref=e119]: 新易盛
+        - generic [ref=e120] [cursor=pointer]:
+          - generic [ref=e121]: "688280"
+          - generic [ref=e122]: 精进电动
+        - generic [ref=e123] [cursor=pointer]:
+          - generic [ref=e124]: "000886"
+          - generic [ref=e125]: 海南高速
+        - generic [ref=e126] [cursor=pointer]:
+          - generic [ref=e127]: "688322"
+          - generic [ref=e128]: 奥比中光
+        - generic [ref=e129] [cursor=pointer]:
+          - generic [ref=e130]: "688443"
+          - generic [ref=e131]: 智翔金泰
+        - generic [ref=e132] [cursor=pointer]:
+          - generic [ref=e133]: "688809"
+          - generic [ref=e134]: 强一股份
+        - generic [ref=e135] [cursor=pointer]:
+          - generic [ref=e136]: "688256"
+          - generic [ref=e137]: 寒武纪
+        - generic [ref=e138] [cursor=pointer]:
+          - generic [ref=e139]: "688302"
+          - generic [ref=e140]: 海创药业
+        - generic [ref=e141] [cursor=pointer]:
+          - generic [ref=e142]: "688331"
+          - generic [ref=e143]: 荣昌生物
+        - generic [ref=e144] [cursor=pointer]:
+          - generic [ref=e145]: "002602"
+          - generic [ref=e146]: 世纪华通
+        - generic [ref=e147] [cursor=pointer]:
+          - generic [ref=e148]: "300857"
+          - generic [ref=e149]: 协创数据
+        - generic [ref=e150] [cursor=pointer]:
+          - generic [ref=e151]: "688072"
+          - generic [ref=e152]: 拓荆科技
+        - generic [ref=e153] [cursor=pointer]:
+          - generic [ref=e154]: "002141"
+          - generic [ref=e155]: 贤丰控股
+        - generic [ref=e156] [cursor=pointer]:
+          - generic [ref=e157]: "688795"
+          - generic [ref=e158]: 摩尔线程
+        - generic [ref=e159] [cursor=pointer]:
+          - generic [ref=e160]: "300308"
+          - generic [ref=e161]: 中际旭创
+        - generic [ref=e162] [cursor=pointer]:
+          - generic [ref=e163]: "300879"
+          - generic [ref=e164]: 大叶股份
+        - generic [ref=e165] [cursor=pointer]:
+          - generic [ref=e166]: "688041"
+          - generic [ref=e167]: 海光信息
+        - generic [ref=e168] [cursor=pointer]:
+          - generic [ref=e169]: "688282"
+          - generic [ref=e170]: 理工导航
+        - generic [ref=e171] [cursor=pointer]:
+          - generic [ref=e172]: "688062"
+          - generic [ref=e173]: 迈威生物
+        - generic [ref=e174] [cursor=pointer]:
+          - generic [ref=e175]: "688808"
+          - generic [ref=e176]: 联讯仪器
+        - generic [ref=e177] [cursor=pointer]:
+          - generic [ref=e178]: "688192"
+          - generic [ref=e179]: 迪哲医药
+        - generic [ref=e180] [cursor=pointer]:
+          - generic [ref=e181]: "600540"
+          - generic [ref=e182]: 新赛股份
+        - generic [ref=e183] [cursor=pointer]:
+          - generic [ref=e184]: "688498"
+          - generic [ref=e185]: 源杰科技
+        - generic [ref=e186] [cursor=pointer]:
+          - generic [ref=e187]: "301666"
+          - generic [ref=e188]: 大普微
+        - generic [ref=e189] [cursor=pointer]:
+          - generic [ref=e190]: "603151"
+          - generic [ref=e191]: 邦基科技
+        - generic [ref=e192] [cursor=pointer]:
+          - generic [ref=e193]: "920045"
+          - generic [ref=e194]: 蘅东光
+        - generic [ref=e195] [cursor=pointer]:
+          - generic [ref=e196]: "001309"
+          - generic [ref=e197]: 德明利
+        - generic [ref=e198] [cursor=pointer]:
+          - generic [ref=e199]: "301356"
+          - generic [ref=e200]: 天振股份
+        - generic [ref=e201] [cursor=pointer]:
+          - generic [ref=e202]: "688661"
+          - generic [ref=e203]: 和林微纳
+        - generic [ref=e204] [cursor=pointer]:
+          - generic [ref=e205]: "688712"
+          - generic [ref=e206]: 北芯生命
+      - generic [ref=e208]:
+        - generic [ref=e209]:
+          - generic [ref=e210]:
+            - generic [ref=e211]: 城投控股
+            - generic [ref=e212]: "600649"
+          - generic [ref=e213]:
+            - generic [ref=e214]: "4.01"
+            - generic [ref=e215]: "-2.43%"
+        - generic [ref=e216]:
+          - generic [ref=e217]:
+            - generic [ref=e218]: 市值
+            - generic [ref=e219]: 0.00亿
+          - generic [ref=e220]:
+            - generic [ref=e221]: PE
+            - generic [ref=e222]: "-"
+          - generic [ref=e223]:
+            - generic [ref=e224]: PB
+            - generic [ref=e225]: "0.46"
+          - generic [ref=e226]:
+            - generic [ref=e227]: 股息率
+            - generic [ref=e228]: "-"
+        - button "分析此股票" [ref=e230] [cursor=pointer]
+    - generic [ref=e234]:
+      - textbox "输入消息..." [ref=e235]
+      - button "发送" [ref=e236] [cursor=pointer]:
+        - img [ref=e237]
+    - generic [ref=e240]:
+      - generic [ref=e241]:
+        - generic [ref=e242]: 投资日历
+        - button "刷新日历数据" [ref=e244] [cursor=pointer]:
+          - img [ref=e245]
+      - generic [ref=e248]:
+        - generic [ref=e249]:
+          - button "<" [ref=e250] [cursor=pointer]
+          - generic [ref=e251]: 2026年5月
+          - button ">" [ref=e252] [cursor=pointer]
+        - generic [ref=e253]:
+          - generic [ref=e254]: 日
+          - generic [ref=e255]: 一
+          - generic [ref=e256]: 二
+          - generic [ref=e257]: 三
+          - generic [ref=e258]: 四
+          - generic [ref=e259]: 五
+          - generic [ref=e260]: 六
+        - generic [ref=e261]:
+          - generic [ref=e268] [cursor=pointer]: "1"
+          - generic [ref=e270] [cursor=pointer]: "2"
+          - generic [ref=e272] [cursor=pointer]: "3"
+          - generic [ref=e274] [cursor=pointer]: "4"
+          - generic [ref=e276] [cursor=pointer]: "5"
+          - generic [ref=e278] [cursor=pointer]: "6"
+          - generic [ref=e280] [cursor=pointer]: "7"
+          - generic [ref=e282] [cursor=pointer]: "8"
+          - generic [ref=e284] [cursor=pointer]: "9"
+          - generic [ref=e288] [cursor=pointer]: "10"
+          - generic [ref=e290] [cursor=pointer]: "11"
+          - generic [ref=e294] [cursor=pointer]: "12"
+          - generic [ref=e298] [cursor=pointer]: "13"
+          - generic [ref=e300] [cursor=pointer]: "14"
+          - generic [ref=e304] [cursor=pointer]: "15"
+          - generic [ref=e308] [cursor=pointer]: "16"
+          - generic [ref=e310] [cursor=pointer]: "17"
+          - generic [ref=e312] [cursor=pointer]: "18"
+          - generic [ref=e316] [cursor=pointer]: "19"
+          - generic [ref=e318] [cursor=pointer]: "20"
+          - generic [ref=e320] [cursor=pointer]: "21"
+          - generic [ref=e322] [cursor=pointer]: "22"
+          - generic [ref=e324] [cursor=pointer]: "23"
+          - generic [ref=e326] [cursor=pointer]: "24"
+          - generic [ref=e328] [cursor=pointer]: "25"
+          - generic [ref=e330] [cursor=pointer]: "26"
+          - generic [ref=e332] [cursor=pointer]: "27"
+          - generic [ref=e334] [cursor=pointer]: "28"
+          - generic [ref=e336] [cursor=pointer]: "29"
+          - generic [ref=e338] [cursor=pointer]: "30"
+          - generic [ref=e340] [cursor=pointer]: "31"
+        - generic [ref=e341]:
+          - generic [ref=e342]: 本月重点关注
+          - generic [ref=e343] [cursor=pointer]:
+            - generic [ref=e344]:
+              - generic [ref=e346]: 05-09
+              - generic [ref=e347]: 环旭电子 业绩预告
+            - generic [ref=e348]: "最新价: 40.09; 最新涨跌幅: 1.058735; 公告日期: 20260509; 报告期[20260331]: 2026年一季报; 变动类型[20260331]: 不确定"
+          - generic [ref=e349] [cursor=pointer]:
+            - generic [ref=e350]:
+              - generic [ref=e352]: 05-11
+              - generic [ref=e353]: 朗信电气 业绩预告
+            - generic [ref=e354]: "公告日期: 20260511; 报告期[20260331]: 2026年一季报"
+          - generic [ref=e355] [cursor=pointer]:
+            - generic [ref=e356]:
+              - generic [ref=e358]: 05-12
+              - generic [ref=e359]: 合富中国 业绩预告
+            - generic [ref=e360]: "最新价: 14.31; 最新涨跌幅: -1.105736; 公告日期: 20260512; 报告期[20260331]: 2026年一季报; 变动类型[20260331]: 不确定"
+          - generic [ref=e361] [cursor=pointer]:
+            - generic [ref=e362]:
+              - generic [ref=e364]: 05-14
+              - generic [ref=e365]: 维通利 业绩预告
+            - generic [ref=e366]: "最新价: 95.26; 最新涨跌幅: -21.057429; 公告日期: 20260514; 报告期[20260331]: 2026年一季报; 净利润增长率上限[20260331]: -6.859999999999999"
+          - generic [ref=e367] [cursor=pointer]:
+            - generic [ref=e368]:
+              - generic [ref=e370]: 05-14
+              - generic [ref=e371]: 龙辰科技 业绩预告
+            - generic [ref=e372]: "公告日期: 20260514; 报告期[20260331]: 2026年一季报"
+          - generic [ref=e373] [cursor=pointer]:
+            - generic [ref=e374]:
+              - generic [ref=e376]: 05-15
+              - generic [ref=e377]: 天海电子 业绩预告
+            - generic [ref=e378]: "最新价: 67.12; 最新涨跌幅: 146.855462; 公告日期: 20260515; 报告期[20260331]: 2026年一季报; 净利润增长率上限[20260331]: 7.16"
+          - generic [ref=e379] [cursor=pointer]:
+            - generic [ref=e380]:
+              - generic [ref=e382]: 05-18
+              - generic [ref=e383]: 新天力 业绩预告
+            - generic [ref=e384]: "公告日期: 20260518"

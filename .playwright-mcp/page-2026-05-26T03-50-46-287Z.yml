@@ -1,0 +1,80 @@
+- generic [ref=e3]:
+  - generic [ref=e4]:
+    - generic [ref=e5]:
+      - generic [ref=e6]: π
+      - generic [ref=e7]: Trading Agent
+    - generic [ref=e9]: 加载中...
+  - generic [ref=e11]: "市场情绪: 加载中..."
+  - generic [ref=e12]:
+    - generic [ref=e13]: RESEARCH
+    - textbox "搜索股票 (代码/名称/拼音)" [ref=e15]
+  - generic [ref=e16]:
+    - generic [ref=e17]:
+      - generic [ref=e19]: 股票池
+      - generic [ref=e20]:
+        - generic [ref=e21] [cursor=pointer]:
+          - generic [ref=e22]:
+            - generic [ref=e23]: lgbm_40_60
+            - button "×" [ref=e24]
+          - generic [ref=e25]: 21 只
+        - generic [ref=e26] [cursor=pointer]:
+          - generic [ref=e27]:
+            - generic [ref=e28]: LGBM Rank 40-60
+            - button "×" [ref=e29]
+          - generic [ref=e30]: 21 只
+        - generic [ref=e31] [cursor=pointer]:
+          - generic [ref=e32]:
+            - generic [ref=e33]: 周线多头日线缩量回调_202605
+            - button "×" [ref=e34]
+          - generic [ref=e35]: 30 只
+        - generic [ref=e36] [cursor=pointer]:
+          - generic [ref=e37]:
+            - generic [ref=e38]: 最近访问
+            - button "×" [ref=e39]
+          - generic [ref=e40]: 103 只
+        - generic [ref=e41] [cursor=pointer]:
+          - generic [ref=e42]:
+            - generic [ref=e43]: 未来关注股池
+            - button "×" [ref=e44]
+          - generic [ref=e45]: 50 只
+        - generic [ref=e46] [cursor=pointer]:
+          - generic [ref=e47]:
+            - generic [ref=e48]: 周线多头日线回调缩量
+            - button "×" [ref=e49]
+          - generic [ref=e50]: 50 只
+        - generic [ref=e51] [cursor=pointer]:
+          - generic [ref=e52]:
+            - generic [ref=e53]: 前期强势缩量调整
+            - button "×" [ref=e54]
+          - generic [ref=e55]: 50 只
+        - generic [ref=e56] [cursor=pointer]:
+          - generic [ref=e57]:
+            - generic [ref=e58]: 营收连续两年增长超50%
+            - button "×" [ref=e59]
+          - generic [ref=e60]: 45 只
+        - generic [ref=e61] [cursor=pointer]:
+          - generic [ref=e62]:
+            - generic [ref=e63]: 日线多头排列市值TOP10
+            - button "×" [ref=e64]
+          - generic [ref=e65]: 10 只
+    - generic [ref=e66]:
+      - generic [ref=e70]:
+        - button "附件" [ref=e71] [cursor=pointer]:
+          - img [ref=e72]
+        - textbox "输入消息..." [ref=e74]
+        - button "发送" [ref=e75] [cursor=pointer]:
+          - img [ref=e76]
+      - generic [ref=e80]: 工具调用
+    - generic [ref=e82]:
+      - generic [ref=e84] [cursor=pointer]:
+        - generic [ref=e85]: 📈 强势股
+        - img [ref=e86]
+      - generic [ref=e93] [cursor=pointer]:
+        - generic [ref=e94]: 📅 投资日历
+        - generic [ref=e95]:
+          - button "刷新日历数据" [ref=e96]:
+            - img [ref=e97]
+          - img [ref=e100]
+      - generic [ref=e105] [cursor=pointer]:
+        - generic [ref=e106]: 📰 财经新闻
+        - img [ref=e107]

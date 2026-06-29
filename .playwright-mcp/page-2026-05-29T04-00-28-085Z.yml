@@ -1,0 +1,35 @@
+- generic [ref=e3]:
+  - generic [ref=e4]:
+    - generic [ref=e5]:
+      - generic [ref=e6]: π
+      - generic [ref=e7]: Trading Agent
+    - generic [ref=e9]: 加载中...
+  - generic [ref=e10]:
+    - generic [ref=e11]: RESEARCH
+    - textbox "搜索股票 (代码/名称/拼音)" [ref=e13]
+  - generic [ref=e14]:
+    - generic [ref=e17]: 股票池
+    - generic [ref=e22]:
+      - generic [ref=e26]:
+        - generic [ref=e27]: 工具调用
+        - button "收起" [ref=e28] [cursor=pointer]:
+          - img [ref=e29]
+      - generic [ref=e33]:
+        - button "设置" [ref=e34] [cursor=pointer]:
+          - img [ref=e35]
+        - button "附件" [ref=e38] [cursor=pointer]:
+          - img [ref=e39]
+        - button "Choose File"
+        - textbox "输入消息..." [ref=e41]
+        - button "发送" [ref=e42] [cursor=pointer]:
+          - img [ref=e43]
+    - generic [ref=e46]:
+      - generic [ref=e48] [cursor=pointer]:
+        - generic [ref=e49]: 📅 投资日历
+        - generic [ref=e50]:
+          - button "刷新日历数据" [ref=e51]:
+            - img [ref=e52]
+          - img [ref=e55]
+      - generic [ref=e60] [cursor=pointer]:
+        - generic [ref=e61]: 📰 财经新闻
+        - img [ref=e62]

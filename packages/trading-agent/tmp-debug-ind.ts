@@ -1,0 +1,10 @@
+import { createDataStore } from "./src/data/index.js";
+const store = createDataStore(`${process.env.HOME || process.env.USERPROFILE || "."}/.trading-agent/data`);
+await store.init();
+const all = await store.getIndustries("em");
+console.log("em industries count", all.length);
+console.log("has BK0420?", all.some(i => i.industry_code === "BK0420"));
+console.log("sample em", all.slice(0,10).map(i => i.industry_code));
+const s1 = await store.getIndustryStocks("BK0420", "em");
+console.log("BK0420 em stocks", s1.length);
+await store.close();

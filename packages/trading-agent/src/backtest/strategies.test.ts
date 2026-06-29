@@ -1,5 +1,6 @@
-import { describe, expect, it } from "vitest";
+import { beforeEach, describe, expect, it } from "vitest";
 import type { KlineRow } from "../data/types.js";
+import { indicatorCache } from "./indicator-cache.js";
 import { generateSignals } from "./strategies.js";
 
 function makeKlines(closes: (number | null)[]): KlineRow[] {
@@ -63,6 +64,8 @@ function makeKlinesOHLC(data: Array<{ open: number; high: number; low: number; c
 }
 
 describe("generateSignals", () => {
+	beforeEach(() => indicatorCache.clear());
+
 	describe("rsi_reversal", () => {
 		it("should buy when RSI recovers above oversold and sell when RSI falls below overbought", () => {
 			// With period=1: RSI=0 on a down day, RSI=100 on an up day.
@@ -154,6 +157,32 @@ describe("generateSignals", () => {
 			const signals = generateSignals(klines, "rsi_overbought_sell", { period: 1, overbought: 70 });
 			expect(signals.filter((s) => s.type === "sell")).toHaveLength(1);
 			expect(signals[0].index).toBe(2);
+		});
+	});
+
+	describe("always_buy", () => {
+		it("should emit a buy signal for every bar", () => {
+			const klines = makeKlines([100, 101, 102]);
+			const signals = generateSignals(klines, "always_buy");
+			expect(signals.filter((s) => s.type === "buy")).toHaveLength(3);
+			expect(signals[0].reason).toContain("AlwaysBuy");
+		});
+	});
+
+	describe("time_exit", () => {
+		it("should emit a sell signal every N trading days", () => {
+			const klines = makeKlines([100, 101, 102, 103, 104, 105, 106, 107, 108, 109, 110]);
+			const signals = generateSignals(klines, "time_exit", { period: 5 });
+			expect(signals.filter((s) => s.type === "sell")).toHaveLength(2);
+			expect(signals[0].index).toBe(4);
+			expect(signals[1].index).toBe(9);
+			expect(signals[0].reason).toContain("TimeExit(5天)");
+		});
+
+		it("should default to period 5", () => {
+			const klines = makeKlines([100, 101, 102, 103, 104, 105, 106, 107, 108, 109, 110]);
+			const signals = generateSignals(klines, "time_exit");
+			expect(signals.filter((s) => s.type === "sell")).toHaveLength(2);
 		});
 	});
 

@@ -13,7 +13,7 @@ All development is done via direct Python script execution. There is no build st
 ### Install Dependencies
 
 ```bash
-pip install akshare pandas numpy jqdatasdk
+pip install akshare pandas numpy mootdx requests beautifulsoup4
 ```
 
 Verify `akshare` is installed before running analysis:
@@ -81,12 +81,12 @@ The skill uses a hybrid data architecture implemented in `scripts/data_fetcher.p
 
 | Data Type | Primary Source | Fallback |
 |-----------|----------------|----------|
-| Real-time quotes / K-line | `stock-data` skill (JoinQuant `jqdatasdk`) | `akshare` |
-| Basic info (industry, PB, listing date) | `akshare` | `stock-data` |
-| Financial statements & indicators | `akshare` | — |
+| Real-time quotes / K-line | `mootdx` (TCP direct) | `akshare` / Eastmoney |
+| Basic info (industry, PB, listing date) | local SQLite + Eastmoney | `akshare` |
+| Financial statements & indicators | `mootdx` snapshot + Eastmoney F10 | `akshare` |
 | Holder & dividend data | `akshare` | — |
 
-`scripts/data_fetcher.py` dynamically adds `../../stock-data/scripts` to `sys.path` to import `jq_data.py`. If the `stock-data` skill is unavailable, it gracefully falls back to `akshare` only. Every JSON result includes a `_source` field indicating where that data came from.
+Every JSON result includes a `_source` field indicating where that data came from.
 
 ### Four-Module Pipeline
 
@@ -105,8 +105,7 @@ Use `--no-cache` to force a fresh fetch.
 
 ### Key Supporting Scripts
 
-- **`scripts/jq_data.py`** — Thin wrapper around `jqdatasdk` for authenticating, normalizing codes, and fetching price/K-line data. Used only when the `stock-data` skill is present.
-- **`scripts/get_quote.py` / `get_kline.py` / `get_fundamentals.py`** — Stand-alone helper scripts that directly call `akshare` or `jq_data` for quick one-off lookups.
+- **`scripts/get_quote.py` / `get_kline.py` / `get_fundamentals.py`** — Stand-alone helper scripts that call `mootdx` / `akshare` / Eastmoney for quick one-off lookups.
 - **`scripts/analyze_002352.py`** — Example ad-hoc analysis script that merges manually fetched JSON files and performs technical analysis (MA, RSI) with `pandas`.
 
 ### Report Generation
@@ -134,6 +133,5 @@ When writing or modifying code in this repository, follow these guidelines:
 ## Notes
 
 - There is **no test suite**. Validate changes by running the scripts against a known stock code (e.g., `600519`) and inspecting the JSON output.
-- There is **no package manifest** (`requirements.txt`, `pyproject.toml`, etc.). Dependencies are `akshare`, `pandas`, `numpy`, and optionally `jqdatasdk`.
-- `jq_data.py` contains hardcoded JoinQuant credentials inside an `@assert_auth` decorator. Do not modify or expose them.
+- There is **no package manifest** (`requirements.txt`, `pyproject.toml`, etc.). Dependencies are `akshare`, `pandas`, `numpy`, `mootdx`, `requests`, and `beautifulsoup4`.
 - Holder data (`--data-type holder` or `complete`) can be extremely slow due to paginated `akshare` requests. Prefer `--data-type all` (which excludes holders) for routine analysis.

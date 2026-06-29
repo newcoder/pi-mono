@@ -1,0 +1,339 @@
+- generic [ref=e3]:
+  - generic [ref=e4]:
+    - generic [ref=e5]:
+      - generic [ref=e6]: π
+      - generic [ref=e7]: Trading Agent
+    - generic [ref=e8]:
+      - generic [ref=e68] [cursor=pointer]:
+        - generic [ref=e69]: 上证指数
+        - generic [ref=e70]: "3964.24"
+        - generic [ref=e71]: ▼
+        - generic [ref=e72]: "-0.73%"
+      - generic [ref=e73] [cursor=pointer]:
+        - generic [ref=e74]: 沪深300
+        - generic [ref=e75]: "4697.77"
+        - generic [ref=e76]: ▼
+        - generic [ref=e77]: "-1.07%"
+      - generic [ref=e78] [cursor=pointer]:
+        - generic [ref=e79]: 科创50
+        - generic [ref=e80]: "1634.93"
+        - generic [ref=e81]: ▼
+        - generic [ref=e82]: "-1.05%"
+      - generic [ref=e83] [cursor=pointer]:
+        - generic [ref=e84]: 中证500
+        - generic [ref=e85]: "7976.17"
+        - generic [ref=e86]: ▼
+        - generic [ref=e87]: "-1.09%"
+      - generic [ref=e88] [cursor=pointer]:
+        - generic [ref=e89]: 深证成指
+        - generic [ref=e90]: "14756.98"
+        - generic [ref=e91]: ▼
+        - generic [ref=e92]: "-1.32%"
+      - generic [ref=e93] [cursor=pointer]:
+        - generic [ref=e94]: 创业板指
+        - generic [ref=e95]: "3785.63"
+        - generic [ref=e96]: ▼
+        - generic [ref=e97]: "-1.79%"
+  - generic [ref=e10]:
+    - generic [ref=e11]: RESEARCH
+    - textbox "搜索股票 (代码/名称/拼音)" [ref=e13]
+  - generic [ref=e14]:
+    - generic [ref=e15]:
+      - generic [ref=e17]: 股票池
+      - generic [ref=e18]:
+        - generic [ref=e19]:
+          - generic [ref=e98] [cursor=pointer]:
+            - generic [ref=e99]:
+              - generic [ref=e100]: "[62] 最近访问"
+              - button "×" [ref=e101]
+            - generic [ref=e102]: 28 只
+          - generic [ref=e103] [cursor=pointer]:
+            - generic [ref=e104]:
+              - generic [ref=e105]: "[61] 53号股池_Alpha5D_Top20"
+              - button "×" [ref=e106]
+            - generic [ref=e107]: 20 只
+          - generic [ref=e108] [cursor=pointer]:
+            - generic [ref=e109]:
+              - generic [ref=e110]: "[60] 物理AI核心股池"
+              - button "×" [ref=e111]
+            - generic [ref=e112]: 18 只
+          - generic [ref=e113] [cursor=pointer]:
+            - generic [ref=e114]:
+              - generic [ref=e115]: "[58] 周线多头排列+日线金叉"
+              - button "×" [ref=e116]
+            - generic [ref=e117]: 25 只
+          - generic [ref=e118] [cursor=pointer]:
+            - generic [ref=e119]:
+              - generic [ref=e120]: "[57] 东方财富人气飙升榜TOP30"
+              - button "×" [ref=e121]
+            - generic [ref=e122]: 26 只
+          - generic [ref=e123] [cursor=pointer]:
+            - generic [ref=e124]:
+              - generic [ref=e125]: "[56] 东方财富人气榜TOP30"
+              - button "×" [ref=e126]
+            - generic [ref=e127]: 30 只
+          - generic [ref=e128] [cursor=pointer]:
+            - generic [ref=e129]:
+              - generic [ref=e130]: "[55] 雷达机会榜_20260609"
+              - button "×" [ref=e131]
+            - generic [ref=e132]: 20 只
+          - generic [ref=e133] [cursor=pointer]:
+            - generic [ref=e134]:
+              - generic [ref=e135]: "[54] ML_自选股"
+              - button "×" [ref=e136]
+            - generic [ref=e137]: 50 只
+          - generic [ref=e138] [cursor=pointer]:
+            - generic [ref=e139]:
+              - generic [ref=e140]: "[53] 自选股"
+              - button "×" [ref=e141]
+            - generic [ref=e142]: 276 只
+          - generic [ref=e143] [cursor=pointer]:
+            - generic [ref=e144]:
+              - generic [ref=e145]: "[51] 周线金叉股_市值TOP20"
+              - button "×" [ref=e146]
+            - generic [ref=e147]: 20 只
+          - generic [ref=e148] [cursor=pointer]:
+            - generic [ref=e149]:
+              - generic [ref=e150]: "[50] 周线多头排列_调整缩量_市值TOP9"
+              - button "×" [ref=e151]
+            - generic [ref=e152]: 9 只
+          - generic [ref=e153] [cursor=pointer]:
+            - generic [ref=e154]:
+              - generic [ref=e155]: "[49] ML_算力概念股核心池_预测排序"
+              - button "×" [ref=e156]
+            - generic [ref=e157]: 13 只
+          - generic [ref=e158] [cursor=pointer]:
+            - generic [ref=e159]:
+              - generic [ref=e160]: "[48] 算力概念股核心池"
+              - button "×" [ref=e161]
+            - generic [ref=e162]: 13 只
+          - generic [ref=e163] [cursor=pointer]:
+            - generic [ref=e164]:
+              - generic [ref=e165]: "[23] 周线多头日线缩量回调_202605"
+              - button "×" [ref=e166]
+            - generic [ref=e167]: 30 只
+        - generic [ref=e168]:
+          - generic [ref=e169]: 📂
+          - generic [ref=e170]: 选择股票池查看个股
+    - generic [ref=e22]:
+      - generic [ref=e23]:
+        - generic [ref=e417]:
+          - generic [ref=e418]: 你
+          - generic [ref=e420]: 请对600519运行MA金叉策略回测，时间范围2024年1月到2024年12月
+        - generic [ref=e26]:
+          - generic [ref=e27]: 工具调用
+          - button "收起" [ref=e28] [cursor=pointer]:
+            - img [ref=e29]
+      - generic [ref=e33]:
+        - button "设置" [ref=e34] [cursor=pointer]:
+          - img [ref=e35]
+        - button "附件" [ref=e38] [cursor=pointer]:
+          - img [ref=e39]
+        - button "Choose File"
+        - textbox "输入消息..." [active] [ref=e41]
+        - button "发送" [ref=e42] [cursor=pointer]:
+          - img [ref=e43]
+    - generic [ref=e46]:
+      - generic [ref=e47]:
+        - generic [ref=e48] [cursor=pointer]:
+          - generic [ref=e49]: 📅 投资日历
+          - generic [ref=e50]:
+            - button "刷新日历数据" [ref=e51]:
+              - img [ref=e52]
+            - img [ref=e55]
+        - generic [ref=e58]:
+          - generic [ref=e171]:
+            - button "<" [ref=e172] [cursor=pointer]
+            - generic [ref=e173]: 2026年6月
+            - button ">" [ref=e174] [cursor=pointer]
+          - generic [ref=e175]:
+            - generic [ref=e176]: 日
+            - generic [ref=e177]: 一
+            - generic [ref=e178]: 二
+            - generic [ref=e179]: 三
+            - generic [ref=e180]: 四
+            - generic [ref=e181]: 五
+            - generic [ref=e182]: 六
+          - generic [ref=e183]:
+            - generic [ref=e186] [cursor=pointer]: "1"
+            - generic [ref=e192] [cursor=pointer]: "2"
+            - generic [ref=e196] [cursor=pointer]: "3"
+            - generic [ref=e198] [cursor=pointer]: "4"
+            - generic [ref=e202] [cursor=pointer]: "5"
+            - generic [ref=e204] [cursor=pointer]: "6"
+            - generic [ref=e206] [cursor=pointer]: "7"
+            - generic [ref=e208] [cursor=pointer]: "8"
+            - generic [ref=e210] [cursor=pointer]: "9"
+            - generic [ref=e214] [cursor=pointer]: "10"
+            - generic [ref=e218] [cursor=pointer]: "11"
+            - generic [ref=e220] [cursor=pointer]: "12"
+            - generic [ref=e222] [cursor=pointer]: "13"
+            - generic [ref=e224] [cursor=pointer]: "14"
+            - generic [ref=e226] [cursor=pointer]: "15"
+            - generic [ref=e230] [cursor=pointer]: "16"
+            - generic [ref=e232] [cursor=pointer]: "17"
+            - generic [ref=e234] [cursor=pointer]: "18"
+            - generic [ref=e236] [cursor=pointer]: "19"
+            - generic [ref=e238] [cursor=pointer]: "20"
+            - generic [ref=e240] [cursor=pointer]: "21"
+            - generic [ref=e242] [cursor=pointer]: "22"
+            - generic [ref=e244] [cursor=pointer]: "23"
+            - generic [ref=e246] [cursor=pointer]: "24"
+            - generic [ref=e248] [cursor=pointer]: "25"
+            - generic [ref=e250] [cursor=pointer]: "26"
+            - generic [ref=e252] [cursor=pointer]: "27"
+            - generic [ref=e254] [cursor=pointer]: "28"
+            - generic [ref=e256] [cursor=pointer]: "29"
+            - generic [ref=e258] [cursor=pointer]: "30"
+          - generic [ref=e259]:
+            - generic [ref=e260]: 本月重点关注
+            - generic [ref=e261] [cursor=pointer]:
+              - generic [ref=e262]:
+                - generic [ref=e264]: 预计
+                - generic [ref=e265]: OPEC+产量会议
+              - generic [ref=e266]: 决定下半年原油产量政策 (2026年6月1-5日)
+            - generic [ref=e267] [cursor=pointer]:
+              - generic [ref=e268]:
+                - generic [ref=e270]: 06-01
+                - generic [ref=e271]: 永大股份 业绩预告
+              - generic [ref=e272]: "公告日期: 20260601; 报告期[20260331]: 2026年一季报"
+            - generic [ref=e273] [cursor=pointer]:
+              - generic [ref=e274]:
+                - generic [ref=e276]: 预计
+                - generic [ref=e277]: 618购物节
+              - generic [ref=e278]: 年中电商大促 (2026年6月1-18日)
+            - generic [ref=e279] [cursor=pointer]:
+              - generic [ref=e280]:
+                - generic [ref=e282]: 预计
+                - generic [ref=e283]: 苹果WWDC
+              - generic [ref=e284]: 苹果年度开发者大会，iOS/macOS新系统发布 (2026年6月2-13日)
+            - generic [ref=e285] [cursor=pointer]:
+              - generic [ref=e286]:
+                - generic [ref=e288]: 预计
+                - generic [ref=e289]: Computex台北电脑展
+              - generic [ref=e290]: 全球第二大电脑展，AI PC新品发布 (2026年6月2-5日)
+            - generic [ref=e291] [cursor=pointer]:
+              - generic [ref=e292]:
+                - generic [ref=e294]: 06-04
+                - generic [ref=e295]: 臻宝科技 业绩预告
+              - generic [ref=e296]: "公告日期: 20260604; 报告期[20260331]: 2026年一季报"
+            - generic [ref=e297] [cursor=pointer]:
+              - generic [ref=e298]:
+                - generic [ref=e300]: 06-04
+                - generic [ref=e301]: 惠科股份 业绩预告
+              - generic [ref=e302]: "公告日期: 20260604; 报告期[20260331]: 2026年一季报"
+            - generic [ref=e303] [cursor=pointer]:
+              - generic [ref=e304]:
+                - generic [ref=e306]: 06-04
+                - generic [ref=e307]: 科莱瑞迪 业绩预告
+              - generic [ref=e308]: "公告日期: 20260604; 报告期[20260331]: 2026年一季报"
+            - generic [ref=e309] [cursor=pointer]:
+              - generic [ref=e310]:
+                - generic [ref=e312]: 06-09
+                - generic [ref=e313]: 环旭电子 业绩预告
+              - generic [ref=e314]: "最新价: 40.74; 最新涨跌幅: 5.054152; 公告日期: 20260609; 报告期[20260331]: 2026年一季报; 变动类型[20260331]: 不确定"
+            - generic [ref=e315] [cursor=pointer]:
+              - generic [ref=e316]:
+                - generic [ref=e318]: 预计
+                - generic [ref=e319]: SNEC光伏展
+              - generic [ref=e320]: 全球最大光伏展 (2026年6月10-12日)
+            - generic [ref=e321] [cursor=pointer]:
+              - generic [ref=e322]:
+                - generic [ref=e324]: 预计
+                - generic [ref=e325]: 迎峰度夏
+              - generic [ref=e326]: 夏季用电高峰，电力保供政策密集 (2026年6月15-30日)
+      - generic [ref=e59]:
+        - generic [ref=e60] [cursor=pointer]:
+          - generic [ref=e61]: 📰 财经新闻
+          - img [ref=e62]
+        - generic [ref=e65]:
+          - generic "中国驻南非大使馆召开促合规保安全视频会议" [ref=e327]:
+            - generic [ref=e328]:
+              - generic [ref=e329]: 东财7x24
+              - generic [ref=e330]: 06-11 12:32
+            - generic [ref=e331]: 中国驻南非大使馆召开促合规保安全视频会议
+            - generic [ref=e332]: 【中国驻南非大使馆召开促合规保安全视频会议】据新华社，中国驻南非大使馆10日召开视频会议，针对近期南非国内持续紧张的社会安全形势，敦促在南中资企业和侨商侨企开展自查整改，依法合规经营，提高风险防范意识。
+          - generic "京津冀出台九条专项举措 支持雄安技能人才队伍建设高质量发展" [ref=e333]:
+            - generic [ref=e334]:
+              - generic [ref=e335]: 东财7x24
+              - generic [ref=e336]: 06-11 12:24
+            - generic [ref=e337]: 京津冀出台九条专项举措 支持雄安技能人才队伍建设高质量发展
+            - generic [ref=e338]: 【京津冀出台九条专项举措 支持雄安技能人才队伍建设高质量发展】今天（6月11日），京津冀三地人社部门联合出台推动雄安新区技能人才队伍建设高质量发展九条专项举措。
+          - generic "国家药监局批准古莫奇单抗注射液上市" [ref=e339]:
+            - generic [ref=e340]:
+              - generic [ref=e341]: 东财7x24
+              - generic [ref=e342]: 06-11 12:22
+            - generic [ref=e343]: 国家药监局批准古莫奇单抗注射液上市
+            - generic [ref=e344]: 【国家药监局批准古莫奇单抗注射液上市】6月11日，据国家药监局消息，近日，国家药品监督管理局批准中山康方生物医药有限公司申报的古莫奇单抗注射液（商品名：奇佑康）上市，用于治疗适合接受系统治疗或光疗的中度至重度斑块状银屑病成人患者。该品种的上...
+          - generic "康方生物：董事会批准动用最多200百万港元以在公开市场上购买公司普通股股份" [ref=e345]:
+            - generic [ref=e346]:
+              - generic [ref=e347]: 东财7x24
+              - generic [ref=e348]: 06-11 12:21
+            - generic [ref=e349]: 康方生物：董事会批准动用最多200百万港元以在公开市场上购买公司普通股股份
+            - generic [ref=e350]: 【康方生物：董事会批准动用最多200百万港元以在公开市场上购买公司普通股股份】康方生物港交所公告，于2026年6月11日，公司董事会批准动用最多200百万港元以在公开市场上购买本公司普通股股份。建议购买股份将由公司2021年受限制股份单位计...
+          - generic "豆包手机硬件产品负责人林夕已离职" [ref=e351]:
+            - generic [ref=e352]:
+              - generic [ref=e353]: 东财7x24
+              - generic [ref=e354]: 06-11 12:21
+            - generic [ref=e355]: 豆包手机硬件产品负责人林夕已离职
+            - generic [ref=e356]: 【豆包手机硬件产品负责人林夕已离职】字节跳动AI硬件团队Ocean核心成员、豆包手机硬件产品负责人林夕已于近期离职。这是字节自2024年启动AI手机项目以来，首位出走的核心硬件负责人。据悉，林夕此前长期任职于华为终端，是Pura X阔折叠手...
+          - generic "烽火通信中标中国电信Wi-Fi 7 FTTR-B集采项目" [ref=e357]:
+            - generic [ref=e358]:
+              - generic [ref=e359]: 东财7x24
+              - generic [ref=e360]: 06-11 12:18
+            - generic [ref=e361]: 烽火通信中标中国电信Wi-Fi 7 FTTR-B集采项目
+            - generic [ref=e362]: 【烽火通信中标中国电信Wi-Fi 7 FTTR-B集采项目】据烽火通信消息，中国电信政企融合网关增强版产品（2026年）集中采购项目标包2：Wi-Fi7中标结果近日正式揭晓，烽火通信成功中标。
+          - generic "多家品牌金饰价格较昨日下跌近40元/克" [ref=e363]:
+            - generic [ref=e364]:
+              - generic [ref=e365]: 东财7x24
+              - generic [ref=e366]: 06-11 12:16
+            - generic [ref=e367]: 多家品牌金饰价格较昨日下跌近40元/克
+            - generic [ref=e368]: 【多家品牌金饰价格较昨日下跌近40元/克】今日国内黄金饰品价格对比显示，多家品牌金饰价格较昨日下跌近40元/克，普遍报1236-1240元/克；菜百首饰足金价格跌幅较大，较昨日1305元/克下跌50元/克。
+          - generic "地瓜机器人与智在无界达成战略合作" [ref=e369]:
+            - generic [ref=e370]:
+              - generic [ref=e371]: 东财7x24
+              - generic [ref=e372]: 06-11 12:12
+            - generic [ref=e373]: 地瓜机器人与智在无界达成战略合作
+            - generic [ref=e374]: 【地瓜机器人与智在无界达成战略合作】据地瓜机器人消息，6月11日，地瓜机器人与智在无界BeingBeyond正式宣布达成战略合作，完成Being-H-Flash在旭日S600具身智能大算力芯片上的端侧部署，实测运行帧率接近20FPS。此外，...
+          - generic "机构：受存储器市场打破历史规律推动 第一季度半导体市场营收突破3000亿美元" [ref=e375]:
+            - generic [ref=e376]:
+              - generic [ref=e377]: 东财7x24
+              - generic [ref=e378]: 06-11 12:12
+            - generic [ref=e379]: 机构：受存储器市场打破历史规律推动 第一季度半导体市场营收突破3000亿美元
+            - generic [ref=e380]: 【机构：受存储器市场打破历史规律推动 第一季度半导体市场营收突破3000亿美元】在半导体行业创下历史新高的一年之后，新年伊始依然延续了强劲的增长势头。根据Omdia的最新研究，2026年第一季度的半导体营收较2025年第四季度环比增长27%...
+          - generic "港股午评：恒生指数跌1.11% 恒生科技指数跌2.0%" [ref=e381]:
+            - generic [ref=e382]:
+              - generic [ref=e383]: 东财7x24
+              - generic [ref=e384]: 06-11 12:10
+            - generic [ref=e385]: 港股午评：恒生指数跌1.11% 恒生科技指数跌2.0%
+            - generic [ref=e386]: 【港股午评：恒生指数跌1.11% 恒生科技指数跌2.0%】港股午间收盘，香港恒生指数跌1.11%，恒生科技指数跌2.0%。权重科技股继续走低，阿里巴巴跌近5%，百度、京东跌逾3%。芯片股普跌，天数智芯跌逾9%，中芯国际、华虹宏力、兆易创新跌...
+          - generic "6月11日午间新闻精选" [ref=e387]:
+            - generic [ref=e388]:
+              - generic [ref=e389]: 东财7x24
+              - generic [ref=e390]: 06-11 12:06
+            - generic [ref=e391]: 6月11日午间新闻精选
+            - generic [ref=e392]: 【6月11日午间新闻精选】1、截至午间收盘，沪指跌0.73%，深证成指跌1.32%，创业板指跌1.79%。2、港股午间收盘，香港恒生指数跌1.11%，恒生科技指数跌2.01%。3、极兔速递有限公司对极兔速递相关企业安全生产管理缺位，未按规定...
+          - generic "再添新平台 上海浦东启动人工智能文创产业基地建设" [ref=e393]:
+            - generic [ref=e394]:
+              - generic [ref=e395]: 东财7x24
+              - generic [ref=e396]: 06-11 12:04
+            - generic [ref=e397]: 再添新平台 上海浦东启动人工智能文创产业基地建设
+            - generic [ref=e398]: 【再添新平台 上海浦东启动人工智能文创产业基地建设】6月10日，上海浦东正式启动人工智能文创产业基地建设，一期项目面积约15000平方米，预计7月投入使用。该基地旨在探索人工智能与国产优质文学IP内容的创新转化，树立可复制的“上海样本”和行...
+          - generic "KKR成立100亿美元数据中心集团" [ref=e399]:
+            - generic [ref=e400]:
+              - generic [ref=e401]: 东财7x24
+              - generic [ref=e402]: 06-11 12:04
+            - generic [ref=e403]: KKR成立100亿美元数据中心集团
+            - generic [ref=e404]: KKR成立100亿美元数据中心集团，由前AWS首席执行官领导。
+          - generic "极兔速递急跌近10% 被国家邮政局立案调查" [ref=e405]:
+            - generic [ref=e406]:
+              - generic [ref=e407]: 东财7x24
+              - generic [ref=e408]: 06-11 11:59
+            - generic [ref=e409]: 极兔速递急跌近10% 被国家邮政局立案调查
+            - generic [ref=e410]: 【极兔速递急跌近10% 被国家邮政局立案调查】极兔速递－Ｗ(01519.HK)盘中急跌，截至发稿跌9%，成交超2.5亿港元。消息面上，国家邮政局发文称，今年以来，使用“极兔速递”商标、字号、快递运单经营快递业务的企业多发生产安全事故，场所内...
+          - generic "招金黄金：公司有对外销售尾矿交易，不存在经营决策失误" [ref=e411]:
+            - generic [ref=e412]:
+              - generic [ref=e413]: 东财7x24
+              - generic [ref=e414]: 06-11 11:58
+            - generic [ref=e415]: 招金黄金：公司有对外销售尾矿交易，不存在经营决策失误
+            - generic [ref=e416]: 【招金黄金：公司有对外销售尾矿交易，不存在经营决策失误】有投资者提问，根据披露信息，斐济瓦矿有1800万吨尾矿，每吨含金品位1克左右，每天处理尾矿矿石1300吨。按此处理能力，约需40年才能处理完毕。目前黄金价格处于相对高位，为何不对外出售...

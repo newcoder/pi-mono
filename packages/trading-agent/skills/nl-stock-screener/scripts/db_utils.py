@@ -7,14 +7,13 @@ import os
 import sys
 import json
 import sqlite3
+import subprocess
 from datetime import datetime, timedelta
 from typing import List, Dict, Optional, Tuple
 import pandas as pd
 
-# Add china-stock-analysis/scripts to path for jq_data import
-_CHINA_SKILL_DIR = os.path.join(os.path.expanduser("~"), ".agents", "skills", "china-stock-analysis", "scripts")
-if _CHINA_SKILL_DIR not in sys.path:
-    sys.path.insert(0, _CHINA_SKILL_DIR)
+# Path to a-share-analysis scripts (used for get_quote.py / get_kline.py)
+_A_SHARE_DIR = os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", "..", "a-share-analysis", "scripts")
 
 DB_PATH = os.path.join(os.path.expanduser("~"), ".trading-agent", "data", "market.db")
 
@@ -60,25 +59,25 @@ def get_stock_list(scope: str = "all") -> List[Dict]:
                 return [{"code": r["code"], "name": "", "market": r["market"]} for r in rows]
             return [{"code": r["code"], "name": r["name"], "market": r["market"]} for r in rows]
 
-        # Index scopes require jq_data
+        # Index scopes via akshare
         if scope in ("hs300", "zz500", "zz1000", "cyb", "kcb"):
             try:
-                from jq_data import get_hs300_stocks, get_zz500_stocks, get_zz1000_stocks
+                import akshare as ak
                 index_map = {
-                    "hs300": get_hs300_stocks,
-                    "zz500": get_zz500_stocks,
-                    "zz1000": get_zz1000_stocks,
+                    "hs300": "000300",
+                    "zz500": "000905",
+                    "zz1000": "000852",
+                    "cyb": "399006",
+                    "kcb": "000688",
                 }
-                if scope in index_map:
-                    codes = index_map[scope]()
-                else:
-                    codes = []
-                # normalize codes
+                df = ak.index_stock_cons(symbol=index_map[scope])
+                codes = df["品种代码"].astype(str).tolist()
                 result = []
-                for c in codes:
-                    parts = c.split(".")
-                    code = parts[0]
-                    market = 1 if parts[1] == "XSHG" else 0
+                for code in codes:
+                    code = code.strip()
+                    if not code:
+                        continue
+                    market = 1 if code.startswith(("60", "68", "90")) else 0
                     result.append({"code": code, "name": "", "market": market})
                 return result
             except Exception as e:
@@ -169,12 +168,11 @@ def get_klines(code: str, market: int, period: str = "daily", adjust: str = "bfq
 
 def sync_kline_if_missing(code: str, market: int, period: str = "daily", adjust: str = "bfq", days: int = 120) -> bool:
     """
-    Sync kline data from JoinQuant if local DB is missing or stale.
+    Sync kline data from a-share-analysis get_kline.py if local DB is missing or stale.
     Returns True if data is now available.
     """
     conn = get_db()
     try:
-        # Check latest date
         row = conn.execute(
             "SELECT MAX(date) as max_date FROM klines WHERE code = ? AND market = ? AND period = ? AND adjust = ?",
             (code, market, period, adjust)
@@ -183,7 +181,6 @@ def sync_kline_if_missing(code: str, market: int, period: str = "daily", adjust:
         latest = row["max_date"] if row else None
         today = datetime.now().strftime("%Y-%m-%d")
 
-        # Need sync if no data or latest date is more than 3 days old
         need_sync = False
         if not latest:
             need_sync = True
@@ -197,63 +194,45 @@ def sync_kline_if_missing(code: str, market: int, period: str = "daily", adjust:
 
         print(f"  Syncing kline for {code} ({period}, {adjust})...")
 
+        end = datetime.now().strftime("%Y-%m-%d")
+        start = (datetime.now() - timedelta(days=days * 2)).strftime("%Y-%m-%d")
+        period_arg = {"weekly": "week", "monthly": "month"}.get(period, period)
+
+        script = os.path.join(_A_SHARE_DIR, "get_kline.py")
         try:
-            from jq_data import normalize_code, fetch, get_kline_data
-            jq_code = normalize_code(code)
-            end = datetime.now().strftime("%Y-%m-%d")
-            start = (datetime.now() - timedelta(days=days * 2)).strftime("%Y-%m-%d")
-
-            # Map adjust codes
-            fq_map = {"bfq": None, "qfq": "pre", "hfq": "post"}
-            fq = fq_map.get(adjust)
-
-            # Map our period names to jq_data frequency names
-            freq_map = {"daily": "daily", "weekly": "week", "monthly": "month"}
-            jq_period = freq_map.get(period, period)
-
-            # Use get_kline_data for week/month which handles resampling; raw fetch for daily/minute
-            if jq_period in ("week", "month", "quarter", "year"):
-                df = get_kline_data(code, start_date=start.replace("-", ""), end_date=end.replace("-", ""), frequency=jq_period, fq=fq)
-            else:
-                df = fetch(jq_code, start_date=start, end_date=end, frequency=jq_period, fq=fq)
-
-            if df is None or len(df) == 0:
+            proc = subprocess.run(
+                [sys.executable, script, code, "--market", str(market),
+                 "--period", period_arg, "--adjust", adjust,
+                 "--start", start.replace("-", ""), "--end", end.replace("-", "")],
+                capture_output=True, text=True, encoding="utf-8", timeout=60
+            )
+            if proc.returncode != 0:
+                print(f"    get_kline.py failed: {proc.stderr}", file=sys.stderr)
                 return False
 
-            if "date" not in df.columns:
-                df.reset_index(inplace=True)
-                # Unnamed index becomes 'index' column; rename to 'date'
-                if "index" in df.columns and "date" not in df.columns:
-                    df.rename(columns={"index": "date"}, inplace=True)
-            # Save to DB
-            for _, row in df.iterrows():
-                date_val = row.get("date")
-                date_str = str(date_val).split(" ")[0] if date_val is not None else None
-                open_p = float(row["open"]) if pd.notna(row.get("open")) else None
-                close_p = float(row["close"]) if pd.notna(row.get("close")) else None
-                high_p = float(row["high"]) if pd.notna(row.get("high")) else None
-                low_p = float(row["low"]) if pd.notna(row.get("low")) else None
-                volume = float(row["volume"]) if pd.notna(row.get("volume")) else None
-                money = float(row["money"]) if pd.notna(row.get("money")) else None
-                pre_close = float(row["pre_close"]) if pd.notna(row.get("pre_close")) else None
+            data = json.loads(proc.stdout)
+            klines = data.get("klines", [])
+            if not klines:
+                print(f"    No klines returned for {code}")
+                return False
 
-                change_pct = None
-                change_amount = None
-                amplitude = None
-                if close_p is not None and pre_close is not None and pre_close != 0:
-                    change_pct = round((close_p - pre_close) / pre_close * 100, 4)
-                    change_amount = round(close_p - pre_close, 4)
-                    if high_p is not None and low_p is not None:
-                        amplitude = round((high_p - low_p) / pre_close * 100, 4)
-
+            for k in klines:
+                date_str = str(k.get("date", "")).split(" ")[0]
+                if not date_str:
+                    continue
                 conn.execute(
                     """INSERT OR REPLACE INTO klines
                        (code, market, period, adjust, date, open, high, low, close, volume, turnover, change_pct, change_amount, amplitude, pre_close)
                        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)""",
-                    (code, market, period, adjust, date_str, open_p, high_p, low_p, close_p, volume, money, change_pct, change_amount, amplitude, pre_close)
+                    (
+                        code, market, period, adjust, date_str,
+                        k.get("open"), k.get("high"), k.get("low"), k.get("close"),
+                        k.get("volume"), k.get("amount") or k.get("turnover"),
+                        k.get("change_pct"), k.get("change_amount"), k.get("amplitude"), k.get("pre_close")
+                    )
                 )
             conn.commit()
-            print(f"    Synced {len(df)} rows")
+            print(f"    Synced {len(klines)} rows")
             return True
         except Exception as e:
             print(f"    Sync failed: {e}", file=sys.stderr)
@@ -266,7 +245,7 @@ def sync_quote(code: str, market: int) -> bool:
     """Sync quote data from Python script and save to DB."""
     try:
         import subprocess
-        script = os.path.join(_CHINA_SKILL_DIR, "get_quote.py")
+        script = os.path.join(_A_SHARE_DIR, "get_quote.py")
         proc = subprocess.run(
             [sys.executable, script, code, "--market", str(market)],
             capture_output=True, text=True, encoding="utf-8", timeout=30

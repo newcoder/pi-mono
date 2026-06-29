@@ -8,6 +8,7 @@ Data source: 同花顺概念板块 (http://q.10jqka.com.cn/gn/)
 
 This avoids the blocked Eastmoney HTTP APIs and does not require JoinQuant.
 """
+import argparse
 import json
 import os
 import re
@@ -186,8 +187,68 @@ def sync_all_concepts() -> dict[str, Any]:
     return result
 
 
+def sync_single_concept(concept_name: str) -> dict[str, Any]:
+    """Sync a single Tonghuashun concept by name."""
+    session = requests.Session()
+    session.headers.update(_HEADERS)
+
+    concepts = fetch_concept_list(session)
+    matched = [c for c in concepts if c.get("platename", "") == concept_name]
+    if not matched:
+        matched = [c for c in concepts if concept_name in c.get("platename", "")]
+    if not matched:
+        raise RuntimeError(f"Concept '{concept_name}' not found")
+
+    concept = matched[0]
+    platecode = concept.get("platecode", "")
+    actual_name = concept.get("platename", concept_name)
+
+    stocks = fetch_concept_stocks(session, platecode)
+
+    conn = sqlite3.connect(DB_PATH)
+    conn.row_factory = sqlite3.Row
+    cur = conn.cursor()
+    cur.execute(
+        """
+        CREATE TABLE IF NOT EXISTS concept_stocks (
+            concept TEXT NOT NULL,
+            code TEXT NOT NULL,
+            name TEXT,
+            updated_at TEXT,
+            PRIMARY KEY (concept, code)
+        )
+        """
+    )
+    now = datetime.now().isoformat()
+    # Delete old data for this concept
+    cur.execute("DELETE FROM concept_stocks WHERE concept = ?", (actual_name,))
+    for stock in stocks:
+        cur.execute(
+            "INSERT OR REPLACE INTO concept_stocks (concept, code, name, updated_at) VALUES (?, ?, ?, ?)",
+            (actual_name, stock["code"], stock["name"], now),
+        )
+    conn.commit()
+    conn.close()
+
+    result = {
+        "source": "tonghuashun",
+        "concept": actual_name,
+        "stocks": len(stocks),
+    }
+    _log(f"[sync_concept_stocks_ths] Synced concept '{actual_name}': {len(stocks)} stocks")
+    print(json.dumps(result, ensure_ascii=False))
+    return result
+
+
 def main() -> None:
-    sync_all_concepts()
+    parser = argparse.ArgumentParser(description="Sync concept stocks from Tonghuashun")
+    parser.add_argument("--concept", type=str, help="Sync a single concept by name")
+    args = parser.parse_args()
+
+    if args.concept:
+        sync_single_concept(args.concept)
+    else:
+        sync_all_concepts()
 
 
 if __name__ == "__main__":

@@ -20,7 +20,7 @@ LLM-assisted investment analysis agent for A-share (Chinese stock) markets. Buil
 ### Prerequisites
 
 - Node.js >= 20
-- Python 3 with `akshare`, `jqdatasdk` (for data sync scripts)
+- Python 3 with `akshare`, `mootdx`, `requests`, `beautifulsoup4` (for data sync scripts)
 - A configured LLM provider (OpenAI, Anthropic, DeepSeek, etc.)
 
 ### Installation

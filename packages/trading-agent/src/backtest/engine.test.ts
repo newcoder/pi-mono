@@ -1,6 +1,7 @@
-import { describe, expect, it } from "vitest";
+import { beforeEach, describe, expect, it } from "vitest";
 import type { KlineRow } from "../data/types.js";
 import { generateAllSignals } from "./engine.js";
+import { indicatorCache } from "./indicator-cache.js";
 import type { BacktestConfig } from "./types.js";
 
 function makeKlines(closes: number[]): KlineRow[] {
@@ -44,6 +45,8 @@ function makeKlinesOHLC(data: Array<{ open: number; high: number; low: number; c
 }
 
 describe("generateAllSignals", () => {
+	beforeEach(() => indicatorCache.clear());
+
 	it("should merge buy signals from multiple buy-only strategies", () => {
 		// hammer needs prior bearish candle with long lower shadow
 		const hammerKlines = makeKlinesOHLC([
@@ -117,5 +120,84 @@ describe("generateAllSignals", () => {
 		// legacy strategy contributes both buy and sell unless new-style lists override sells
 		expect(signals.some((s) => s.type === "buy")).toBe(true);
 		expect(signals.some((s) => s.type === "sell")).toBe(true);
+	});
+});
+
+import { simulateTrades } from "./engine.js";
+import type { Signal } from "./types.js";
+
+function makeKlinesWithVolume(closes: number[], volumes: (number | null)[]): KlineRow[] {
+	return closes.map((close, i) => ({
+		code: "600519",
+		market: 1,
+		period: "daily",
+		adjust: "bfq",
+		date: `2024-01-${String(i + 1).padStart(2, "0")}`,
+		open: close,
+		high: close,
+		low: close,
+		close,
+		volume: volumes[i] ?? null,
+		turnover: null,
+		change_pct: null,
+		change_amount: null,
+		amplitude: null,
+		pre_close: null,
+	}));
+}
+
+describe("simulateTrades cost model", () => {
+	const klines = makeKlinesWithVolume([100, 110, 120], [1, 1, 1]);
+	const signals: Signal[] = [
+		{ index: 0, date: klines[0].date, type: "buy", price: klines[0].close ?? 0, reason: "test" },
+		{ index: 1, date: klines[1].date, type: "sell", price: klines[1].close ?? 0, reason: "test" },
+	];
+
+	it("should apply no costs by default", () => {
+		const { trades } = simulateTrades(klines, signals, 110_000, 1.0, 0, 0, 100);
+		expect(trades).toHaveLength(1);
+		// 1000 shares @ 110 cost = 110_000, sold @ 120 -> 120_000
+		expect(trades[0].pnl).toBeCloseTo(10_000, 2);
+	});
+
+	it("should charge tax on sell side only", () => {
+		const { trades } = simulateTrades(klines, signals, 110_000, 1.0, 0, 0, 100, 0.001, 0);
+		// buy: 1000 shares @ 110 = 110_000
+		// sell proceeds: 120_000 * (1 - 0.001) = 119_880
+		expect(trades[0].pnl).toBeCloseTo(9_880, 2);
+	});
+
+	it("should charge transfer fee on both sides", () => {
+		const { trades } = simulateTrades(klines, signals, 110_000, 1.0, 0, 0, 100, 0, 0.00002);
+		// buy cost = 110_000 * 1.00002 = 110_002.2
+		// sell proceeds = 120_000 * (1 - 0.00002) = 119_997.6
+		expect(trades[0].pnl).toBeCloseTo(9_995.4, 2);
+	});
+});
+
+describe("simulateTrades skipNoVolume", () => {
+	it("should skip sell execution when volume is zero", () => {
+		const klines = makeKlinesWithVolume([100, 110, 120], [1, 1, 0]);
+		const signals: Signal[] = [
+			{ index: 0, date: klines[0].date, type: "buy", price: 100, reason: "test" },
+			{ index: 1, date: klines[1].date, type: "sell", price: 110, reason: "test" },
+		];
+		const { trades, filteredTradeCount } = simulateTrades(klines, signals, 110_000, 1.0, 0, 0, 100, 0, 0, true);
+		// sell skipped because day 2 volume is 0; position force-closed at end
+		expect(filteredTradeCount).toBe(1);
+		expect(trades).toHaveLength(1);
+		expect(trades[0].exitDate).toBe(klines[2].date);
+	});
+
+	it("should execute normally when skipNoVolume is false", () => {
+		const klines = makeKlinesWithVolume([100, 110, 120], [1, 1, 0]);
+		const signals: Signal[] = [
+			{ index: 0, date: klines[0].date, type: "buy", price: 100, reason: "test" },
+			{ index: 1, date: klines[1].date, type: "sell", price: 110, reason: "test" },
+		];
+		const { trades, filteredTradeCount } = simulateTrades(klines, signals, 110_000, 1.0, 0, 0, 100, 0, 0, false);
+		expect(filteredTradeCount).toBe(0);
+		expect(trades).toHaveLength(1);
+		expect(trades[0].exitDate).toBe(klines[2].date);
 	});
 });

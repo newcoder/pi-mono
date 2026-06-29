@@ -1,0 +1,20 @@
+=== RAW HEX ===
+a1eed0d0d2b5b7d6cef6a1ee20a1f336303035313920b9f3d6ddc3a9cca820b8fcd0c2c8d5c6daa3ba323032362d30352d3135a1f320b8dbb0c4d7cad1b620c1e9cda856392e300d0aa1efb1bec0b8b0fcc0a8a1be312ed0d0d2b5b5d8cebba1bfa1be322ecbf9caf4d0d0d2b5a1bfa1be332ed0d0d2b5b6afccaca1bfa1ef0d0a0d0aa1be312ed0d0d2b5b5d8cebba1bf0d0aa1becbf9caf4d0d0d2b5a1bf0d0acab3c6b7d2fbc1cf2d2db0d7bec6a2f22d2db0d7bec6a2f3b9b228323129bcd20d0a0d0aa1beb9abcbbed0d0c7e9cafdbedda1bfa3a8b2bbd7e3d6dcc6dad4f2d2d4cab5bccabdbbd2d7c8d5cdb3bcc6a3a920bdd8d6b9c8d5c6daa3ba323032362d30352d31340d0ac5c5c3fb20202020b4fac2eb20202020202020202020bcf2b3c62020202020202035c8d5d5c7b5f8b7f928a3a529202020203230c8d5d5c7b5f8b7f928a3a5292020202020203630c8d5d5c7b5f8b7f928a3a5292020202020313230c8d5d5c7b5f8b7f928a3a52920202020202020cad0d3afc2ca2854544d290d0aa9a4a9a4a9a4a9a4a9a4a9a4a9a4a9a4a9a4a9a4a9a4a9a4a9a4a9a4a9a4a9a4a9a4a9a4a9a4a9a4a9a4a9a4a9a4a9a4a9a4a9a4a9a4a9a4a9a4a9a4a9a4a9a4a9a4a9a4a9a4a9a4a9a4a9a4a9a4a9a4a9a4a9a4a9a4a9a4a9a4a9a4a9a4a9a4a9a4a9a4a9a4a9a4a9a4a9a4a9a4
+
+=== DECODED (gb18030) ===
+☆行业分析☆ ◇600519 贵州茅台 更新日期：2026-05-15◇ 港澳资讯 灵通V9.0
+★本栏包括【1.行业地位】【2.所属行业】【3.行业动态】★
+
+【1.行业地位】
+【所属行业】
+食品饮料--白酒Ⅱ--白酒Ⅲ共(21)家
+
+【公司行情数据】（不足周期则以实际交易日统计） 截止日期：2026-05-14
+排名    代码          简称       5日涨跌幅(％)    20日涨跌幅(％)      60日涨跌幅(％)     120日涨跌幅(％)       市盈率(TTM)
+─────────────────────────────────────────────────────────────
+1      603919         金徽酒              9.07              9.13              -12.06               -6.96             30.03
+2      000995       皇台酒业              6.32             10.69               -7.38                7.40            448.22
+3      603369         今世缘              4.17              9.08              -11.39              -26.71             15.26
+4      600199       金种子酒              3.65              2.24              -14.00              -22.43            -30.95
+5      600559       老白干酒              1.04              1.19              -12.78              -19.66             28.20
+6      000799         酒鬼酒              0.55              0.90            

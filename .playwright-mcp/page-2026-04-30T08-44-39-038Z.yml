@@ -1,0 +1,101 @@
+- generic [ref=e3]:
+  - generic [ref=e4]:
+    - generic [ref=e226]: 上证指数 4112.16 ▲0.11%
+    - generic [ref=e227]: "|"
+    - generic [ref=e228]: 沪深300 4807.31 ▼-0.06%
+    - generic [ref=e229]: "|"
+    - generic [ref=e230]: 科创50 1571.07 ▲5.19%
+    - generic [ref=e231]: "|"
+    - generic [ref=e232]: 中证500 8349.51 ▲0.09%
+    - generic [ref=e233]: "|"
+    - generic [ref=e234]: 深证成指 15107.55 ▼-0.09%
+    - generic [ref=e235]: "|"
+    - generic [ref=e236]: 创业板指 3677.15 ▼-0.27%
+  - generic [ref=e6]:
+    - generic [ref=e147]: 情绪 54/100 [███████████░░░░░░░░░] 中性
+    - generic [ref=e148]: 涨2578
+    - generic [ref=e149]: 跌2754
+    - generic [ref=e150]: 涨停66 跌停7
+    - generic [ref=e151]: 北向 +130亿
+  - generic [ref=e8]:
+    - generic [ref=e9]: research
+    - generic [ref=e10]: 已连接
+  - generic [ref=e11]:
+    - generic [ref=e13]:
+      - generic [ref=e152]: 股票池
+      - generic [ref=e153]:
+        - generic [ref=e154] [cursor=pointer]:
+          - generic [ref=e155]:
+            - generic [ref=e156]: 多指标共振
+            - button "×" [ref=e157]
+          - generic [ref=e158]: 5 只
+        - generic [ref=e159] [cursor=pointer]:
+          - generic [ref=e160]:
+            - generic [ref=e161]: 通信设备MA多头
+            - button "×" [ref=e162]
+          - generic [ref=e163]: 5 只
+        - generic [ref=e164] [cursor=pointer]:
+          - generic [ref=e165]:
+            - generic [ref=e166]: 高乖离
+            - button "×" [ref=e167]
+          - generic [ref=e168]: 5 只
+        - generic [ref=e169] [cursor=pointer]:
+          - generic [ref=e170]:
+            - generic [ref=e171]: 高换手
+            - button "×" [ref=e172]
+          - generic [ref=e173]: 5 只
+        - generic [ref=e174] [cursor=pointer]:
+          - generic [ref=e175]:
+            - generic [ref=e176]: 锤子线
+            - button "×" [ref=e177]
+          - generic [ref=e178]: 5 只
+        - generic [ref=e179] [cursor=pointer]:
+          - generic [ref=e180]:
+            - generic [ref=e181]: 高ROE
+            - button "×" [ref=e182]
+          - generic [ref=e183]: 5 只
+        - generic [ref=e184] [cursor=pointer]:
+          - generic [ref=e185]:
+            - generic [ref=e186]: 涨跌幅超7
+            - button "×" [ref=e187]
+          - generic [ref=e188]: 5 只
+        - generic [ref=e189] [cursor=pointer]:
+          - generic [ref=e190]:
+            - generic [ref=e191]: 放量上涨
+            - button "×" [ref=e192]
+          - generic [ref=e193]: 5 只
+        - generic [ref=e194] [cursor=pointer]:
+          - generic [ref=e195]:
+            - generic [ref=e196]: 日线多头排列市值TOP10
+            - button "×" [ref=e197]
+          - generic [ref=e198]: 10 只
+        - generic [ref=e199] [cursor=pointer]:
+          - generic [ref=e200]:
+            - generic [ref=e201]: 日线MACD金叉_本周周线金叉预备队
+            - button "×" [ref=e202]
+          - generic [ref=e203]: 100 只
+        - generic [ref=e204] [cursor=pointer]:
+          - generic [ref=e205]:
+            - generic [ref=e206]: 周线RSI低位_即将金叉预备队
+            - button "×" [ref=e207]
+          - generic [ref=e208]: 51 只
+        - generic [ref=e209] [cursor=pointer]:
+          - generic [ref=e210]:
+            - generic [ref=e211]: 2025年报营收利润双增长Top10
+            - button "×" [ref=e212]
+          - generic [ref=e213]: 10 只
+        - generic [ref=e214] [cursor=pointer]:
+          - generic [ref=e215]:
+            - generic [ref=e216]: PE小于20且市值大于100亿
+            - button "×" [ref=e217]
+          - generic [ref=e218]: 50 只
+      - generic [ref=e219]: 多指标共振
+      - generic [ref=e220]:
+        - generic [ref=e221] [cursor=pointer]: 688072 拓荆科技
+        - generic [ref=e222] [cursor=pointer]: 600018 上港集团
+        - generic [ref=e223] [cursor=pointer]: 688019 安集科技
+        - generic [ref=e224] [cursor=pointer]: 603127 昭衍新药
+        - generic [ref=e225] [cursor=pointer]: 603968 醋化股份
+    - generic [ref=e17]:
+      - textbox "输入消息..." [ref=e18]
+      - button "发送" [ref=e19]

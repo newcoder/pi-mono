@@ -1,0 +1,12 @@
+ʳ: U+02B3, UTF-8: cab3
+  UTF-8 bytes as GBK: 食
+Ʒ: U+01B7, UTF-8: c6b7
+  UTF-8 bytes as GBK: 品
+
+食品 GBK bytes: cab3c6b7
+CA D3 C6 B7 as UTF-8: 'utf-8' codec can't decode byte 0xca in position 0: invalid continuation byte
+
+Whole line analysis:
+UTF-8 bytes: cab3c6b7efbfbdefbfbd2d2defbfbdd7bec6a2efbfbd2d2defbfbdd7bec6a2efbfbd28323129
+As GBK: 'gbk' codec can't decode byte 0xa2 in position 18: illegal multibyte sequence
+As latin1->gbk: 'latin-1' codec can't encode characters in position 0-3: ordinal not in range(256)

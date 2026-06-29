@@ -6,6 +6,7 @@ import type {
 	BusinessCompositionRow,
 	CalendarEventRow,
 	ConceptStockRow,
+	DynamicPoolItemRow,
 	FactorIcRow,
 	FundamentalIndicatorsRow,
 	FundamentalsRow,
@@ -487,6 +488,23 @@ CREATE INDEX IF NOT EXISTS idx_pt_portfolio ON portfolio_trades(portfolio_id, tr
 CREATE INDEX IF NOT EXISTS idx_pt_code ON portfolio_trades(code, market);
 `;
 
+const DYNAMIC_POOL_SCHEMA = `
+CREATE TABLE IF NOT EXISTS dynamic_pool_items (
+    pool_id INTEGER NOT NULL,
+    date TEXT NOT NULL,
+    code TEXT NOT NULL,
+    market INTEGER NOT NULL,
+    name TEXT,
+    weight REAL,
+    created_at TEXT DEFAULT CURRENT_TIMESTAMP,
+    PRIMARY KEY (pool_id, date, code, market),
+    FOREIGN KEY (pool_id) REFERENCES stock_pools(id) ON DELETE CASCADE
+);
+
+CREATE INDEX IF NOT EXISTS idx_dynamic_pool_items_lookup
+    ON dynamic_pool_items(pool_id, date);
+`;
+
 export class DataStore {
 	private db: sqlite3.Database | null = null;
 	private dbPath: string;
@@ -504,7 +522,20 @@ export class DataStore {
 
 		await promisifyExec(this.db, "PRAGMA foreign_keys = ON;");
 		await promisifyExec(this.db, SCHEMA_SQL);
+		await this.runMigrations();
 		this.initialized = true;
+	}
+
+	private async runMigrations(): Promise<void> {
+		if (!this.db) return;
+
+		// Add is_dynamic column to existing stock_pools tables
+		const cols = (await promisifyQuery(this.db, "PRAGMA table_info(stock_pools)")) as Array<{ name: string }>;
+		if (!cols.some((c) => c.name === "is_dynamic")) {
+			await promisifyExec(this.db, "ALTER TABLE stock_pools ADD COLUMN is_dynamic INTEGER DEFAULT 0");
+		}
+
+		await promisifyExec(this.db, DYNAMIC_POOL_SCHEMA);
 	}
 
 	// ─── Stocks ─────────────────────────────────────────────────────
@@ -597,6 +628,35 @@ export class DataStore {
 		return promisifyQuery(this.db, sql);
 	}
 
+	async getKlinesForCodes(
+		codes: Array<{ code: string; market: number }>,
+		period: string,
+		adjust: string,
+		start: string,
+		end: string,
+	): Promise<Map<string, KlineRow[]>> {
+		const result = new Map<string, KlineRow[]>();
+		if (!this.db || codes.length === 0) return result;
+
+		const tuples = codes.map((c) => `(${s(c.code)}, ${c.market})`).join(",");
+		const sql = `
+			SELECT * FROM klines
+			WHERE (code, market) IN (VALUES ${tuples})
+			  AND period = ${s(period)}
+			  AND adjust = ${s(adjust)}
+			  AND date >= ${s(start)}
+			  AND date <= ${s(end)}
+			ORDER BY code, market, date
+		`;
+		const rows = (await promisifyQuery(this.db, sql)) as KlineRow[];
+		for (const row of rows) {
+			const key = `${row.code}_${row.market}`;
+			if (!result.has(key)) result.set(key, []);
+			result.get(key)!.push(row);
+		}
+		return result;
+	}
+
 	async getLatestKlineDate(code: string, market: number, period: string, adjust: string): Promise<string | null> {
 		if (!this.db) return null;
 		const rows = await promisifyQuery(
@@ -629,6 +689,31 @@ export class DataStore {
 		if (end) sql += ` AND date <= ${s(end)}`;
 		sql += ` ORDER BY date`;
 		return promisifyQuery(this.db, sql);
+	}
+
+	async getAdjustFactorsForCodes(
+		codes: Array<{ code: string; market: number }>,
+		start: string,
+		end: string,
+	): Promise<Map<string, AdjustFactorRow[]>> {
+		const result = new Map<string, AdjustFactorRow[]>();
+		if (!this.db || codes.length === 0) return result;
+
+		const tuples = codes.map((c) => `(${s(c.code)}, ${c.market})`).join(",");
+		const sql = `
+			SELECT code, market, date, qfq_factor, hfq_factor FROM adjust_factors
+			WHERE (code, market) IN (VALUES ${tuples})
+			  AND date >= ${s(start)}
+			  AND date <= ${s(end)}
+			ORDER BY code, market, date
+		`;
+		const rows = (await promisifyQuery(this.db, sql)) as AdjustFactorRow[];
+		for (const row of rows) {
+			const key = `${row.code}_${row.market}`;
+			if (!result.has(key)) result.set(key, []);
+			result.get(key)!.push(row);
+		}
+		return result;
 	}
 
 	async getLatestFactorDate(code: string, market: number): Promise<string | null> {
@@ -1329,10 +1414,10 @@ export class DataStore {
 
 	// ─── Stock Pools ────────────────────────────────────────────────
 
-	async createStockPool(name: string, description?: string): Promise<number> {
+	async createStockPool(name: string, description?: string, isDynamic = false): Promise<number> {
 		if (!this.db) throw new Error("DataStore not initialized");
 		const now = new Date().toISOString();
-		const sql = `INSERT INTO stock_pools (name, description, created_at, updated_at) VALUES (${s(name)}, ${s(description) ?? "NULL"}, ${s(now)}, ${s(now)})`;
+		const sql = `INSERT INTO stock_pools (name, description, is_dynamic, created_at, updated_at) VALUES (${s(name)}, ${s(description) ?? "NULL"}, ${isDynamic ? 1 : 0}, ${s(now)}, ${s(now)})`;
 		await promisifyExec(this.db, sql);
 		const rows = await promisifyQuery(this.db, `SELECT id FROM stock_pools WHERE name = ${s(name)}`);
 		return rows[0]?.id;
@@ -1419,6 +1504,75 @@ export class DataStore {
 	async clearStockPool(poolId: number): Promise<void> {
 		if (!this.db) return;
 		await promisifyExec(this.db, `DELETE FROM stock_pool_items WHERE pool_id = ${poolId}`);
+	}
+
+	async markStockPoolDynamic(poolId: number, dynamic: boolean): Promise<void> {
+		if (!this.db) return;
+		await promisifyExec(this.db, `UPDATE stock_pools SET is_dynamic = ${dynamic ? 1 : 0} WHERE id = ${poolId}`);
+	}
+
+	async setDynamicPoolItems(
+		poolId: number,
+		date: string,
+		items: Array<{ code: string; market: number; name?: string; weight?: number }>,
+	): Promise<void> {
+		if (!this.db || items.length === 0) return;
+		const now = new Date().toISOString();
+		const f = (v: number | null | undefined) => (v == null || Number.isNaN(v) ? "NULL" : String(v));
+		const values = items
+			.map(
+				(item) =>
+					`(${poolId}, ${s(date)}, ${s(item.code)}, ${item.market}, ${s(item.name) ?? "NULL"}, ${f(item.weight)}, ${s(now)})`,
+			)
+			.join(",");
+		await promisifyExec(
+			this.db,
+			`INSERT OR REPLACE INTO dynamic_pool_items (pool_id, date, code, market, name, weight, created_at) VALUES ${values}`,
+		);
+	}
+
+	async getDynamicPoolItems(
+		poolId: number,
+		date: string,
+	): Promise<Array<{ code: string; market: number; name: string | null; weight: number | null }>> {
+		if (!this.db) return [];
+		return promisifyQuery(
+			this.db,
+			`SELECT code, market, name, weight FROM dynamic_pool_items WHERE pool_id = ${poolId} AND date = ${s(date)} ORDER BY code`,
+		);
+	}
+
+	async getDynamicPoolDates(poolId: number): Promise<string[]> {
+		if (!this.db) return [];
+		const rows = await promisifyQuery(
+			this.db,
+			`SELECT DISTINCT date FROM dynamic_pool_items WHERE pool_id = ${poolId} ORDER BY date`,
+		);
+		return rows.map((r) => r.date as string);
+	}
+
+	async getDynamicPoolItemsInRange(
+		poolId: number,
+		startDate: string,
+		endDate: string,
+	): Promise<Map<string, Array<{ code: string; market: number; name?: string; weight?: number }>>> {
+		if (!this.db) return new Map();
+		const rows = (await promisifyQuery(
+			this.db,
+			`SELECT date, code, market, name, weight FROM dynamic_pool_items WHERE pool_id = ${poolId} AND date >= ${s(startDate)} AND date <= ${s(endDate)} ORDER BY date, code`,
+		)) as DynamicPoolItemRow[];
+		const map = new Map<string, Array<{ code: string; market: number; name?: string; weight?: number }>>();
+		for (const r of rows) {
+			const list = map.get(r.date) ?? [];
+			list.push({ code: r.code, market: r.market, name: r.name ?? undefined, weight: r.weight ?? undefined });
+			map.set(r.date, list);
+		}
+		return map;
+	}
+
+	async clearDynamicPoolDate(poolId: number, date: string): Promise<void> {
+		if (!this.db) return;
+		await promisifyExec(this.db, `DELETE FROM dynamic_pool_items WHERE pool_id = ${poolId} AND date = ${s(date)}`);
 	}
 
 	// ─── Portfolios ─────────────────────────────────────────────────
