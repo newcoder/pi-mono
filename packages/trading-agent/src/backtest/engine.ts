@@ -1553,6 +1553,202 @@ export async function runPoolBacktest(
 						}
 					}
 				}
+			} else if (fullPositionMode === "linear") {
+				// Linear decreasing weights: rank 1 gets N shares, rank N gets 1 share.
+				// Build ranked target list from scoredHoldings (already sorted by score desc).
+				const targetRanked = scoredHoldings.filter((h) => targetCodes.has(h.code));
+				const n = targetRanked.length;
+				if (n > 0) {
+					// Weight_i = n - i (0-based). Total = n*(n+1)/2. Fraction = weight_i / total.
+					const totalWeight = (n * (n + 1)) / 2;
+
+					// Total portfolio value at today's open
+					let totalValue = cash;
+					for (const h of targetRanked) {
+						const pos = positions.get(h.code);
+						const klineMap = klineMapByCode.get(h.code);
+						const kline = klineMap?.get(date);
+						const price = kline?.open ?? pos?.lastClose ?? 0;
+						if (pos && price > 0) totalValue += pos.shares * price;
+					}
+
+					const maxTargetValue = totalValue * maxPositionWeight;
+
+					// Sell overweight positions first (partial sells allowed)
+					for (let i = 0; i < n; i++) {
+						const h = targetRanked[i];
+						const pos = positions.get(h.code);
+						if (!pos) continue;
+
+						const stock = stockMap.get(h.code);
+						if (!stock) continue;
+
+						const klineMap = klineMapByCode.get(h.code);
+						const kline = klineMap?.get(date);
+						if (!checkTradeable(kline)) continue;
+						const sellPrice = (kline?.open ?? pos.lastClose) * (1 - slippage);
+
+						const linearWeight = n - i;
+						const targetFraction = linearWeight / totalWeight;
+						const effectiveTargetValue = Math.min(targetFraction * totalValue, maxTargetValue);
+						const currentValue = pos.shares * sellPrice;
+						if (currentValue <= effectiveTargetValue) continue;
+
+						const excessValue = currentValue - effectiveTargetValue;
+						if (excessValue <= effectiveTargetValue * rebalanceThreshold) continue;
+
+						const rawShares = Math.floor(excessValue / sellPrice);
+						const shares = Math.floor(rawShares / minLot) * minLot;
+						if (shares >= minLot && shares < pos.shares) {
+							const sellAmount = shares * sellPrice;
+							if (!isTradeAmountValid(sellAmount, minTradeAmount)) continue;
+							const proceeds = sellAmount * (1 - commission - transferFee - taxRate);
+							const costBasis = shares * pos.entryPrice * (1 + commission + transferFee);
+							const pnl = proceeds - costBasis;
+							trades.push({
+								code: h.code,
+								market: stock.market,
+								direction: "sell",
+								date,
+								price: sellPrice,
+								shares,
+								amount: sellAmount,
+								pnl,
+								pnlPct: costBasis > 0 ? (pnl / costBasis) * 100 : 0,
+								daysHeld: pos.daysHeld,
+								result: pnl > 0 ? "win" : pnl < 0 ? "loss" : "breakeven",
+								memo: "线性减仓",
+							});
+							cash += proceeds;
+							pos.shares -= shares;
+							if (pos.shares <= 0) positions.delete(h.code);
+						}
+					}
+
+					// Buy underweight positions
+					for (let i = 0; i < n; i++) {
+						const h = targetRanked[i];
+						const pos = positions.get(h.code);
+						const stock = stockMap.get(h.code);
+						if (!stock) continue;
+
+						const klineMap = klineMapByCode.get(h.code);
+						const kline = klineMap?.get(date);
+						if (kline && isLimitUp(kline)) continue;
+						if (!checkTradeable(kline)) continue;
+						const buyPrice = (kline?.open ?? pos?.lastClose ?? 0) * (1 + slippage);
+						if (buyPrice <= 0) continue;
+
+						const linearWeight = n - i;
+						const targetFraction = linearWeight / totalWeight;
+						const effectiveTargetValue = Math.min(targetFraction * totalValue, maxTargetValue);
+						const currentValue = pos ? pos.shares * buyPrice : 0;
+						const deficitValue = effectiveTargetValue - currentValue;
+						if (deficitValue <= effectiveTargetValue * rebalanceThreshold) continue;
+
+						const rawShares = Math.floor(deficitValue / buyPrice);
+						const shares = Math.floor(rawShares / minLot) * minLot;
+						if (shares >= minLot) {
+							const amount = shares * buyPrice;
+							if (!isTradeAmountValid(amount, minTradeAmount)) continue;
+							const cost = amount * (1 + commission + transferFee);
+							if (cost <= cash) {
+								cash -= cost;
+								if (pos) {
+									const totalCost = pos.entryPrice * pos.shares + amount;
+									pos.shares += shares;
+									pos.entryPrice = totalCost / pos.shares;
+								} else {
+									positions.set(h.code, {
+										shares,
+										entryPrice: buyPrice,
+										entryDate: date,
+										daysHeld: 0,
+										lastClose: buyPrice,
+									});
+								}
+								trades.push({
+									code: h.code,
+									market: stock.market,
+									direction: "buy",
+									date,
+									price: buyPrice,
+									shares,
+									amount,
+									memo: "线性买入",
+								});
+							}
+						}
+					}
+
+					// Cash sweep: redistribute remaining cash linearly to buyable targets
+					const buyableRanked = targetRanked.filter((h) => {
+						const klineMap = klineMapByCode.get(h.code);
+						const kline = klineMap?.get(date);
+						if (kline && isLimitUp(kline)) return false;
+						return checkTradeable(kline);
+					});
+					if (buyableRanked.length > 0 && cash > 0) {
+						let remaining = buyableRanked.length;
+						for (const h of buyableRanked) {
+							const pos = positions.get(h.code);
+							const stock = stockMap.get(h.code);
+							if (!stock) {
+								remaining--;
+								continue;
+							}
+
+							const klineMap = klineMapByCode.get(h.code);
+							const kline = klineMap?.get(date);
+							const buyPrice = (kline?.open ?? pos?.lastClose ?? 0) * (1 + slippage);
+							if (buyPrice <= 0) {
+								remaining--;
+								continue;
+							}
+
+							const currentValue = pos ? pos.shares * buyPrice : 0;
+							const maxAddValue = Math.max(0, totalValue * maxPositionWeight - currentValue);
+							const cashPerStock = cash / remaining;
+							const cashToUse = Math.min(cashPerStock, maxAddValue);
+							const rawShares = Math.floor(cashToUse / buyPrice);
+							const shares = Math.floor(rawShares / minLot) * minLot;
+
+							if (shares >= minLot) {
+								const amount = shares * buyPrice;
+								if (isTradeAmountValid(amount, minTradeAmount)) {
+									const cost = amount * (1 + commission + transferFee);
+									if (cost <= cash) {
+										cash -= cost;
+										if (pos) {
+											const totalCost = pos.entryPrice * pos.shares + amount;
+											pos.shares += shares;
+											pos.entryPrice = totalCost / pos.shares;
+										} else {
+											positions.set(h.code, {
+												shares,
+												entryPrice: buyPrice,
+												entryDate: date,
+												daysHeld: 0,
+												lastClose: buyPrice,
+											});
+										}
+										trades.push({
+											code: h.code,
+											market: stock.market,
+											direction: "buy",
+											date,
+											price: buyPrice,
+											shares,
+											amount,
+											memo: "线性现金 sweep",
+										});
+									}
+								}
+							}
+							remaining--;
+						}
+					}
+				}
 			}
 
 			execLoopTime += performance.now() - tExecStart;

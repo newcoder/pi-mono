@@ -138,7 +138,7 @@ export interface PoolBacktestConfig {
 	initialCapital?: number;
 	positionSize?: number;
 	fullPosition?: boolean; // 是否一直满仓
-	fullPositionMode?: "add_to_holdings" | "equal_weight"; // 满仓模式：加仓到持仓 / 目标等权再平衡
+	fullPositionMode?: "add_to_holdings" | "equal_weight" | "linear"; // 满仓模式：加仓到持仓 / 目标等权再平衡 / 线性递减权重
 	rebalanceThreshold?: number; // 等权再平衡触发阈值，如 0.05 = 偏离目标权重 5% 才调仓
 	maxPositionWeight?: number; // 单个标的最大权重上限，如 0.1 = 10%。防止目标集合过小时 all-in 单只股票。默认 0.1
 	minTradeAmount?: number; // 忽略小于该金额的交易，默认 0
