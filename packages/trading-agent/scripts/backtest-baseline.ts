@@ -2,7 +2,7 @@
 /**
  * backtest-baseline — 回测基线/回归测试套件
  *
- * 覆盖所有 19 种策略 × 9 种 rank_by，分别在 4 个股池上运行：
+ * 覆盖所有 18 种策略 × 9 种 rank_by，分别在 4 个股池上运行：
  *   自选股53号, 沪深300, 中证500, 中证1000
  *
  * 配置：初始资金 1亿，满仓等权，最大持仓 20 只，最近三年
@@ -118,8 +118,8 @@ const STRATEGIES: StrategyEntry[] = [
 	{ strategy: "rsi_overbought_sell", category: "sellOnly", asExitOf: "always_buy" },
 
 	// ── Special cases ──
+	// always_buy+time_exit(5d) = 每天买入+5日定时换仓, 用于测试排序因子
 	{ strategy: "always_buy", category: "special", exitStrategy: "time_exit", exitParams: { period: 5 } },
-	{ strategy: "time_exit", category: "special", asExitOf: "always_buy" },
 ];
 
 const RANK_BY_OPTIONS: PoolBacktestConfig["rankBy"][] = [
