@@ -30,48 +30,28 @@ export interface StrategyParams {
 }
 
 export function generateSignals(klines: KlineRow[], strategy: StrategyType, params: StrategyParams = {}): Signal[] {
-	switch (strategy) {
-		case "ma_cross":
-			return maCrossSignals(klines, params);
-		case "macd_cross":
-			return macdCrossSignals(klines, params);
-		case "rsi_reversal":
-			return rsiReversalSignals(klines, params);
-		case "bollinger_breakout":
-			return bollingerSignals(klines, params);
-		case "supertrend":
-			return supertrendSignals(klines, params);
-		case "hammer":
-			return hammerSignals(klines, params);
-		case "bullish_engulf":
-			return bullishEngulfSignals(klines, params);
-		case "morning_star":
-			return morningStarSignals(klines, params);
-		case "three_soldiers":
-			return threeSoldiersSignals(klines, params);
-		case "tech_composite":
-			return techCompositeSignals(klines, params);
-		case "breakout":
-			return breakoutSignals(klines, params);
-		case "volume_contraction":
-			return volumeContractionSignals(klines, params);
-		case "shooting_star":
-			return shootingStarSignals(klines, params);
-		case "bearish_engulf":
-			return bearishEngulfSignals(klines, params);
-		case "evening_star":
-			return eveningStarSignals(klines, params);
-		case "three_crows":
-			return threeCrowsSignals(klines, params);
-		case "rsi_overbought_sell":
-			return rsiOverboughtSellSignals(klines, params);
-		case "time_exit":
-			return timeExitSignals(klines, params);
-		case "always_buy":
-			return alwaysBuySignals(klines);
-		default:
-			return [];
-	}
+	const registry: Record<string, (klines: KlineRow[], params: StrategyParams) => Signal[]> = {
+		ma_cross: maCrossSignals,
+		macd_cross: macdCrossSignals,
+		rsi_reversal: rsiReversalSignals,
+		bollinger_breakout: bollingerSignals,
+		supertrend: supertrendSignals,
+		hammer: hammerSignals,
+		bullish_engulf: bullishEngulfSignals,
+		morning_star: morningStarSignals,
+		three_soldiers: threeSoldiersSignals,
+		tech_composite: techCompositeSignals,
+		breakout: breakoutSignals,
+		volume_contraction: volumeContractionSignals,
+		shooting_star: shootingStarSignals,
+		bearish_engulf: bearishEngulfSignals,
+		evening_star: eveningStarSignals,
+		three_crows: threeCrowsSignals,
+		rsi_overbought_sell: rsiOverboughtSellSignals,
+		time_exit: timeExitSignals,
+		always_buy: alwaysBuySignals,
+	};
+	return (registry[strategy] ?? (() => []))(klines, params);
 }
 
 function maCrossSignals(klines: KlineRow[], params: StrategyParams): Signal[] {

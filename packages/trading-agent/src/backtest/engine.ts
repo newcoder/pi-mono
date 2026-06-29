@@ -787,6 +787,85 @@ export async function runPoolBacktest(
 	// scoreDate must be a date whose close data is already known at decision time
 	// (e.g. the signal date for new candidates, or the previous trading day for
 	// existing positions). Do not pass the execution date to avoid lookahead bias.
+	// Rank score registry — add new rank_by here (one entry, no switch changes needed)
+	const rankScorers: Record<
+		string,
+		(stock: (typeof stockData)[number], scoreDate: string, recencyDays?: number) => number
+	> = {
+		momentum: (_s, sd) => {
+			const k = klineMapByCode.get(_s.code)?.get(sd);
+			return k?.change_pct ?? 0;
+		},
+		value: (_s, sd) => {
+			const k = klineMapByCode.get(_s.code)?.get(sd);
+			if (!k) return 0;
+			const chg = k.change_pct ?? 0;
+			const pc = k.pre_close ?? k.close ?? 0;
+			const price = pc > 0 ? pc * (1 + chg / 100) : (k.close ?? 0);
+			return price > 0 ? 1 / price : 0;
+		},
+		turnover: (_s, sd) => {
+			const k = klineMapByCode.get(_s.code)?.get(sd);
+			const raw = k?.turnover ?? k?.volume ?? 0;
+			return Math.log10(raw + 1);
+		},
+		technical: (_s, sd) => {
+			const k = klineMapByCode.get(_s.code)?.get(sd);
+			if (!k) return 0;
+			return (k.change_pct ?? 0) * 0.5 + Math.log10((k.turnover ?? 0) + 1) * 0.5;
+		},
+		low_volatility: (_s, sd) => {
+			const idx = dateIndex.get(sd);
+			if (idx == null) return 0;
+			const lb = config.volatilityLookbackDays ?? 5;
+			const km = klineMapByCode.get(_s.code);
+			const closes: number[] = [];
+			for (let i = Math.max(0, idx - lb + 1); i <= idx; i++) {
+				const k = km?.get(allDates[i]);
+				if (k?.close != null) closes.push(k.close);
+			}
+			if (closes.length < 2) return 0;
+			const rets: number[] = [];
+			for (let i = 1; i < closes.length; i++) {
+				if (closes[i - 1] > 0) rets.push((closes[i] / closes[i - 1] - 1) * 100);
+			}
+			if (rets.length < 2) return 0;
+			const m = rets.reduce((a, b) => a + b, 0) / rets.length;
+			const v = rets.reduce((s, r) => s + (r - m) ** 2, 0) / (rets.length - 1);
+			return -Math.sqrt(v);
+		},
+		signal_recency: (_s, _sd, rd) => (rd != null ? -rd : 0),
+		ma_alignment: (_s, sd) => {
+			const li = _s.dateToIndex.get(sd);
+			if (li == null) return 0;
+			const ma10 = cachedMA(_s.klines, 10).values[li];
+			const ma20 = cachedMA(_s.klines, 20).values[li];
+			const ma60 = cachedMA(_s.klines, 60).values[li];
+			const cl = klineMapByCode.get(_s.code)?.get(sd)?.close ?? null;
+			if (ma10 == null || ma20 == null || ma60 == null || cl == null) return 0;
+			if (ma10 <= 0 || ma20 <= 0 || ma60 <= 0) return 0;
+			return cl / ma10 - 1 + (ma10 / ma20 - 1) + (ma20 / ma60 - 1);
+		},
+		weekly_ma_alignment: (_s, sd) => {
+			const series = weeklyCloseSeries.get(_s.code);
+			if (!series || series.length === 0) return 0;
+			let idx = -1;
+			for (let i = 0; i < series.length; i++) {
+				if (series[i].endDate <= sd) idx = i;
+				else break;
+			}
+			if (idx < 0 || idx + 1 < 20) return 0;
+			const a = (arr: number[]) => arr.reduce((x, y) => x + y, 0) / arr.length;
+			const cl = series.slice(0, idx + 1).map((s) => s.close);
+			const w5 = a(cl.slice(-5)),
+				w10 = a(cl.slice(-10)),
+				w20 = a(cl.slice(-20));
+			if (w5 <= 0 || w10 <= 0 || w20 <= 0) return 0;
+			const c = cl[cl.length - 1];
+			return c / w5 - 1 + (w5 / w10 - 1) + (w10 / w20 - 1);
+		},
+	};
+
 	function computeRankScore(
 		stock: (typeof stockData)[number],
 		scoreDate: string,
@@ -794,105 +873,7 @@ export async function runPoolBacktest(
 		recencyDays?: number,
 	): number {
 		if (!rankBy) return 0;
-
-		const klineMap = klineMapByCode.get(stock.code);
-		const kline = klineMap?.get(scoreDate);
-		if (!kline) return 0;
-
-		switch (rankBy) {
-			case "momentum":
-				// Latest change_pct — higher is better for momentum/trend strategies
-				return kline.change_pct ?? 0;
-			case "value": {
-				// Approximate PE from latest close — lower PE = higher score (inverted)
-				// If change_pct and pre_close available: price = pre_close * (1 + change_pct/100)
-				const change = kline.change_pct ?? 0;
-				const preClose = kline.pre_close ?? kline.close ?? 0;
-				const price = preClose > 0 ? preClose * (1 + change / 100) : (kline.close ?? 0);
-				// Invert: lower price = higher score (cheap stocks preferred)
-				return price > 0 ? 1 / price : 0;
-			}
-			case "turnover": {
-				// Higher turnover = more active = higher score.
-				// Turnover is stored as amount in currency (often billions), so use log scale
-				// to compress the wide range into a comparable 0-12 range.
-				const raw = kline.turnover ?? kline.volume ?? 0;
-				return Math.log10(raw + 1);
-			}
-			case "technical": {
-				// Composite: trend + momentum + volume + volatility.
-				// Use change_pct for momentum and log-scaled turnover for activity.
-				const chg = kline.change_pct ?? 0;
-				const to = Math.log10((kline.turnover ?? 0) + 1);
-				return chg * 0.5 + to * 0.5;
-			}
-			case "low_volatility": {
-				// Lower recent return volatility = higher score. Use percentage returns
-				// over the lookback window ending at scoreDate to make it comparable across stocks.
-				const idx = dateIndex.get(scoreDate);
-				if (idx == null) return 0;
-				const lookback = config.volatilityLookbackDays ?? 5;
-				const startIdx = Math.max(0, idx - lookback + 1);
-				const closes: number[] = [];
-				for (let i = startIdx; i <= idx; i++) {
-					const k = klineMap?.get(allDates[i]);
-					if (k?.close != null) closes.push(k.close);
-				}
-				if (closes.length < 2) return 0;
-				const returns: number[] = [];
-				for (let i = 1; i < closes.length; i++) {
-					if (closes[i - 1] > 0) returns.push((closes[i] / closes[i - 1] - 1) * 100);
-				}
-				if (returns.length < 2) return 0;
-				const mean = returns.reduce((a, b) => a + b, 0) / returns.length;
-				const variance = returns.reduce((sum, r) => sum + (r - mean) ** 2, 0) / (returns.length - 1);
-				return -Math.sqrt(variance);
-			}
-			case "signal_recency":
-				// More recent signal / position = higher score (lower days = higher).
-				return recencyDays != null ? -recencyDays : 0;
-			case "ma_alignment": {
-				// Bullish alignment strength: 10/20/60 MA, price on top.
-				// Score = (close/MA10 - 1) + (MA10/MA20 - 1) + (MA20/MA60 - 1).
-				// Higher = more strongly aligned; negative = bearish / no alignment.
-				const localIdx = stock.dateToIndex.get(scoreDate);
-				if (localIdx == null) return 0;
-				const ma10Values = cachedMA(stock.klines, 10).values;
-				const ma20Values = cachedMA(stock.klines, 20).values;
-				const ma60Values = cachedMA(stock.klines, 60).values;
-				const ma10 = ma10Values[localIdx];
-				const ma20 = ma20Values[localIdx];
-				const ma60 = ma60Values[localIdx];
-				const close = kline?.close ?? null;
-				if (ma10 == null || ma20 == null || ma60 == null || close == null) return 0;
-				if (ma10 <= 0 || ma20 <= 0 || ma60 <= 0) return 0;
-				return close / ma10 - 1 + (ma10 / ma20 - 1) + (ma20 / ma60 - 1);
-			}
-			case "weekly_ma_alignment": {
-				// Bullish alignment strength on weekly closes: 5/10/20 week MA.
-				// Score = (close/WMA5 - 1) + (WMA5/WMA10 - 1) + (WMA10/WMA20 - 1).
-				const series = weeklyCloseSeries.get(stock.code);
-				if (!series || series.length === 0) return 0;
-				let idx = -1;
-				for (let i = 0; i < series.length; i++) {
-					if (series[i].endDate <= scoreDate) idx = i;
-					else break;
-				}
-				if (idx < 0) return 0;
-				const needed = 20;
-				if (idx + 1 < needed) return 0;
-				const avg = (arr: number[]) => arr.reduce((a, b) => a + b, 0) / arr.length;
-				const closes = series.slice(0, idx + 1).map((s) => s.close);
-				const wma5 = avg(closes.slice(-5));
-				const wma10 = avg(closes.slice(-10));
-				const wma20 = avg(closes.slice(-20));
-				if (wma5 <= 0 || wma10 <= 0 || wma20 <= 0) return 0;
-				const close = closes[closes.length - 1];
-				return close / wma5 - 1 + (wma5 / wma10 - 1) + (wma10 / wma20 - 1);
-			}
-			default:
-				return 0;
-		}
+		return rankScorers[rankBy]?.(stock, scoreDate, recencyDays) ?? 0;
 	}
 
 	// 4. Run simulation (single pass or multi-run for random rankBy)
@@ -922,6 +903,40 @@ export async function runPoolBacktest(
 			return true;
 		}
 
+		function closePosition(
+			code: string,
+			market: number,
+			shares: number,
+			entryPrice: number,
+			sellPrice: number,
+			daysHeld: number,
+			memo: string,
+			sellDate: string,
+		): boolean {
+			const sellAmount = shares * sellPrice;
+			if (!isTradeAmountValid(sellAmount, minTradeAmount)) return false;
+			const proceeds = sellAmount * (1 - commission - transferFee - taxRate);
+			const costBasis = shares * entryPrice * (1 + commission + transferFee);
+			const pnl = proceeds - costBasis;
+			trades.push({
+				code,
+				market,
+				direction: "sell",
+				date: sellDate,
+				price: sellPrice,
+				shares,
+				amount: sellAmount,
+				pnl,
+				pnlPct: costBasis > 0 ? (pnl / costBasis) * 100 : 0,
+				daysHeld,
+				result: pnl > 0 ? "win" : pnl < 0 ? "loss" : "breakeven",
+				memo,
+			});
+			cash += proceeds;
+			positions.delete(code);
+			return true;
+		}
+
 		// 5. Day-by-day simulation
 		for (let dateIdx = 0; dateIdx < allDates.length; dateIdx++) {
 			const date = allDates[dateIdx];
@@ -942,30 +957,16 @@ export async function runPoolBacktest(
 					const klineMap = klineMapByCode.get(code);
 					const kline = klineMap?.get(date);
 					if (!checkTradeable(kline)) continue;
-					const sellPrice = (kline?.open ?? pos.lastClose) * (1 - slippage);
-					const sellAmount = pos.shares * sellPrice;
-					if (!isTradeAmountValid(sellAmount, minTradeAmount)) {
-						continue;
-					}
-					const proceeds = sellAmount * (1 - commission - transferFee - taxRate);
-					const costBasis = pos.shares * pos.entryPrice * (1 + commission + transferFee);
-					const pnl = proceeds - costBasis;
-					trades.push({
+					closePosition(
 						code,
-						market: stock.market,
-						direction: "sell",
+						stock.market,
+						pos.shares,
+						pos.entryPrice,
+						(kline?.open ?? pos.lastClose) * (1 - slippage),
+						pos.daysHeld,
+						"调出动态池",
 						date,
-						price: sellPrice,
-						shares: pos.shares,
-						amount: sellAmount,
-						pnl,
-						pnlPct: costBasis > 0 ? (pnl / costBasis) * 100 : 0,
-						daysHeld: pos.daysHeld,
-						result: pnl > 0 ? "win" : pnl < 0 ? "loss" : "breakeven",
-						memo: "调出动态池",
-					});
-					cash += proceeds;
-					positions.delete(code);
+					);
 				}
 			}
 
@@ -982,30 +983,16 @@ export async function runPoolBacktest(
 					const execKline = klineMapByCode.get(code)?.get(date);
 					if (execKline && isLimitDown(execKline)) continue;
 					if (!checkTradeable(execKline)) continue;
-					const sellPrice = exec.price * (1 - slippage);
-					const sellAmount = pos.shares * sellPrice;
-					if (!isTradeAmountValid(sellAmount, minTradeAmount)) {
-						continue;
-					}
-					const proceeds = sellAmount * (1 - commission - transferFee - taxRate);
-					const costBasis = pos.shares * pos.entryPrice * (1 + commission + transferFee);
-					const pnl = proceeds - costBasis;
-					trades.push({
+					closePosition(
 						code,
-						market: stock.market,
-						direction: "sell",
+						stock.market,
+						pos.shares,
+						pos.entryPrice,
+						exec.price * (1 - slippage),
+						pos.daysHeld,
+						"策略卖出",
 						date,
-						price: sellPrice,
-						shares: pos.shares,
-						amount: sellAmount,
-						pnl,
-						pnlPct: costBasis > 0 ? (pnl / costBasis) * 100 : 0,
-						daysHeld: pos.daysHeld,
-						result: pnl > 0 ? "win" : pnl < 0 ? "loss" : "breakeven",
-						memo: "策略卖出",
-					});
-					cash += proceeds;
-					positions.delete(code);
+					);
 				}
 			}
 
@@ -1023,27 +1010,16 @@ export async function runPoolBacktest(
 					const klineMap = klineMapByCode.get(code);
 					const kline = klineMap?.get(date);
 					if (!checkTradeable(kline)) continue;
-					const sellPrice = (kline?.open ?? pos.lastClose) * (1 - slippage);
-					const proceeds = pos.shares * sellPrice * (1 - commission - transferFee - taxRate);
-					const costBasis = pos.shares * pos.entryPrice * (1 + commission + transferFee);
-					const pnl = proceeds - costBasis;
-
-					trades.push({
+					closePosition(
 						code,
-						market: stock.market,
-						direction: "sell",
+						stock.market,
+						pos.shares,
+						pos.entryPrice,
+						(kline?.open ?? pos.lastClose) * (1 - slippage),
+						pos.daysHeld,
+						`强制平仓（持仓${pos.daysHeld}天，超过${maxHoldingDays}天上限）`,
 						date,
-						price: sellPrice,
-						shares: pos.shares,
-						amount: pos.shares * sellPrice,
-						pnl,
-						pnlPct: costBasis > 0 ? (pnl / costBasis) * 100 : 0,
-						daysHeld: pos.daysHeld,
-						result: pnl > 0 ? "win" : pnl < 0 ? "loss" : "breakeven",
-						memo: `强制平仓（持仓${pos.daysHeld}天，超过${maxHoldingDays}天上限）`,
-					});
-					cash += proceeds;
-					positions.delete(code);
+					);
 				}
 			}
 
@@ -1129,30 +1105,16 @@ export async function runPoolBacktest(
 					const klineMap = klineMapByCode.get(code);
 					const kline = klineMap?.get(date);
 					if (!checkTradeable(kline)) continue;
-					const sellPrice = (kline?.open ?? pos.lastClose) * (1 - slippage);
-					const sellAmount = pos.shares * sellPrice;
-					if (!isTradeAmountValid(sellAmount, minTradeAmount)) {
-						continue;
-					}
-					const proceeds = sellAmount * (1 - commission - transferFee - taxRate);
-					const costBasis = pos.shares * pos.entryPrice * (1 + commission + transferFee);
-					const pnl = proceeds - costBasis;
-					trades.push({
+					closePosition(
 						code,
-						market: stock.market,
-						direction: "sell",
+						stock.market,
+						pos.shares,
+						pos.entryPrice,
+						(kline?.open ?? pos.lastClose) * (1 - slippage),
+						pos.daysHeld,
+						"周期强制换仓",
 						date,
-						price: sellPrice,
-						shares: pos.shares,
-						amount: sellAmount,
-						pnl,
-						pnlPct: costBasis > 0 ? (pnl / costBasis) * 100 : 0,
-						daysHeld: pos.daysHeld,
-						result: pnl > 0 ? "win" : pnl < 0 ? "loss" : "breakeven",
-						memo: "周期强制换仓",
-					});
-					cash += proceeds;
-					positions.delete(code);
+					);
 				}
 			}
 
@@ -1167,30 +1129,16 @@ export async function runPoolBacktest(
 					const klineMap = klineMapByCode.get(code);
 					const kline = klineMap?.get(date);
 					if (!checkTradeable(kline)) continue;
-					const sellPrice = (kline?.open ?? pos.lastClose) * (1 - slippage);
-					const sellAmount = pos.shares * sellPrice;
-					if (!isTradeAmountValid(sellAmount, minTradeAmount)) {
-						continue;
-					}
-					const proceeds = sellAmount * (1 - commission - transferFee - taxRate);
-					const costBasis = pos.shares * pos.entryPrice * (1 + commission + transferFee);
-					const pnl = proceeds - costBasis;
-					trades.push({
+					closePosition(
 						code,
-						market: stock.market,
-						direction: "sell",
+						stock.market,
+						pos.shares,
+						pos.entryPrice,
+						(kline?.open ?? pos.lastClose) * (1 - slippage),
+						pos.daysHeld,
+						"调出目标持仓",
 						date,
-						price: sellPrice,
-						shares: pos.shares,
-						amount: sellAmount,
-						pnl,
-						pnlPct: costBasis > 0 ? (pnl / costBasis) * 100 : 0,
-						daysHeld: pos.daysHeld,
-						result: pnl > 0 ? "win" : pnl < 0 ? "loss" : "breakeven",
-						memo: "调出目标持仓",
-					});
-					cash += proceeds;
-					positions.delete(code);
+					);
 				}
 			}
 
