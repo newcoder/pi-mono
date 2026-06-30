@@ -10,11 +10,14 @@ import {
 	formatPoolTradeList,
 	formatTradeList,
 } from "../backtest/report.js";
+import { STRATEGY_META } from "../backtest/strategies.js";
 import type { BacktestResult, PoolBacktestConfig, StrategyType } from "../backtest/types.js";
 import { getDataStore } from "../data/index.js";
 import type { ReportBenchmark, ReportData } from "../report/generator.js";
 import { generateReport } from "../report/generator.js";
 import { generatePoolBacktestReport } from "../report/pool-report.js";
+
+void STRATEGY_META; // single source of truth for strategy type definitions
 
 const backtestParams = Type.Object({
 	code: Type.Optional(Type.String({ description: "6位股票代码，如 600519。与 pool_id 二选一。" })),

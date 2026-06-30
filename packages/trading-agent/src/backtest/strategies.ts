@@ -54,6 +54,29 @@ export function generateSignals(klines: KlineRow[], strategy: StrategyType, para
 	return (registry[strategy] ?? (() => []))(klines, params);
 }
 
+/** Strategy metadata: which signal directions each strategy generates. */
+export const STRATEGY_META: Record<string, { buys: boolean; sells: boolean; description: string }> = {
+	ma_cross: { buys: true, sells: true, description: "MA均线金叉/死叉" },
+	macd_cross: { buys: true, sells: true, description: "MACD金叉/死叉" },
+	rsi_reversal: { buys: true, sells: true, description: "RSI超卖买入/超买卖出" },
+	bollinger_breakout: { buys: true, sells: true, description: "布林带下轨反弹/上轨回落" },
+	supertrend: { buys: true, sells: true, description: "Supertrend趋势跟踪：转多买入/转空卖出" },
+	tech_composite: { buys: true, sells: true, description: "技术综合打分：趋势+动量+量能+波动率四维评分" },
+	hammer: { buys: true, sells: false, description: "锤子线反转：长下影+小实体，前日阴线" },
+	bullish_engulf: { buys: true, sells: false, description: "阳包阴：阳线实体完全吞没前日阴线" },
+	morning_star: { buys: true, sells: false, description: "晨星：大阴→小星→大阳，底部反转" },
+	three_soldiers: { buys: true, sells: false, description: "红三兵：连续三阳，逐步放量" },
+	breakout: { buys: true, sells: false, description: "突破买入：放量上涨，量比阈值+涨幅阈值" },
+	volume_contraction: { buys: true, sells: false, description: "缩量调整：价格下跌+成交量萎缩+波动率收敛后买入" },
+	shooting_star: { buys: false, sells: true, description: "流星线反转：长上影+小实体，顶部卖出信号" },
+	bearish_engulf: { buys: false, sells: true, description: "阴包阳：阴线实体完全吞没前日阳线，卖出信号" },
+	evening_star: { buys: false, sells: true, description: "暮星：大阳→小星→大阴，顶部反转卖出信号" },
+	three_crows: { buys: false, sells: true, description: "三只乌鸦：连续三阴，逐步下跌，卖出信号" },
+	rsi_overbought_sell: { buys: false, sells: true, description: "RSI超买回落：RSI从超买区下穿，卖出信号" },
+	time_exit: { buys: false, sells: true, description: "定时换仓：每N个交易日强制卖出，用作固定周期再平衡" },
+	always_buy: { buys: true, sells: false, description: "每日全买入：用于排序测试，每天给所有股票发买入信号" },
+};
+
 function maCrossSignals(klines: KlineRow[], params: StrategyParams): Signal[] {
 	const fast = params.fast ?? 5;
 	const slow = params.slow ?? 10;
