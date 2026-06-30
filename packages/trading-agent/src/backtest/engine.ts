@@ -888,14 +888,7 @@ export async function runPoolBacktest(
 		let cash = initialCapital;
 		const positions = new Map<
 			string,
-			{
-				shares: number;
-				entryPrice: number;
-				entryDate: string;
-				daysHeld: number;
-				lastClose: number;
-				highestClose: number;
-			}
+			{ shares: number; entryPrice: number; entryDate: string; daysHeld: number; lastClose: number }
 		>();
 		const trades: PoolTrade[] = [];
 		const equityCurve: EquityPoint[] = [];
@@ -952,48 +945,6 @@ export async function runPoolBacktest(
 
 			// 5.1 Increment holding days
 			for (const pos of positions.values()) pos.daysHeld++;
-
-			// 5.1a Stop-loss / take-profit / trailing-stop check
-			const stopLossPct = config.stopLossPct ?? 0;
-			const takeProfitPct = config.takeProfitPct ?? 0;
-			const trailingStopPct = config.trailingStopPct ?? 0;
-			if (stopLossPct > 0 || takeProfitPct > 0 || trailingStopPct > 0) {
-				for (const code of [...positions.keys()].sort()) {
-					const pos = positions.get(code)!;
-					const km = klineMapByCode.get(code);
-					const kline = km?.get(date);
-					const currentPrice = kline?.open ?? pos.lastClose;
-					if (currentPrice <= 0) continue;
-					if (currentPrice > pos.highestClose) pos.highestClose = currentPrice;
-					const pnlFromEntry = ((currentPrice - pos.entryPrice) / pos.entryPrice) * 100;
-					let stopMemo: string | null = null;
-					if (stopLossPct > 0 && pnlFromEntry <= -stopLossPct) {
-						stopMemo = `止损(${pnlFromEntry.toFixed(1)}%)`;
-					} else if (takeProfitPct > 0 && pnlFromEntry >= takeProfitPct) {
-						stopMemo = `止盈(${pnlFromEntry.toFixed(1)}%)`;
-					} else if (trailingStopPct > 0 && pos.highestClose > pos.entryPrice) {
-						const dd = ((currentPrice - pos.highestClose) / pos.highestClose) * 100;
-						if (dd <= -trailingStopPct)
-							stopMemo = `移动止损(最高${pos.highestClose.toFixed(2)}回撤${dd.toFixed(1)}%)`;
-					}
-					if (stopMemo) {
-						const stock = stockMap.get(code);
-						if (!stock) continue;
-						if (!checkTradeable(kline)) continue;
-						const sellPrice = currentPrice * (1 - slippage);
-						closePosition(
-							code,
-							stock.market,
-							pos.shares,
-							pos.entryPrice,
-							sellPrice,
-							pos.daysHeld,
-							stopMemo,
-							date,
-						);
-					}
-				}
-			}
 
 			// 5.1b Force-sell positions that dropped out of the dynamic pool
 			if (isDynamic) {
@@ -1227,7 +1178,6 @@ export async function runPoolBacktest(
 								entryDate: date,
 								daysHeld: 0,
 								lastClose: buyPrice,
-								highestClose: buyPrice,
 							});
 							trades.push({
 								code,
@@ -1289,7 +1239,6 @@ export async function runPoolBacktest(
 										entryDate: date,
 										daysHeld: 0,
 										lastClose: buyPrice,
-										highestClose: buyPrice,
 									});
 									trades.push({
 										code,
@@ -1482,7 +1431,6 @@ export async function runPoolBacktest(
 											entryDate: date,
 											daysHeld: 0,
 											lastClose: buyPrice,
-											highestClose: buyPrice,
 										});
 									}
 									trades.push({
@@ -1547,7 +1495,6 @@ export async function runPoolBacktest(
 													entryDate: date,
 													daysHeld: 0,
 													lastClose: buyPrice,
-													highestClose: buyPrice,
 												});
 											}
 											trades.push({

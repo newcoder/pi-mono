@@ -153,6 +153,7 @@ export interface PoolBacktestConfig {
 	stopLossPct?: number;
 	takeProfitPct?: number;
 	trailingStopPct?: number;
+	maxDrawdownLimit?: number; // 组合最大回撤限制，如 20 表示从峰值回撤 20% 后清仓
 	skipNoVolume?: boolean;
 	minLot?: number;
 	strategyParams?: Record<string, number>;
