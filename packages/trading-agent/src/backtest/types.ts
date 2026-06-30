@@ -44,6 +44,9 @@ export interface BacktestConfig {
 	taxRate?: number; // percent charged on sell side only, e.g. 0.001 = 0.1% stamp duty
 	transferFee?: number; // percent per side, e.g. 0.00002 = 0.002% transfer fee
 	maxHoldingDays?: number;
+	stopLossPct?: number; // 止损比例，如 5 表示从入场价下跌 5% 强制卖出
+	takeProfitPct?: number; // 止盈比例，如 20 表示从入场价上涨 20% 强制卖出
+	trailingStopPct?: number; // 移动止损，如 10 表示从持仓期间最高点回撤 10% 强制卖出
 	skipNoVolume?: boolean; // skip trading on days with zero or missing volume (suspended)
 	minLot?: number; // minimum lot size, e.g. 100 for A-shares
 	strategyParams?: Record<string, number>;
@@ -147,6 +150,9 @@ export interface PoolBacktestConfig {
 	taxRate?: number;
 	transferFee?: number;
 	maxHoldingDays?: number;
+	stopLossPct?: number;
+	takeProfitPct?: number;
+	trailingStopPct?: number;
 	skipNoVolume?: boolean;
 	minLot?: number;
 	strategyParams?: Record<string, number>;

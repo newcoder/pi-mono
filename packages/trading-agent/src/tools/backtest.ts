@@ -198,6 +198,11 @@ const backtestParams = Type.Object({
 		Type.Boolean({ description: "是否跳过成交量为0或价格缺失的交易日（停牌），默认true", default: true }),
 	),
 	maxHoldingDays: Type.Optional(Type.Number({ description: "最大持仓天数，超出强制平仓" })),
+	stop_loss_pct: Type.Optional(Type.Number({ description: "止损比例，如 5 表示从入场价下跌 5% 时强制卖出" })),
+	take_profit_pct: Type.Optional(Type.Number({ description: "止盈比例，如 20 表示从入场价上涨 20% 时强制卖出" })),
+	trailing_stop_pct: Type.Optional(
+		Type.Number({ description: "移动止损比例，如 10 表示从持仓期间最高点回撤 10% 时强制卖出" }),
+	),
 	min_lot: Type.Optional(Type.Number({ description: "最小交易单位（股），默认100", default: 100 })),
 	params: Type.Optional(
 		Type.Record(Type.String(), Type.Number(), {
@@ -679,6 +684,9 @@ export const backtestStrategyTool: AgentTool<typeof backtestParams, BacktestTool
 			taxRate: params.tax_rate ?? 0,
 			transferFee: params.transfer_fee ?? 0,
 			maxHoldingDays: params.maxHoldingDays,
+			stopLossPct: params.stop_loss_pct,
+			takeProfitPct: params.take_profit_pct,
+			trailingStopPct: params.trailing_stop_pct,
 			skipNoVolume: params.skip_no_volume ?? true,
 			strategyParams: params.params,
 		};
