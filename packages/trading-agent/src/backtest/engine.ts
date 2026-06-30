@@ -623,6 +623,26 @@ export async function runPoolBacktest(
 		weeklyCloseSeries.set(s.code, buildWeeklyCloses(s.klines));
 	}
 
+	// 3a2. Multi-period filter: weekly trend direction gate
+	const filterPeriod = config.filterPeriod;
+	const weeklyTrendGate = new Map<string, Map<string, boolean>>();
+	if (filterPeriod === "week") {
+		for (const s of stockData) {
+			const wCloses = weeklyCloseSeries.get(s.code);
+			if (!wCloses || wCloses.length < 20) continue;
+			const trendMap = new Map<string, boolean>();
+			const wClosesOnly = wCloses.map((w) => w.close);
+			// Simple SMA on weekly closes
+			for (let i = 19; i < wCloses.length; i++) {
+				const ma5 = wClosesOnly.slice(i - 4, i + 1).reduce((a, b) => a + b, 0) / 5;
+				const ma20 = wClosesOnly.slice(i - 19, i + 1).reduce((a, b) => a + b, 0) / 20;
+				const endDate = wCloses[i].endDate;
+				trendMap.set(endDate, ma5 > ma20);
+			}
+			weeklyTrendGate.set(s.code, trendMap);
+		}
+	}
+
 	// 3b. Load optional industry momentum filter data
 	type IndustryFilterContext = PoolIndustryFilterConfig & {
 		stockIndustry: Map<string, string>;
@@ -1029,6 +1049,17 @@ export async function runPoolBacktest(
 			const buyCandidates = stockData
 				.filter((s) => allowedCodes.has(s.code))
 				.filter((s) => !positions.has(s.code))
+				.filter((s) => {
+					if (!filterPeriod || !weeklyTrendGate.has(s.code)) return true;
+					// Find latest weekly trend date <= current date
+					const gate = weeklyTrendGate.get(s.code)!;
+					let latestTrend: boolean | null = null;
+					for (const [wDate, isBullish] of gate) {
+						if (wDate <= date) latestTrend = isBullish;
+						else break;
+					}
+					return latestTrend !== false; // true or null = allow
+				})
 				.filter((s) => passesIndustryFilter(s, s.execMap.get(date), industryFilter))
 				.filter((s) => passesSizeFilter(s, s.execMap.get(date), sizeFilter))
 				.map((s) => {

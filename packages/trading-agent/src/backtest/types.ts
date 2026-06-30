@@ -153,6 +153,7 @@ export interface PoolBacktestConfig {
 	stopLossPct?: number;
 	takeProfitPct?: number;
 	trailingStopPct?: number;
+	filterPeriod?: string; // 多周期过滤: "week" 表示仅在上周线趋势向上时允许日线买入
 	maxDrawdownLimit?: number; // 组合最大回撤限制，如 20 表示从峰值回撤 20% 后清仓
 	skipNoVolume?: boolean;
 	minLot?: number;
