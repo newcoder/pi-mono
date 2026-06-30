@@ -2,6 +2,7 @@ import { getDataStore } from "../data/index.js";
 import type { KlineRow } from "../data/types.js";
 import { cachedMA, indicatorCache } from "./indicator-cache.js";
 import { computeMetrics } from "./metrics.js";
+import { adjustWeightByVolatility, computeATRPct } from "./position-sizing.js";
 import { generateSignals } from "./strategies.js";
 import type {
 	BacktestConfig,
@@ -447,6 +448,7 @@ export async function runPoolBacktest(
 	const minLot = config.minLot ?? 100;
 	const skipNoVolume = config.skipNoVolume ?? true;
 	const maxHoldingDays = config.maxHoldingDays ?? Infinity;
+	const positionSizingMethod = config.positionSizingMethod ?? "fixed";
 	const fullPosition = config.fullPosition ?? true;
 	const fullPositionMode = config.fullPositionMode ?? "equal_weight";
 	const rebalanceThreshold = config.rebalanceThreshold ?? 0;
@@ -1361,6 +1363,27 @@ export async function runPoolBacktest(
 						const totalLinearWeight = isLinear ? (nLin * (nLin + 1)) / 2 : 0;
 						const maxTargetValue = totalValue * maxPositionWeight;
 
+						const atrAdj = (bw: number, s: (typeof stockData)[number], sd: string) => {
+							if (positionSizingMethod !== "atr") return bw;
+							const ki = s.klines.findIndex((k) => k.date === sd);
+							if (ki < 14) return bw;
+							const sa = computeATRPct(s.klines, ki);
+							if (sa <= 0) return bw;
+							const atrs: number[] = [];
+							for (const cd of targetCodes) {
+								const st = stockMap.get(cd);
+								if (!st) continue;
+								const ix = st.klines.findIndex((k) => k.date === sd);
+								if (ix >= 14) {
+									const a = computeATRPct(st.klines, ix);
+									if (a > 0) atrs.push(a);
+								}
+							}
+							if (atrs.length < 3) return bw;
+							atrs.sort((a, b) => a - b);
+							return adjustWeightByVolatility(bw, sa, atrs[Math.floor(atrs.length / 2)]);
+						};
+
 						// Sell overweight positions first (partial sells allowed)
 						const sellIter = isLinear
 							? rankedTargets!.map((h, i) => ({ code: h.code, idx: i }))
@@ -1377,9 +1400,10 @@ export async function runPoolBacktest(
 							if (!checkTradeable(kline)) continue;
 							const sellPrice = (kline?.open ?? pos.lastClose) * (1 - slippage);
 							const currentValue = pos.shares * sellPrice;
-							const effTarget2 = isLinear
+							let effTarget2 = isLinear
 								? Math.min(((nLin - idx) / totalLinearWeight) * totalValue, maxTargetValue)
 								: Math.min(totalValue / targetCodes.size, maxTargetValue);
+							effTarget2 = atrAdj(effTarget2, stock, date);
 							if (currentValue <= effTarget2) continue;
 
 							const excessValue = currentValue - effTarget2;
@@ -1434,9 +1458,10 @@ export async function runPoolBacktest(
 							if (buyPrice <= 0) continue;
 
 							const currentValue = pos ? pos.shares * buyPrice : 0;
-							const effBuyTarget = isLinear
+							let effBuyTarget = isLinear
 								? Math.min(((nLin - idx) / totalLinearWeight) * totalValue, maxTargetValue)
 								: Math.min(totalValue / targetCodes.size, maxTargetValue);
+							effBuyTarget = atrAdj(effBuyTarget, stock, date);
 							const deficitValue = effBuyTarget - currentValue;
 							if (deficitValue <= effBuyTarget * rebalanceThreshold) continue;
 
