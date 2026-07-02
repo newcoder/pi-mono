@@ -5,14 +5,21 @@ This is a fallback when upstream APIs (Tencent/akshare/Eastmoney) are blocked.
 Assumes no dividend/split corporate actions occurred during the gap period.
 """
 import os
+import sys
+
+_SCRIPT_DIR = os.path.dirname(os.path.abspath(__file__))
+_SKILL_ROOT = os.path.dirname(_SCRIPT_DIR)
+if _SCRIPT_DIR not in sys.path:
+    sys.path.insert(0, _SCRIPT_DIR)
+if _SKILL_ROOT not in sys.path:
+    sys.path.insert(0, _SKILL_ROOT)
+
 import sqlite3
+from local_data.db import get_db, get_db_path, db_exists
 from datetime import datetime, timedelta
 
-DB_PATH = os.path.expanduser("~/.trading-agent/data/market.db")
-
-
 def main():
-    conn = sqlite3.connect(DB_PATH)
+    conn = get_db()
     conn.row_factory = sqlite3.Row
     cur = conn.cursor()
 

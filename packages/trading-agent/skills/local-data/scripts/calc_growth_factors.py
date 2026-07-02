@@ -5,16 +5,21 @@
 用法: python calc_growth_factors.py [--year 2025] [--top 10] [--save]
 """
 
+import os
+import sys
+
+_SCRIPT_DIR = os.path.dirname(os.path.abspath(__file__))
+_SKILL_ROOT = os.path.dirname(_SCRIPT_DIR)
+if _SCRIPT_DIR not in sys.path:
+    sys.path.insert(0, _SCRIPT_DIR)
+if _SKILL_ROOT not in sys.path:
+    sys.path.insert(0, _SKILL_ROOT)
+
 import argparse
 import json
-import os
 import sqlite3
-import sys
+from local_data.db import get_db, get_db_path, db_exists
 import time
-
-
-def _get_db_path():
-    return os.path.expanduser("~/.trading-agent/data/market.db")
 
 
 def _log(msg):
@@ -23,7 +28,7 @@ def _log(msg):
 
 def calc_growth_factors(year: int, save: bool = False):
     """Calculate YoY revenue and profit growth for the given fiscal year."""
-    db_path = _get_db_path()
+    db_path = get_db_path()
     conn = sqlite3.connect(db_path)
     conn.row_factory = sqlite3.Row
     cur = conn.cursor()

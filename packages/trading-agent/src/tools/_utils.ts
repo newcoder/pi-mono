@@ -11,6 +11,9 @@ const HOME = process.env.HOME || process.env.USERPROFILE || ".";
 const BUNDLED_A_SHARE_SCRIPTS = join(__dirname, "../../skills/a-share-analysis/scripts");
 const EXTERNAL_A_SHARE_SCRIPTS = join(HOME, ".agents/skills/a-share-analysis/scripts");
 
+const BUNDLED_LOCAL_DATA_SCRIPTS = join(__dirname, "../../skills/local-data/scripts");
+const EXTERNAL_LOCAL_DATA_SCRIPTS = join(HOME, ".agents/skills/local-data/scripts");
+
 const BUNDLED_NL_SCREENER_SCRIPTS = join(__dirname, "../../skills/nl-stock-screener/scripts");
 const EXTERNAL_NL_SCREENER_SCRIPTS = join(HOME, ".agents/skills/nl-stock-screener/scripts");
 
@@ -33,6 +36,11 @@ export function resolveScriptPath(scriptName: string, bundledDir: string, extern
 /** Resolve a-share script path (bundled优先). */
 export function resolveAShareScript(scriptName: string): string {
 	return resolveScriptPath(scriptName, BUNDLED_A_SHARE_SCRIPTS, EXTERNAL_A_SHARE_SCRIPTS);
+}
+
+/** Resolve local-data script path (bundled优先). */
+export function resolveLocalDataScript(scriptName: string): string {
+	return resolveScriptPath(scriptName, BUNDLED_LOCAL_DATA_SCRIPTS, EXTERNAL_LOCAL_DATA_SCRIPTS);
 }
 
 /** Resolve nl-screener script path (bundled优先). */

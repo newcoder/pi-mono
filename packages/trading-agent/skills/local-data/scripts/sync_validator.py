@@ -6,24 +6,24 @@ A-Share Analysis 数据库完整性验证模块
 用法: python sync_validator.py [--output report.json]
 """
 
+import os
+import sys
+
+_SCRIPT_DIR = os.path.dirname(os.path.abspath(__file__))
+_SKILL_ROOT = os.path.dirname(_SCRIPT_DIR)
+if _SCRIPT_DIR not in sys.path:
+    sys.path.insert(0, _SCRIPT_DIR)
+if _SKILL_ROOT not in sys.path:
+    sys.path.insert(0, _SKILL_ROOT)
+
 import argparse
 import json
-import os
 import sqlite3
-import sys
+from local_data.db import get_db, get_db_path, db_exists
 import io
 from datetime import datetime, timedelta
 
 sys.stdout = io.TextIOWrapper(sys.stdout.buffer, encoding="utf-8")
-
-DB_PATH = os.path.expanduser("~/.trading-agent/data/market.db")
-
-
-def get_db() -> sqlite3.Connection:
-    conn = sqlite3.connect(DB_PATH)
-    conn.row_factory = sqlite3.Row
-    return conn
-
 
 def _is_trade_day(date_str: str) -> bool:
     """Heuristic: check if date is a weekday (not perfect but good enough for validation)."""
@@ -419,12 +419,12 @@ def validate_news() -> dict:
 
 def validate_all() -> dict:
     """Run all validations and return combined report."""
-    if not os.path.exists(DB_PATH):
-        return {"status": "FAIL", "message": f"Database not found: {DB_PATH}"}
+    if not os.path.exists(get_db_path()):
+        return {"status": "FAIL", "message": f"Database not found: {get_db_path()}"}
 
     report = {
         "validation_time": datetime.now().isoformat(),
-        "db_path": DB_PATH,
+        "db_path": get_db_path(),
     }
 
     validators = [

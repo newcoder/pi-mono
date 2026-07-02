@@ -31,7 +31,7 @@ import { fileURLToPath } from "node:url";
 import { dirname, join } from "node:path";
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
-const A_SHARE_SCRIPTS = join(__dirname, "../skills/a-share-analysis/scripts/");
+const LOCAL_DATA_SCRIPTS = join(__dirname, "../skills/local-data/scripts/");
 
 async function main() {
 	const dataDir = getDataDir();
@@ -95,7 +95,7 @@ async function main() {
 	// 6. Market news (macro)
 	console.log("[SyncAll] === Syncing market news ===");
 	try {
-		const mktNews = await runPython(`${A_SHARE_SCRIPTS}market_news_sync.py`, ["--sources", "cls", "--limit", "100"], 120000);
+		const mktNews = await runPython(`${LOCAL_DATA_SCRIPTS}market_news_sync.py`, ["--sources", "cls", "--limit", "100"], 120000);
 		results.push(`Market news: ${mktNews.saved ?? "?"} saved`);
 		console.log(`[SyncAll] Market news: ${JSON.stringify(mktNews)}`);
 	} catch (e) {
@@ -105,7 +105,7 @@ async function main() {
 	// 7. Stock news (batch for watchlist / limited scope — skip full market to avoid timeout)
 	console.log("[SyncAll] === Syncing stock news (batch mode) ===");
 	try {
-		const stockNews = await runPython(`${A_SHARE_SCRIPTS}news_sync.py`, ["--batch", "--sources", "eastmoney", "--limit", "5"], 600000);
+		const stockNews = await runPython(`${LOCAL_DATA_SCRIPTS}news_sync.py`, ["--batch", "--sources", "eastmoney", "--limit", "5"], 600000);
 		results.push(`Stock news: ${stockNews.total_saved ?? "?"} saved`);
 		console.log(`[SyncAll] Stock news: ${JSON.stringify(stockNews)}`);
 	} catch (e) {
@@ -115,7 +115,7 @@ async function main() {
 	// 8. Data quality random sampling
 	console.log("[SyncAll] === Running data quality sampling ===");
 	try {
-		const samplerPath = `${A_SHARE_SCRIPTS}data_quality_sampler.py`;
+		const samplerPath = `${LOCAL_DATA_SCRIPTS}data_quality_sampler.py`;
 		const qualityReport = await runPython(
 			samplerPath,
 			["--stocks", "5", "--dates", "3", "--output", `${process.env.HOME || process.env.USERPROFILE}/.trading-agent/logs/data_quality_${new Date().toISOString().slice(0,10).replace(/-/g,'')}.json`],

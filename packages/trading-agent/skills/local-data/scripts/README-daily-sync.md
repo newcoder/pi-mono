@@ -1,8 +1,8 @@
-# A-Share Analysis 每日定时同步任务
+# Local Data 每日定时同步任务
 
 ## 简介
 
-本任务负责在每天凌晨自动同步 A 股全市场数据到本地 SQLite 数据库 (`~/.trading-agent/data/market.db`)，确保 `a-share-analysis` skill 的分析功能基于最新、最完整的数据。
+本任务负责在每天凌晨自动同步 A 股全市场数据到本地 SQLite 数据库 (`~/.trading-agent/data/market.db`)，为 `a-share-analysis` 等分析 skill 提供最新、最完整的数据。
 
 ## 同步内容
 
@@ -23,9 +23,9 @@
 
 确认以下文件已存在于 skill 目录：
 ```powershell
-ls "$env:USERPROFILE\.agents\skills\a-share-analysis\scripts\daily_sync.py"
-ls "$env:USERPROFILE\.agents\skills\a-share-analysis\scripts\sync_validator.py"
-ls "$env:USERPROFILE\.agents\skills\a-share-analysis\scripts\setup_task.ps1"
+ls "$env:USERPROFILE\.agents\skills\local-data\scripts\daily_sync.py"
+ls "$env:USERPROFILE\.agents\skills\local-data\scripts\sync_validator.py"
+ls "$env:USERPROFILE\.agents\skills\local-data\scripts\setup_task.ps1"
 ```
 
 ### 2. 安装依赖
@@ -39,20 +39,20 @@ pip install akshare pandas requests beautifulsoup4 mootdx
 **以管理员身份**运行 PowerShell，执行：
 
 ```powershell
-cd "$env:USERPROFILE\.agents\skills\a-share-analysis\scripts"
+cd "$env:USERPROFILE\.agents\skills\local-data\scripts"
 .\setup_task.ps1
 ```
 
 或手动通过「任务计划程序」(`taskschd.msc`) 创建：
 - **常规**: 名称 `A-Share-Daily-Sync`，勾选「使用最高权限运行」
 - **触发器**: 每天 `01:20:00`
-- **操作**: 程序 `python`，参数 `daily_sync.py`，起始于 `%USERPROFILE%\.agents\skills\a-share-analysis\scripts`
+- **操作**: 程序 `python`，参数 `daily_sync.py`，起始于 `%USERPROFILE%\.agents\skills\local-data\scripts`
 - **设置**: 失败重试 3 次，间隔 5 分钟
 
 ### 4. 手动测试运行
 
 ```powershell
-cd "$env:USERPROFILE\.agents\skills\a-share-analysis\scripts"
+cd "$env:USERPROFILE\.agents\skills\local-data\scripts"
 python daily_sync.py --skip-fundamentals
 ```
 

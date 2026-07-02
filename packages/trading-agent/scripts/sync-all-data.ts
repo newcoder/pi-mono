@@ -109,7 +109,7 @@ async function main() {
 	try {
 		const samplerScript = join(
 			__dirname,
-			"../skills/a-share-analysis/scripts/data_quality_sampler.py",
+			"../skills/local-data/scripts/data_quality_sampler.py",
 		);
 		const logDir = join(HOME, ".trading-agent/logs");
 		const today = new Date().toISOString().slice(0, 10).replace(/-/g, "");

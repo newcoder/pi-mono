@@ -5,9 +5,18 @@
 输出: JSON {concept: str, stocks: [{code, name, price, change_pct}]}
 """
 
+import os
+import sys
+
+_SCRIPT_DIR = os.path.dirname(os.path.abspath(__file__))
+_SKILL_ROOT = os.path.dirname(_SCRIPT_DIR)
+if _SCRIPT_DIR not in sys.path:
+    sys.path.insert(0, _SCRIPT_DIR)
+if _SKILL_ROOT not in sys.path:
+    sys.path.insert(0, _SKILL_ROOT)
+
 import argparse
 import json
-import sys
 import time
 
 try:

@@ -8,12 +8,21 @@ A股数据获取模块（本地优先 + 网络 fallback）
 - 新增 session 内存缓存，大幅提速二次查询
 """
 
+import os
+import sys
+
+_SCRIPT_DIR = os.path.dirname(os.path.abspath(__file__))
+_SKILL_ROOT = os.path.dirname(_SCRIPT_DIR)
+if _SCRIPT_DIR not in sys.path:
+    sys.path.insert(0, _SCRIPT_DIR)
+if _SKILL_ROOT not in sys.path:
+    sys.path.insert(0, _SKILL_ROOT)
+
 import argparse
 import json
-import sys
 import time
-import os
 import sqlite3
+from local_data.db import get_db, get_db_path, db_exists
 from datetime import datetime, timedelta
 from typing import Optional, Callable
 from functools import wraps
@@ -44,8 +53,6 @@ _SESSION_CACHE = {}
 
 # ── Local SQLite database helpers ─────────────────────────────────────────────
 
-_LOCAL_DB_PATH = os.path.expanduser("~/.trading-agent/data/market.db")
-
 
 def _get_market_from_code(code: str) -> int:
     """Infer market from code prefix: 1=SH, 0=SZ."""
@@ -54,10 +61,10 @@ def _get_market_from_code(code: str) -> int:
 
 def _query_local_db(sql: str, params: tuple = ()) -> list:
     """Execute a read-only query against the local market.db."""
-    if not os.path.exists(_LOCAL_DB_PATH):
+    if not os.path.exists(get_db_path()):
         return []
     try:
-        conn = sqlite3.connect(_LOCAL_DB_PATH)
+        conn = sqlite3.connect(get_db_path())
         conn.row_factory = sqlite3.Row
         cur = conn.cursor()
         cur.execute(sql, params)
@@ -957,10 +964,9 @@ def _get_valuation_from_local_db(code: str) -> dict | None:
     策略：多行中取最新价（latest），取第一行有 PE/PB 的估值数据。
     """
     try:
-        db_path = os.path.expanduser("~/.trading-agent/data/market.db")
-        if not os.path.exists(db_path):
+        if not db_exists():
             return None
-        conn = sqlite3.connect(db_path)
+        conn = get_db()
         cursor = conn.cursor()
         cursor.execute(
             "SELECT snapshot_date, pe, pb, total_cap, float_cap, high_52w, low_52w, latest "

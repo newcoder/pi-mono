@@ -1,6 +1,6 @@
 ---
 name: a-share-analysis
-description: A股价值投资分析工具，提供股票筛选、个股三档分析（基本面/技术面/深度）、行业对比和估值计算功能。优先使用 trading-agent 本地 SQLite 数据库（已同步的行情/财务/K线数据），缺失时 fallback 到东方财富 API 补全。适合低频交易的普通投资者。
+description: A股价值投资分析工具，提供股票筛选、个股三档分析（基本面/技术面/深度）、行业对比和估值计算功能。底层数据由 local-data skill 的本地 SQLite 数据库提供，缺失时 fallback 到东方财富 API 补全。适合低频交易的普通投资者。
 tools:
   - get_quote
   - get_fundamentals
@@ -23,7 +23,7 @@ tools:
 
 ## 数据源架构（本地优先 + 网络 fallback）
 
-本 skill 的 `data_fetcher.py` 优先从 trading-agent 本地 SQLite 数据库读取，本地缺失时自动 fallback 到东方财富 API：
+本 skill 专注分析，不直接维护数据库。所有本地数据由 **`local-data`** skill 提供，通过其 `data_fetcher.py` 读取；`data_fetcher.py` 优先从 trading-agent 本地 SQLite 数据库读取，本地缺失时自动 fallback 到东方财富 API：
 
 | 数据类型 | 优先来源 | Fallback | 说明 |
 |---------|---------|---------|------|
@@ -38,7 +38,7 @@ tools:
 
 ### 预计算财务指标表（fundamental_indicators）
 
-`fundamentals` 表中的原始财务数据已通过 `calc_fundamental_indicators.py` 自动计算衍生指标，存入 `fundamental_indicators` 表。当基本面数据更新时，这些指标会自动重新计算。
+`fundamentals` 表中的原始财务数据已由 `local-data` skill 的 `calc_fundamental_indicators.py` 自动计算衍生指标，存入 `fundamental_indicators` 表。当基本面数据更新时，这些指标会自动重新计算。
 
 **包含的指标维度（30+ 项）：**
 - **成长性**：营收/净利润 YoY、QoQ、3年/5年 CAGR、经营现金流 YoY、FCF、FCF YoY、研发费用增速及占比、CAPEX 增速及占比
@@ -64,6 +64,13 @@ tools:
 - 检测财务异常风险
 
 ## Prerequisites
+
+### 依赖技能
+
+本 skill 依赖 **`local-data`** skill 提供本地数据。分析前请确保：
+
+1. `local-data` skill 已安装/存在。
+2. 已通过 `local-data/scripts/daily_sync.py` 同步过至少一次数据。
 
 ### Python环境要求
 ```bash
@@ -247,7 +254,7 @@ iWencai 返回的结果包含股票代码、名称、最新价、涨跌幅、主
 ### Step 2: Fetch Stock Data
 
 ```bash
-python scripts/data_fetcher.py \
+python ~/.agents/skills/local-data/scripts/data_fetcher.py \
     --code "600519" \
     --data-type all \
     --years 5 \
@@ -291,7 +298,7 @@ python scripts/data_fetcher.py \
 - **利空事件**：减持、定增、业绩预亏、业绩亏损、业绩下滑、解禁、监管处罚、质押风险、诉讼仲裁
 - **利多事件**：增持、业绩预增、业绩增长、回购、分红、重大合同、产品突破
 
-> **注意**：数据来自本地数据库，需先通过 `news_sync.py` 同步。若返回空，提示用户新闻数据尚未同步。
+> **注意**：数据来自本地数据库，需先通过 `local-data` skill 的 `news_sync.py` 同步。若返回空，提示用户新闻数据尚未同步。
 
 ### Step 4: Run Financial Analysis
 
@@ -384,7 +391,7 @@ python scripts/deep_analyzer.py \
 ### Step 2: Fetch Industry Data
 
 ```bash
-python scripts/data_fetcher.py \
+python ~/.agents/skills/local-data/scripts/data_fetcher.py \
     --codes "600519,000858,002304" \
     --data-type comparison \
     --output industry_data.json
@@ -392,7 +399,7 @@ python scripts/data_fetcher.py \
 
 或按行业获取：
 ```bash
-python scripts/data_fetcher.py \
+python ~/.agents/skills/local-data/scripts/data_fetcher.py \
     --industry "白酒" \
     --top 10 \
     --output industry_data.json
@@ -523,7 +530,7 @@ python scripts/valuation_calculator.py \
 - **query 模式**：按新闻类型分组展示，标注受益/承压板块
 - **stats 模式**：展示类型分布柱状图 + 板块排行
 
-> **注意**：市场新闻数据来自本地 `market_news` 表，需先通过 `market_news_sync.py` 同步。数据来源为财联社等财经媒体。
+> **注意**：市场新闻数据来自本地 `market_news` 表，需先通过 `local-data` skill 的 `market_news_sync.py` 同步。数据来源为财联社等财经媒体。
 
 ---
 

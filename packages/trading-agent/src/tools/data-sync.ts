@@ -5,7 +5,7 @@ import type { AgentTool } from "@mariozechner/pi-agent-core";
 import { Type } from "@sinclair/typebox";
 import { loadUserConfig } from "../config/user-config.js";
 import { getDataSync } from "../data/index.js";
-import { resolveAShareScript, runPython } from "./_utils.js";
+import { resolveLocalDataScript, runPython } from "./_utils.js";
 
 // ── sync_kline tool ─────────────────────────────────────────────────────────
 
@@ -181,7 +181,7 @@ export const syncNewsTool: AgentTool<typeof syncNewsParams, { marketNews: string
 			const outputPath = join(tmpDir, "result.json");
 			try {
 				await runPython(
-					resolveAShareScript("market_news_sync.py"),
+					resolveLocalDataScript("market_news_sync.py"),
 					["--sources", sources, "--limit", String(limit), "--output", outputPath],
 					120000,
 				);
@@ -212,7 +212,7 @@ export const syncNewsTool: AgentTool<typeof syncNewsParams, { marketNews: string
 						const outputPath = join(tmpDir, "result.json");
 						try {
 							await runPython(
-								resolveAShareScript("news_sync.py"),
+								resolveLocalDataScript("news_sync.py"),
 								[
 									"--code",
 									item.code,
@@ -248,7 +248,7 @@ export const syncNewsTool: AgentTool<typeof syncNewsParams, { marketNews: string
 				const outputPath = join(tmpDir, "result.json");
 				try {
 					await runPython(
-						resolveAShareScript("news_sync.py"),
+						resolveLocalDataScript("news_sync.py"),
 						["--batch", "--sources", sources, "--limit", String(limit), "--output", outputPath],
 						1800000,
 					);

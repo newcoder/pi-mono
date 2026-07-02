@@ -5,11 +5,20 @@
 用法: python sync_concepts_jq.py [--concept <概念名称>] [--all]
 """
 
+import os
+import sys
+
+_SCRIPT_DIR = os.path.dirname(os.path.abspath(__file__))
+_SKILL_ROOT = os.path.dirname(_SCRIPT_DIR)
+if _SCRIPT_DIR not in sys.path:
+    sys.path.insert(0, _SCRIPT_DIR)
+if _SKILL_ROOT not in sys.path:
+    sys.path.insert(0, _SKILL_ROOT)
+
 import argparse
 import json
-import os
 import sqlite3
-import sys
+from local_data.db import get_db, get_db_path, db_exists
 import time
 
 import requests
@@ -27,10 +36,6 @@ _FETCH_TIMEOUT = 15
 def _log(msg):
     """Log to stderr so stdout stays clean for JSON output."""
     print(msg, file=sys.stderr)
-
-
-def _get_db_path():
-    return os.path.expanduser("~/.trading-agent/data/market.db")
 
 
 def _get_market_from_code(code):
@@ -176,7 +181,7 @@ def _fetch_akshare_concept_stocks(concept_code):
 
 def sync_single_concept(concept_name):
     """Sync a single concept by name."""
-    db_path = _get_db_path()
+    db_path = get_db_path()
 
     # Step 1: Search for concept by name (akshare primary, Eastmoney fallback)
     concepts = None
@@ -223,7 +228,7 @@ def sync_single_concept(concept_name):
 
 def sync_all_concepts():
     """Sync all concepts."""
-    db_path = _get_db_path()
+    db_path = get_db_path()
 
     concepts = None
     try:

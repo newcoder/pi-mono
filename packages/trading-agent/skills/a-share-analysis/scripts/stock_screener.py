@@ -25,8 +25,12 @@ except ImportError:
     print("pip install akshare pandas numpy")
     sys.exit(1)
 
+_SCRIPT_DIR = os.path.dirname(os.path.abspath(__file__))
+_LOCAL_DATA_ROOT = os.path.normpath(os.path.join(_SCRIPT_DIR, "..", "..", "local-data"))
+if _LOCAL_DATA_ROOT not in sys.path:
+    sys.path.insert(0, _LOCAL_DATA_ROOT)
 
-_DB_PATH = os.path.expanduser("~/.trading-agent/data/market.db")
+from local_data.db import get_db, get_db_path, db_exists
 
 
 def retry_on_failure(max_retries: int = 3, delay: float = 1.0):
@@ -69,11 +73,11 @@ def _get_index_constituent_codes(index_code: str) -> List[str]:
 
 def _load_from_local_db(scope: str = "all", custom_codes: List[str] = None) -> pd.DataFrame:
     """Load latest quote data from local SQLite as a fallback when akshare is slow/down."""
-    if not os.path.exists(_DB_PATH):
+    if not db_exists():
         return pd.DataFrame()
 
     try:
-        conn = sqlite3.connect(_DB_PATH)
+        conn = get_db()
         # Latest quote per (code, market), enriched with name from stocks table
         sql = """
             SELECT q.code, q.market, COALESCE(NULLIF(q.name, ''), s.name) AS name,
@@ -395,9 +399,9 @@ def main():
     parser.add_argument("--pe-min", type=float, help="最小PE")
     parser.add_argument("--pb-max", type=float, help="最大PB")
     parser.add_argument("--pb-min", type=float, help="最小PB")
-    parser.add_argument("--roe-min", type=float, help="最小ROE (%)")
-    parser.add_argument("--debt-ratio-max", type=float, help="最大资产负债率 (%)")
-    parser.add_argument("--dividend-min", type=float, help="最小股息率 (%)")
+    parser.add_argument("--roe-min", type=float, help="最小ROE (%%)")
+    parser.add_argument("--debt-ratio-max", type=float, help="最大资产负债率 (%%)")
+    parser.add_argument("--dividend-min", type=float, help="最小股息率 (%%)")
     parser.add_argument("--market-cap-min", type=float, help="最小市值 (亿)")
     parser.add_argument("--market-cap-max", type=float, help="最大市值 (亿)")
     parser.add_argument("--sort-by", type=str, default="score",

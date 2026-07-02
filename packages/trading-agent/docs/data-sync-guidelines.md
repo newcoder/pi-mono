@@ -1,6 +1,8 @@
-# A-Share 本地数据同步与使用指南
+# Local Data 本地数据同步与使用指南
 
 本文说明 `pi-trading-agent` 如何利用本地 SQLite 数据库 `~/.trading-agent/data/market.db` 缓存 A 股数据，以及各类数据应该何时同步、如何查询、有哪些使用原则。
+
+数据同步脚本位于 `local-data` skill（`packages/trading-agent/skills/local-data`），分析逻辑位于 `a-share-analysis` skill。
 
 ---
 
@@ -36,7 +38,7 @@
 ### 3.1 命令行全量同步
 
 ```bash
-cd packages/trading-agent/skills/a-share-analysis/scripts
+cd packages/trading-agent/skills/local-data/scripts
 python daily_sync.py
 ```
 
@@ -50,18 +52,21 @@ stocks → quotes → klines → fundamentals → indicators → industry_moment
 只跑某几个阶段：
 
 ```bash
+cd packages/trading-agent/skills/local-data/scripts
 python daily_sync.py --phase stocks,quotes,klines,hot_stocks
 ```
 
 跳过财务数据（最慢）：
 
 ```bash
+cd packages/trading-agent/skills/local-data/scripts
 python daily_sync.py --skip-fundamentals
 ```
 
 ### 3.2 历史强势股某日同步
 
 ```bash
+cd packages/trading-agent/skills/local-data/scripts
 python daily_sync.py --phase hot_stocks --date 2026-06-25
 ```
 
@@ -199,7 +204,7 @@ set HTTPS_PROXY=
 
 ### 6.4 表结构升级
 
-`news_sync.py` / `market_news_sync.py` 等脚本启动时会自动 `ALTER TABLE` 新增字段（如 `content`、`source_type`），无需手动删库。
+`local-data/scripts/news_sync.py` / `local-data/scripts/market_news_sync.py` 等脚本启动时会自动 `ALTER TABLE` 新增字段（如 `content`、`source_type`），无需手动删库。
 
 ---
 

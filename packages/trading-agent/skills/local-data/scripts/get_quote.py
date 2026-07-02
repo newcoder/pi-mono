@@ -4,11 +4,20 @@ Fetch real-time or latest-available stock quote.
 - Trading hours: live Eastmoney API
 - Non-trading hours: local SQLite (klines/quotes) fallback
 """
+import os
+import sys
+
+_SCRIPT_DIR = os.path.dirname(os.path.abspath(__file__))
+_SKILL_ROOT = os.path.dirname(_SCRIPT_DIR)
+if _SCRIPT_DIR not in sys.path:
+    sys.path.insert(0, _SCRIPT_DIR)
+if _SKILL_ROOT not in sys.path:
+    sys.path.insert(0, _SKILL_ROOT)
+
 import argparse
 import json
-import os
 import sqlite3
-import sys
+from local_data.db import get_db, get_db_path, db_exists
 import io
 from datetime import datetime
 
@@ -20,9 +29,6 @@ HEADERS = {
     "Referer": "https://quote.eastmoney.com/",
 }
 
-_DB_PATH = os.path.expanduser("~/.trading-agent/data/market.db")
-
-
 def _is_a_share_trading_hours() -> bool:
     """Check if current time is within A-share trading hours (Mon-Fri 09:30-11:30, 13:00-15:00)."""
     now = datetime.now()
@@ -33,10 +39,10 @@ def _is_a_share_trading_hours() -> bool:
 
 
 def _query_local_db(sql: str, params: tuple = ()) -> list:
-    if not os.path.exists(_DB_PATH):
+    if not os.path.exists(get_db_path()):
         return []
     try:
-        conn = sqlite3.connect(_DB_PATH)
+        conn = get_db()
         conn.row_factory = sqlite3.Row
         cur = conn.cursor()
         cur.execute(sql, params)

@@ -21,6 +21,14 @@ def _market_prefix(code: str) -> str:
 
 def _get_factors_single_akshare(code: str, market: int, start_date: str, end_date: str) -> list:
     """Fetch adjustment factors for a single stock via akshare.
+import os
+_SCRIPT_DIR = os.path.dirname(os.path.abspath(__file__))
+_SKILL_ROOT = os.path.dirname(_SCRIPT_DIR)
+if _SCRIPT_DIR not in sys.path:
+    sys.path.insert(0, _SCRIPT_DIR)
+if _SKILL_ROOT not in sys.path:
+    sys.path.insert(0, _SKILL_ROOT)
+
     Uses stock_zh_a_hist with different adjust modes to compute factors.
     """
     import akshare as ak

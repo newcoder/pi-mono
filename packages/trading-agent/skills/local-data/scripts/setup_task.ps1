@@ -10,7 +10,7 @@
 #>
 
 $TaskName = "A-Share-Daily-Sync"
-$SkillDir = Join-Path $env:USERPROFILE ".agents\skills\a-share-analysis\scripts"
+$SkillDir = Join-Path $env:USERPROFILE ".agents\skills\local-data\scripts"
 $PythonExe = "python"
 $ScriptPath = Join-Path $SkillDir "daily_sync.py"
 $LogDir = Join-Path $env:USERPROFILE ".trading-agent\logs"
@@ -56,7 +56,7 @@ Register-ScheduledTask -TaskName $TaskName `
     -Trigger $Trigger `
     -Settings $Settings `
     -Principal $Principal `
-    -Description "A-Share Analysis 全市场数据每日同步 (stocks/quotes/klines/fundamentals/industries/concepts/news)"
+    -Description "Local Data 全市场数据每日同步 (stocks/quotes/klines/fundamentals/industries/concepts/news)"
 
 Write-Host ""
 Write-Host "========================================"

@@ -12,24 +12,24 @@
   2. 可直接复制给 LLM 的验证提示文本
 """
 
+import os
+import sys
+
+_SCRIPT_DIR = os.path.dirname(os.path.abspath(__file__))
+_SKILL_ROOT = os.path.dirname(_SCRIPT_DIR)
+if _SCRIPT_DIR not in sys.path:
+    sys.path.insert(0, _SCRIPT_DIR)
+if _SKILL_ROOT not in sys.path:
+    sys.path.insert(0, _SKILL_ROOT)
+
 import argparse
 import json
-import os
 import sqlite3
-import sys
+from local_data.db import get_db, get_db_path, db_exists
 import io
 from datetime import datetime
 
 sys.stdout = io.TextIOWrapper(sys.stdout.buffer, encoding="utf-8")
-
-DB_PATH = os.path.expanduser("~/.trading-agent/data/market.db")
-
-
-def get_db() -> sqlite3.Connection:
-    conn = sqlite3.connect(DB_PATH)
-    conn.row_factory = sqlite3.Row
-    return conn
-
 
 def random_sample_stocks(conn, n=5):
     """随机抽取 n 只普通 A 股（排除指数、ETF、北交所）."""
@@ -206,13 +206,13 @@ def main():
     parser.add_argument("--output", help="JSON 报告输出路径")
     args = parser.parse_args()
 
-    if not os.path.exists(DB_PATH):
-        print(f"错误: 数据库不存在: {DB_PATH}")
+    if not os.path.exists(get_db_path()):
+        print(f"错误: 数据库不存在: {get_db_path()}")
         sys.exit(1)
 
     conn = get_db()
 
-    print(f"[Sampler] 从 {DB_PATH} 随机抽样...")
+    print(f"[Sampler] 从 {get_db_path()} 随机抽样...")
     print(f"[Sampler] 抽取 {args.stocks} 只股票，每只 {args.dates} 个日期\n")
 
     # 随机抽取股票
@@ -224,7 +224,7 @@ def main():
 
     report = {
         "sample_time": datetime.now().isoformat(),
-        "db_path": DB_PATH,
+        "db_path": get_db_path(),
         "sample_config": {"stocks": args.stocks, "dates": args.dates},
         "sampled_stocks": [],
     }

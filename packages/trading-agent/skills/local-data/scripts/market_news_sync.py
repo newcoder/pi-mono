@@ -3,19 +3,25 @@
 Market news sync.
 Fetches market-wide news, classifies them, and saves to local SQLite DB.
 """
+import os
+import sys
+
+_SCRIPT_DIR = os.path.dirname(os.path.abspath(__file__))
+_SKILL_ROOT = os.path.dirname(_SCRIPT_DIR)
+if _SCRIPT_DIR not in sys.path:
+    sys.path.insert(0, _SCRIPT_DIR)
+if _SKILL_ROOT not in sys.path:
+    sys.path.insert(0, _SKILL_ROOT)
+
 import argparse
 import json
-import sys
-import os
 import sqlite3
+from local_data.db import get_db, get_db_path, db_exists
 from datetime import datetime, timedelta
 from typing import Dict, List
 
 from market_news_fetcher import fetch_market_news
 from market_news_classifier import classify_market_news_batch
-
-DB_PATH = os.path.join(os.path.expanduser("~"), ".trading-agent", "data", "market.db")
-
 
 def ensure_market_news_table(conn: sqlite3.Connection):
     """Create market_news table if not exists."""
@@ -47,12 +53,6 @@ def ensure_market_news_table(conn: sqlite3.Connection):
     conn.execute("CREATE INDEX IF NOT EXISTS idx_mnews_time ON market_news(pub_time)")
     conn.execute("CREATE INDEX IF NOT EXISTS idx_mnews_source_type ON market_news(source_type)")
     conn.commit()
-
-
-def get_db() -> sqlite3.Connection:
-    conn = sqlite3.connect(DB_PATH)
-    conn.row_factory = sqlite3.Row
-    return conn
 
 
 def cleanup_old_market_news(conn: sqlite3.Connection, days: int = 60):

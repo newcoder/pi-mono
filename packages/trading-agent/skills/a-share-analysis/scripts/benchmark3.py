@@ -4,7 +4,12 @@ import time
 import sys
 import os
 
-sys.path.insert(0, os.path.dirname(__file__))
+_SCRIPT_DIR = os.path.dirname(os.path.abspath(__file__))
+_LOCAL_DATA_SCRIPTS = os.path.normpath(os.path.join(_SCRIPT_DIR, "..", "..", "local-data", "scripts"))
+if _SCRIPT_DIR not in sys.path:
+    sys.path.insert(0, _SCRIPT_DIR)
+if _LOCAL_DATA_SCRIPTS not in sys.path:
+    sys.path.insert(0, _LOCAL_DATA_SCRIPTS)
 from data_fetcher import (
     _get_stock_info_from_stock_data,
     _get_stock_info_from_jq_enrichment,

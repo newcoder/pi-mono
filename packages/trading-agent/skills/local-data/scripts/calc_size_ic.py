@@ -9,26 +9,26 @@ Usage:
   python calc_size_ic.py --all
   python calc_size_ic.py --since 2024-01-01 --forwards 5,10,20
 """
+import os
+import sys
+
+_SCRIPT_DIR = os.path.dirname(os.path.abspath(__file__))
+_SKILL_ROOT = os.path.dirname(_SCRIPT_DIR)
+if _SCRIPT_DIR not in sys.path:
+    sys.path.insert(0, _SCRIPT_DIR)
+if _SKILL_ROOT not in sys.path:
+    sys.path.insert(0, _SKILL_ROOT)
+
 import argparse
 import json
-import os
 import sqlite3
-import sys
+from local_data.db import get_db, get_db_path, db_exists
 from datetime import datetime
 from typing import Dict, List, Optional, Sequence
 
 import pandas as pd
 
 from calc_industry_momentum import compute_ic
-
-_DB_PATH = os.path.expanduser("~/.trading-agent/data/market.db")
-
-
-def get_db() -> sqlite3.Connection:
-    conn = sqlite3.connect(_DB_PATH)
-    conn.row_factory = sqlite3.Row
-    return conn
-
 
 def ensure_tables(conn: sqlite3.Connection):
     """Ensure required tables exist."""

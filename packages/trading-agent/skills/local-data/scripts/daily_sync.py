@@ -9,12 +9,21 @@ A-Share Analysis 全市场数据每日定时同步脚本
 依赖:     akshare, pandas, requests, beautifulsoup4, mootdx
 """
 
-import argparse
-import json
 import os
 import sys
+
+_SCRIPT_DIR = os.path.dirname(os.path.abspath(__file__))
+_SKILL_ROOT = os.path.dirname(_SCRIPT_DIR)
+if _SCRIPT_DIR not in sys.path:
+    sys.path.insert(0, _SCRIPT_DIR)
+if _SKILL_ROOT not in sys.path:
+    sys.path.insert(0, _SKILL_ROOT)
+
+import argparse
+import json
 import io
 import sqlite3
+from local_data.db import get_db, get_db_path, db_exists
 import subprocess
 import time
 import traceback
@@ -33,14 +42,8 @@ for _proxy_key in ("HTTP_PROXY", "HTTPS_PROXY", "http_proxy", "https_proxy"):
     os.environ.pop(_proxy_key, None)
 
 # ── Paths ──────────────────────────────────────────────────────────────────
-_SCRIPT_DIR = os.path.dirname(os.path.abspath(__file__))
-_SKILL_DIR = os.path.join(os.path.expanduser("~"), ".agents", "skills", "a-share-analysis", "scripts")
-if _SKILL_DIR not in sys.path:
-    sys.path.insert(0, _SKILL_DIR)
-
-_DB_PATH = os.path.expanduser("~/.trading-agent/data/market.db")
 _LOG_DIR = os.path.expanduser("~/.trading-agent/logs")
-os.makedirs(os.path.dirname(_DB_PATH), exist_ok=True)
+os.makedirs(os.path.dirname(get_db_path()), exist_ok=True)
 os.makedirs(_LOG_DIR, exist_ok=True)
 
 # ── Logging setup ──────────────────────────────────────────────────────────
@@ -131,13 +134,6 @@ def _phase(name: str):
 
 
 # ── DB helpers ─────────────────────────────────────────────────────────────
-
-def get_db() -> sqlite3.Connection:
-    conn = sqlite3.connect(_DB_PATH)
-    conn.row_factory = sqlite3.Row
-    conn.execute("PRAGMA journal_mode=WAL;")
-    return conn
-
 
 def ensure_tables():
     """Ensure all required tables exist."""

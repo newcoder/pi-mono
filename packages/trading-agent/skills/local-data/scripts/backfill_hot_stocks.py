@@ -3,18 +3,26 @@
 Backfill historical hot_stocks from Tonghuashun into the local DB.
 Fetches every trading day in [start_date, end_date] that is not already present.
 """
+import os
+import sys
+
+_SCRIPT_DIR = os.path.dirname(os.path.abspath(__file__))
+_SKILL_ROOT = os.path.dirname(_SCRIPT_DIR)
+if _SCRIPT_DIR not in sys.path:
+    sys.path.insert(0, _SCRIPT_DIR)
+if _SKILL_ROOT not in sys.path:
+    sys.path.insert(0, _SKILL_ROOT)
+
 import argparse
 import importlib.util
-import os
 import sqlite3
-import sys
+from local_data.db import get_db, get_db_path, db_exists
 import time
 from concurrent.futures import ThreadPoolExecutor, as_completed
 from datetime import date, datetime, timedelta
 from typing import Dict, List, Set
 
 _SCRIPT_DIR = os.path.dirname(os.path.abspath(__file__))
-_DB_PATH = os.path.expanduser("~/.trading-agent/data/market.db")
 _A_STOCK_DATA_DIR = os.path.normpath(os.path.join(_SCRIPT_DIR, "..", "..", "a-stock-data", "scripts"))
 
 
@@ -153,7 +161,7 @@ def main():
 
     module = _load_hot_stocks_module()
 
-    conn = sqlite3.connect(_DB_PATH)
+    conn = get_db()
     ensure_table(conn)
     existing = get_existing_dates(conn)
     conn.close()
@@ -185,7 +193,7 @@ def main():
         print(f"Dry run complete. Would insert {total_rows} rows across {len(fetched_results)} days.")
         return
 
-    conn = sqlite3.connect(_DB_PATH)
+    conn = get_db()
     try:
         ensure_table(conn)
         total_inserted = 0

@@ -1,8 +1,17 @@
+import os
+import sys
+
+_SCRIPT_DIR = os.path.dirname(os.path.abspath(__file__))
+_SKILL_ROOT = os.path.dirname(_SCRIPT_DIR)
+if _SCRIPT_DIR not in sys.path:
+    sys.path.insert(0, _SCRIPT_DIR)
+if _SKILL_ROOT not in sys.path:
+    sys.path.insert(0, _SKILL_ROOT)
+
 #!/usr/bin/env python3
 """Incremental sync adjust_factors from latest date in DB to today."""
-import os
 import sqlite3
-import sys
+from local_data.db import get_db, get_db_path, db_exists
 from datetime import datetime, timedelta
 
 # Need batch_get_factors in path
@@ -14,13 +23,12 @@ from batch_get_factors import batch_get_factors
 
 import time
 
-DB_PATH = os.path.expanduser("~/.trading-agent/data/market.db")
 BATCH_SIZE = 200
 MAX_WORKERS = 2
 
 
 def main():
-    conn = sqlite3.connect(DB_PATH)
+    conn = get_db()
     conn.row_factory = sqlite3.Row
     cur = conn.cursor()
 
