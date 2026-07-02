@@ -2,7 +2,7 @@ import type { AgentTool } from "@mariozechner/pi-agent-core";
 import { Type } from "@sinclair/typebox";
 import { getDataStore, getDataSync } from "../data/index.js";
 import type { AdjustFactorRow, KlineRow } from "../data/types.js";
-import { formatNumber, runJsonScript } from "./_utils.js";
+import { formatNumber, runLocalDataJsonScript } from "./_utils.js";
 
 // ─── Parameter Schemas ──────────────────────────────────────────
 
@@ -481,7 +481,7 @@ export const getFundamentalsTool: AgentTool<typeof getFundamentalsParams, Fundam
 		if (history) {
 			args.push("--history", "--limit", "12");
 		}
-		const data = await runJsonScript("get_fundamentals.py", args, history ? 120_000 : undefined);
+		const data = await runLocalDataJsonScript("get_fundamentals.py", args, history ? 120_000 : undefined);
 		return {
 			content: [
 				{
@@ -620,7 +620,7 @@ export const getKlineTool: AgentTool<typeof getKlineParams, KlineDetails> = {
 				const args = [params.code, "--market", String(market), "--period", period, "--adjust", adjust];
 				args.push("--start", defaultStart);
 				args.push("--end", defaultEnd);
-				const data = await runJsonScript("get_kline.py", args);
+				const data = await runLocalDataJsonScript("get_kline.py", args);
 				klines = data.klines || [];
 			}
 		}

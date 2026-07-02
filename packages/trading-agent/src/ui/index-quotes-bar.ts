@@ -1,7 +1,7 @@
 import type { Component } from "@mariozechner/pi-tui";
 import { truncateToWidth } from "@mariozechner/pi-tui";
 import chalk from "chalk";
-import { resolveAShareScript, runJsonScript } from "../tools/_utils.js";
+import { resolveLocalDataScript, runJsonScript } from "../tools/_utils.js";
 
 export interface IndexQuote {
 	code: string;
@@ -22,7 +22,7 @@ export class IndexQuotesBar implements Component {
 		if (this.fetching) return;
 		this.fetching = true;
 		try {
-			const scriptPath = resolveAShareScript("index_quote_fetcher.py");
+			const scriptPath = resolveLocalDataScript("index_quote_fetcher.py");
 			const data: IndexQuote[] = await runJsonScript(scriptPath, [], 30000);
 			if (Array.isArray(data) && data.length > 0) {
 				this.quotes = data;

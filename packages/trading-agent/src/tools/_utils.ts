@@ -222,6 +222,17 @@ export async function runJsonScript(script: string, args: string[], timeoutMs?: 
 	return JSON.parse(stdout.slice(start));
 }
 
+/** Run a Python script from the local-data skill directory and parse JSON output. */
+export async function runLocalDataJsonScript(script: string, args: string[], timeoutMs?: number): Promise<any> {
+	const scriptPath = resolveLocalDataScript(script);
+	const stdout = await runPython(scriptPath, args, timeoutMs);
+	const start = stdout.search(/[[{]/);
+	if (start === -1) {
+		throw new Error(`No JSON found in script output: ${stdout.slice(0, 200)}`);
+	}
+	return JSON.parse(stdout.slice(start));
+}
+
 /** Run a Python script from the a-stock-data skill directory and parse JSON output. */
 export async function runAStockDataJsonScript(script: string, args: string[], timeoutMs?: number): Promise<any> {
 	const scriptPath = resolveAStockDataScript(script);

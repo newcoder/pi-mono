@@ -1,5 +1,5 @@
 import { requireStore, requireSync } from "../data/index.js";
-import { runJsonScript } from "../tools/_utils.js";
+import { runLocalDataJsonScript } from "../tools/_utils.js";
 
 interface SyncTask {
 	code: string;
@@ -192,7 +192,7 @@ export class BackgroundSyncService {
 		const codeList = indices.map((i) => i.code).join(",");
 
 		try {
-			const quotes = await runJsonScript("get_index_quotes.py", ["--codes", codeList], 30000);
+			const quotes = await runLocalDataJsonScript("get_index_quotes.py", ["--codes", codeList], 30000);
 			const now = new Date().toISOString();
 			for (const q of quotes) {
 				const idx = indices.find((i) => i.code === q.code);

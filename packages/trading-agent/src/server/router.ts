@@ -6,7 +6,7 @@ import type { ModelRegistry } from "@mariozechner/pi-coding-agent";
 import { loadUserConfig, saveUserConfig } from "../config/user-config.js";
 import type { TradingSession } from "../core/trading-session.js";
 import { requireStore, requireSync } from "../data/index.js";
-import { runAStockDataJsonScript, runJsonScript } from "../tools/_utils.js";
+import { runAStockDataJsonScript, runJsonScript, runLocalDataJsonScript } from "../tools/_utils.js";
 import { predictStockRankingTool } from "../tools/ml-prediction.js";
 import type { BackgroundSyncService } from "./background-sync.js";
 import type { MootdxDaemon } from "./mootdx-daemon.js";
@@ -87,7 +87,7 @@ export async function handleRequest(
 			let quotes: any[] = [];
 			try {
 				// Fetch real-time index quotes via Sina (batch, reliable)
-				const spotQuotes = await runJsonScript("get_index_quotes.py", ["--codes", codeList], 30000);
+				const spotQuotes = await runLocalDataJsonScript("get_index_quotes.py", ["--codes", codeList], 30000);
 				quotes = spotQuotes.map((q: any) => ({
 					code: q.code,
 					name: q.name,

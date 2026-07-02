@@ -1,6 +1,6 @@
 import { mkdir } from "node:fs/promises";
 import { dirname } from "node:path";
-import { runAStockDataJsonScript, runJsonScript } from "../tools/_utils.js";
+import { runAStockDataJsonScript, runJsonScript, runLocalDataJsonScript } from "../tools/_utils.js";
 import type { DataStore } from "./data-store.js";
 import type {
 	ConceptStockRow,
@@ -111,7 +111,7 @@ export class DataSyncService {
 		args.push("--start", fetchStart);
 		args.push("--end", defaultEnd.replace(/-/g, ""));
 
-		const data = await runJsonScript("get_kline.py", args);
+		const data = await runLocalDataJsonScript("get_kline.py", args);
 		if (!data.klines || data.klines.length === 0) return 0;
 
 		const rows: KlineRow[] = data.klines.map((k: any) => ({
@@ -154,7 +154,7 @@ export class DataSyncService {
 	 */
 	async fetchAllAshareList(): Promise<Array<{ code: string; market: number; name: string }>> {
 		try {
-			const data = await runJsonScript("get_all_stocks.py", [], 120_000);
+			const data = await runLocalDataJsonScript("get_all_stocks.py", [], 120_000);
 			return data as Array<{ code: string; market: number; name: string }>;
 		} catch (e) {
 			console.warn(
@@ -309,7 +309,7 @@ export class DataSyncService {
 	// ─── Quote Sync ─────────────────────────────────────────────────
 
 	async syncQuote(code: string, market: number): Promise<QuoteRow> {
-		const data = await runJsonScript("get_quote.py", [code, "--market", String(market)]);
+		const data = await runLocalDataJsonScript("get_quote.py", [code, "--market", String(market)]);
 
 		const quote: QuoteRow = {
 			code,
@@ -356,7 +356,7 @@ export class DataSyncService {
 		if (historyLimit > 0) {
 			args.push("--limit", String(historyLimit));
 		}
-		const data = await runJsonScript("get_fundamentals.py", args, 120_000);
+		const data = await runLocalDataJsonScript("get_fundamentals.py", args, 120_000);
 
 		// Skip stocks with no F10 data (delisted, indices, invalid codes)
 		if (data._no_f10_data) {
@@ -494,7 +494,7 @@ export class DataSyncService {
 
 		// Recalculate fundamental indicators for this stock
 		try {
-			await runJsonScript("calc_fundamental_indicators.py", ["--code", code], 60_000);
+			await runLocalDataJsonScript("calc_fundamental_indicators.py", ["--code", code], 60_000);
 		} catch (e) {
 			console.warn(`[syncFundamentals] Indicator recalculation failed for ${code}:`, e);
 		}
@@ -571,7 +571,7 @@ export class DataSyncService {
 		if (totalSynced > 0) {
 			console.log("[syncAllFundamentals] Recalculating fundamental indicators...");
 			try {
-				const result = await runJsonScript("calc_fundamental_indicators.py", ["--all"], 600_000);
+				const result = await runLocalDataJsonScript("calc_fundamental_indicators.py", ["--all"], 600_000);
 				console.log(`[syncAllFundamentals] Indicators recalculated: ${result.rows_inserted ?? "?"} rows`);
 			} catch (e) {
 				console.warn("[syncAllFundamentals] Indicator recalculation failed:", e);
@@ -640,7 +640,7 @@ export class DataSyncService {
 		if (totalSynced > 0) {
 			console.log("[backfillFundamentals] Recalculating fundamental indicators...");
 			try {
-				const result = await runJsonScript("calc_fundamental_indicators.py", ["--all"], 600_000);
+				const result = await runLocalDataJsonScript("calc_fundamental_indicators.py", ["--all"], 600_000);
 				console.log(`[backfillFundamentals] Indicators recalculated: ${result.rows_inserted ?? "?"} rows`);
 			} catch (e) {
 				console.warn("[backfillFundamentals] Indicator recalculation failed:", e);
@@ -875,7 +875,7 @@ export class DataSyncService {
 
 	async syncConceptStocks(concept: string): Promise<ConceptStockRow[]> {
 		// Single concept: akshare primary (reliable for arbitrary concept names)
-		const result = await runJsonScript("sync_concepts.py", ["--concept", concept], 180_000);
+		const result = await runLocalDataJsonScript("sync_concepts.py", ["--concept", concept], 180_000);
 		const actualConcept = result.concept || concept;
 		return this.store.getConceptStocks(actualConcept);
 	}
@@ -883,7 +883,7 @@ export class DataSyncService {
 	async syncAllConcepts(): Promise<number> {
 		// Full sync: Tonghuashun (daily_sync also uses this source)
 		console.log("[syncAllConcepts] Starting full concept sync via Tonghuashun...");
-		await runJsonScript("sync_concept_stocks_ths.py", [], 600_000);
+		await runLocalDataJsonScript("sync_concept_stocks_ths.py", [], 600_000);
 		const concepts = await this.store.getAllConcepts();
 		console.log(`[syncAllConcepts] Done. ${concepts.length} concepts in local DB.`);
 		return concepts.length;
@@ -891,7 +891,7 @@ export class DataSyncService {
 
 	async syncIndustries(): Promise<{ standards: number; industries: number; mappings: number; errors: string[] }> {
 		console.log("[syncIndustries] Syncing all industry classifications via Eastmoney/akshare...");
-		const result = await runJsonScript("sync_industries.py", ["--all"], 600_000);
+		const result = await runLocalDataJsonScript("sync_industries.py", ["--all"], 600_000);
 
 		const results = result.results || [];
 		let totalIndustries = 0;
@@ -971,7 +971,7 @@ export class DataSyncService {
 	// ─── Stock List Sync ────────────────────────────────────────────
 
 	async syncStockList(): Promise<number> {
-		const data = await runJsonScript("get_all_stocks.py", [], 120_000);
+		const data = await runLocalDataJsonScript("get_all_stocks.py", [], 120_000);
 		const results = Array.isArray(data) ? data : data.results || [];
 
 		const rows: StockRow[] = results.map((r: any) => ({
