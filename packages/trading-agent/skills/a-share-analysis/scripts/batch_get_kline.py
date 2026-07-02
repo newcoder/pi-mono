@@ -2,6 +2,7 @@
 """Batch fetch K-line data for multiple stocks from JoinQuant."""
 import argparse
 import json
+import os
 import sys
 import io
 import warnings
@@ -9,6 +10,11 @@ import pandas as pd
 
 warnings.filterwarnings('ignore')
 sys.stdout = io.TextIOWrapper(sys.stdout.buffer, encoding="utf-8")
+
+# Avoid unstable local HTTP proxies breaking akshare/requests fallbacks.
+for _proxy_key in ("HTTP_PROXY", "HTTPS_PROXY", "http_proxy", "https_proxy"):
+    os.environ.pop(_proxy_key, None)
+os.environ.setdefault("NO_PROXY", "*")
 
 # mootdx primary (TCP direct, no auth)
 try:
@@ -121,86 +127,89 @@ def _normalize_df(df):
 
 def batch_get_kline(stock_codes, start_date, end_date, period="daily", adjust="bfq"):
     """
-    Fetch K-line for multiple stocks in one call.
+    Fetch K-line for multiple stocks.
     stock_codes: list of dicts with {code, market}
     Returns: list of kline dicts with code, market, date, open, close, etc.
 
-    Uses mootdx (TCP direct) for bfq data, akshare for qfq/hfq.
+    Per stock: try mootdx (TCP direct) first, then fall back to akshare.
     No JoinQuant dependency.
     """
-    needs_resample = period in ('week', 'month', 'quarter', 'year')
     all_klines = []
 
-    # Primary: mootdx for bfq (TCP direct, fastest)
-    if mootdx_kline is not None:
-        for item in stock_codes:
-            try:
-                mk = mootdx_kline(
-                    item["code"], item.get("market", 0),
-                    period=period, adjust="bfq",
-                    start=start_date, end=end_date,
-                )
-                if mk:
-                    for k in mk:
-                        all_klines.append({
-                            "code": k["code"],
-                            "market": k["market"],
-                            "date": k["date"],
-                            "open": k["open"],
-                            "close": k["close"],
-                            "low": k["low"],
-                            "high": k["high"],
-                            "volume": k["volume"],
-                            "amount": k.get("turnover"),
-                            "pre_close": k.get("pre_close"),
-                            "change_amount": k.get("change_amount"),
-                            "change_pct": k.get("change_pct"),
-                            "amplitude": k.get("amplitude"),
-                        })
-            except Exception as mx_err:
-                print(json.dumps({"_mootdx_error": str(mx_err), "code": item["code"]}, ensure_ascii=False), file=sys.stderr)
+    ak_start = f"{start_date[:4]}{start_date[5:7]}{start_date[8:10]}" if len(start_date) == 10 else start_date
+    ak_end = f"{end_date[:4]}{end_date[5:7]}{end_date[8:10]}" if len(end_date) == 10 else end_date
+    ak_adjust = AK_ADJUST_MAP.get(adjust, "")
 
-    # Fallback: akshare for qfq/hfq or if mootdx failed
-    if len(all_klines) == 0 or adjust != "bfq":
-        if ak is not None:
-            ak_start = f"{start_date[:4]}-{start_date[4:6]}-{start_date[6:8]}" if len(start_date) == 8 else start_date
-            ak_end = f"{end_date[:4]}-{end_date[4:6]}-{end_date[6:8]}" if len(end_date) == 8 else end_date
-            ak_adjust = AK_ADJUST_MAP.get(adjust, "")
-            for item in stock_codes:
-                code = item["code"]
-                market = item.get("market", 0)
-                try:
-                    df = ak.stock_zh_a_hist(symbol=code, period="daily", start_date=ak_start, end_date=ak_end, adjust=ak_adjust)
-                    if df is not None and not df.empty:
-                        for _, row in df.iterrows():
-                            dt = str(row.get("日期", ""))
-                            open_p = float(row["开盘"]) if pd.notna(row.get("开盘")) else None
-                            close_p = float(row["收盘"]) if pd.notna(row.get("收盘")) else None
-                            low_p = float(row["最低"]) if pd.notna(row.get("最低")) else None
-                            high_p = float(row["最高"]) if pd.notna(row.get("最高")) else None
-                            volume = float(row["成交量"]) if pd.notna(row.get("成交量")) else None
-                            money = float(row["成交额"]) if pd.notna(row.get("成交额")) else None
-                            change_pct = float(row["涨跌幅"]) if pd.notna(row.get("涨跌幅")) else None
-                            change_amount = float(row["涨跌额"]) if pd.notna(row.get("涨跌额")) else None
-                            amplitude = float(row["振幅"]) if pd.notna(row.get("振幅")) else None
-                            all_klines.append({
-                                "code": code,
-                                "market": market,
-                                "date": dt,
-                                "open": open_p,
-                                "close": close_p,
-                                "low": low_p,
-                                "high": high_p,
-                                "volume": volume,
-                                "amount": money,
-                                "amplitude": amplitude,
-                                "change_pct": change_pct,
-                                "change_amount": change_amount,
-                                "turnover": None,
-                                "pre_close": None,
-                            })
-                except Exception as ak_err:
-                    print(json.dumps({"_akshare_error": str(ak_err), "code": code}, ensure_ascii=False), file=sys.stderr)
+    def _symbol_prefix(code: str) -> str:
+        if code.startswith(("60", "68", "90")):
+            return f"sh{code}"
+        if code.startswith(("8", "4", "92")):
+            return f"bj{code}"
+        return f"sz{code}"
+
+    def _from_mootdx(item):
+        if mootdx_kline is None:
+            return []
+        try:
+            return mootdx_kline(
+                item["code"], item.get("market", 0),
+                period=period, adjust="bfq",
+                start=start_date, end=end_date,
+            ) or []
+        except Exception as mx_err:
+            print(json.dumps({"_mootdx_error": str(mx_err), "code": item["code"]}, ensure_ascii=False), file=sys.stderr)
+            return []
+
+    def _from_akshare(item):
+        if ak is None:
+            return []
+        code = item["code"]
+        market = item.get("market", 0)
+        try:
+            df = ak.stock_zh_a_daily(
+                symbol=_symbol_prefix(code),
+                start_date=ak_start,
+                end_date=ak_end,
+                adjust=ak_adjust,
+            )
+            if df is None or df.empty:
+                return []
+            rows = []
+            for _, row in df.iterrows():
+                rows.append({
+                    "code": code,
+                    "market": market,
+                    "date": str(row.get("date", "")),
+                    "open": float(row["open"]) if pd.notna(row.get("open")) else None,
+                    "close": float(row["close"]) if pd.notna(row.get("close")) else None,
+                    "low": float(row["low"]) if pd.notna(row.get("low")) else None,
+                    "high": float(row["high"]) if pd.notna(row.get("high")) else None,
+                    "volume": float(row["volume"]) if pd.notna(row.get("volume")) else None,
+                    "amount": float(row["amount"]) if pd.notna(row.get("amount")) else None,
+                    "amplitude": None,
+                    "change_pct": float(row["pct_change"]) if pd.notna(row.get("pct_change")) else None,
+                    "change_amount": None,
+                    "turnover": None,
+                    "pre_close": None,
+                })
+            return rows
+        except Exception as ak_err:
+            print(json.dumps({"_akshare_error": str(ak_err), "code": code}, ensure_ascii=False), file=sys.stderr)
+            return []
+
+    def _is_bj(code: str) -> bool:
+        return code.startswith(("8", "4", "92"))
+
+    def _fetch_one(item):
+        code = item["code"]
+        # Use mootdx for SH/SZ; akshare does not reliably cover delisted/suspended stocks.
+        # For Beijing stocks, mootdx std market does not support them, so use akshare directly.
+        if _is_bj(code):
+            return _from_akshare(item)
+        return _from_mootdx(item)
+
+    for item in stock_codes:
+        all_klines.extend(_fetch_one(item))
 
     return all_klines
 

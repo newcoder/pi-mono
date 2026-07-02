@@ -28,6 +28,10 @@ from typing import Dict, List, Optional, Tuple
 warnings.filterwarnings('ignore')
 sys.stdout = io.TextIOWrapper(sys.stdout.buffer, encoding="utf-8")
 
+# Avoid unstable local HTTP proxies breaking akshare/requests fallbacks.
+for _proxy_key in ("HTTP_PROXY", "HTTPS_PROXY", "http_proxy", "https_proxy"):
+    os.environ.pop(_proxy_key, None)
+
 # ── Paths ──────────────────────────────────────────────────────────────────
 _SCRIPT_DIR = os.path.dirname(os.path.abspath(__file__))
 _SKILL_DIR = os.path.join(os.path.expanduser("~"), ".agents", "skills", "a-share-analysis", "scripts")
@@ -752,11 +756,25 @@ def sync_klines() -> dict:
         raise RuntimeError("No stocks found. Run Phase 1 first.")
 
     total = len(stocks)
-    logger.info(f"Syncing klines for {total} stocks...")
+    logger.info(f"Found {total} stocks...")
 
-    # Determine date range: from 90 days ago to today
+    # Determine target date from existing daily klines and skip stocks already up to date.
+    # If no data exists, fall back to fetching the last 90 days for all stocks.
     end_date = datetime.now().strftime('%Y-%m-%d')
-    start_date = (datetime.now() - timedelta(days=90)).strftime('%Y-%m-%d')
+    latest_rows = conn.execute(
+        "SELECT code, market, MAX(date) as max_date FROM klines WHERE period = 'daily' AND adjust = 'bfq' GROUP BY code, market"
+    ).fetchall()
+    latest_map = {(r["code"], r["market"]): r["max_date"] for r in latest_rows}
+    target_date = max((d for d in latest_map.values() if d), default=None)
+
+    if not target_date:
+        start_date = (datetime.now() - timedelta(days=90)).strftime('%Y-%m-%d')
+        stocks_to_sync = stocks
+        logger.info(f"No existing klines, fetching last 90 days for all {len(stocks_to_sync)} stocks")
+    else:
+        start_date = (datetime.strptime(target_date, '%Y-%m-%d') - timedelta(days=90)).strftime('%Y-%m-%d')
+        stocks_to_sync = [s for s in stocks if latest_map.get((s["code"], s["market"])) != target_date]
+        logger.info(f"Target date {target_date}, {len(stocks_to_sync)} stocks need update, fetching from {start_date}")
 
     synced = 0
     failed = 0
@@ -765,8 +783,9 @@ def sync_klines() -> dict:
     try:
         # Process in batches of 50
         batch_size = 50
-        for i in range(0, total, batch_size):
-            batch = stocks[i:i + batch_size]
+        sync_total = len(stocks_to_sync)
+        for i in range(0, sync_total, batch_size):
+            batch = stocks_to_sync[i:i + batch_size]
             batch_dicts = [{"code": s["code"], "market": s["market"]} for s in batch]
 
             try:
@@ -801,7 +820,7 @@ def sync_klines() -> dict:
 
                 if (i // batch_size + 1) % 10 == 0:
                     conn.commit()
-                    logger.info(f"  Klines progress: {min(i + batch_size, total)}/{total} stocks, {total_rows} rows")
+                    logger.info(f"  Klines progress: {min(i + batch_size, sync_total)}/{sync_total} stocks, {total_rows} rows")
 
             except Exception as e:
                 logger.warning(f"  Batch {i}-{i+batch_size} failed: {e}")

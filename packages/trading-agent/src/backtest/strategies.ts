@@ -1,6 +1,6 @@
 import type { KlineRow } from "../data/types.js";
 import { getCloses, getVolumes } from "../indicators/engine.js";
-import { cachedMA, cachedMACD, cachedRSI, cachedSupertrend } from "./indicator-cache.js";
+import { cachedKD, cachedMA, cachedMACD, cachedRSI, cachedSupertrend } from "./indicator-cache.js";
 import type { Signal, StrategyType } from "./types.js";
 import { average } from "./utils.js";
 
@@ -27,6 +27,10 @@ export interface StrategyParams {
 	priceDropPct?: number; // min price drop from adjustment start (default 5)
 	volumeRatioMax?: number; // max recent/prior volume ratio (default 0.7)
 	volatilityRatioMax?: number; // max recent/prior volatility ratio (default 0.6)
+	requireFreshHigh?: number; // volume_contraction: only trade first pullback after a fresh high (default 0)
+	// KD signal
+	smoothK?: number; // K line smoothing period (default 3)
+	smoothD?: number; // D line smoothing period (default 3)
 }
 
 export function generateSignals(klines: KlineRow[], strategy: StrategyType, params: StrategyParams = {}): Signal[] {
@@ -50,6 +54,8 @@ export function generateSignals(klines: KlineRow[], strategy: StrategyType, para
 		rsi_overbought_sell: rsiOverboughtSellSignals,
 		time_exit: timeExitSignals,
 		always_buy: alwaysBuySignals,
+		kd_daily: kdDailySignals,
+		kd_weekly: kdWeeklySignals,
 	};
 	return (registry[strategy] ?? (() => []))(klines, params);
 }
@@ -75,6 +81,8 @@ export const STRATEGY_META: Record<string, { buys: boolean; sells: boolean; desc
 	rsi_overbought_sell: { buys: false, sells: true, description: "RSI超买回落：RSI从超买区下穿，卖出信号" },
 	time_exit: { buys: false, sells: true, description: "定时换仓：每N个交易日强制卖出，用作固定周期再平衡" },
 	always_buy: { buys: true, sells: false, description: "每日全买入：用于排序测试，每天给所有股票发买入信号" },
+	kd_daily: { buys: true, sells: true, description: "日线KD：K线上穿D线买入，下穿卖出" },
+	kd_weekly: { buys: true, sells: true, description: "周线KD：基于周线KDJ计算，信号在次一交易日执行" },
 };
 
 function maCrossSignals(klines: KlineRow[], params: StrategyParams): Signal[] {
@@ -531,6 +539,7 @@ function volumeContractionSignals(klines: KlineRow[], params: StrategyParams): S
 	const priceDropPct = params.priceDropPct ?? 5;
 	const volumeRatioMax = params.volumeRatioMax ?? 0.7;
 	const volatilityRatioMax = params.volatilityRatioMax ?? 0.6;
+	const requireFreshHigh = (params.requireFreshHigh ?? 0) !== 0;
 
 	const minLength = lookbackDays + contractionDays;
 	if (klines.length < minLength) return [];
@@ -556,6 +565,20 @@ function volumeContractionSignals(klines: KlineRow[], params: StrategyParams): S
 		if (adjustmentStartClose == null) continue;
 		if (current.close >= adjustmentStartClose * (1 - priceDropPct / 100)) continue;
 
+		// Optional: require the contraction to start right after a fresh high in the lookback window.
+		// This filters out lower-high / M-top patterns and keeps first-pullback setups.
+		if (requireFreshHigh) {
+			const peakHigh = klines[priorEnd].high;
+			if (peakHigh == null) continue;
+			const priorHighsExcludingPeak = priorWindow
+				.slice(0, -1)
+				.map((k) => k.high)
+				.filter((h): h is number => h != null);
+			if (priorHighsExcludingPeak.length === 0) continue;
+			const maxPriorHigh = Math.max(...priorHighsExcludingPeak);
+			if (peakHigh <= maxPriorHigh) continue;
+		}
+
 		// 2. Volume contraction: recent average volume significantly lower than prior average
 		const avgVolumePrior = average(priorWindow.map((k) => k.volume));
 		const avgVolumeRecent = average(recentWindow.map((k) => k.volume));
@@ -574,12 +597,16 @@ function volumeContractionSignals(klines: KlineRow[], params: StrategyParams): S
 		});
 		if (slope(trs) >= 0) continue;
 
+		const reason = requireFreshHigh
+			? `VolumeContraction创新高后首次回调(价跌${priceDropPct.toFixed(0)}% 量缩${((avgVolumeRecent / avgVolumePrior) * 100).toFixed(0)}% 波动${((recentVol / priorVol) * 100).toFixed(0)}%)`
+			: `VolumeContraction(价跌${priceDropPct.toFixed(0)}% 量缩${((avgVolumeRecent / avgVolumePrior) * 100).toFixed(0)}% 波动${((recentVol / priorVol) * 100).toFixed(0)}%)`;
+
 		signals.push({
 			index: i,
 			date: current.date,
 			type: "buy",
 			price: current.close,
-			reason: `VolumeContraction(价跌${priceDropPct.toFixed(0)}% 量缩${((avgVolumeRecent / avgVolumePrior) * 100).toFixed(0)}% 波动${((recentVol / priorVol) * 100).toFixed(0)}%)`,
+			reason,
 		});
 	}
 
@@ -699,6 +726,98 @@ function breakoutSignals(klines: KlineRow[], params: StrategyParams): Signal[] {
 				price: c.close ?? c.open!,
 				reason: `Breakout(+${c.change_pct.toFixed(1)}%,${vr.toFixed(1)}x)`,
 			});
+		}
+	}
+	return signals;
+}
+
+// ─── KD (Stochastic) Signals ─────────────────────────────────────
+
+function kdSignals(klines: KlineRow[], params: StrategyParams): Signal[] {
+	const period = params.period ?? 9;
+	const smoothK = params.smoothK ?? 3;
+	const smoothD = params.smoothD ?? 3;
+	if (klines.length < period + Math.max(smoothK, smoothD)) return [];
+
+	const { k, d } = cachedKD(klines, { period, smoothK, smoothD });
+	const signals: Signal[] = [];
+	let inPosition = false;
+
+	for (let i = 1; i < klines.length; i++) {
+		const kPrev = k[i - 1];
+		const dPrev = d[i - 1];
+		const kCurr = k[i];
+		const dCurr = d[i];
+		if (kPrev == null || dPrev == null || kCurr == null || dCurr == null) continue;
+
+		if (!inPosition && kPrev <= dPrev && kCurr > dCurr) {
+			signals.push({
+				index: i,
+				date: klines[i].date,
+				type: "buy",
+				price: klines[i].close ?? 0,
+				reason: `KD金叉(K=${kCurr.toFixed(1)},D=${dCurr.toFixed(1)})`,
+			});
+			inPosition = true;
+		} else if (inPosition && kPrev >= dPrev && kCurr < dCurr) {
+			signals.push({
+				index: i,
+				date: klines[i].date,
+				type: "sell",
+				price: klines[i].close ?? 0,
+				reason: `KD死叉(K=${kCurr.toFixed(1)},D=${dCurr.toFixed(1)})`,
+			});
+			inPosition = false;
+		}
+	}
+	return signals;
+}
+
+function kdDailySignals(klines: KlineRow[], params: StrategyParams): Signal[] {
+	return kdSignals(klines, params);
+}
+
+function getISOWeek(dateStr: string): string {
+	const date = new Date(`${dateStr}T00:00:00Z`);
+	const yearStart = new Date(Date.UTC(date.getUTCFullYear(), 0, 1));
+	const weekNo = Math.ceil(((date.getTime() - yearStart.getTime()) / 86_400_000 + 1) / 7);
+	return `${date.getUTCFullYear()}-W${String(weekNo).padStart(2, "0")}`;
+}
+
+function buildWeeklyKlines(klines: KlineRow[]): KlineRow[] {
+	const weekMap = new Map<string, KlineRow>();
+	for (const k of klines) {
+		const week = getISOWeek(k.date);
+		const existing = weekMap.get(week);
+		if (!existing) {
+			weekMap.set(week, { ...k, period: "weekly" });
+		} else {
+			if (k.high != null && (existing.high == null || k.high > existing.high)) existing.high = k.high;
+			if (k.low != null && (existing.low == null || k.low < existing.low)) existing.low = k.low;
+			existing.close = k.close ?? existing.close;
+			existing.volume = (existing.volume ?? 0) + (k.volume ?? 0);
+			existing.date = k.date;
+			existing.change_pct = k.change_pct ?? existing.change_pct;
+		}
+	}
+	return [...weekMap.values()].sort((a, b) => a.date.localeCompare(b.date));
+}
+
+function kdWeeklySignals(klines: KlineRow[], params: StrategyParams): Signal[] {
+	const weeklyKlines = buildWeeklyKlines(klines);
+	if (weeklyKlines.length < (params.period ?? 9) + Math.max(params.smoothK ?? 3, params.smoothD ?? 3)) return [];
+
+	const dateToIndex = new Map<string, number>();
+	for (let i = 0; i < klines.length; i++) {
+		dateToIndex.set(klines[i].date, i);
+	}
+
+	const weeklySignals = kdSignals(weeklyKlines, params);
+	const signals: Signal[] = [];
+	for (const s of weeklySignals) {
+		const idx = dateToIndex.get(s.date);
+		if (idx != null) {
+			signals.push({ ...s, index: idx });
 		}
 	}
 	return signals;

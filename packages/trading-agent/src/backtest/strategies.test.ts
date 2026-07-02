@@ -160,6 +160,56 @@ describe("generateSignals", () => {
 		});
 	});
 
+	describe("kd_daily", () => {
+		it("should buy on K crossing above D and sell on K crossing below D", () => {
+			// period=3, smoothK=3, smoothD=3
+			const klines = makeKlinesOHLC([
+				{ open: 100, high: 100, low: 100, close: 100 },
+				{ open: 90, high: 100, low: 90, close: 90 },
+				{ open: 80, high: 100, low: 80, close: 80 },
+				{ open: 90, high: 100, low: 80, close: 90 },
+				{ open: 100, high: 100, low: 80, close: 100 }, // K crosses above D
+				{ open: 100, high: 100, low: 90, close: 100 },
+				{ open: 90, high: 100, low: 90, close: 90 },
+				{ open: 90, high: 100, low: 90, close: 90 }, // K crosses below D
+			]);
+			const signals = generateSignals(klines, "kd_daily", { period: 3, smoothK: 3, smoothD: 3 });
+			const buys = signals.filter((s) => s.type === "buy");
+			const sells = signals.filter((s) => s.type === "sell");
+			expect(buys).toHaveLength(1);
+			expect(buys[0].index).toBe(4);
+			expect(sells).toHaveLength(1);
+			expect(sells[0].index).toBe(7);
+		});
+	});
+
+	describe("kd_weekly", () => {
+		it("should map weekly KD signal to the daily index of the weekly close date", () => {
+			// 56 calendar days = 8 ISO weeks; force a weekly KD golden cross after weeks 1-3 decline
+			const data: Array<{ open: number; high: number; low: number; close: number }> = [];
+			for (let i = 0; i < 56; i++) {
+				const week = Math.floor(i / 7);
+				let close = 100;
+				if (week < 3) {
+					close = 80; // weeks 1-3 decline
+				} else if (week === 3) {
+					close = 100; // week 4 bounce
+				} else {
+					close = 110; // weeks 5-8 uptrend
+				}
+				data.push({ open: close, high: 110, low: 80, close });
+			}
+			const klines = makeKlinesOHLC(data);
+			const signals = generateSignals(klines, "kd_weekly", { period: 3, smoothK: 3, smoothD: 3 });
+			const buys = signals.filter((s) => s.type === "buy");
+			expect(buys.length).toBeGreaterThan(0);
+			for (const s of signals) {
+				expect(s.index).toBeLessThan(klines.length);
+				expect(s.reason).toContain("KD");
+			}
+		});
+	});
+
 	describe("always_buy", () => {
 		it("should emit a buy signal for every bar", () => {
 			const klines = makeKlines([100, 101, 102]);
@@ -241,6 +291,60 @@ describe("generateSignals", () => {
 			});
 
 			expect(signals.some((s) => s.type === "buy")).toBe(false);
+		});
+
+		it("should only buy after a fresh high when requireFreshHigh is set", () => {
+			// 20 days prior: price oscillates and ends with a fresh high of 110
+			const prior = Array.from({ length: 20 }, (_, i) => ({
+				close: 100 + (i % 2 === 0 ? 2 : -2),
+				volume: 1_000_000,
+				high: i === 19 ? 110 : 109,
+				low: 96,
+			}));
+			// 5 days contraction: pullback from the fresh high
+			const contraction = [
+				{ close: 99, volume: 400_000, high: 101, low: 97 },
+				{ close: 98, volume: 350_000, high: 100, low: 97 },
+				{ close: 96, volume: 300_000, high: 98, low: 96 },
+				{ close: 95, volume: 280_000, high: 97, low: 95 },
+				{ close: 93, volume: 250_000, high: 95, low: 93 },
+			];
+			const klines = makeKlinesWithVolume([...prior, ...contraction]);
+
+			// Without fresh-high filter: still buys because contraction conditions are met.
+			const signalsUnfiltered = generateSignals(klines, "volume_contraction", {
+				lookbackDays: 20,
+				contractionDays: 5,
+				priceDropPct: 5,
+				volumeRatioMax: 0.7,
+				volatilityRatioMax: 0.6,
+			});
+			expect(signalsUnfiltered.some((s) => s.type === "buy")).toBe(true);
+
+			// With fresh-high filter: prior end high (110) is the fresh high, so it should still buy.
+			const signalsFiltered = generateSignals(klines, "volume_contraction", {
+				lookbackDays: 20,
+				contractionDays: 5,
+				priceDropPct: 5,
+				volumeRatioMax: 0.7,
+				volatilityRatioMax: 0.6,
+				requireFreshHigh: 1,
+			});
+			expect(signalsFiltered.some((s) => s.type === "buy")).toBe(true);
+			expect(signalsFiltered.find((s) => s.type === "buy")?.reason).toContain("创新高后首次回调");
+
+			// Lower the prior high below the contraction start high to simulate an M-top / lower high.
+			const priorLowerHigh = prior.map((k, i) => ({ ...k, high: i === 19 ? 108 : 109 }));
+			const klinesLowerHigh = makeKlinesWithVolume([...priorLowerHigh, ...contraction]);
+			const signalsMTop = generateSignals(klinesLowerHigh, "volume_contraction", {
+				lookbackDays: 20,
+				contractionDays: 5,
+				priceDropPct: 5,
+				volumeRatioMax: 0.7,
+				volatilityRatioMax: 0.6,
+				requireFreshHigh: 1,
+			});
+			expect(signalsMTop.some((s) => s.type === "buy")).toBe(false);
 		});
 	});
 });
