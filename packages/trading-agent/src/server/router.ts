@@ -5,7 +5,7 @@ import { join } from "node:path";
 import type { ModelRegistry } from "@mariozechner/pi-coding-agent";
 import { loadUserConfig, saveUserConfig } from "../config/user-config.js";
 import type { TradingSession } from "../core/trading-session.js";
-import { requireStore, requireSync } from "../data/index.js";
+import { marketFromCode, requireStore, requireSync } from "../data/index.js";
 import { runAStockDataJsonScript, runJsonScript, runLocalDataJsonScript } from "../tools/_utils.js";
 import { predictStockRankingTool } from "../tools/ml-prediction.js";
 import type { BackgroundSyncService } from "./background-sync.js";
@@ -75,50 +75,76 @@ export async function handleRequest(
 		if (path === "/api/indices" && method === "GET") {
 			const store = requireStore();
 			const indices = [
-				{ code: "000001", name: "上证指数" },
-				{ code: "399001", name: "深证成指" },
-				{ code: "399006", name: "创业板指" },
-				{ code: "000688", name: "科创50" },
-				{ code: "000300", name: "沪深300" },
-				{ code: "000905", name: "中证500" },
+				{ code: "000001", name: "上证指数", market: 1 },
+				{ code: "399001", name: "深证成指", market: 0 },
+				{ code: "399006", name: "创业板指", market: 0 },
+				{ code: "000688", name: "科创50", market: 1 },
+				{ code: "000300", name: "沪深300", market: 1 },
+				{ code: "000905", name: "中证500", market: 1 },
 			];
 			const codeList = indices.map((i) => i.code).join(",");
 
 			let quotes: any[] = [];
-			try {
-				// Fetch real-time index quotes via Sina (batch, reliable)
-				const spotQuotes = await runLocalDataJsonScript("get_index_quotes.py", ["--codes", codeList], 30000);
-				quotes = spotQuotes.map((q: any) => ({
-					code: q.code,
-					name: q.name,
-					latest: q.price,
-					change_pct: q.change_pct,
-					snapshot_date: new Date().toISOString().slice(0, 10),
-					updated_at: new Date().toISOString(),
-				}));
-			} catch (e) {
-				console.warn("[Indices] Real-time fetch failed, falling back to DB:", e);
-				// Fallback: use cached quotes from DB
-				// Pass market for each index to avoid code collisions
-				// (e.g., 000001 is both 平安银行 market=0 and 上证指数 market=1)
-				const codes = indices.map((i) => i.code);
-				const markets = indices.map((i) =>
-					i.code.startsWith("6") || ["000001", "000688", "000300", "000905"].includes(i.code) ? 1 : 0,
-				);
-				quotes = await store.getLatestQuotes(codes, markets);
+
+			// 1. Read from DB first — background sync updates every 30s during market hours.
+			//    This avoids spawning a Python process on every frontend poll.
+			const dbCodes = indices.map((i) => i.code);
+			const dbMarkets = indices.map((i) => i.market);
+			const dbQuotes = await store.getLatestQuotes(dbCodes, dbMarkets);
+			const maxAge = 90_000; // 90s — max acceptable staleness before falling back to real-time
+
+			let dbFresh = false;
+			if (dbQuotes.length === indices.length) {
+				const now = Date.now();
+				dbFresh = dbQuotes.every((q) => {
+					const updated = q.updated_at ? new Date(q.updated_at).getTime() : 0;
+					return now - updated < maxAge;
+				});
 			}
 
-			// Ensure all requested indices are represented
+			if (dbFresh) {
+				quotes = dbQuotes.map((q) => ({
+					code: q.code,
+					name: q.name || indices.find((i) => i.code === q.code)?.name,
+					latest: q.latest,
+					change_pct: q.change_pct,
+					snapshot_date: q.snapshot_date,
+					updated_at: q.updated_at,
+				}));
+			} else {
+				// 2. DB is stale or missing — fetch real-time via Python script
+				try {
+					const spotQuotes = await runLocalDataJsonScript("get_index_quotes.py", ["--codes", codeList], 30000);
+					quotes = spotQuotes.map((q: any) => ({
+						code: q.code,
+						name: q.name,
+						latest: q.price,
+						change_pct: q.change_pct,
+						snapshot_date: new Date().toISOString().slice(0, 10),
+						updated_at: new Date().toISOString(),
+					}));
+				} catch (e) {
+					console.warn("[Indices] Real-time fetch failed, falling back to DB:", e);
+					// Use whatever DB had (even if stale)
+					quotes = dbQuotes.map((q) => ({
+						code: q.code,
+						name: q.name || indices.find((i) => i.code === q.code)?.name,
+						latest: q.latest,
+						change_pct: q.change_pct,
+						snapshot_date: q.snapshot_date,
+						updated_at: q.updated_at,
+					}));
+				}
+			}
+
+			// 3. Fill any missing indices from klines as last resort
 			const foundCodes = new Set(quotes.map((q) => q.code));
 			for (const idx of indices) {
 				if (!foundCodes.has(idx.code)) {
-					// Last resort: try kline close as fallback
 					try {
-						const market =
-							idx.code.startsWith("6") || ["000001", "000688", "000300", "000905"].includes(idx.code) ? 1 : 0;
 						const klines = await store.getKlines({
 							code: idx.code,
-							market,
+							market: idx.market,
 							period: "daily",
 							adjust: "bfq",
 							limit: 1,
@@ -160,14 +186,14 @@ export async function handleRequest(
 			}
 			const store = requireStore();
 			const sync = requireSync();
-			const market = code.startsWith("6") ? 1 : 0;
+			const market = marketFromCode(code);
 
 			let quote: any = null;
 
-			// 1. Try mootdx (TCP direct) first — fastest and most reliable
+			// 1. Try mootdx (TCP direct) first with a short timeout to avoid UI blocking
 			if (mootdxDaemon) {
 				try {
-					const mootdxResult = await mootdxDaemon.request("quote", { code, market }, 15000);
+					const mootdxResult = await mootdxDaemon.request("quote", { code, market }, 3000);
 					if (mootdxResult && mootdxResult.latest != null) {
 						quote = mootdxResult;
 						console.log(`[Quote] mootdx hit for ${code}: ${mootdxResult._source}`);
@@ -182,7 +208,7 @@ export async function handleRequest(
 				quote = (await store.getLatestQuotes([code], [market]))[0] || null;
 			}
 
-			// 3. Fallback: HTTP real-time fetch
+			// 3. Fallback: HTTP real-time fetch (fast batch-capable source)
 			if (!quote) {
 				try {
 					quote = await sync.getQuoteWithCache(code, market);
@@ -336,6 +362,27 @@ export async function handleRequest(
 			const allMarkets = items.map((i) => i.market);
 			const quotes = await store.getLatestQuotes(allCodes, allMarkets);
 			const quoteMap = new Map(quotes.map((q) => [`${q.code}:${q.market}`, q]));
+
+			// Fallback: batch-fetch real-time quotes for items missing from DB
+			const itemsNeedingQuotes = items.filter((i) => !quoteMap.has(`${i.code}:${i.market}`));
+			if (itemsNeedingQuotes.length > 0) {
+				try {
+					const batchItems = itemsNeedingQuotes.map((i) => ({ code: i.code, market: i.market }));
+					const fetched: any[] = await runLocalDataJsonScript(
+						"batch_get_quotes.py",
+						["--items", JSON.stringify(batchItems)],
+						30_000,
+					);
+					for (const q of fetched) {
+						if (q?.code != null && q?.latest != null) {
+							quoteMap.set(`${q.code}:${q.market}`, q);
+						}
+					}
+				} catch (e) {
+					console.warn(`[Pool/${poolId}] Batch quote fetch failed:`, e);
+				}
+			}
+
 			const enrichedItems = items.map((item) => {
 				const q = quoteMap.get(`${item.code}:${item.market}`);
 				return {
@@ -421,35 +468,61 @@ export async function handleRequest(
 				badRequest(res, "code parameter required");
 				return;
 			}
-			const market = code.startsWith("6") ? 1 : 0;
+			const market = marketFromCode(code);
 			const period = (query.period as any) || "daily";
 			const limit = query.limit ? Number(query.limit) : 100;
 
 			let klines: any[] = [];
+			const store = requireStore();
+			const adjust = (query.adjust as any) || "bfq";
 
-			// 1. Try mootdx (TCP direct) first
-			if (mootdxDaemon) {
+			// 1. DB cache first — 统一周期命名为 week/month
+			klines = await store.getKlines({
+				code,
+				market,
+				period,
+				adjust,
+				limit,
+			});
+			console.log(`[Klines] DB cache for ${code} ${period}: ${klines.length} bars`);
+
+			// 2. Fallback: mootdx (TCP direct) with a short timeout
+			if (klines.length === 0 && mootdxDaemon) {
+				console.log(`[Klines] Falling back to mootdx for ${code} ${period} (market=${market})`);
 				try {
-					const mootdxResult = await mootdxDaemon.request("klines", { code, market, period, limit }, 20000);
+					const mootdxResult = await mootdxDaemon.request("klines", { code, market, period, limit }, 5000);
 					if (Array.isArray(mootdxResult) && mootdxResult.length > 0) {
 						klines = mootdxResult;
 						console.log(`[Klines] mootdx hit for ${code}: ${mootdxResult.length} bars`);
+						// Persist fallback data so next request hits DB
+						try {
+							const rows = mootdxResult.map((k: any) => ({
+								code: k.code,
+								market: k.market,
+								period: k.period,
+								adjust: k.adjust,
+								date: k.date,
+								open: k.open ?? null,
+								high: k.high ?? null,
+								low: k.low ?? null,
+								close: k.close ?? null,
+								volume: k.volume ?? null,
+								turnover: k.turnover ?? null,
+								change_pct: k.change_pct ?? null,
+								change_amount: k.change_amount ?? null,
+								amplitude: k.amplitude ?? null,
+								pre_close: k.pre_close ?? null,
+							}));
+							await store.saveKlines(rows);
+						} catch (saveErr) {
+							console.warn(`[Klines] Failed to persist mootdx fallback for ${code}:`, saveErr);
+						}
 					}
 				} catch (e) {
-					console.warn(`[Klines] mootdx failed for ${code}, falling back to DB:`, e);
+					console.warn(`[Klines] mootdx failed for ${code}:`, e);
 				}
-			}
-
-			// 2. Fallback: DB cache
-			if (klines.length === 0) {
-				const store = requireStore();
-				klines = await store.getKlines({
-					code,
-					market,
-					period,
-					adjust: (query.adjust as any) || "bfq",
-					limit,
-				});
+			} else if (klines.length === 0) {
+				console.warn(`[Klines] No mootdxDaemon available for ${code} ${period}`);
 			}
 
 			json(res, 200, klines);
@@ -463,7 +536,7 @@ export async function handleRequest(
 				badRequest(res, "Stock code required");
 				return;
 			}
-			const market = code.startsWith("6") ? 1 : 0;
+			const market = marketFromCode(code);
 			let fundamentals: any = null;
 
 			// 1. Try mootdx (TCP direct) first

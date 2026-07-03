@@ -68,6 +68,39 @@ export const SCRIPTS_DIR = EXTERNAL_A_SHARE_SCRIPTS;
 
 const DEFAULT_TIMEOUT_MS = 30000;
 
+/**
+ * Single-slot sequential queue: at most one Python subprocess runs at a time.
+ * Each call to runPython enqueues itself; the queue drains sequentially so
+ * background sync, frontend polling, and user-initiated calls never overlap.
+ */
+const MAX_CONCURRENT = 3;
+let pythonActive = 0;
+const pythonWaiters: Array<() => void> = [];
+
+function enqueuePython<T>(fn: () => Promise<T>): Promise<T> {
+	return new Promise<T>((resolve, reject) => {
+		const run = async () => {
+			pythonActive++;
+			try {
+				const result = await fn();
+				resolve(result);
+			} catch (err) {
+				reject(err);
+			} finally {
+				pythonActive--;
+				const next = pythonWaiters.shift();
+				if (next) next();
+			}
+		};
+
+		if (pythonActive < MAX_CONCURRENT) {
+			run();
+		} else {
+			pythonWaiters.push(run);
+		}
+	});
+}
+
 /** In-flight Python script executions keyed by script+args. Prevents duplicate
  *  concurrent subprocesses for identical calls (e.g. frontend polling the same
  *  stock quote simultaneously). */
@@ -81,7 +114,7 @@ function runPythonCommand(cmd: string, script: string, args: string[], timeoutMs
 		const proc = spawn(cmd, [scriptPath, ...args], {
 			cwd,
 			stdio: ["ignore", "pipe", "pipe"],
-			env: { ...process.env, PYTHONIOENCODING: "utf-8" },
+			env: { ...process.env, PYTHONIOENCODING: "utf-8", PYTHONUTF8: "1" },
 		});
 		let stdout = "";
 		let stderr = "";
@@ -125,7 +158,7 @@ export async function runPython(script: string, args: string[], timeoutMs = DEFA
 		return existing;
 	}
 
-	const promise = (async (): Promise<string> => {
+	const promise = enqueuePython(async (): Promise<string> => {
 		const commands = ["python3", "python", "py"];
 		let lastError: Error | undefined;
 
@@ -147,7 +180,7 @@ export async function runPython(script: string, args: string[], timeoutMs = DEFA
 		}
 
 		throw lastError ?? new Error(`No Python interpreter found. Tried: ${commands.join(", ")}`);
-	})();
+	});
 
 	inFlight.set(key, promise);
 	promise.then(
@@ -174,7 +207,7 @@ export async function runPythonCustom(
 		const proc = spawn(pythonPath, [scriptPath, ...args], {
 			cwd,
 			stdio: ["ignore", "pipe", "pipe"],
-			env: { ...process.env, PYTHONIOENCODING: "utf-8" },
+			env: { ...process.env, PYTHONIOENCODING: "utf-8", PYTHONUTF8: "1" },
 		});
 		let stdout = "";
 		let stderr = "";

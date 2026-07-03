@@ -79,6 +79,7 @@ def _resample_df(df, period, code_col='code'):
         'volume': 'sum',
         'money': 'sum',
         'pre_close': 'first',
+        'market': 'first',
     }
     freq = {
         'week': 'W-FRI',
@@ -218,6 +219,31 @@ def batch_get_kline(stock_codes, start_date, end_date, period="daily", adjust="b
 
     for item in stock_codes:
         all_klines.extend(_fetch_one(item))
+
+    # Resample daily data to week/month/quarter/year when requested
+    if period != "daily" and all_klines:
+        df = pd.DataFrame(all_klines)
+        if 'date' in df.columns and 'code' in df.columns and len(df) > 0:
+            df = _resample_df(df, period)
+            if df is not None and len(df) > 0:
+                all_klines = []
+                for _, row in df.iterrows():
+                    all_klines.append({
+                        "code": str(row.get("code", "")),
+                        "market": int(row["market"]) if pd.notna(row.get("market")) else 0,
+                        "date": str(row.get("date", ""))[:10] if pd.notna(row.get("date")) else "",
+                        "open": float(row["open"]) if pd.notna(row.get("open")) else None,
+                        "close": float(row["close"]) if pd.notna(row.get("close")) else None,
+                        "low": float(row["low"]) if pd.notna(row.get("low")) else None,
+                        "high": float(row["high"]) if pd.notna(row.get("high")) else None,
+                        "volume": float(row["volume"]) if pd.notna(row.get("volume")) else None,
+                        "amount": float(row["money"]) if "money" in row and pd.notna(row.get("money")) else None,
+                        "amplitude": None,
+                        "change_pct": None,
+                        "change_amount": None,
+                        "turnover": None,
+                        "pre_close": float(row["pre_close"]) if "pre_close" in row and pd.notna(row.get("pre_close")) else None,
+                    })
 
     return all_klines
 

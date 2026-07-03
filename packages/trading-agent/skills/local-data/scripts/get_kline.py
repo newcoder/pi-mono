@@ -11,6 +11,15 @@ AK_ADJUST_MAP = {
     "hfq": "hfq",
 }
 
+# Map our period names to akshare period names
+AK_PERIOD_MAP = {
+    "daily": "daily",
+    "week": "weekly",
+    "month": "monthly",
+    "quarter": "quarterly",
+    "year": "yearly",
+}
+
 PERIOD_CHOICES = ["1m", "5m", "15m", "30m", "60m", "120m", "daily", "week", "month", "quarter", "year"]
 ADJUST_CHOICES = ["bfq", "qfq", "hfq"]
 
@@ -62,7 +71,8 @@ def get_stock_kline(
         ak_start = f"{start_date[:4]}-{start_date[4:6]}-{start_date[6:8]}" if len(start_date) == 8 else start_date
         ak_end = f"{end_date[:4]}-{end_date[4:6]}-{end_date[6:8]}" if len(end_date) == 8 else end_date
         ak_adjust = AK_ADJUST_MAP.get(adjust, "")
-        df = ak.stock_zh_a_hist(symbol=stock_code, period="daily", start_date=ak_start, end_date=ak_end, adjust=ak_adjust)
+        ak_period = AK_PERIOD_MAP.get(period, "daily")
+        df = ak.stock_zh_a_hist(symbol=stock_code, period=ak_period, start_date=ak_start, end_date=ak_end, adjust=ak_adjust)
         if df is not None and not df.empty:
             klines = []
             for _, row in df.iterrows():

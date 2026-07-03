@@ -59,6 +59,122 @@ function s(v: string | null | undefined): string {
 	return `'${v.replace(/'/g, "''")}'`;
 }
 
+/**
+ * Aggregate daily klines into weekly or monthly OHLC bars.
+ * - Weekly: groups by Monday of each ISO week
+ * - Monthly: groups by YYYY-MM
+ * Returns bars sorted by date, limited to `maxBars` if specified.
+ */
+function aggregateDailyKlines(daily: KlineRow[], period: "week" | "month", maxBars?: number): KlineRow[] {
+	if (daily.length === 0) return [];
+
+	const groups = new Map<string, KlineRow[]>();
+
+	for (const k of daily) {
+		const d = new Date(`${k.date}T00:00:00`);
+		let key: string;
+		if (period === "week") {
+			// Monday of the ISO week
+			const dayOfWeek = d.getDay() || 7; // Sun=0→7, Mon=1
+			const monday = new Date(d);
+			monday.setDate(d.getDate() - (dayOfWeek - 1));
+			key = monday.toISOString().slice(0, 10);
+		} else {
+			// YYYY-MM-01 (first of the month)
+			key = `${k.date.slice(0, 7)}-01`;
+		}
+		if (!groups.has(key)) groups.set(key, []);
+		groups.get(key)!.push(k);
+	}
+
+	const result: KlineRow[] = [];
+	for (const [key, bars] of groups) {
+		bars.sort((a, b) => a.date.localeCompare(b.date));
+		const first = bars[0];
+		const last = bars[bars.length - 1];
+		result.push({
+			code: first.code,
+			market: first.market,
+			period,
+			adjust: first.adjust,
+			date: key, // Monday date for week, YYYY-MM-01 for month
+			open: first.open,
+			high: Math.max(...bars.map((b) => b.high ?? -Infinity)),
+			low: Math.min(...bars.map((b) => b.low ?? Infinity)),
+			close: last.close,
+			volume: bars.reduce((sum, b) => sum + (b.volume ?? 0), 0),
+			turnover: bars.reduce((sum, b) => sum + (b.turnover ?? 0), 0),
+			change_pct: null,
+			change_amount: null,
+			amplitude: null,
+			pre_close: null,
+		});
+	}
+
+	result.sort((a, b) => a.date.localeCompare(b.date));
+	if (maxBars != null && result.length > maxBars) {
+		return result.slice(result.length - maxBars);
+	}
+	return result;
+}
+
+/**
+ * Aggregate daily industry klines into weekly or monthly OHLC bars.
+ * Uses the same grouping logic as aggregateDailyKlines.
+ */
+function aggregateDailyIndustryKlines(
+	daily: IndustryKlineRow[],
+	period: "week" | "month",
+	maxBars?: number,
+): IndustryKlineRow[] {
+	if (daily.length === 0) return [];
+
+	const groups = new Map<string, IndustryKlineRow[]>();
+
+	for (const k of daily) {
+		const d = new Date(`${k.date}T00:00:00`);
+		let key: string;
+		if (period === "week") {
+			const dayOfWeek = d.getDay() || 7;
+			const monday = new Date(d);
+			monday.setDate(d.getDate() - (dayOfWeek - 1));
+			key = monday.toISOString().slice(0, 10);
+		} else {
+			key = `${k.date.slice(0, 7)}-01`;
+		}
+		if (!groups.has(key)) groups.set(key, []);
+		groups.get(key)!.push(k);
+	}
+
+	const result: IndustryKlineRow[] = [];
+	for (const [key, bars] of groups) {
+		bars.sort((a, b) => a.date.localeCompare(b.date));
+		const first = bars[0];
+		const last = bars[bars.length - 1];
+		result.push({
+			code: first.code,
+			period,
+			date: key,
+			open: first.open,
+			high: Math.max(...bars.map((b) => b.high ?? -Infinity)),
+			low: Math.min(...bars.map((b) => b.low ?? Infinity)),
+			close: last.close,
+			volume: bars.reduce((sum, b) => sum + (b.volume ?? 0), 0),
+			turnover: bars.reduce((sum, b) => sum + (b.turnover ?? 0), 0),
+			change_pct: null,
+			change_amount: null,
+			amplitude: null,
+			turnover_rate: null,
+		});
+	}
+
+	result.sort((a, b) => a.date.localeCompare(b.date));
+	if (maxBars != null && result.length > maxBars) {
+		return result.slice(result.length - maxBars);
+	}
+	return result;
+}
+
 const SCHEMA_SQL = `
 CREATE TABLE IF NOT EXISTS stocks (
     code TEXT PRIMARY KEY,
@@ -536,6 +652,14 @@ export class DataStore {
 		}
 
 		await promisifyExec(this.db, DYNAMIC_POOL_SCHEMA);
+
+		// 统一 K 线周期命名：weekly/monthly -> week/month，并删除残留旧命名数据
+		await promisifyExec(this.db, "UPDATE OR IGNORE klines SET period = 'week' WHERE period = 'weekly'");
+		await promisifyExec(this.db, "UPDATE OR IGNORE klines SET period = 'month' WHERE period = 'monthly'");
+		await promisifyExec(this.db, "DELETE FROM klines WHERE period = 'weekly' OR period = 'monthly'");
+		await promisifyExec(this.db, "UPDATE OR IGNORE industry_klines SET period = 'week' WHERE period = 'weekly'");
+		await promisifyExec(this.db, "UPDATE OR IGNORE industry_klines SET period = 'month' WHERE period = 'monthly'");
+		await promisifyExec(this.db, "DELETE FROM industry_klines WHERE period = 'weekly' OR period = 'monthly'");
 	}
 
 	// ─── Stocks ─────────────────────────────────────────────────────
@@ -617,7 +741,26 @@ export class DataStore {
 
 	async getKlines(filter: KlineFilter): Promise<KlineRow[]> {
 		if (!this.db) return [];
-		let sql = `SELECT * FROM klines WHERE code = ${s(filter.code)}`;
+
+		// Week/month klines are aggregated on-the-fly from daily data.
+		// The background sync only fetches daily klines; storing weekly/monthly
+		// would duplicate data and add sync complexity for no benefit.
+		if (filter.period === "week" || filter.period === "month") {
+			const dailyKlines = await this.queryKlines({
+				...filter,
+				period: "daily",
+				// Fetch enough daily bars to satisfy the requested limit after aggregation
+				limit: filter.limit ? filter.limit * (filter.period === "week" ? 7 : 22) : undefined,
+			});
+			return aggregateDailyKlines(dailyKlines, filter.period, filter.limit);
+		}
+
+		return this.queryKlines(filter);
+	}
+
+	private async queryKlines(filter: KlineFilter): Promise<KlineRow[]> {
+		if (!this.db) return [];
+		let sql = `SELECT * FROM klines WHERE code = ${s(filter.code)} AND open IS NOT NULL`;
 		if (filter.market != null) sql += ` AND market = ${filter.market}`;
 		if (filter.period) sql += ` AND period = ${s(filter.period)}`;
 		if (filter.adjust) sql += ` AND adjust = ${s(filter.adjust)}`;
@@ -729,7 +872,12 @@ export class DataStore {
 
 	async saveQuote(quote: QuoteRow): Promise<void> {
 		if (!this.db) return;
-		const f = (v: number | null | undefined) => (v == null || Number.isNaN(v) ? "NULL" : String(v));
+		const f = (v: number | string | null | undefined) => {
+			if (v == null || Number.isNaN(v) || v === "" || v === "-" || v === "—") return "NULL";
+			if (typeof v === "number") return String(v);
+			const n = Number(v);
+			return Number.isFinite(n) ? String(n) : "NULL";
+		};
 		const sql = `
 			INSERT OR REPLACE INTO quotes
 			(code, market, snapshot_date, name, latest, open, high, low, prev_close, volume, turnover, change_pct, pe, pb, total_cap, float_cap, high_52w, low_52w, updated_at)
@@ -1027,9 +1175,15 @@ export class DataStore {
 
 	async findIndustryByName(name: string, standard?: string): Promise<IndustryRow[]> {
 		if (!this.db) return [];
-		let sql = `SELECT * FROM industries WHERE name LIKE '%' || ${s(name).slice(1, -1)} || '%'`;
+		let sql = `SELECT * FROM industries WHERE name LIKE '%' || ${s(name)} || '%'`;
 		if (standard) sql += ` AND standard = ${s(standard)}`;
-		return promisifyQuery(this.db, sql);
+		const rows: IndustryRow[] = await promisifyQuery(this.db, sql);
+		// Prefer exact matches, then prefix matches, then substring matches
+		return rows.sort((a, b) => {
+			const aExact = a.name === name ? 0 : a.name.startsWith(name) ? 1 : 2;
+			const bExact = b.name === name ? 0 : b.name.startsWith(name) ? 1 : 2;
+			return aExact - bExact;
+		});
 	}
 
 	// ─── Industry Indices ───────────────────────────────────────────
@@ -1076,7 +1230,31 @@ export class DataStore {
 		limit?: number,
 	): Promise<IndustryKlineRow[]> {
 		if (!this.db) return [];
-		let sql = `SELECT * FROM industry_klines WHERE code = ${s(code)} AND period = ${s(period)}`;
+
+		// Aggregate week/month from daily industry klines on the fly
+		if (period === "week" || period === "month") {
+			const dailyKlines = await this.queryIndustryKlines(
+				code,
+				"daily",
+				start,
+				end,
+				limit ? limit * (period === "week" ? 7 : 22) : undefined,
+			);
+			return aggregateDailyIndustryKlines(dailyKlines, period, limit);
+		}
+
+		return this.queryIndustryKlines(code, period, start, end, limit);
+	}
+
+	private async queryIndustryKlines(
+		code: string,
+		period: string,
+		start?: string,
+		end?: string,
+		limit?: number,
+	): Promise<IndustryKlineRow[]> {
+		if (!this.db) return [];
+		let sql = `SELECT * FROM industry_klines WHERE code = ${s(code)} AND period = ${s(period)} AND open IS NOT NULL`;
 		if (start) sql += ` AND date >= ${s(start)}`;
 		if (end) sql += ` AND date <= ${s(end)}`;
 		sql += ` ORDER BY date`;
