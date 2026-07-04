@@ -413,3 +413,42 @@ export interface IndustrySyntheticKlineRow {
 	constituent_count: number | null;
 	updated_at?: string;
 }
+
+export interface ConceptSyntheticKlineRow {
+	concept: string;
+	date: string;
+	close: number | null;
+	constituent_count: number | null;
+	updated_at?: string;
+}
+
+export interface ConceptFilterResultRow {
+	concept: string;
+	constituent_count: number | null;
+	dispersion: number | null;
+	max_benchmark_correlation: number | null;
+	size_pass: number | null;
+	dispersion_pass: number | null;
+	independence_pass: number | null;
+	rank_score: number | null;
+	rank: number | null;
+	updated_at?: string;
+}
+
+export interface ConceptIndicatorRow {
+	concept: string;
+	date: string;
+	period_days: number;
+	momentum_return: number | null;
+	momentum_rank: number | null;
+	has_momentum: number | null;
+	updated_at?: string;
+}
+
+export interface TrackedThemeRow {
+	concept: string;
+	master_theme: string;
+	status: "tracked" | "merged" | "excluded";
+	notes: string | null;
+	updated_at?: string;
+}

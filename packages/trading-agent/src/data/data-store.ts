@@ -5,7 +5,10 @@ import type {
 	AdjustFactorRow,
 	BusinessCompositionRow,
 	CalendarEventRow,
+	ConceptFilterResultRow,
+	ConceptIndicatorRow,
 	ConceptStockRow,
+	ConceptSyntheticKlineRow,
 	DynamicPoolItemRow,
 	FactorIcRow,
 	FundamentalIndicatorsRow,
@@ -27,6 +30,7 @@ import type {
 	StockIndicatorRow,
 	StockIndustryRow,
 	StockRow,
+	TrackedThemeRow,
 } from "./types.js";
 
 function promisifyQuery(db: sqlite3.Database, sql: string, params?: unknown[]): Promise<any[]> {
@@ -308,11 +312,64 @@ CREATE TABLE IF NOT EXISTS sectors (
 );
 
 CREATE TABLE IF NOT EXISTS concept_stocks (
-    concept TEXT NOT NULL,
+    theme TEXT NOT NULL,
     code TEXT NOT NULL,
     name TEXT,
     updated_at TEXT,
-    PRIMARY KEY (concept, code)
+    PRIMARY KEY (theme, code)
+);
+
+CREATE TABLE IF NOT EXISTS concept_synthetic_klines (
+    theme TEXT NOT NULL,
+    date TEXT NOT NULL,
+    close REAL,
+    constituent_count INTEGER,
+    updated_at TEXT,
+    PRIMARY KEY (theme, date)
+);
+
+CREATE TABLE IF NOT EXISTS concept_filter_results (
+    concept TEXT PRIMARY KEY,
+    constituent_count INTEGER,
+    dispersion REAL,
+    max_benchmark_correlation REAL,
+    size_pass INTEGER,
+    dispersion_pass INTEGER,
+    independence_pass INTEGER,
+    rank_score REAL,
+    rank INTEGER,
+    updated_at TEXT
+);
+
+CREATE TABLE IF NOT EXISTS concept_indicators (
+    theme TEXT NOT NULL,
+    date TEXT NOT NULL,
+    period_days INTEGER NOT NULL,
+    momentum_return REAL,
+    momentum_rank INTEGER,
+    has_momentum INTEGER,
+    updated_at TEXT,
+    PRIMARY KEY (theme, date, period_days)
+);
+
+CREATE TABLE IF NOT EXISTS tracked_themes (
+    concept TEXT NOT NULL,
+    master_theme TEXT NOT NULL,
+    status TEXT NOT NULL DEFAULT 'tracked',
+    notes TEXT,
+    updated_at TEXT,
+    PRIMARY KEY (concept)
+);
+
+CREATE TABLE IF NOT EXISTS theme_classification (
+	theme TEXT NOT NULL,
+	parent_theme TEXT,
+	level TEXT NOT NULL,
+	mentions INTEGER,
+	sub_concepts TEXT,
+	snapshot_date TEXT NOT NULL,
+	updated_at TEXT,
+	PRIMARY KEY (theme, snapshot_date)
 );
 
 CREATE TABLE IF NOT EXISTS business_composition (
@@ -742,14 +799,15 @@ export class DataStore {
 	async getKlines(filter: KlineFilter): Promise<KlineRow[]> {
 		if (!this.db) return [];
 
-		// Week/month klines are aggregated on-the-fly from daily data.
-		// The background sync only fetches daily klines; storing weekly/monthly
-		// would duplicate data and add sync complexity for no benefit.
+		// Week/month: prefer stored data (synced via syncAllKlines --period week/month),
+		// fall back to on-the-fly aggregation from daily if no stored rows exist.
 		if (filter.period === "week" || filter.period === "month") {
+			const stored = await this.queryKlines(filter);
+			if (stored.length > 0) return stored;
+
 			const dailyKlines = await this.queryKlines({
 				...filter,
 				period: "daily",
-				// Fetch enough daily bars to satisfy the requested limit after aggregation
 				limit: filter.limit ? filter.limit * (filter.period === "week" ? 7 : 22) : undefined,
 			});
 			return aggregateDailyKlines(dailyKlines, filter.period, filter.limit);
@@ -1073,6 +1131,129 @@ export class DataStore {
 			concept: string;
 		}[];
 		return rows.map((r) => r.concept);
+	}
+
+	// ─── Concept Synthetic Klines ────────────────────────────────────
+
+	async saveConceptSyntheticKlines(klines: ConceptSyntheticKlineRow[]): Promise<void> {
+		if (klines.length === 0 || !this.db) return;
+		const now = new Date().toISOString();
+		const values = klines
+			.map((k) => {
+				const f = (v: number | null) => (v == null ? "NULL" : String(v));
+				return `(${s(k.concept)}, ${s(k.date)}, ${f(k.close)}, ${f(k.constituent_count)}, ${s(now)})`;
+			})
+			.join(",\n");
+		await promisifyExec(
+			this.db,
+			`INSERT OR REPLACE INTO concept_synthetic_klines (concept, date, close, constituent_count, updated_at) VALUES ${values}`,
+		);
+	}
+
+	async getConceptSyntheticKlines(concept: string, start?: string, end?: string): Promise<ConceptSyntheticKlineRow[]> {
+		if (!this.db) return [];
+		let sql = `SELECT * FROM concept_synthetic_klines WHERE concept = ${s(concept)}`;
+		if (start) sql += ` AND date >= ${s(start)}`;
+		if (end) sql += ` AND date <= ${s(end)}`;
+		sql += ` ORDER BY date`;
+		return promisifyQuery(this.db, sql);
+	}
+
+	// ─── Concept Filter Results ──────────────────────────────────────
+
+	async saveConceptFilterResults(results: ConceptFilterResultRow[]): Promise<void> {
+		if (results.length === 0 || !this.db) return;
+		const now = new Date().toISOString();
+		const f = (v: number | null | undefined) => (v == null || Number.isNaN(v) ? "NULL" : String(v));
+		const values = results
+			.map(
+				(r) =>
+					`(${s(r.concept)}, ${f(r.constituent_count)}, ${f(r.dispersion)}, ${f(r.max_benchmark_correlation)}, ${f(r.size_pass)}, ${f(r.dispersion_pass)}, ${f(r.independence_pass)}, ${f(r.rank_score)}, ${f(r.rank)}, ${s(now)})`,
+			)
+			.join(",\n");
+		await promisifyExec(
+			this.db,
+			`INSERT OR REPLACE INTO concept_filter_results (concept, constituent_count, dispersion, max_benchmark_correlation, size_pass, dispersion_pass, independence_pass, rank_score, rank, updated_at) VALUES ${values}`,
+		);
+	}
+
+	async getConceptFilterResults(): Promise<ConceptFilterResultRow[]> {
+		if (!this.db) return [];
+		return promisifyQuery(this.db, `SELECT * FROM concept_filter_results ORDER BY rank`);
+	}
+
+	// ─── Concept Indicators ──────────────────────────────────────────
+
+	async saveConceptIndicators(indicators: ConceptIndicatorRow[]): Promise<void> {
+		if (indicators.length === 0 || !this.db) return;
+		const now = new Date().toISOString();
+		const f = (v: number | null | undefined) => (v == null || Number.isNaN(v) ? "NULL" : String(v));
+		const values = indicators
+			.map(
+				(r) =>
+					`(${s(r.concept)}, ${s(r.date)}, ${r.period_days}, ${f(r.momentum_return)}, ${f(r.momentum_rank)}, ${f(r.has_momentum)}, ${s(now)})`,
+			)
+			.join(",\n");
+		await promisifyExec(
+			this.db,
+			`INSERT OR REPLACE INTO concept_indicators (concept, date, period_days, momentum_return, momentum_rank, has_momentum, updated_at) VALUES ${values}`,
+		);
+	}
+
+	async getConceptIndicators(
+		concept: string,
+		periodDays: number,
+		start?: string,
+		end?: string,
+	): Promise<ConceptIndicatorRow[]> {
+		if (!this.db) return [];
+		let sql = `SELECT * FROM concept_indicators WHERE concept = ${s(concept)} AND period_days = ${periodDays}`;
+		if (start) sql += ` AND date >= ${s(start)}`;
+		if (end) sql += ` AND date <= ${s(end)}`;
+		sql += ` ORDER BY date`;
+		return promisifyQuery(this.db, sql);
+	}
+
+	// ─── Tracked Themes ─────────────────────────────────────────────
+
+	async saveTrackedTheme(theme: TrackedThemeRow): Promise<void> {
+		if (!this.db) return;
+		const now = new Date().toISOString();
+		await promisifyExec(
+			this.db,
+			`INSERT OR REPLACE INTO tracked_themes (concept, master_theme, status, notes, updated_at) VALUES (${s(theme.concept)}, ${s(theme.master_theme)}, ${s(theme.status)}, ${s(theme.notes)}, ${s(now)})`,
+		);
+	}
+
+	async getTrackedThemes(status?: string): Promise<TrackedThemeRow[]> {
+		if (!this.db) return [];
+		let sql = `SELECT * FROM tracked_themes`;
+		if (status) sql += ` WHERE status = ${s(status)}`;
+		sql += ` ORDER BY master_theme, concept`;
+		return promisifyQuery(this.db, sql);
+	}
+
+	async getTrackedConcepts(): Promise<string[]> {
+		const rows = await this.getTrackedThemes("tracked");
+		return rows.map((r) => r.concept);
+	}
+
+	// ─── Theme Classification ───────────────────────────────────────
+
+	async getThemeHistory(level?: string): Promise<
+		Array<{
+			snapshot_date: string;
+			theme: string;
+			level: string;
+			mentions: number;
+			sub_concepts: string | null;
+		}>
+	> {
+		if (!this.db) return [];
+		let sql = `SELECT snapshot_date, theme, level, mentions, sub_concepts FROM theme_classification`;
+		if (level) sql += ` WHERE level = '${level.replace(/'/g, "''")}'`;
+		sql += ` ORDER BY snapshot_date, mentions DESC`;
+		return promisifyQuery(this.db, sql);
 	}
 
 	// ─── Business Composition ───────────────────────────────────────

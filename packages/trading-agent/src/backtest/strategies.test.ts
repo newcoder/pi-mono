@@ -183,6 +183,24 @@ describe("generateSignals", () => {
 		});
 	});
 
+	it("should emit a death cross even when it occurs before any golden cross", () => {
+		// period=3, smoothK=3, smoothD=3 — rising then falling produces death cross first
+		const klines = makeKlinesOHLC([
+			{ open: 100, high: 100, low: 100, close: 100 },
+			{ open: 110, high: 110, low: 100, close: 110 },
+			{ open: 120, high: 120, low: 100, close: 120 },
+			{ open: 130, high: 130, low: 100, close: 130 },
+			{ open: 100, high: 100, low: 90, close: 95 }, // K crosses below D
+			{ open: 100, high: 100, low: 90, close: 95 },
+			{ open: 100, high: 100, low: 90, close: 95 },
+		]);
+		const signals = generateSignals(klines, "kd_daily", { period: 3, smoothK: 3, smoothD: 3 });
+		const sells = signals.filter((s) => s.type === "sell");
+		expect(sells.length).toBeGreaterThanOrEqual(1);
+		for (const s of sells) {
+			expect(s.reason).toContain("KD死叉");
+		}
+	});
 	describe("kd_weekly", () => {
 		it("should map weekly KD signal to the daily index of the weekly close date", () => {
 			// 56 calendar days = 8 ISO weeks; force a weekly KD golden cross after weeks 1-3 decline

@@ -284,6 +284,70 @@ def ensure_tables():
         )
     """)
 
+    # index_klines (benchmark indices for concept independence filter)
+    cur.execute("""
+        CREATE TABLE IF NOT EXISTS index_klines (
+            code TEXT NOT NULL,
+            date TEXT NOT NULL,
+            close REAL,
+            PRIMARY KEY (code, date)
+        )
+    """)
+
+    # concept_synthetic_klines
+    cur.execute("""
+        CREATE TABLE IF NOT EXISTS concept_synthetic_klines (
+            concept TEXT NOT NULL,
+            date TEXT NOT NULL,
+            close REAL,
+            constituent_count INTEGER,
+            updated_at TEXT,
+            PRIMARY KEY (concept, date)
+        )
+    """)
+
+    # concept_filter_results
+    cur.execute("""
+        CREATE TABLE IF NOT EXISTS concept_filter_results (
+            concept TEXT PRIMARY KEY,
+            constituent_count INTEGER,
+            dispersion REAL,
+            max_benchmark_correlation REAL,
+            size_pass INTEGER,
+            dispersion_pass INTEGER,
+            independence_pass INTEGER,
+            rank_score REAL,
+            rank INTEGER,
+            updated_at TEXT
+        )
+    """)
+
+    # concept_indicators
+    cur.execute("""
+        CREATE TABLE IF NOT EXISTS concept_indicators (
+            concept TEXT NOT NULL,
+            date TEXT NOT NULL,
+            period_days INTEGER NOT NULL,
+            momentum_return REAL,
+            momentum_rank INTEGER,
+            has_momentum INTEGER,
+            updated_at TEXT,
+            PRIMARY KEY (concept, date, period_days)
+        )
+    """)
+
+    # tracked_themes
+    cur.execute("""
+        CREATE TABLE IF NOT EXISTS tracked_themes (
+            concept TEXT NOT NULL,
+            master_theme TEXT NOT NULL,
+            status TEXT NOT NULL DEFAULT 'tracked',
+            notes TEXT,
+            updated_at TEXT,
+            PRIMARY KEY (concept)
+        )
+    """)
+
     # industry_indicators
     cur.execute("""
         CREATE TABLE IF NOT EXISTS industry_indicators (
@@ -1128,6 +1192,58 @@ def sync_concepts() -> dict:
         raise RuntimeError(f"Concept sync failed: {e}")
 
 
+# ── Phase 6b: Sync Benchmark Index Klines ──────────────────────────────────────
+
+@_phase("index_klines")
+def sync_index_klines() -> dict:
+    """Sync benchmark index daily klines (沪深300/中证500) for concept independence filter."""
+    try:
+        import sync_index_klines
+        result = sync_index_klines.sync_index_klines(get_db())
+        return {"detail": result}
+    except Exception as e:
+        raise RuntimeError(f"Index klines sync failed: {e}")
+
+
+# ── Phase 6c: Build Concept Synthetic Klines ────────────────────────────────────
+
+@_phase("concept_synthetic_klines")
+def sync_concept_synthetic_klines() -> dict:
+    """Build equal-weight qfq-adjusted synthetic klines for all concepts."""
+    try:
+        import calc_concept_synthetic_klines
+        result = calc_concept_synthetic_klines.calc_all(get_db())
+        return {"detail": result}
+    except Exception as e:
+        raise RuntimeError(f"Concept synthetic klines failed: {e}")
+
+
+# ── Phase 6d: Run Concept Filter ────────────────────────────────────────────────
+
+@_phase("concept_filter")
+def sync_concept_filter() -> dict:
+    """Run Layer 1 automated filter (size, dispersion, independence)."""
+    try:
+        import filter_concepts
+        result = filter_concepts.run_filter(get_db())
+        return {"detail": result}
+    except Exception as e:
+        raise RuntimeError(f"Concept filter failed: {e}")
+
+
+# ── Phase 6e: Compute Concept Momentum ──────────────────────────────────────────
+
+@_phase("concept_momentum")
+def sync_concept_momentum() -> dict:
+    """Compute concept momentum and IC for tracked concepts."""
+    try:
+        import calc_concept_momentum
+        result = calc_concept_momentum.calc_all(get_db())
+        return {"detail": result}
+    except Exception as e:
+        raise RuntimeError(f"Concept momentum failed: {e}")
+
+
 # ── Phase 7: Sync Hot Stocks ─────────────────────────────────────────────────
 
 @_phase("hot_stocks")
@@ -1184,6 +1300,19 @@ def sync_hot_stocks() -> dict:
         return {"count": inserted, "date": target_date}
     finally:
         conn.close()
+
+
+# ── Phase 7b: Classify Market Themes ────────────────────────────────────────────
+
+@_phase("classify_themes")
+def sync_classify_themes() -> dict:
+    """Classify market themes (主线/支线/细分) from hot stock reasons."""
+    try:
+        import classify_themes
+        result = classify_themes.run_classification(get_db())
+        return {"detail": result}
+    except Exception as e:
+        raise RuntimeError(f"Theme classification failed: {e}")
 
 
 # ── Phase 8: Sync Stock News ───────────────────────────────────────────────

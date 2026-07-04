@@ -13,7 +13,6 @@ export interface StrategyParams {
 	overbought?: number;
 	stdDev?: number;
 	multiplier?: number;
-	drawdownSellPct?: number;
 	// K-line patterns
 	minBodyRatio?: number; // min body/open ratio for valid candles (default 0.02)
 	// Composite signals
@@ -254,13 +253,11 @@ function bollingerSignals(klines: KlineRow[], params: StrategyParams): Signal[] 
 function supertrendSignals(klines: KlineRow[], params: StrategyParams): Signal[] {
 	const period = params.period ?? 10;
 	const multiplier = params.multiplier ?? 3;
-	const drawdownSellPct = params.drawdownSellPct ?? 0;
 	if (klines.length < period + 1) return [];
 
 	const st = cachedSupertrend(klines, { period, multiplier });
 	const signals: Signal[] = [];
 	let inPosition = false;
-	let highestCloseSinceEntry: number | null = null;
 
 	for (let i = 1; i < klines.length; i++) {
 		const prevTrend = st.trend[i - 1];
@@ -277,44 +274,18 @@ function supertrendSignals(klines: KlineRow[], params: StrategyParams): Signal[]
 				reason: `Supertrend转多(周期${period}, 倍数${multiplier})`,
 			});
 			inPosition = true;
-			highestCloseSinceEntry = close;
 			continue;
 		}
 
-		if (inPosition) {
-			if (highestCloseSinceEntry != null && close > highestCloseSinceEntry) {
-				highestCloseSinceEntry = close;
-			}
-
-			// 1. Supertrend death cross
-			if (prevTrend === "up" && currTrend === "down") {
-				signals.push({
-					index: i,
-					date: klines[i].date,
-					type: "sell",
-					price: close,
-					reason: `Supertrend转空(周期${period}, 倍数${multiplier})`,
-				});
-				inPosition = false;
-				highestCloseSinceEntry = null;
-				continue;
-			}
-
-			// 2. Drawdown stop loss
-			if (drawdownSellPct > 0 && highestCloseSinceEntry != null) {
-				const stopPrice = highestCloseSinceEntry * (1 - drawdownSellPct / 100);
-				if (close < stopPrice) {
-					signals.push({
-						index: i,
-						date: klines[i].date,
-						type: "sell",
-						price: close,
-						reason: `Supertrend回撤卖出(从${highestCloseSinceEntry.toFixed(2)}回撤${drawdownSellPct}%)`,
-					});
-					inPosition = false;
-					highestCloseSinceEntry = null;
-				}
-			}
+		if (inPosition && prevTrend === "up" && currTrend === "down") {
+			signals.push({
+				index: i,
+				date: klines[i].date,
+				type: "sell",
+				price: close,
+				reason: `Supertrend转空(周期${period}, 倍数${multiplier})`,
+			});
+			inPosition = false;
 		}
 	}
 	return signals;
@@ -741,7 +712,6 @@ function kdSignals(klines: KlineRow[], params: StrategyParams): Signal[] {
 
 	const { k, d } = cachedKD(klines, { period, smoothK, smoothD });
 	const signals: Signal[] = [];
-	let inPosition = false;
 
 	for (let i = 1; i < klines.length; i++) {
 		const kPrev = k[i - 1];
@@ -750,7 +720,7 @@ function kdSignals(klines: KlineRow[], params: StrategyParams): Signal[] {
 		const dCurr = d[i];
 		if (kPrev == null || dPrev == null || kCurr == null || dCurr == null) continue;
 
-		if (!inPosition && kPrev <= dPrev && kCurr > dCurr) {
+		if (kPrev <= dPrev && kCurr > dCurr) {
 			signals.push({
 				index: i,
 				date: klines[i].date,
@@ -758,8 +728,7 @@ function kdSignals(klines: KlineRow[], params: StrategyParams): Signal[] {
 				price: klines[i].close ?? 0,
 				reason: `KD金叉(K=${kCurr.toFixed(1)},D=${dCurr.toFixed(1)})`,
 			});
-			inPosition = true;
-		} else if (inPosition && kPrev >= dPrev && kCurr < dCurr) {
+		} else if (kPrev >= dPrev && kCurr < dCurr) {
 			signals.push({
 				index: i,
 				date: klines[i].date,
@@ -767,7 +736,6 @@ function kdSignals(klines: KlineRow[], params: StrategyParams): Signal[] {
 				price: klines[i].close ?? 0,
 				reason: `KD死叉(K=${kCurr.toFixed(1)},D=${dCurr.toFixed(1)})`,
 			});
-			inPosition = false;
 		}
 	}
 	return signals;

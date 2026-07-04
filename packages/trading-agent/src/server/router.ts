@@ -71,6 +71,16 @@ export async function handleRequest(
 			return;
 		}
 
+		// Theme history (market theme classification over time)
+		if (path === "/api/theme-history" && method === "GET") {
+			const store = requireStore();
+			const query = parseQuery(url);
+			const level = query.level;
+			const rows = await store.getThemeHistory(level);
+			json(res, 200, rows);
+			return;
+		}
+
 		// Index quotes (major A-share indices)
 		if (path === "/api/indices" && method === "GET") {
 			const store = requireStore();

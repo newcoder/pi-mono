@@ -17,7 +17,17 @@ import type { ReportBenchmark, ReportData } from "../report/generator.js";
 import { generateReport } from "../report/generator.js";
 import { generatePoolBacktestReport } from "../report/pool-report.js";
 
-void STRATEGY_META; // single source of truth for strategy type definitions
+// Derive strategy categories from the single source of truth.
+const STRATEGY_ALL = Object.keys(STRATEGY_META) as StrategyType[];
+const STRATEGY_BUY_CAPABLE = STRATEGY_ALL.filter((k) => STRATEGY_META[k].buys);
+const STRATEGY_SELL_CAPABLE = STRATEGY_ALL.filter((k) => STRATEGY_META[k].sells);
+
+function strategyLiteral(values: string[], description: string): any {
+	return Type.Union(
+		values.map((v) => Type.Literal(v, { description: STRATEGY_META[v]?.description ?? v })),
+		{ description },
+	);
+}
 
 const backtestParams = Type.Object({
 	code: Type.Optional(Type.String({ description: "6位股票代码，如 600519。与 pool_id 二选一。" })),
@@ -33,47 +43,9 @@ const backtestParams = Type.Object({
 	dynamic_pool_id: Type.Optional(
 		Type.Number({ description: "动态股票池编号。成分股按交易日变化；与 pool_id、code 互斥。" }),
 	),
-	strategy: Type.Union(
-		[
-			Type.Literal("ma_cross", { description: "MA均线金叉/死叉" }),
-			Type.Literal("macd_cross", { description: "MACD金叉/死叉" }),
-			Type.Literal("rsi_reversal", { description: "RSI超卖买入/超买卖出" }),
-			Type.Literal("bollinger_breakout", { description: "布林带下轨反弹/上轨回落" }),
-			Type.Literal("supertrend", { description: "Supertrend趋势跟踪：转多买入/转空卖出" }),
-			Type.Literal("hammer", { description: "锤子线反转：长下影+小实体，前日阴线" }),
-			Type.Literal("bullish_engulf", { description: "阳包阴：阳线实体完全吞没前日阴线" }),
-			Type.Literal("morning_star", { description: "晨星：大阴→小星→大阳，底部反转" }),
-			Type.Literal("three_soldiers", { description: "红三兵：连续三阳，逐步放量" }),
-			Type.Literal("tech_composite", { description: "技术综合打分：趋势+动量+量能+波动率四维评分" }),
-			Type.Literal("breakout", { description: "突破买入：放量上涨，量比阈值+涨幅阈值" }),
-			Type.Literal("volume_contraction", { description: "缩量调整：价格下跌+成交量萎缩+波动率收敛后买入" }),
-			Type.Literal("shooting_star", { description: "流星线反转：长上影+小实体，顶部卖出信号" }),
-			Type.Literal("bearish_engulf", { description: "阴包阳：阴线实体完全吞没前日阳线，卖出信号" }),
-			Type.Literal("evening_star", { description: "暮星：大阳→小星→大阴，顶部反转卖出信号" }),
-			Type.Literal("three_crows", { description: "三只乌鸦：连续三阴，逐步下跌，卖出信号" }),
-			Type.Literal("rsi_overbought_sell", { description: "RSI超买回落：RSI从超买区下穿，卖出信号" }),
-			Type.Literal("time_exit", { description: "定时换仓：每N个交易日强制卖出，用作固定周期再平衡" }),
-			Type.Literal("always_buy", { description: "每日全买入：用于排序测试，每天给所有股票发买入信号" }),
-		],
-		{ description: "回测策略类型" },
-	),
+	strategy: strategyLiteral(STRATEGY_ALL, "回测策略类型"),
 	exit_strategy: Type.Optional(
-		Type.Union(
-			[
-				Type.Literal("ma_cross", { description: "MA均线死叉" }),
-				Type.Literal("macd_cross", { description: "MACD死叉" }),
-				Type.Literal("rsi_reversal", { description: "RSI超买回落" }),
-				Type.Literal("bollinger_breakout", { description: "布林带上轨回落" }),
-				Type.Literal("supertrend", { description: "Supertrend转空" }),
-				Type.Literal("shooting_star", { description: "流星线反转" }),
-				Type.Literal("bearish_engulf", { description: "阴包阳" }),
-				Type.Literal("evening_star", { description: "暮星" }),
-				Type.Literal("three_crows", { description: "三只乌鸦" }),
-				Type.Literal("rsi_overbought_sell", { description: "RSI超买回落" }),
-				Type.Literal("time_exit", { description: "定时换仓：每N个交易日强制卖出" }),
-			],
-			{ description: "独立的卖出信号策略，与主策略买入信号配合作为退出条件；不生成买入信号" },
-		),
+		strategyLiteral(STRATEGY_SELL_CAPABLE, "独立的卖出信号策略，与主策略买入信号配合作为退出条件；不生成买入信号"),
 	),
 	exit_params: Type.Optional(
 		Type.Record(Type.String(), Type.Number(), {
@@ -83,21 +55,7 @@ const backtestParams = Type.Object({
 	buy_strategies: Type.Optional(
 		Type.Array(
 			Type.Object({
-				strategy: Type.Union([
-					Type.Literal("ma_cross"),
-					Type.Literal("macd_cross"),
-					Type.Literal("rsi_reversal"),
-					Type.Literal("bollinger_breakout"),
-					Type.Literal("supertrend"),
-					Type.Literal("hammer"),
-					Type.Literal("bullish_engulf"),
-					Type.Literal("morning_star"),
-					Type.Literal("three_soldiers"),
-					Type.Literal("tech_composite"),
-					Type.Literal("breakout"),
-					Type.Literal("volume_contraction"),
-					Type.Literal("always_buy"),
-				]),
+				strategy: strategyLiteral(STRATEGY_BUY_CAPABLE, ""),
 				params: Type.Optional(Type.Record(Type.String(), Type.Number())),
 			}),
 			{ description: "买入信号源列表，任意一个触发即买入；自动双向指标只取买入信号" },
@@ -106,19 +64,7 @@ const backtestParams = Type.Object({
 	sell_strategies: Type.Optional(
 		Type.Array(
 			Type.Object({
-				strategy: Type.Union([
-					Type.Literal("ma_cross"),
-					Type.Literal("macd_cross"),
-					Type.Literal("rsi_reversal"),
-					Type.Literal("bollinger_breakout"),
-					Type.Literal("supertrend"),
-					Type.Literal("shooting_star"),
-					Type.Literal("bearish_engulf"),
-					Type.Literal("evening_star"),
-					Type.Literal("three_crows"),
-					Type.Literal("rsi_overbought_sell"),
-					Type.Literal("time_exit"),
-				]),
+				strategy: strategyLiteral(STRATEGY_SELL_CAPABLE, ""),
 				params: Type.Optional(Type.Record(Type.String(), Type.Number())),
 			}),
 			{ description: "卖出信号源列表，任意一个触发即卖出；自动双向指标只取卖出信号" },
@@ -156,8 +102,20 @@ const backtestParams = Type.Object({
 					description:
 						"目标等权再平衡。对持仓+当日买入候选股进行买卖，使权重尽量相等，避免集中。默认 equal_weight。",
 				}),
+				Type.Literal("linear", {
+					description: "线性持仓比例。按排名分配权重，排名越高权重越大（第1名权重最大，第N名权重最小）。",
+				}),
 			],
 			{ description: "满仓模式", default: "equal_weight" },
+		),
+	),
+	position_sizing_method: Type.Optional(
+		Type.Union(
+			[
+				Type.Literal("fixed", { description: "固定目标权重，默认" }),
+				Type.Literal("atr", { description: "ATR波动率倒数：高波动股票降低仓位，低波动股票提高仓位" }),
+			],
+			{ description: "仓位调整方法", default: "fixed" },
 		),
 	),
 	rebalance_threshold: Type.Optional(
@@ -201,11 +159,6 @@ const backtestParams = Type.Object({
 		Type.Boolean({ description: "是否跳过成交量为0或价格缺失的交易日（停牌），默认true", default: true }),
 	),
 	maxHoldingDays: Type.Optional(Type.Number({ description: "最大持仓天数，超出强制平仓" })),
-	stop_loss_pct: Type.Optional(Type.Number({ description: "止损比例，如 5 表示从入场价下跌 5% 时强制卖出" })),
-	take_profit_pct: Type.Optional(Type.Number({ description: "止盈比例，如 20 表示从入场价上涨 20% 时强制卖出" })),
-	trailing_stop_pct: Type.Optional(
-		Type.Number({ description: "移动止损比例，如 10 表示从持仓期间最高点回撤 10% 时强制卖出" }),
-	),
 	min_lot: Type.Optional(Type.Number({ description: "最小交易单位（股），默认100", default: 100 })),
 	params: Type.Optional(
 		Type.Record(Type.String(), Type.Number(), {
@@ -306,6 +259,11 @@ const backtestParams = Type.Object({
 			default: 1,
 		}),
 	),
+	seed: Type.Optional(
+		Type.Number({
+			description: "随机排序的随机种子，未提供时自动根据配置生成，保证结果可复现",
+		}),
+	),
 	save_to_portfolio: Type.Optional(
 		Type.String({
 			description: "将回测交易记录保存到指定组合名称。若组合不存在则自动创建，若已存在则追加交易记录。",
@@ -346,7 +304,7 @@ export const backtestStrategyTool: AgentTool<typeof backtestParams, BacktestTool
 	name: "backtest_strategy",
 	label: "回测策略",
 	description:
-		"对单只股票或股票池运行技术指标回测，验证策略历史表现。支持MA均线金叉/死叉、MACD金叉/死叉、RSI超卖买入/超买卖出、布林带下轨反弹/上轨回落、Supertrend趋势跟踪、锤子线反转、阳包阴、晨星、红三兵、技术综合打分、突破买入、缩量调整、流星线、阴包阳、暮星、三只乌鸦、RSI超买回落、定时换仓、每日全买入共19种策略。可通过 buy_strategies/sell_strategies 分别配置多个买入/卖出信号源，任意一个触发即买卖；自动双向指标（ma_cross/macd_cross/rsi_reversal/bollinger_breakout/supertrend/tech_composite）在买入列表里只取买入信号，在卖出列表里只取卖出信号。time_exit 为纯卖出策略，每 period 个交易日强制卖出，可用于固定周期再平衡；always_buy 每天给所有股票发出买入信号，常用于排序能力测试。旧的 strategy/exit_strategy 仍兼容。提供 code 回测单只股票，或提供 pool_id 对股票池中所有股票批量回测（共享资金池、动态仓位分配、100股整数倍）。数据从本地数据库读取。可通过 save_to_portfolio 将回测交易记录保存到组合中；通过 benchmark_index 生成带指数对比的 HTML 报告；通过 save_holdings_as_pool 将回测终点持仓保存为新股池。",
+		"对单只股票(code)或股票池(pool_id/dynamic_pool_id)运行技术指标回测。支持21种策略(均线/MACD/RSI/布林/Supertrend/K线形态/KD/缩量调整等)。buy/sell_strategies可分别配置多个信号源。支持行业动量过滤、市值因子过滤、排序选股、ATR仓位、等权再平衡、HTML报告、持仓保存。数据从本地DB读取。",
 	parameters: backtestParams,
 	execute: async (_id, params) => {
 		// ── Input validation ──────────────────────────────────────
@@ -416,11 +374,17 @@ export const backtestStrategyTool: AgentTool<typeof backtestParams, BacktestTool
 			}
 
 			const poolConfig = {
-				strategy: params.strategy as StrategyType,
-				exitStrategy: params.exit_strategy as StrategyType | undefined,
+				strategy: params.strategy as unknown as StrategyType,
+				exitStrategy: params.exit_strategy as unknown as StrategyType | undefined,
 				exitStrategyParams: params.exit_params,
-				buyStrategies: params.buy_strategies?.map((s) => ({ strategy: s.strategy, params: s.params })),
-				sellStrategies: params.sell_strategies?.map((s) => ({ strategy: s.strategy, params: s.params })),
+				buyStrategies: params.buy_strategies?.map((s: any) => ({
+					strategy: s.strategy as unknown as StrategyType,
+					params: s.params,
+				})),
+				sellStrategies: params.sell_strategies?.map((s: any) => ({
+					strategy: s.strategy as unknown as StrategyType,
+					params: s.params,
+				})),
 				start: params.start,
 				end: params.end,
 				period: params.period ?? "daily",
@@ -429,6 +393,7 @@ export const backtestStrategyTool: AgentTool<typeof backtestParams, BacktestTool
 				positionSize: params.positionSize ?? 1.0,
 				fullPosition: params.full_position ?? true,
 				fullPositionMode: params.full_position_mode ?? "equal_weight",
+				positionSizingMethod: params.position_sizing_method ?? "fixed",
 				rebalanceThreshold: params.rebalance_threshold ?? 0,
 				rebalanceFrequency: params.rebalance_frequency ?? 1,
 				rebalanceFullPortfolio: params.rebalance_full_portfolio ?? false,
@@ -471,6 +436,7 @@ export const backtestStrategyTool: AgentTool<typeof backtestParams, BacktestTool
 					| undefined,
 				maxPositions: params.max_positions,
 				randomRuns: params.random_runs,
+				seed: params.seed,
 				volatilityLookbackDays: params.volatility_lookback_days,
 			};
 
@@ -671,11 +637,17 @@ export const backtestStrategyTool: AgentTool<typeof backtestParams, BacktestTool
 		const config = {
 			code: params.code,
 			market: params.market ?? 1,
-			strategy: params.strategy as StrategyType,
-			exitStrategy: params.exit_strategy as StrategyType | undefined,
+			strategy: params.strategy as unknown as StrategyType,
+			exitStrategy: params.exit_strategy as unknown as StrategyType | undefined,
 			exitStrategyParams: params.exit_params,
-			buyStrategies: params.buy_strategies?.map((s) => ({ strategy: s.strategy, params: s.params })),
-			sellStrategies: params.sell_strategies?.map((s) => ({ strategy: s.strategy, params: s.params })),
+			buyStrategies: params.buy_strategies?.map((s: any) => ({
+				strategy: s.strategy as unknown as StrategyType,
+				params: s.params,
+			})),
+			sellStrategies: params.sell_strategies?.map((s: any) => ({
+				strategy: s.strategy as unknown as StrategyType,
+				params: s.params,
+			})),
 			start: params.start,
 			end: params.end,
 			period: params.period ?? "daily",
@@ -687,10 +659,8 @@ export const backtestStrategyTool: AgentTool<typeof backtestParams, BacktestTool
 			taxRate: params.tax_rate ?? 0,
 			transferFee: params.transfer_fee ?? 0,
 			maxHoldingDays: params.maxHoldingDays,
-			stopLossPct: params.stop_loss_pct,
-			takeProfitPct: params.take_profit_pct,
-			trailingStopPct: params.trailing_stop_pct,
 			skipNoVolume: params.skip_no_volume ?? true,
+			minLot: minLot,
 			strategyParams: params.params,
 		};
 
@@ -719,19 +689,11 @@ export const backtestStrategyTool: AgentTool<typeof backtestParams, BacktestTool
 					const transferFeeRate = params.transfer_fee ?? 0;
 					const taxRate = params.tax_rate ?? 0;
 					for (const trade of result.trades) {
-						await store.addPortfolioTrade({
-							portfolio_id: portfolioId,
-							trade_date: trade.entryDate,
-							code: params.code,
-							market: params.market ?? 1,
-							direction: "buy",
-							quantity: trade.shares,
-							price: trade.entryPrice,
-							adjust: params.adjust ?? "bfq",
-							commission: trade.shares * trade.entryPrice * (commissionRate + transferFeeRate),
-							tax: 0,
-							memo: `${params.strategy} 策略买入`,
-						});
+						const buyAmount = trade.shares * trade.entryPrice;
+						const sellAmount = trade.shares * trade.exitPrice;
+						const commission =
+							buyAmount * (commissionRate + transferFeeRate) + sellAmount * (commissionRate + transferFeeRate);
+						const tax = sellAmount * taxRate;
 						await store.addPortfolioTrade({
 							portfolio_id: portfolioId,
 							trade_date: trade.exitDate,
@@ -741,9 +703,9 @@ export const backtestStrategyTool: AgentTool<typeof backtestParams, BacktestTool
 							quantity: trade.shares,
 							price: trade.exitPrice,
 							adjust: params.adjust ?? "bfq",
-							commission: trade.shares * trade.exitPrice * (commissionRate + transferFeeRate),
-							tax: trade.shares * trade.exitPrice * taxRate,
-							memo: `${params.strategy} 策略卖出 | 持仓${trade.daysHeld}天 | 盈亏${trade.pnl >= 0 ? "+" : ""}${trade.pnl.toFixed(2)}`,
+							commission,
+							tax,
+							memo: `${params.strategy} | 入场${trade.entryDate} ${trade.entryPrice.toFixed(2)} | 出场${trade.exitDate} ${trade.exitPrice.toFixed(2)} | 持仓${trade.daysHeld}天 | 盈亏${trade.pnl >= 0 ? "+" : ""}${trade.pnl.toFixed(2)}`,
 						});
 					}
 				} catch (err) {
