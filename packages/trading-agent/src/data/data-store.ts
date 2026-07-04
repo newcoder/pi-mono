@@ -1251,9 +1251,13 @@ export class DataStore {
 	> {
 		if (!this.db) return [];
 		let sql = `SELECT snapshot_date, theme, level, mentions, sub_concepts FROM theme_classification`;
-		if (level) sql += ` WHERE level = '${level.replace(/'/g, "''")}'`;
+		const params: string[] = [];
+		if (level) {
+			sql += ` WHERE level = ?`;
+			params.push(level);
+		}
 		sql += ` ORDER BY snapshot_date, mentions DESC`;
-		return promisifyQuery(this.db, sql);
+		return promisifyQuery(this.db, sql, params);
 	}
 
 	// ─── Business Composition ───────────────────────────────────────
