@@ -3,6 +3,8 @@ import type { IncomingMessage, ServerResponse } from "node:http";
 import { homedir } from "node:os";
 import { join } from "node:path";
 import type { ModelRegistry } from "@mariozechner/pi-coding-agent";
+import { runDynamicPoolBacktest, runPoolBacktest } from "../backtest/engine.js";
+import { STRATEGY_META } from "../backtest/strategies.js";
 import { loadUserConfig, saveUserConfig } from "../config/user-config.js";
 import type { TradingSession } from "../core/trading-session.js";
 import { marketFromCode, requireStore, requireSync } from "../data/index.js";
@@ -467,6 +469,51 @@ export async function handleRequest(
 				await store.removeFromStockPool(poolId, String(item.code), Number(item.market));
 			}
 			json(res, 200, { success: true });
+			return;
+		}
+
+		// Backtest strategies metadata
+		if (path === "/api/backtest/strategies" && method === "GET") {
+			json(res, 200, STRATEGY_META);
+			return;
+		}
+
+		// Backtest runner
+		if (path === "/api/backtest/run" && method === "POST") {
+			let body = "";
+			for await (const chunk of req) {
+				body += chunk;
+			}
+			const params = body ? JSON.parse(body) : {};
+			const poolId = params.poolId;
+			const config = params.config || {};
+
+			if (!poolId) {
+				badRequest(res, "poolId is required");
+				return;
+			}
+
+			try {
+				const store = requireStore();
+				const pool = await store.getStockPoolById(poolId);
+				if (!pool) {
+					json(res, 404, { error: `Pool ${poolId} not found` });
+					return;
+				}
+
+				let result: any;
+				if (pool.is_dynamic) {
+					result = await runDynamicPoolBacktest(poolId, config);
+				} else {
+					const items = await store.getStockPoolItems(poolId);
+					const stocks = items.map((i: any) => ({ code: i.code, market: i.market, name: i.name || undefined }));
+					result = await runPoolBacktest(stocks, config);
+				}
+
+				json(res, 200, result);
+			} catch (err) {
+				json(res, 500, { error: err instanceof Error ? err.message : String(err) });
+			}
 			return;
 		}
 

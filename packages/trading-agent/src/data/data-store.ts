@@ -953,7 +953,7 @@ export class DataStore {
 			this.db,
 			`SELECT * FROM quotes WHERE code = ${s(code)} AND market = ${market} AND snapshot_date = ${s(date)} LIMIT 1`,
 		);
-		return rows[0] ?? null;
+		return rows[0] ? { ...rows[0], is_dynamic: !!rows[0].is_dynamic } : null;
 	}
 
 	async getLatestQuotes(codes?: string[], markets?: number[]): Promise<QuoteRow[]> {
@@ -1018,7 +1018,7 @@ export class DataStore {
 			this.db,
 			`SELECT * FROM fundamentals WHERE code = ${s(code)} AND market = ${market} ORDER BY report_date DESC LIMIT 1`,
 		);
-		return rows[0] ?? null;
+		return rows[0] ? { ...rows[0], is_dynamic: !!rows[0].is_dynamic } : null;
 	}
 
 	// ─── Fundamental Indicators ─────────────────────────────────────
@@ -1060,7 +1060,7 @@ export class DataStore {
 			this.db,
 			`SELECT * FROM fundamental_indicators WHERE code = ${s(code)} AND market = ${market} ORDER BY report_date DESC LIMIT 1`,
 		);
-		return rows[0] ?? null;
+		return rows[0] ? { ...rows[0], is_dynamic: !!rows[0].is_dynamic } : null;
 	}
 
 	// ─── Sectors ────────────────────────────────────────────────────
@@ -1258,6 +1258,36 @@ export class DataStore {
 		}
 		sql += ` ORDER BY snapshot_date, mentions DESC`;
 		return promisifyQuery(this.db, sql, params);
+	}
+
+	async getThemePoolItemsInRange(
+		theme: string,
+		start: string,
+		end: string,
+	): Promise<Map<string, Array<{ code: string; market: number; name?: string; weight?: number }>>> {
+		const map = new Map<string, Array<{ code: string; market: number; name?: string; weight?: number }>>();
+		if (!this.db) return map;
+
+		const rows = (await promisifyQuery(
+			this.db,
+			`SELECT snapshot_date, code, market, name, final_weight
+			 FROM theme_constituents
+			 WHERE theme = ? AND snapshot_date >= ? AND snapshot_date <= ?
+			 ORDER BY snapshot_date, code`,
+			[theme, start, end],
+		)) as Array<{ snapshot_date: string; code: string; market: number; name: string | null; final_weight: number }>;
+
+		for (const row of rows) {
+			const items = map.get(row.snapshot_date) ?? [];
+			items.push({
+				code: row.code,
+				market: row.market,
+				name: row.name ?? undefined,
+				weight: row.final_weight,
+			});
+			if (!map.has(row.snapshot_date)) map.set(row.snapshot_date, items);
+		}
+		return map;
 	}
 
 	// ─── Business Composition ───────────────────────────────────────
@@ -1480,7 +1510,7 @@ export class DataStore {
 			this.db,
 			`SELECT * FROM industry_quotes WHERE code = ${s(code)} AND snapshot_date = ${s(date)} LIMIT 1`,
 		);
-		return rows[0] ?? null;
+		return rows[0] ? { ...rows[0], is_dynamic: !!rows[0].is_dynamic } : null;
 	}
 
 	async getLatestIndustryQuotes(codes?: string[]): Promise<IndustryQuoteRow[]> {
@@ -1653,7 +1683,7 @@ export class DataStore {
 	async getLatestMacro(): Promise<MacroRow | null> {
 		if (!this.db) return null;
 		const rows = await promisifyQuery(this.db, `SELECT * FROM macro ORDER BY snapshot_date DESC LIMIT 1`);
-		return rows[0] ?? null;
+		return rows[0] ? { ...rows[0], is_dynamic: !!rows[0].is_dynamic } : null;
 	}
 
 	// ─── Utility ────────────────────────────────────────────────────
@@ -1814,26 +1844,34 @@ export class DataStore {
 		return promisifyQuery(this.db, sql);
 	}
 
-	async getStockPoolByName(
-		name: string,
-	): Promise<{ id: number; name: string; description: string | null; created_at: string } | null> {
+	async getStockPoolByName(name: string): Promise<{
+		id: number;
+		name: string;
+		description: string | null;
+		is_dynamic?: number;
+		created_at: string;
+	} | null> {
 		if (!this.db) return null;
 		const rows = await promisifyQuery(
 			this.db,
-			`SELECT id, name, description, created_at FROM stock_pools WHERE name = ${s(name)}`,
+			`SELECT id, name, description, is_dynamic, created_at FROM stock_pools WHERE name = ${s(name)}`,
 		);
-		return rows[0] ?? null;
+		return rows[0] ? { ...rows[0], is_dynamic: !!rows[0].is_dynamic } : null;
 	}
 
-	async getStockPoolById(
-		id: number,
-	): Promise<{ id: number; name: string; description: string | null; created_at: string } | null> {
+	async getStockPoolById(id: number): Promise<{
+		id: number;
+		name: string;
+		description: string | null;
+		is_dynamic?: number;
+		created_at: string;
+	} | null> {
 		if (!this.db) return null;
 		const rows = await promisifyQuery(
 			this.db,
-			`SELECT id, name, description, created_at FROM stock_pools WHERE id = ${id}`,
+			`SELECT id, name, description, is_dynamic, created_at FROM stock_pools WHERE id = ${id}`,
 		);
-		return rows[0] ?? null;
+		return rows[0] ? { ...rows[0], is_dynamic: !!rows[0].is_dynamic } : null;
 	}
 
 	async addToStockPool(poolId: number, items: Array<{ code: string; market: number; name?: string }>): Promise<void> {
@@ -1968,7 +2006,7 @@ export class DataStore {
 			this.db,
 			`SELECT id, name, description, initial_cash, created_at, updated_at FROM portfolios WHERE id = ${id}`,
 		);
-		return rows[0] ?? null;
+		return rows[0] ? { ...rows[0], is_dynamic: !!rows[0].is_dynamic } : null;
 	}
 
 	async getPortfolioByName(name: string): Promise<PortfolioRow | null> {
@@ -1977,7 +2015,7 @@ export class DataStore {
 			this.db,
 			`SELECT id, name, description, initial_cash, created_at, updated_at FROM portfolios WHERE name = ${s(name)}`,
 		);
-		return rows[0] ?? null;
+		return rows[0] ? { ...rows[0], is_dynamic: !!rows[0].is_dynamic } : null;
 	}
 
 	async addPortfolioTrade(trade: Omit<PortfolioTradeRow, "id" | "created_at">): Promise<number> {
