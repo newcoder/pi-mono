@@ -55,7 +55,7 @@ tr:hover td{background:rgba(37,99,235,.05)}
 <div class="controls">
   <label>策略 <select id="strategy"></select></label>
   <label>最大持仓 <input type="number" id="maxPositions" value="10" min="1" max="100"></label>
-  <label>初始资金(万) <input type="number" id="initialCapital" value="100000" step="10000"></label>
+  <label>初始资金(万) <input type="number" id="initialCapital" value="100" step="10"></label>
   <label>排序 <select id="rankBy">
     <option value="momentum">动量</option><option value="value">价值</option><option value="turnover">换手率</option>
     <option value="technical">技术综合</option><option value="low_volatility">低波动</option>
@@ -157,7 +157,7 @@ async function runBacktest(){
     strategy: getVal('strategy'),
     start: getVal('startDate').replace(/-/g,''),
     end: getVal('endDate').replace(/-/g,''),
-    initialCapital: Number(getVal('initialCapital')),
+    initialCapital: Number(getVal('initialCapital')) * 10000,
     maxPositions: Number(getVal('maxPositions')),
     rankBy: getVal('rankBy'),
     fullPosition: getVal('fullPosition')==='true',
@@ -206,7 +206,7 @@ function renderResults(r){
     <div class="metric-card"><div class="metric-label">耗时</div><div class="metric-value" style="color:#888;font-size:18px">${(r.elapsedMs/1000).toFixed(1)}s</div></div>
   `;
 
-  $('stats').innerHTML = `区间: ${r.startDate} ~ ${r.endDate} | 股票: ${r.stocks?.length||0}只 | 初始: ${r.initialCapital.toLocaleString()} | 过滤交易: ${r.filteredTradeCount||0}`;
+  $('stats').innerHTML = `区间: ${r.startDate} ~ ${r.endDate} | 股票: ${r.stocks?.length||0}只 | 初始: ${(r.initialCapital/10000).toFixed(0)}万 | 过滤交易: ${r.filteredTradeCount||0}`;
 
   // Scroll to results
   $('results').scrollIntoView({behavior:'smooth'});
