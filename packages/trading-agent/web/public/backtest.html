@@ -86,6 +86,14 @@ tr:hover td{background:rgba(37,99,235,.05)}
   <div id="metrics" class="metrics-grid"></div>
   <div id="stats" class="stats-bar"></div>
   <div id="equity-chart" class="chart-container"></div>
+  <div style="padding:0 24px">
+    <h2 style="cursor:pointer;display:flex;align-items:center;gap:8px;padding:16px 0 8px" onclick="document.getElementById('holdings-table').classList.toggle('hidden');this.querySelector('span').textContent=document.getElementById('holdings-table').classList.contains('hidden')?'▶':'▼'">
+      <span>▼</span> 终持仓 (<span id="holdings-count">0</span>只)
+    </h2>
+    <div id="holdings-table" class="table-wrapper" style="margin:0 0 16px">
+      <table><thead><tr><th>股票</th><th>最后买入</th><th>持仓数量</th></tr></thead><tbody id="holdings-body"></tbody></table>
+    </div>
+  </div>
   <h2>交易明细</h2>
   <div class="table-wrapper"><table><thead><tr><th>日期</th><th>股票</th><th>方向</th><th>价格</th><th>数量</th><th>金额</th><th>盈亏</th><th>持仓(天)</th><th>备注</th></tr></thead><tbody id="trade-body"></tbody></table></div>
 </div>
@@ -195,6 +203,49 @@ function renderResults(r){
   $('results').classList.remove('hidden');
   const m = r.metrics;
   const cls = v => v>0?'text-up':v<0?'text-down':'text-neutral';
+
+  // Compute derived metrics
+  const sells = r.trades.filter(t=>t.direction==='sell');
+  const buys = r.trades.filter(t=>t.direction==='buy');
+  let avgPositions = 0;
+  if(r.equityCurve.length>0){
+    const dates = [...new Set(r.trades.map(t=>t.date))].sort();
+    let totalPos = 0, daysWithTrades = 0;
+    // Approximate: active stocks per day from trade activity
+    const holdings = new Map();
+    let posSum = 0, posDays = 0;
+    for(const pt of r.equityCurve){
+      const d = pt.date;
+      // Count holdings on this date from trades up to this date
+      let held = 0;
+      for(const t of r.trades){
+        if(t.date <= d){
+          if(t.direction==='buy') held++;
+          else held = Math.max(0, held-1);
+        }
+      }
+      // Simpler: use avg of buy entries per month
+    }
+    // Simple approximation: total buy trades / number of unique trading months
+    const months = (new Date(r.endDate)-new Date(r.startDate))/(86400000*30.44);
+    avgPositions = Math.round(sells.length / Math.max(months, 1));
+  }
+  // Turnover rate: total buy amount / average equity
+  const totalBuy = buys.reduce((s,t)=>s+(t.amount||0),0);
+  const avgEquity = r.equityCurve.reduce((s,p)=>s+p.equity,0)/Math.max(r.equityCurve.length,1);
+  const turnover = avgEquity > 0 ? (totalBuy/avgEquity*100).toFixed(0) : '-';
+
+  // Final holdings: net shares by code
+  const hMap = new Map();
+  for(const t of r.trades){
+    const k = t.code;
+    if(!hMap.has(k)) hMap.set(k,{code:k,shares:0,lastBuy:'',name:t.code});
+    const h = hMap.get(k);
+    if(t.direction==='buy'){ h.shares += t.shares||0; h.lastBuy = t.date; }
+    else h.shares -= t.shares||0;
+  }
+  const finalHoldings = [...hMap.values()].filter(h=>h.shares>0).sort((a,b)=>b.shares-a.shares);
+
   $('metrics').innerHTML = `
     <div class="metric-card"><div class="metric-label">总收益率</div><div class="metric-value ${cls(m.totalReturn)}">${m.totalReturn>0?'+':''}${m.totalReturn.toFixed(1)}%</div></div>
     <div class="metric-card"><div class="metric-label">年化收益</div><div class="metric-value ${cls(m.annualizedReturn)}">${m.annualizedReturn>0?'+':''}${m.annualizedReturn.toFixed(1)}%</div></div>
@@ -202,7 +253,9 @@ function renderResults(r){
     <div class="metric-card"><div class="metric-label">最大回撤</div><div class="metric-value text-down">${m.maxDrawdown.toFixed(1)}%</div></div>
     <div class="metric-card"><div class="metric-label">胜率</div><div class="metric-value ${m.winRate>50?'text-up':'text-neutral'}">${m.winRate.toFixed(1)}%</div></div>
     <div class="metric-card"><div class="metric-label">盈亏比</div><div class="metric-value ${m.profitFactor>1?'text-up':'text-neutral'}">${m.profitFactor.toFixed(2)}</div></div>
-    <div class="metric-card"><div class="metric-label">交易次数</div><div class="metric-value" style="color:#e0e0e0">${r.trades.filter(t=>t.direction==='sell').length}</div></div>
+    <div class="metric-card"><div class="metric-label">交易次数</div><div class="metric-value" style="color:#e0e0e0">${sells.length}</div></div>
+    <div class="metric-card"><div class="metric-label">换手率</div><div class="metric-value" style="color:#e0e0e0">${turnover}%</div></div>
+    <div class="metric-card"><div class="metric-label">终持仓</div><div class="metric-value" style="color:#f59e0b">${finalHoldings.length}只</div></div>
     <div class="metric-card"><div class="metric-label">耗时</div><div class="metric-value" style="color:#888;font-size:18px">${(r.elapsedMs/1000).toFixed(1)}s</div></div>
   `;
 
@@ -230,6 +283,14 @@ function renderResults(r){
     container.innerHTML = '<div style="padding:40px;text-align:center;color:#888">图表加载失败: '+e.message+'<br><small>请检查网络连接后刷新</small></div>';
     console.error('Chart error:', e);
   }
+
+  // Final holdings
+  const hRows = [];
+  for(const h of finalHoldings){
+    hRows.push(`<tr><td style="font-weight:500">${h.code}</td><td>${h.lastBuy}</td><td>${h.shares}</td></tr>`);
+  }
+  $('holdings-body').innerHTML = hRows.join('') || '<tr><td colspan="3" style="color:#666;text-align:center">无持仓</td></tr>';
+  $('holdings-count').textContent = finalHoldings.length;
 
   // Trade table
   const trades = r.trades;
