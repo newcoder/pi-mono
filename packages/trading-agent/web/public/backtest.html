@@ -91,11 +91,13 @@ tr:hover td{background:rgba(37,99,235,.05)}
       <span>▼</span> 终持仓 (<span id="holdings-count">0</span>只)
     </h2>
     <div id="holdings-table" class="table-wrapper" style="margin:0 0 16px">
-      <table><thead><tr><th>股票</th><th>最后买入</th><th>持仓数量</th></tr></thead><tbody id="holdings-body"></tbody></table>
+      <table><thead><tr><th>代码</th><th>名称</th><th>最后买入</th><th>持仓数量</th></tr></thead><tbody id="holdings-body"></tbody></table>
     </div>
   </div>
-  <h2>交易明细</h2>
-  <div class="table-wrapper"><table><thead><tr><th>日期</th><th>股票</th><th>方向</th><th>价格</th><th>数量</th><th>金额</th><th>盈亏</th><th>持仓(天)</th><th>备注</th></tr></thead><tbody id="trade-body"></tbody></table></div>
+  <h2 style="cursor:pointer;display:flex;align-items:center;gap:8px;padding:16px 24px 8px" onclick="document.getElementById('trade-table-wrap').classList.toggle('hidden');this.querySelector('span').textContent=document.getElementById('trade-table-wrap').classList.contains('hidden')?'▶':'▼'">
+    <span>▼</span> 交易明细 (<span id="trade-count">0</span>笔)
+  </h2>
+  <div id="trade-table-wrap" class="table-wrapper" style="margin:0 24px 24px"><table><thead><tr><th>日期</th><th>代码</th><th>名称</th><th>方向</th><th>价格</th><th>数量</th><th>金额</th><th>盈亏</th><th>持仓(天)</th><th>备注</th></tr></thead><tbody id="trade-body"></tbody></table></div>
 </div>
 
 <script>
@@ -204,42 +206,42 @@ function renderResults(r){
   const m = r.metrics;
   const cls = v => v>0?'text-up':v<0?'text-down':'text-neutral';
 
-  // Compute derived metrics
+  // Build code→name lookup from stocks list
+  const nameMap = {};
+  if(r.stocks) for(const s of r.stocks) nameMap[s.code] = s.name || s.code;
+
   const sells = r.trades.filter(t=>t.direction==='sell');
   const buys = r.trades.filter(t=>t.direction==='buy');
-  let avgPositions = 0;
-  if(r.equityCurve.length>0){
-    const dates = [...new Set(r.trades.map(t=>t.date))].sort();
-    let totalPos = 0, daysWithTrades = 0;
-    // Approximate: active stocks per day from trade activity
-    const holdings = new Map();
-    let posSum = 0, posDays = 0;
-    for(const pt of r.equityCurve){
-      const d = pt.date;
-      // Count holdings on this date from trades up to this date
-      let held = 0;
+
+  // Turnover: per rebalance cycle, stocks traded / stocks held, averaged
+  const tradeDates = [...new Set(r.trades.map(t=>t.date))].sort();
+  let turnover = '-';
+  if(tradeDates.length > 1){
+    const cycles = [];
+    for(let i=0; i<tradeDates.length; i++){
+      const d = tradeDates[i];
+      const dayTrades = r.trades.filter(t=>t.date===d);
+      const tradedCodes = new Set(dayTrades.map(t=>t.code));
+      // Count holdings before this day's trades
+      const held = new Set();
       for(const t of r.trades){
-        if(t.date <= d){
-          if(t.direction==='buy') held++;
-          else held = Math.max(0, held-1);
+        if(t.date < d){
+          if(t.direction==='buy') held.add(t.code);
+          else held.delete(t.code);
         }
       }
-      // Simpler: use avg of buy entries per month
+      if(held.size > 0){
+        cycles.push(tradedCodes.size / held.size);
+      }
     }
-    // Simple approximation: total buy trades / number of unique trading months
-    const months = (new Date(r.endDate)-new Date(r.startDate))/(86400000*30.44);
-    avgPositions = Math.round(sells.length / Math.max(months, 1));
+    if(cycles.length > 0) turnover = (cycles.reduce((a,b)=>a+b,0)/cycles.length*100).toFixed(0);
   }
-  // Turnover rate: total buy amount / average equity
-  const totalBuy = buys.reduce((s,t)=>s+(t.amount||0),0);
-  const avgEquity = r.equityCurve.reduce((s,p)=>s+p.equity,0)/Math.max(r.equityCurve.length,1);
-  const turnover = avgEquity > 0 ? (totalBuy/avgEquity*100).toFixed(0) : '-';
 
   // Final holdings: net shares by code
   const hMap = new Map();
   for(const t of r.trades){
     const k = t.code;
-    if(!hMap.has(k)) hMap.set(k,{code:k,shares:0,lastBuy:'',name:t.code});
+    if(!hMap.has(k)) hMap.set(k,{code:k,shares:0,lastBuy:'',name:nameMap[k]||k});
     const h = hMap.get(k);
     if(t.direction==='buy'){ h.shares += t.shares||0; h.lastBuy = t.date; }
     else h.shares -= t.shares||0;
@@ -287,20 +289,21 @@ function renderResults(r){
   // Final holdings
   const hRows = [];
   for(const h of finalHoldings){
-    hRows.push(`<tr><td style="font-weight:500">${h.code}</td><td>${h.lastBuy}</td><td>${h.shares}</td></tr>`);
+    hRows.push(`<tr><td style="font-weight:500">${h.code}</td><td>${h.name}</td><td>${h.lastBuy}</td><td>${h.shares}</td></tr>`);
   }
   $('holdings-body').innerHTML = hRows.join('') || '<tr><td colspan="3" style="color:#666;text-align:center">无持仓</td></tr>';
   $('holdings-count').textContent = finalHoldings.length;
 
   // Trade table
   const trades = r.trades;
+  $('trade-count').textContent = trades.length;
   const rows = [];
   for(let i=0;i<Math.min(trades.length,500);i++){
     const t = trades[i];
     const dirCls = t.direction==='buy'?'color:#3b82f6':'color:#f59e0b';
     const pnlCls = t.pnl>0?'text-up':t.pnl<0?'text-down':'';
     rows.push(`<tr>
-      <td>${t.date}</td><td style="font-weight:500">${t.code}</td>
+      <td>${t.date}</td><td style="font-weight:500">${t.code}</td><td>${nameMap[t.code]||t.code}</td>
       <td style="${dirCls}">${t.direction==='buy'?'买入':'卖出'}</td>
       <td>${t.price?.toFixed(2)||'-'}</td><td>${t.shares||0}</td><td>${(t.amount||0).toFixed(0)}</td>
       <td class="${pnlCls}">${t.pnl!=null?(t.pnl>0?'+':'')+t.pnl.toFixed(0):'-'}</td>
