@@ -192,6 +192,7 @@ async function runBacktest(){
 }
 
 function renderResults(r){
+  $('results').classList.remove('hidden');
   const m = r.metrics;
   const cls = v => v>0?'text-up':v<0?'text-down':'text-neutral';
   $('metrics').innerHTML = `
@@ -248,7 +249,6 @@ function renderResults(r){
   if(trades.length>500) rows.push(`<tr><td colspan="9" style="text-align:center;color:#666;padding:12px">显示前500笔，共${trades.length}笔</td></tr>`);
   $('trade-body').innerHTML = rows.join('');
 
-  $('results').classList.remove('hidden');
 }
 </script>
 </body>
