@@ -57,10 +57,10 @@ tr:hover td{background:rgba(37,99,235,.05)}
   <label>最大持仓 <input type="number" id="maxPositions" value="10" min="1" max="100"></label>
   <label>初始资金(万) <input type="number" id="initialCapital" value="100" step="10"></label>
   <label>排序 <select id="rankBy">
-    <option value="momentum">动量</option><option value="value">价值</option><option value="turnover">换手率</option>
+    <option value="momentum">动量</option><option value="value">价值</option><option value="turnover" selected>换手率</option>
     <option value="technical">技术综合</option><option value="low_volatility">低波动</option>
     <option value="signal_recency">信号新鲜度</option>
-    <option value="ma_alignment" selected>MA排列</option><option value="random">随机</option>
+    <option value="ma_alignment">MA排列</option><option value="weekly_ma_alignment">周线MA排列</option><option value="random">随机</option>
   </select></label>
   <label>起始 <input type="date" id="startDate"></label>
   <label>结束 <input type="date" id="endDate"></label>
