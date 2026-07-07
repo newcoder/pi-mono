@@ -236,6 +236,8 @@ const backtestParams = Type.Object({
 				Type.Literal("signal_recency", { description: "按买入信号产生时间排序，越近的排前面" }),
 				Type.Literal("ma_alignment", { description: "按10/20/60日均线多头排列强度排序，越强越靠前" }),
 				Type.Literal("weekly_ma_alignment", { description: "按5/10/20周均线多头排列强度排序，越强越靠前" }),
+				Type.Literal("market_cap", { description: "按总市值排序，市值越大越靠前" }),
+				Type.Literal("amount", { description: "按成交额排序，成交额越大越靠前" }),
 				Type.Literal("random", { description: "随机选择，多次运行取平均" }),
 			],
 			{ description: "买入候选的二级排序因子" },
@@ -433,6 +435,9 @@ export const backtestStrategyTool: AgentTool<typeof backtestParams, BacktestTool
 					| "low_volatility"
 					| "signal_recency"
 					| "ma_alignment"
+					| "weekly_ma_alignment"
+					| "market_cap"
+					| "amount"
 					| undefined,
 				maxPositions: params.max_positions,
 				randomRuns: params.random_runs,

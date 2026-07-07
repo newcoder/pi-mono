@@ -858,6 +858,16 @@ export async function runPoolBacktest(
 			const raw = k?.turnover ?? k?.volume ?? 0;
 			return Math.log10(raw + 1);
 		},
+		market_cap: (_s, _sd) => {
+			const q = quoteMap.get(_s.code);
+			const cap = q?.total_cap ?? null;
+			return cap != null && cap > 0 ? Math.log10(cap) : 0;
+		},
+		amount: (_s, sd) => {
+			const k = klineMapByCode.get(_s.code)?.get(sd);
+			const raw = k?.turnover ?? 0;
+			return raw > 0 ? Math.log10(raw) : 0;
+		},
 		technical: (_s, sd) => {
 			const k = klineMapByCode.get(_s.code)?.get(sd);
 			if (!k) return 0;

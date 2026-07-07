@@ -19,7 +19,9 @@ export type StrategyType =
 	| "three_crows"
 	| "rsi_overbought_sell"
 	| "time_exit"
-	| "always_buy";
+	| "always_buy"
+	| "kd_daily"
+	| "kd_weekly";
 
 export interface SignalSource {
 	strategy: StrategyType;
@@ -44,9 +46,6 @@ export interface BacktestConfig {
 	taxRate?: number; // percent charged on sell side only, e.g. 0.001 = 0.1% stamp duty
 	transferFee?: number; // percent per side, e.g. 0.00002 = 0.002% transfer fee
 	maxHoldingDays?: number;
-	stopLossPct?: number; // 止损比例，如 5 表示从入场价下跌 5% 强制卖出
-	takeProfitPct?: number; // 止盈比例，如 20 表示从入场价上涨 20% 强制卖出
-	trailingStopPct?: number; // 移动止损，如 10 表示从持仓期间最高点回撤 10% 强制卖出
 	skipNoVolume?: boolean; // skip trading on days with zero or missing volume (suspended)
 	minLot?: number; // minimum lot size, e.g. 100 for A-shares
 	strategyParams?: Record<string, number>;
@@ -150,12 +149,8 @@ export interface PoolBacktestConfig {
 	taxRate?: number;
 	transferFee?: number;
 	maxHoldingDays?: number;
-	stopLossPct?: number;
-	takeProfitPct?: number;
-	trailingStopPct?: number;
 	positionSizingMethod?: string; // 仓位调整方法: "fixed"(默认) | "atr"(波动率倒数)
 	filterPeriod?: string; // 多周期过滤: "week" 表示仅在上周线趋势向上时允许日线买入
-	maxDrawdownLimit?: number; // 组合最大回撤限制，如 20 表示从峰值回撤 20% 后清仓
 	skipNoVolume?: boolean;
 	minLot?: number;
 	strategyParams?: Record<string, number>;
@@ -171,9 +166,13 @@ export interface PoolBacktestConfig {
 		| "signal_recency"
 		| "ma_alignment"
 		| "weekly_ma_alignment"
+		| "market_cap"
+		| "amount"
 		| "random";
 	maxPositions?: number;
 	randomRuns?: number;
+	/** Optional seed for deterministic random ranking. Auto-derived from config if omitted. */
+	seed?: number;
 	volatilityLookbackDays?: number;
 	dynamicPoolId?: number;
 	/** If set, ranking-based rebalancing only happens every N trading days. Existing positions are held on off days unless a sell signal fires. */
