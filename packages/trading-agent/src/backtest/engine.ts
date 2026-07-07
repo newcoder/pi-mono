@@ -18,7 +18,7 @@ import type {
 	StrategyType,
 	Trade,
 } from "./types.js";
-import { round } from "./utils.js";
+import { createRng, hashString, type Rng, round } from "./utils.js";
 
 function sortSignals(signals: Signal[]): Signal[] {
 	const copy = [...signals];
@@ -487,6 +487,18 @@ export async function runPoolBacktest(
 		adjust !== "bfq" ? store.getAdjustFactorsForCodes(stocks, defaultStart, defaultEnd) : Promise.resolve(null),
 	]);
 
+	// Load latest quotes for value ranking (PE/PB)
+	const quoteMap = new Map();
+	try {
+		const codes = stocks.map((s) => s.code);
+		const markets = stocks.map((s) => s.market);
+		const quotes = await store.getLatestQuotes(codes, markets);
+		for (const q of quotes) {
+			if (q.code) quoteMap.set(q.code, { pe: q.pe ?? null, pb: q.pb ?? null, total_cap: q.total_cap ?? null });
+		}
+	} catch (_) {
+		/* quotes optional */
+	}
 	const tDbEnd = performance.now();
 
 	for (const stock of stocks) {
@@ -818,12 +830,27 @@ export async function runPoolBacktest(
 			const k = klineMapByCode.get(_s.code)?.get(sd);
 			return k?.change_pct ?? 0;
 		},
-		value: (_s, sd) => {
-			const k = klineMapByCode.get(_s.code)?.get(sd);
+		value: (_s, _sd) => {
+			const q = quoteMap.get(_s.code);
+			if (q) {
+				const pb = q.pb ?? null;
+				const pe = q.pe ?? null;
+				let score = 0,
+					n = 0;
+				if (pb != null && pb > 0) {
+					score += 1 / Math.max(pb, 0.01);
+					n++;
+				}
+				if (pe != null && pe > 0) {
+					score += 1 / Math.max(pe, 1);
+					n++;
+				}
+				if (n > 0) return score / n;
+			}
+			// Fallback to inverse price
+			const k = klineMapByCode.get(_s.code)?.get(_sd);
 			if (!k) return 0;
-			const chg = k.change_pct ?? 0;
-			const pc = k.pre_close ?? k.close ?? 0;
-			const price = pc > 0 ? pc * (1 + chg / 100) : (k.close ?? 0);
+			const price = k.close ?? 0;
 			return price > 0 ? 1 / price : 0;
 		},
 		turnover: (_s, sd) => {
@@ -899,7 +926,7 @@ export async function runPoolBacktest(
 	}
 
 	// 4. Run simulation (single pass or multi-run for random rankBy)
-	function runOneSimulation(): {
+	function runOneSimulation(rng: Rng): {
 		trades: PoolTrade[];
 		equityCurve: EquityPoint[];
 		filteredTradeCount: number;
@@ -934,9 +961,10 @@ export async function runPoolBacktest(
 			daysHeld: number,
 			memo: string,
 			sellDate: string,
+			force = false,
 		): boolean {
 			const sellAmount = shares * sellPrice;
-			if (!isTradeAmountValid(sellAmount, minTradeAmount)) return false;
+			if (!force && !isTradeAmountValid(sellAmount, minTradeAmount)) return false;
 			const proceeds = sellAmount * (1 - commission - transferFee - taxRate);
 			const costBasis = shares * entryPrice * (1 + commission + transferFee);
 			const pnl = proceeds - costBasis;
@@ -988,6 +1016,7 @@ export async function runPoolBacktest(
 						pos.daysHeld,
 						"调出动态池",
 						date,
+						true,
 					);
 				}
 			}
@@ -1041,6 +1070,7 @@ export async function runPoolBacktest(
 						pos.daysHeld,
 						`强制平仓（持仓${pos.daysHeld}天，超过${maxHoldingDays}天上限）`,
 						date,
+						true,
 					);
 				}
 			}
@@ -1073,9 +1103,7 @@ export async function runPoolBacktest(
 					const currentDateIdx = dateIndex.get(date);
 					const recencyDays = signalDateIdx != null && currentDateIdx != null ? currentDateIdx - signalDateIdx : 0;
 					const rankScore =
-						config.rankBy === "random"
-							? Math.random()
-							: computeRankScore(s, scoreDate, config.rankBy, recencyDays);
+						config.rankBy === "random" ? rng() : computeRankScore(s, scoreDate, config.rankBy, recencyDays);
 					return { code: s.code, stock: s, score: rankScore };
 				})
 				.filter((c): c is NonNullable<typeof c> => c !== null)
@@ -1094,9 +1122,7 @@ export async function runPoolBacktest(
 				const pos = positions.get(code)!;
 				const recencyDays = pos.daysHeld;
 				const score =
-					config.rankBy === "random"
-						? Math.random()
-						: computeRankScore(stock, scoreDate, config.rankBy, recencyDays);
+					config.rankBy === "random" ? rng() : computeRankScore(stock, scoreDate, config.rankBy, recencyDays);
 				scoredHoldings.push({ code, score, stock });
 			}
 			for (const c of buyCandidates) {
@@ -1147,6 +1173,7 @@ export async function runPoolBacktest(
 						pos.daysHeld,
 						"周期强制换仓",
 						date,
+						true,
 					);
 				}
 			}
@@ -1345,7 +1372,10 @@ export async function runPoolBacktest(
 						}
 					}
 				} else if (fullPositionMode === "equal_weight" || fullPositionMode === "linear") {
-					// Target equal-weight rebalancing among target holdings
+					// Target equal-weight/linear rebalancing among target holdings.
+					// Compute a single target share count per stock and execute one net action
+					// (sell excess or buy deficit) so the same stock is never bought and sold
+					// on the same rebalance day.
 					if (targetCodes.size > 0) {
 						// Total portfolio value at today's open
 						let totalValue = cash;
@@ -1363,149 +1393,168 @@ export async function runPoolBacktest(
 						const totalLinearWeight = isLinear ? (nLin * (nLin + 1)) / 2 : 0;
 						const maxTargetValue = totalValue * maxPositionWeight;
 
-						const atrAdj = (bw: number, s: (typeof stockData)[number], sd: string) => {
-							if (positionSizingMethod !== "atr") return bw;
-							const ki = s.klines.findIndex((k) => k.date === sd);
-							if (ki < 14) return bw;
-							const sa = computeATRPct(s.klines, ki);
-							if (sa <= 0) return bw;
+						// Pre-compute median ATR once for ATR position sizing
+						let medianAtrPct = 0;
+						if (positionSizingMethod === "atr") {
 							const atrs: number[] = [];
 							for (const cd of targetCodes) {
 								const st = stockMap.get(cd);
 								if (!st) continue;
-								const ix = st.klines.findIndex((k) => k.date === sd);
+								const ix = st.klines.findIndex((k) => k.date === date);
 								if (ix >= 14) {
 									const a = computeATRPct(st.klines, ix);
 									if (a > 0) atrs.push(a);
 								}
 							}
-							if (atrs.length < 3) return bw;
-							atrs.sort((a, b) => a - b);
-							return adjustWeightByVolatility(bw, sa, atrs[Math.floor(atrs.length / 2)]);
+							if (atrs.length >= 3) {
+								atrs.sort((a, b) => a - b);
+								medianAtrPct = atrs[Math.floor(atrs.length / 2)];
+							}
+						}
+
+						// Compute a single net target for each stock
+						type RebalanceAction = {
+							code: string;
+							stock: (typeof stockData)[number];
+							kline: KlineRow | undefined;
+							pos:
+								| { shares: number; entryPrice: number; entryDate: string; daysHeld: number; lastClose: number }
+								| undefined;
+							targetValue: number;
+							diffShares: number;
 						};
-
-						// Sell overweight positions first (partial sells allowed)
-						const sellIter = isLinear
+						const actions: RebalanceAction[] = [];
+						const iter = isLinear
 							? rankedTargets!.map((h, i) => ({ code: h.code, idx: i }))
 							: [...targetCodes].sort().map((code) => ({ code, idx: 0 }));
-						for (const { code, idx } of sellIter) {
-							const pos = positions.get(code);
-							if (!pos) continue;
-
-							const stock = stockMap.get(code);
-							if (!stock) continue;
-
-							const klineMap = klineMapByCode.get(code);
-							const kline = klineMap?.get(date);
-							if (!checkTradeable(kline)) continue;
-							const sellPrice = (kline?.open ?? pos.lastClose) * (1 - slippage);
-							const currentValue = pos.shares * sellPrice;
-							let effTarget2 = isLinear
-								? Math.min(((nLin - idx) / totalLinearWeight) * totalValue, maxTargetValue)
-								: Math.min(totalValue / targetCodes.size, maxTargetValue);
-							effTarget2 = atrAdj(effTarget2, stock, date);
-							if (currentValue <= effTarget2) continue;
-
-							const excessValue = currentValue - effTarget2;
-							if (excessValue <= effTarget2 * rebalanceThreshold) continue;
-
-							const rawShares = Math.floor(excessValue / sellPrice);
-							const shares = Math.floor(rawShares / minLot) * minLot;
-
-							if (shares >= minLot && shares < pos.shares) {
-								const sellAmount = shares * sellPrice;
-								if (!isTradeAmountValid(sellAmount, minTradeAmount)) {
-									continue;
-								}
-								const proceeds = sellAmount * (1 - commission - transferFee - taxRate);
-								const costBasis = shares * pos.entryPrice * (1 + commission + transferFee);
-								const pnl = proceeds - costBasis;
-								trades.push({
-									code,
-									market: stock.market,
-									direction: "sell",
-									date,
-									price: sellPrice,
-									shares,
-									amount: sellAmount,
-									pnl,
-									pnlPct: costBasis > 0 ? (pnl / costBasis) * 100 : 0,
-									daysHeld: pos.daysHeld,
-									result: pnl > 0 ? "win" : pnl < 0 ? "loss" : "breakeven",
-									memo: "等权再平衡减仓",
-								});
-								cash += proceeds;
-								pos.shares -= shares;
-								if (pos.shares <= 0) positions.delete(code);
-							}
-						}
-
-						// Buy underweight positions
-						const buyIter2 = isLinear
-							? rankedTargets!.map((h, i) => ({ code: h.code, idx: i }))
-							: [...targetCodes].sort().map((code) => ({ code, idx: 0 }));
-						for (const { code, idx } of buyIter2) {
+						for (const { code, idx } of iter) {
 							const pos = positions.get(code);
 							const stock = stockMap.get(code);
 							if (!stock) continue;
 
 							const klineMap = klineMapByCode.get(code);
 							const kline = klineMap?.get(date);
-							// Skip rebalancing buy if at limit-up
-							if (kline && isLimitUp(kline)) continue;
 							if (!checkTradeable(kline)) continue;
-							const buyPrice = (kline?.open ?? pos?.lastClose ?? 0) * (1 + slippage);
-							if (buyPrice <= 0) continue;
+							const refPrice = kline?.open ?? pos?.lastClose ?? 0;
+							if (refPrice <= 0) continue;
 
-							const currentValue = pos ? pos.shares * buyPrice : 0;
-							let effBuyTarget = isLinear
+							let targetValue = isLinear
 								? Math.min(((nLin - idx) / totalLinearWeight) * totalValue, maxTargetValue)
 								: Math.min(totalValue / targetCodes.size, maxTargetValue);
-							effBuyTarget = atrAdj(effBuyTarget, stock, date);
-							const deficitValue = effBuyTarget - currentValue;
-							if (deficitValue <= effBuyTarget * rebalanceThreshold) continue;
 
-							const rawShares = Math.floor(deficitValue / buyPrice);
-							const shares = Math.floor(rawShares / minLot) * minLot;
-
-							if (shares >= minLot) {
-								const amount = shares * buyPrice;
-								if (!isTradeAmountValid(amount, minTradeAmount)) {
-									continue;
-								}
-								const cost = amount * (1 + commission + transferFee);
-								if (cost <= cash) {
-									cash -= cost;
-									if (pos) {
-										const totalCost = pos.entryPrice * pos.shares + amount;
-										pos.shares += shares;
-										pos.entryPrice = totalCost / pos.shares;
-									} else {
-										positions.set(code, {
-											shares,
-											entryPrice: buyPrice,
-											entryDate: date,
-											daysHeld: 0,
-											lastClose: buyPrice,
-										});
+							// ATR adjustment
+							if (positionSizingMethod === "atr") {
+								const ki = stock.klines.findIndex((k) => k.date === date);
+								if (ki >= 14 && medianAtrPct > 0) {
+									const sa = computeATRPct(stock.klines, ki);
+									if (sa > 0) {
+										targetValue = adjustWeightByVolatility(targetValue, sa, medianAtrPct);
 									}
-									trades.push({
-										code,
-										market: stock.market,
-										direction: "buy",
-										date,
-										price: buyPrice,
-										shares,
-										amount,
-										memo: "等权再平衡买入",
-									});
 								}
+							}
+
+							const currentShares = pos?.shares ?? 0;
+							const rawTargetShares = Math.floor(targetValue / refPrice);
+							const targetShares = Math.floor(rawTargetShares / minLot) * minLot;
+							const diffShares = targetShares - currentShares;
+
+							// Skip tiny deviations within the rebalance threshold
+							if (rebalanceThreshold > 0) {
+								const deviationValue = Math.abs(diffShares) * refPrice;
+								if (deviationValue <= targetValue * rebalanceThreshold) continue;
+							}
+
+							if (diffShares === 0) continue;
+
+							actions.push({
+								code,
+								stock,
+								kline,
+								pos,
+								targetValue,
+								diffShares,
+							});
+						}
+
+						// Execute all sells first
+						const soldToday = new Set<string>();
+						for (const action of actions) {
+							if (action.diffShares >= 0) continue;
+							soldToday.add(action.code);
+							const pos = action.pos;
+							if (!pos) continue;
+							const shares = Math.min(-action.diffShares, pos.shares);
+							if (shares < minLot) continue;
+							const sellPrice = (action.kline?.open ?? pos.lastClose) * (1 - slippage);
+							const sellAmount = shares * sellPrice;
+							if (!isTradeAmountValid(sellAmount, minTradeAmount)) continue;
+							const proceeds = sellAmount * (1 - commission - transferFee - taxRate);
+							const costBasis = shares * pos.entryPrice * (1 + commission + transferFee);
+							const pnl = proceeds - costBasis;
+							trades.push({
+								code: action.code,
+								market: action.stock.market,
+								direction: "sell",
+								date,
+								price: sellPrice,
+								shares,
+								amount: sellAmount,
+								pnl,
+								pnlPct: costBasis > 0 ? (pnl / costBasis) * 100 : 0,
+								daysHeld: pos.daysHeld,
+								result: pnl > 0 ? "win" : pnl < 0 ? "loss" : "breakeven",
+								memo: "等权再平衡减仓",
+							});
+							cash += proceeds;
+							pos.shares -= shares;
+							if (pos.shares <= 0) {
+								positions.delete(action.code);
 							}
 						}
 
-						// Cash sweep: if some targets were limit-up, redistribute remaining cash
-						// evenly across the targets that are actually buyable today.
+						// Execute all buys
+						for (const action of actions) {
+							if (action.diffShares <= 0) continue;
+							// Skip rebalancing buy if at limit-up
+							if (action.kline && isLimitUp(action.kline)) continue;
+							const pos = action.pos;
+							const buyPrice = (action.kline?.open ?? pos?.lastClose ?? 0) * (1 + slippage);
+							if (buyPrice <= 0) continue;
+							const shares = action.diffShares;
+							const amount = shares * buyPrice;
+							if (!isTradeAmountValid(amount, minTradeAmount)) continue;
+							const cost = amount * (1 + commission + transferFee);
+							if (cost > cash) continue;
+							cash -= cost;
+							if (pos) {
+								const totalCost = pos.entryPrice * pos.shares + amount;
+								pos.shares += shares;
+								pos.entryPrice = totalCost / pos.shares;
+							} else {
+								positions.set(action.code, {
+									shares,
+									entryPrice: buyPrice,
+									entryDate: date,
+									daysHeld: 0,
+									lastClose: buyPrice,
+								});
+							}
+							trades.push({
+								code: action.code,
+								market: action.stock.market,
+								direction: "buy",
+								date,
+								price: buyPrice,
+								shares,
+								amount,
+								memo: "等权再平衡买入",
+							});
+						}
+
+						// Cash sweep: redistribute remaining cash across buyable targets that still
+						// have capacity, but never re-buy a stock that was sold today.
 						const buyableTargetCodes = [...targetCodes].filter((code) => {
+							if (soldToday.has(code)) return false;
 							const klineMap = klineMapByCode.get(code);
 							const kline = klineMap?.get(date);
 							if (kline && isLimitUp(kline)) return false;
@@ -1595,10 +1644,11 @@ export async function runPoolBacktest(
 
 	const isRandomMultiRun = config.rankBy === "random" && (config.randomRuns ?? 1) > 1;
 	const actualRuns = isRandomMultiRun ? (config.randomRuns ?? 1) : 1;
+	const baseSeed = config.seed ?? hashString(JSON.stringify(config));
 	const passResults: Array<ReturnType<typeof runOneSimulation>> = [];
 	const tSimStart = performance.now();
 	for (let r = 0; r < actualRuns; r++) {
-		passResults.push(runOneSimulation());
+		passResults.push(runOneSimulation(createRng(baseSeed + r)));
 	}
 	const tSimEnd = performance.now();
 
