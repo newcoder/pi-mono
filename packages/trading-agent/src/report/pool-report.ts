@@ -91,7 +91,7 @@ function buildTemplate(data: PoolReportData): string {
 	const equityChartScript = buildEquityChartScript(strategyCurve, benchmarks);
 	const drawdownChartScript = buildDrawdownChartScript(strategyCurve, benchmarks);
 	const heatmapHtml = buildMonthlyHeatmap(strategyCurve);
-	const tradeRowsHtml = buildTradeRows(trades, fmtNum, fmtPct);
+	const tradeRowsHtml = buildTradeRows([...trades].reverse(), fmtNum, fmtPct);
 
 	return `<!DOCTYPE html>
 <html lang="zh-CN">

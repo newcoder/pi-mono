@@ -332,7 +332,7 @@ function renderResults(r){
   $('holdings-count').textContent = finalHoldings.length;
 
   // Trade table
-  const trades = r.trades;
+  const trades = [...r.trades].reverse();
   $('trade-count').textContent = trades.length;
   const rows = [];
   for(let i=0;i<Math.min(trades.length,500);i++){
