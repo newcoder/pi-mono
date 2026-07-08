@@ -49,6 +49,7 @@ tr:hover td{background:rgba(37,99,235,.05)}
   <div class="header-right">
     <select id="pool-select" style="min-width:200px"><option value="">加载中...</option></select>
     <button id="run-btn" onclick="runBacktest()">▶ 运行回测</button>
+    <button id="save-btn" class="hidden" onclick="saveReport()" style="background:#1a1d2b;color:#e0e0e0;border:1px solid #333;border-radius:6px;padding:8px 14px;cursor:pointer;font-size:13px">📄 保存报告</button>
   </div>
 </div>
 
@@ -57,10 +58,11 @@ tr:hover td{background:rgba(37,99,235,.05)}
   <label>最大持仓 <input type="number" id="maxPositions" value="10" min="1" max="100"></label>
   <label>初始资金(万) <input type="number" id="initialCapital" value="100" step="10"></label>
   <label>排序 <select id="rankBy">
-    <option value="momentum">动量</option><option value="value">价值</option><option value="turnover" selected>换手率</option>
+    <option value="momentum">动量</option><option value="value">价值</option><option value="turnover" selected>成交额</option>
     <option value="technical">技术综合</option><option value="low_volatility">低波动</option>
     <option value="signal_recency">信号新鲜度</option>
-    <option value="ma_alignment">MA排列</option><option value="weekly_ma_alignment">周线MA排列</option><option value="market_cap">总市值</option><option value="amount">成交额</option><option value="random">随机</option>
+<option value="turnover_rate">换手率</option>
+    <option value="ma_alignment">MA排列</option><option value="weekly_ma_alignment">周线MA排列</option><option value="market_cap">总市值</option><option value="random">随机</option>
   </select></label>
   <label>起始 <input type="date" id="startDate"></label>
   <label>结束 <input type="date" id="endDate"></label>
@@ -150,6 +152,30 @@ async function init(){
 }
 document.addEventListener('DOMContentLoaded', init);
 
+async function saveReport(){
+  if(!state.lastResult||!state.lastConfig) return;
+  const btn=$('save-btn'); btn.textContent='保存中...'; btn.disabled=true;
+  try {
+    const poolName=state.pools.find(p=>p.id==Number(getVal('pool-select')))?.name||'';
+    const res=await fetch('/api/backtest/save',{
+      method:'POST',headers:{'Content-Type':'application/json'},
+      body:JSON.stringify({
+        title:poolName+' '+getVal('strategy')+' 回测报告',
+        poolName, strategy:getVal('strategy'),
+        startDate:state.lastResult.startDate, endDate:state.lastResult.endDate,
+        initialCapital:state.lastResult.initialCapital,
+        strategyCurve:state.lastResult.equityCurve.map(p=>({date:p.date,equity:p.equity})),
+        strategyMetrics:{totalReturn:state.lastResult.metrics.totalReturn,annualizedReturn:state.lastResult.metrics.annualizedReturn,sharpeRatio:state.lastResult.metrics.sharpeRatio,maxDrawdown:state.lastResult.metrics.maxDrawdown,winRate:state.lastResult.metrics.winRate,profitFactor:state.lastResult.metrics.profitFactor,totalTrades:state.lastResult.trades.filter(t=>t.direction==='sell').length},
+        benchmarks:[], trades:state.lastResult.trades,
+        config:state.lastConfig
+      })
+    });
+    const data=await res.json();
+    if(data.url) window.open(data.url,'_blank');
+    btn.textContent='📄 保存报告'; btn.disabled=false;
+  }catch(e){ btn.textContent='❌ 失败'; btn.disabled=false; console.error(e); }
+}
+
 function toggleAdvanced(){
   const p = $('advancedPanel');
   p.style.display = p.style.display === 'flex' ? 'none' : 'flex';
@@ -203,6 +229,17 @@ async function runBacktest(){
 
 function renderResults(r){
   $('results').classList.remove('hidden');
+  $('save-btn').classList.remove('hidden');
+  // Store result for save
+  state.lastResult = r;
+  state.lastConfig = {
+    策略: getVal('strategy'), 股池: state.pools.find(p=>p.id==Number(getVal('pool-select')))?.name||'',
+    区间: getVal('startDate')+' ~ '+getVal('endDate'),
+    初始资金: (Number(getVal('initialCapital'))*10000).toLocaleString(),
+    最大持仓: getVal('maxPositions'), 排序: getVal('rankBy'),
+    满仓: getVal('fullPosition'), 仓位方法: getVal('positionSizingMethod'),
+    滑点: getVal('slippage')+'%', 佣金: getVal('commission')+'%',
+  };
   const m = r.metrics;
   const cls = v => v>0?'text-up':v<0?'text-down':'text-neutral';
 
@@ -256,7 +293,7 @@ function renderResults(r){
     <div class="metric-card"><div class="metric-label">胜率</div><div class="metric-value ${m.winRate>50?'text-up':'text-neutral'}">${m.winRate.toFixed(1)}%</div></div>
     <div class="metric-card"><div class="metric-label">盈亏比</div><div class="metric-value ${m.profitFactor>1?'text-up':'text-neutral'}">${m.profitFactor.toFixed(2)}</div></div>
     <div class="metric-card"><div class="metric-label">交易次数</div><div class="metric-value" style="color:#e0e0e0">${sells.length}</div></div>
-    <div class="metric-card"><div class="metric-label">换手率</div><div class="metric-value" style="color:#e0e0e0">${turnover}%</div></div>
+    <div class="metric-card"><div class="metric-label">成交额</div><div class="metric-value" style="color:#e0e0e0">${turnover}%</div></div>
     <div class="metric-card"><div class="metric-label">终持仓</div><div class="metric-value" style="color:#f59e0b">${finalHoldings.length}只</div></div>
     <div class="metric-card"><div class="metric-label">耗时</div><div class="metric-value" style="color:#888;font-size:18px">${(r.elapsedMs/1000).toFixed(1)}s</div></div>
   `;

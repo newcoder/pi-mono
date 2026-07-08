@@ -35,6 +35,7 @@ export interface PoolReportData {
 	strategyMetrics: PoolReportMetrics;
 	benchmarks: PoolReportBenchmark[];
 	trades: PoolTrade[];
+	config?: Record<string, unknown>;
 }
 
 export interface GeneratePoolReportResult {
@@ -72,7 +73,15 @@ function buildTemplate(data: PoolReportData): string {
 		strategyMetrics,
 		benchmarks,
 		trades,
+		config,
 	} = data;
+
+	function buildConfigRows(cfg: Record<string, unknown> | undefined): string {
+		if (!cfg) return "";
+		return Object.entries(cfg)
+			.map(([k, v]) => `<tr><td>${escapeHtml(k)}</td><td>${escapeHtml(String(v))}</td></tr>`)
+			.join("");
+	}
 
 	const fmtNum = (n: number | undefined, digits = 2) =>
 		n == null ? "-" : n.toLocaleString("zh-CN", { minimumFractionDigits: digits, maximumFractionDigits: digits });
@@ -143,6 +152,17 @@ footer { text-align:center; color:var(--text-muted); font-size:0.8rem; padding:2
     <span>生成于 ${new Date().toLocaleString("zh-CN")}</span>
   </div>
 </header>
+
+${
+	config
+		? `
+<section class="table-section">
+  <h2>回测参数</h2>
+  <table><thead><tr><th>参数</th><th>值</th></tr></thead>
+  <tbody>${buildConfigRows(config)}</tbody></table>
+</section>`
+		: ""
+}
 
 <section class="metrics">
 ${metricCards}

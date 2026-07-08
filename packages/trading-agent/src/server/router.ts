@@ -472,6 +472,24 @@ export async function handleRequest(
 			return;
 		}
 
+		// Backtest report save
+		if (path === "/api/backtest/save" && method === "POST") {
+			let body = "";
+			for await (const chunk of req) {
+				body += chunk;
+			}
+			const params = body ? JSON.parse(body) : {};
+			try {
+				const { generatePoolBacktestReport } = await import("../report/pool-report.js");
+				const outputDir = join(homedir(), ".trading-agent", "reports");
+				const genResult = await generatePoolBacktestReport(params, outputDir, "http://localhost:3000");
+				json(res, 200, { url: genResult.url });
+			} catch (err) {
+				json(res, 500, { error: err instanceof Error ? err.message : String(err) });
+			}
+			return;
+		}
+
 		// Backtest strategies metadata
 		if (path === "/api/backtest/strategies" && method === "GET") {
 			json(res, 200, STRATEGY_META);
