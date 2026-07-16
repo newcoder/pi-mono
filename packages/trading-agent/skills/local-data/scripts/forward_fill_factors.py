@@ -28,18 +28,36 @@ def main():
     target_date = row["max_date"] if row and row["max_date"] else datetime.now().strftime("%Y-%m-%d")
     print(f"Target date (latest kline): {target_date}")
 
-    # Get all stocks with existing factors
+    # Get all stocks with existing factors (deterministic: pick the row at MAX(date))
     stocks = cur.execute("""
-        SELECT code, market, MAX(date) as last_date, qfq_factor, hfq_factor
-        FROM adjust_factors
-        GROUP BY code, market
+        SELECT af.code, af.market, af.date as last_date, af.qfq_factor, af.hfq_factor
+        FROM adjust_factors af
+        INNER JOIN (
+            SELECT code, market, MAX(date) as max_date
+            FROM adjust_factors
+            GROUP BY code, market
+        ) latest ON af.code = latest.code AND af.market = latest.market AND af.date = latest.max_date
     """).fetchall()
     print(f"Stocks with existing factors: {len(stocks)}")
+
+    # Dynamic start date: earliest last factor date, falling back to earliest kline date.
+    row = cur.execute("""
+        SELECT MIN(last_date) as min_date FROM (
+            SELECT code, market, MAX(date) as last_date
+            FROM adjust_factors
+            GROUP BY code, market
+        )
+    """).fetchone()
+    fill_start = row["min_date"] if row and row["min_date"] else None
+    if not fill_start:
+        row = cur.execute("SELECT MIN(date) FROM klines WHERE period = 'daily' AND adjust = 'bfq'").fetchone()
+        fill_start = row[0] if row and row[0] else datetime.now().strftime("%Y-%m-%d")
+    print(f"Fill start date: {fill_start}")
 
     # Get trading dates from klines
     trade_dates = [r[0] for r in cur.execute(
         "SELECT DISTINCT date FROM klines WHERE period = 'daily' AND adjust = 'bfq' AND date > ? AND date <= ? ORDER BY date",
-        ("2026-06-01", target_date)
+        (fill_start, target_date)
     ).fetchall()]
     print(f"Trading dates to fill: {len(trade_dates)} ({trade_dates[0]} ~ {trade_dates[-1]})")
 

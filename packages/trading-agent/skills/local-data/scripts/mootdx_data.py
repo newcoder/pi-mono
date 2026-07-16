@@ -127,18 +127,15 @@ def get_kline(
         norm_start = f"{start[:4]}-{start[4:6]}-{start[6:8]}" if start and len(start) == 8 else start
         norm_end = f"{end[:4]}-{end[4:6]}-{end[6:8]}" if end and len(end) == 8 else end
 
-        klines = []
+        # Build raw rows in chronological order so we can derive pre_close
+        # and change metrics from the previous bar's close.
+        raw_rows = []
         for _, row in df.iterrows():
-            # bars() returns 'datetime' column (Timestamp or string)
             dt_val = row.get("datetime", "")
             if hasattr(dt_val, "strftime"):
                 date_str = dt_val.strftime("%Y-%m-%d")
             else:
                 date_str = str(dt_val)[:10] if dt_val else ""
-            if norm_start and date_str < norm_start:
-                continue
-            if norm_end and date_str > norm_end:
-                continue
 
             open_p = float(row["open"]) if pd_notna(row.get("open")) else None
             close_p = float(row["close"]) if pd_notna(row.get("close")) else None
@@ -149,14 +146,43 @@ def get_kline(
             if volume is None:
                 volume = float(row["vol"]) if pd_notna(row.get("vol")) else None
             turnover = float(row["amount"]) if pd_notna(row.get("amount")) else None
-            pre_close = None
+
+            raw_rows.append({
+                "date": date_str,
+                "open": open_p,
+                "high": high_p,
+                "low": low_p,
+                "close": close_p,
+                "volume": volume,
+                "turnover": turnover,
+            })
+
+        raw_rows.sort(key=lambda r: r["date"])
+
+        klines = []
+        prev_close = None
+        for r in raw_rows:
+            date_str = r["date"]
+            if norm_start and date_str < norm_start:
+                prev_close = r["close"]
+                continue
+            if norm_end and date_str > norm_end:
+                continue
+
+            open_p = r["open"]
+            close_p = r["close"]
+            high_p = r["high"]
+            low_p = r["low"]
+            volume = r["volume"]
+            turnover = r["turnover"]
+            pre_close = prev_close
             change_pct = None
             change_amount = None
             amplitude = None
 
-            if close_p is not None and open_p is not None and open_p != 0:
-                change_pct = round((close_p - open_p) / open_p * 100, 4)
-                change_amount = round(close_p - open_p, 4)
+            if close_p is not None and pre_close is not None and pre_close != 0:
+                change_pct = round((close_p - pre_close) / pre_close * 100, 4)
+                change_amount = round(close_p - pre_close, 4)
             if high_p is not None and low_p is not None and low_p != 0:
                 amplitude = round((high_p - low_p) / low_p * 100, 4)
 
@@ -177,6 +203,8 @@ def get_kline(
                 "amplitude": amplitude,
                 "pre_close": pre_close,
             })
+
+            prev_close = close_p
 
         if limit > 0:
             klines = klines[-limit:]

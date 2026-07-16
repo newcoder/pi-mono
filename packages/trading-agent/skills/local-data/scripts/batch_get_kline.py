@@ -77,12 +77,13 @@ def _resample_df(df, period, code_col='code'):
         'low': 'min',
         'close': 'last',
         'volume': 'sum',
-        'money': 'sum',
+        'amount': 'sum',
+        'turnover': 'sum',
         'pre_close': 'first',
         'market': 'first',
     }
     freq = {
-        'week': 'W-FRI',
+        'week': 'W-MON',
         'month': 'ME',
         'quarter': 'QE',
         'year': 'YE',
@@ -157,12 +158,12 @@ def batch_get_kline(stock_codes, start_date, end_date, period="daily", adjust="b
         return f"sz{code}"
 
     def _from_mootdx(item):
-        if mootdx_kline is None:
+        if mootdx_kline is None or adjust != "bfq":
             return []
         try:
             return mootdx_kline(
                 item["code"], item.get("market", 0),
-                period=period, adjust="bfq",
+                period=period, adjust=adjust,
                 start=start_date, end=end_date,
             ) or []
         except Exception as mx_err:
@@ -215,35 +216,43 @@ def batch_get_kline(stock_codes, start_date, end_date, period="daily", adjust="b
         # For Beijing stocks, mootdx std market does not support them, so use akshare directly.
         if _is_bj(code):
             return _from_akshare(item)
-        return _from_mootdx(item)
+        rows = _from_mootdx(item)
+        if not rows:
+            return _from_akshare(item)
+        return rows
 
     for item in stock_codes:
         all_klines.extend(_fetch_one(item))
 
-    # Resample daily data to week/month/quarter/year when requested
+    # For non-daily periods, mootdx returns native-frequency bars directly.
+    # Only the akshare daily portion needs to be resampled once.
     if period != "daily" and all_klines:
-        df = pd.DataFrame(all_klines)
-        if 'date' in df.columns and 'code' in df.columns and len(df) > 0:
-            df = _resample_df(df, period)
-            if df is not None and len(df) > 0:
-                all_klines = []
-                for _, row in df.iterrows():
-                    all_klines.append({
-                        "code": str(row.get("code", "")),
-                        "market": int(row["market"]) if pd.notna(row.get("market")) else 0,
-                        "date": str(row.get("date", ""))[:10] if pd.notna(row.get("date")) else "",
-                        "open": float(row["open"]) if pd.notna(row.get("open")) else None,
-                        "close": float(row["close"]) if pd.notna(row.get("close")) else None,
-                        "low": float(row["low"]) if pd.notna(row.get("low")) else None,
-                        "high": float(row["high"]) if pd.notna(row.get("high")) else None,
-                        "volume": float(row["volume"]) if pd.notna(row.get("volume")) else None,
-                        "amount": float(row["money"]) if "money" in row and pd.notna(row.get("money")) else None,
-                        "amplitude": None,
-                        "change_pct": None,
-                        "change_amount": None,
-                        "turnover": None,
-                        "pre_close": float(row["pre_close"]) if "pre_close" in row and pd.notna(row.get("pre_close")) else None,
-                    })
+        mootdx_klines = [k for k in all_klines if str(k.get("_source", "")).startswith("mootdx")]
+        akshare_klines = [k for k in all_klines if not str(k.get("_source", "")).startswith("mootdx")]
+        resampled = []
+        if akshare_klines:
+            df = pd.DataFrame(akshare_klines)
+            if 'date' in df.columns and 'code' in df.columns and len(df) > 0:
+                df = _resample_df(df, period)
+                if df is not None and len(df) > 0:
+                    for _, row in df.iterrows():
+                        resampled.append({
+                            "code": str(row.get("code", "")),
+                            "market": int(row.get("market")) if pd.notna(row.get("market")) else 0,
+                            "date": str(row.get("date", ""))[:10] if pd.notna(row.get("date")) else "",
+                            "open": float(row["open"]) if pd.notna(row.get("open")) else None,
+                            "close": float(row["close"]) if pd.notna(row.get("close")) else None,
+                            "low": float(row["low"]) if pd.notna(row.get("low")) else None,
+                            "high": float(row["high"]) if pd.notna(row.get("high")) else None,
+                            "volume": float(row["volume"]) if pd.notna(row.get("volume")) else None,
+                            "amount": float(row["amount"]) if "amount" in row and pd.notna(row.get("amount")) else None,
+                            "turnover": float(row["turnover"]) if "turnover" in row and pd.notna(row.get("turnover")) else None,
+                            "amplitude": None,
+                            "change_pct": None,
+                            "change_amount": None,
+                            "pre_close": float(row["pre_close"]) if "pre_close" in row and pd.notna(row.get("pre_close")) else None,
+                        })
+        all_klines = mootdx_klines + resampled
 
     return all_klines
 
