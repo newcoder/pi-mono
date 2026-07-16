@@ -208,6 +208,7 @@ def ensure_tables():
             code TEXT NOT NULL,
             market INTEGER NOT NULL,
             report_date TEXT NOT NULL,
+            report_type TEXT,
             total_revenue REAL,
             operate_revenue REAL,
             operate_cost REAL,
@@ -242,9 +243,36 @@ def ensure_tables():
             finance_cash_flow REAL,
             net_cash_increase REAL,
             construct_long_asset REAL,
+            credit_impairment REAL,
+            asset_impairment REAL,
+            non_operate_income REAL,
+            non_operate_expense REAL,
+            operate_tax_add REAL,
+            total_shares REAL,
             updated_at TEXT,
             PRIMARY KEY (code, market, report_date)
         )
+    """)
+
+    # Idempotent migration: add missing fundamentals columns to existing DBs
+    _fundamentals_new_cols = {
+        "report_type": "TEXT",
+        "total_shares": "REAL",
+        "credit_impairment": "REAL",
+        "asset_impairment": "REAL",
+        "non_operate_income": "REAL",
+        "non_operate_expense": "REAL",
+        "operate_tax_add": "REAL",
+    }
+    cur.execute("PRAGMA table_info(fundamentals)")
+    existing_cols = {row["name"] for row in cur.fetchall()}
+    for col_name, col_type in _fundamentals_new_cols.items():
+        if col_name not in existing_cols:
+            cur.execute(f"ALTER TABLE fundamentals ADD COLUMN {col_name} {col_type}")
+
+    cur.execute("""
+        CREATE INDEX IF NOT EXISTS idx_fundamentals_code
+        ON fundamentals(code, report_date)
     """)
 
     # industries
@@ -423,6 +451,135 @@ def ensure_tables():
     """)
     cur.execute("""
         CREATE INDEX IF NOT EXISTS idx_hot_stocks_reason ON hot_stocks(reason)
+    """)
+
+    # adjust_factors (qfq/hfq adjustment factors)
+    cur.execute("""
+        CREATE TABLE IF NOT EXISTS adjust_factors (
+            code TEXT NOT NULL,
+            market INTEGER NOT NULL,
+            date TEXT NOT NULL,
+            qfq_factor REAL,
+            hfq_factor REAL,
+            updated_at TEXT,
+            PRIMARY KEY (code, market, date)
+        )
+    """)
+    cur.execute("""
+        CREATE INDEX IF NOT EXISTS idx_adjust_factors_date
+        ON adjust_factors(code, market, date)
+    """)
+
+    # fundamental_indicators (pre-computed growth / quality metrics)
+    cur.execute("""
+        CREATE TABLE IF NOT EXISTS fundamental_indicators (
+            code TEXT NOT NULL,
+            market INTEGER NOT NULL,
+            report_date TEXT NOT NULL,
+            revenue_yoy REAL,
+            revenue_qoq REAL,
+            revenue_cagr_3y REAL,
+            revenue_cagr_5y REAL,
+            net_profit_yoy REAL,
+            net_profit_qoq REAL,
+            net_profit_cagr_3y REAL,
+            net_profit_cagr_5y REAL,
+            operate_cash_flow_yoy REAL,
+            operate_cash_flow_qoq REAL,
+            fcf REAL,
+            fcf_yoy REAL,
+            roe REAL,
+            roe_change REAL,
+            research_expense_yoy REAL,
+            research_expense_ratio REAL,
+            capex REAL,
+            capex_yoy REAL,
+            capex_ratio REAL,
+            debt_ratio REAL,
+            debt_ratio_change REAL,
+            current_ratio REAL,
+            quick_ratio REAL,
+            interest_coverage REAL,
+            cash_to_profit REAL,
+            cash_to_debt REAL,
+            equity_ratio REAL,
+            interest_bearing_debt_ratio REAL,
+            short_debt_ratio REAL,
+            updated_at TEXT,
+            PRIMARY KEY (code, market, report_date)
+        )
+    """)
+    cur.execute("""
+        CREATE INDEX IF NOT EXISTS idx_fi_code_date
+        ON fundamental_indicators(code, report_date)
+    """)
+
+    # industry_indices (canonical industry index list)
+    cur.execute("""
+        CREATE TABLE IF NOT EXISTS industry_indices (
+            code TEXT PRIMARY KEY,
+            name TEXT NOT NULL,
+            updated_at TEXT
+        )
+    """)
+
+    # industry_klines (industry-level OHLCV)
+    cur.execute("""
+        CREATE TABLE IF NOT EXISTS industry_klines (
+            code TEXT NOT NULL,
+            period TEXT NOT NULL,
+            date TEXT NOT NULL,
+            open REAL,
+            high REAL,
+            low REAL,
+            close REAL,
+            volume REAL,
+            turnover REAL,
+            change_pct REAL,
+            change_amount REAL,
+            amplitude REAL,
+            turnover_rate REAL,
+            PRIMARY KEY (code, period, date)
+        )
+    """)
+    cur.execute("""
+        CREATE INDEX IF NOT EXISTS idx_industry_klines_code_period
+        ON industry_klines(code, period, date)
+    """)
+
+    # industry_quotes (industry snapshot quotes)
+    cur.execute("""
+        CREATE TABLE IF NOT EXISTS industry_quotes (
+            code TEXT NOT NULL,
+            snapshot_date TEXT NOT NULL,
+            name TEXT,
+            latest REAL,
+            open REAL,
+            high REAL,
+            low REAL,
+            prev_close REAL,
+            volume REAL,
+            turnover REAL,
+            change_pct REAL,
+            change_amount REAL,
+            amplitude REAL,
+            turnover_rate REAL,
+            up_count INTEGER,
+            down_count INTEGER,
+            flat_count INTEGER,
+            leading_stock TEXT,
+            leading_stock_code TEXT,
+            leading_change_pct REAL,
+            lagging_stock TEXT,
+            lagging_stock_code TEXT,
+            lagging_change_pct REAL,
+            updated_at TEXT,
+            PRIMARY KEY (code, snapshot_date)
+        )
+    """)
+    cur.execute("""
+        CREATE INDEX IF NOT EXISTS idx_industry_quotes_date
+        ON industry_quotes(snapshot_date)
     """)
 
     conn.commit()

@@ -15,6 +15,7 @@ if _SKILL_ROOT not in sys.path:
 
 import argparse
 import sqlite3
+import pandas as pd
 from local_data.db import get_db, get_db_path, db_exists
 from datetime import datetime
 
@@ -88,5 +89,4 @@ def main():
 
 
 if __name__ == "__main__":
-    import pandas as pd
     main()
