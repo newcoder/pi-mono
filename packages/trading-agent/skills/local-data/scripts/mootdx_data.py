@@ -13,8 +13,10 @@ import json
 import sys
 import io
 import time
+import logging
 from typing import Optional, Dict, Any, List
 
+logger = logging.getLogger(__name__)
 
 # ─── mootdx client singleton ──────────────────────────────────
 
@@ -79,6 +81,7 @@ def get_quote(code: str, market: int = 1, timeout: float = 5.0) -> Optional[Dict
             "_source": f"mootdx ({latency}ms)",
         }
     except Exception:
+        logger.warning("mootdx get_quote failed", exc_info=True)
         return None
 
 
@@ -214,6 +217,7 @@ def get_kline(
             k["_source"] = f"mootdx ({latency}ms)"
         return klines
     except Exception:
+        logger.warning("mootdx get_kline failed", exc_info=True)
         return None
 
 
@@ -266,6 +270,7 @@ def get_f10_overview(code: str, market: int = 1, timeout: float = 5.0) -> Option
             "_source": "mootdx_f10",
         }
     except Exception:
+        logger.warning("mootdx get_f10_overview failed", exc_info=True)
         return None
 
 
@@ -327,6 +332,7 @@ def get_finance_snapshot(code: str, market: int = 1, timeout: float = 5.0) -> Op
             "_source": "mootdx_finance",
         }
     except Exception:
+        logger.warning("mootdx get_finance_snapshot failed", exc_info=True)
         return None
 
 

@@ -4,8 +4,11 @@ import argparse
 import json
 import sys
 import warnings
+import logging
 import pandas as pd
 from concurrent.futures import ThreadPoolExecutor, as_completed
+
+logger = logging.getLogger(__name__)
 
 warnings.filterwarnings('ignore')
 
@@ -140,6 +143,7 @@ def _get_factors_single_tencent(code: str, market: int, start_date: str, end_dat
             key = {"bfq": "day", "qfq": "qfqday", "hfq": "hfqday"}.get(fq, "day")
             return stock_data.get(key, [])
         except Exception:
+            logger.warning(f"Tencent fqkline fetch failed for {prefix}", exc_info=True)
             return []
 
     bfq_list = _fetch("bfq")

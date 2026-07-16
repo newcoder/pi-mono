@@ -2,8 +2,11 @@ import argparse
 import json
 import sys
 import io
+import logging
 
 import pandas as pd
+
+logger = logging.getLogger(__name__)
 
 AK_ADJUST_MAP = {
     "bfq": "",
@@ -63,6 +66,7 @@ def get_stock_kline(
                     "_source": "mootdx",
                 }
         except Exception:
+            logger.warning(f"mootdx kline fetch failed for {stock_code}", exc_info=True)
             pass  # fallback to akshare
 
     # 2. Fallback: akshare (supports qfq/hfq via stock_zh_a_hist)
@@ -100,6 +104,7 @@ def get_stock_kline(
                 "_source": "akshare",
             }
     except Exception as e:
+        logger.warning(f"akshare kline fetch failed for {stock_code}: {e}", exc_info=True)
         pass  # all sources failed
 
     return {

@@ -16,8 +16,11 @@ from typing import Dict, List, Optional, Tuple
 from urllib.parse import quote
 
 import requests
+import logging
 from requests.adapters import HTTPAdapter
 from urllib3.util.retry import Retry
+
+logger = logging.getLogger(__name__)
 
 _SCRIPT_DIR = os.path.dirname(os.path.abspath(__file__))
 if _SCRIPT_DIR not in sys.path:
@@ -100,6 +103,7 @@ def fetch_eastmoney_news(code: str, limit: int = 20) -> List[Dict]:
                     "url": str(row.iloc[5]) if len(cols) > 5 else "",
                 })
             except Exception:
+                logger.warning(f"Skipping malformed akshare news row for {code}", exc_info=True)
                 continue
         return results
     except Exception as e:
@@ -288,6 +292,110 @@ def fetch_news_concurrent(codes_names: List[Tuple[str, str]], limit: int = 10,
             time.sleep(0.5)
 
     return all_news
+
+
+# ── Market-wide news sources ────────────────────────────────────────────────
+
+def fetch_cls_telegraph(limit: int = 100) -> List[Dict]:
+    """Fetch market-wide telegraph news from cls.cn (财联社电报)."""
+    url = "https://www.cls.cn/nodeapi/telegraphList"
+    params = {"rn": str(limit), "page": "1"}
+    ua = "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36"
+    headers = {
+        "User-Agent": ua,
+        "Referer": "https://www.cls.cn/",
+        "Accept": "application/json, text/plain, */*",
+    }
+    try:
+        r = _SESSION.get(url, params=params, headers=headers, timeout=15)
+        r.raise_for_status()
+        data = r.json()
+        items = data.get("data", {}).get("roll_data", []) or []
+        news = []
+        for item in items:
+            news.append({
+                "title": item.get("title", "") or item.get("brief", ""),
+                "content": item.get("content", "") or item.get("brief", ""),
+                "source": "cls",
+                "source_type": "cls_telegraph",
+                "pub_time": item.get("ctime", ""),
+                "url": "",
+            })
+        return news
+    except Exception as e:
+        print(f"CLS telegraph fetch error: {e}", file=sys.stderr)
+        return []
+
+
+def fetch_eastmoney_global_news(limit: int = 100) -> List[Dict]:
+    """Fetch market-wide 7x24 news from Eastmoney (东财全球资讯)."""
+    import uuid
+    url = "https://np-weblist.eastmoney.com/comm/web/getFastNewsList"
+    params = {
+        "client": "web",
+        "biz": "web_724",
+        "fastColumn": "102",
+        "sortEnd": "",
+        "pageSize": str(limit),
+        "req_trace": str(uuid.uuid4()),
+    }
+    ua = "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36"
+    headers = {
+        "User-Agent": ua,
+        "Referer": "https://kuaixun.eastmoney.com/",
+        "Accept": "application/json, text/plain, */*",
+    }
+    try:
+        r = _SESSION.get(url, params=params, headers=headers, timeout=15)
+        r.raise_for_status()
+        data = r.json()
+        items = data.get("data", {}).get("fastNewsList", []) or []
+        news = []
+        for item in items:
+            news.append({
+                "title": item.get("title", ""),
+                "content": item.get("summary", ""),
+                "source": "eastmoney",
+                "source_type": "eastmoney_global",
+                "pub_time": item.get("showTime", ""),
+                "url": "",
+            })
+        return news
+    except Exception as e:
+        print(f"Eastmoney global news fetch error: {e}", file=sys.stderr)
+        return []
+
+
+def fetch_news(code: str = "", sources: List[str] = None, limit_per_source: int = 10) -> Dict:
+    """
+    Unified news fetch entry point.
+    If code is provided, fetch stock news; otherwise fetch market-wide news.
+    Returns dict: {"success": bool, "items": list of news dicts}.
+    """
+    if sources is None:
+        sources = ["eastmoney"] if code else ["cls_telegraph", "eastmoney_global"]
+
+    items = []
+    for source in sources:
+        try:
+            if code:
+                if source == "eastmoney":
+                    items.extend(fetch_eastmoney_news(code, limit=limit_per_source))
+                elif source == "cls":
+                    items.extend(fetch_cls_news(code, "", limit=limit_per_source))
+                elif source == "stcn":
+                    items.extend(fetch_stcn_news(code, "", limit=limit_per_source))
+            else:
+                if source == "cls_telegraph":
+                    items.extend(fetch_cls_telegraph(limit=limit_per_source))
+                elif source == "eastmoney_global":
+                    items.extend(fetch_eastmoney_global_news(limit=limit_per_source))
+        except Exception as e:
+            print(f"fetch_news error for source {source}: {e}", file=sys.stderr)
+
+    # Sort by pub_time descending
+    items.sort(key=lambda x: x.get("pub_time", ""), reverse=True)
+    return {"success": len(items) > 0, "items": items}
 
 
 # ── CLI ─────────────────────────────────────────────────────────────────────

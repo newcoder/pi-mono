@@ -1,11 +1,14 @@
 import argparse
 import json
 import time
+import logging
 import requests
 from bs4 import BeautifulSoup
 from concurrent.futures import ThreadPoolExecutor, as_completed
 from requests.adapters import HTTPAdapter
 from urllib3.util.retry import Retry
+
+logger = logging.getLogger(__name__)
 
 HEADERS = {
     "User-Agent": (
@@ -153,6 +156,7 @@ def get_stock_fundamentals(stock_code: str, market: int = 1, history: bool = Fal
                     "_source": "mootdx",
                 }
         except Exception:
+            logger.warning(f"mootdx fundamentals fetch failed for {stock_code}", exc_info=True)
             pass  # fallback to Eastmoney
 
     # 2. Fallback: Eastmoney F10 HTTP API

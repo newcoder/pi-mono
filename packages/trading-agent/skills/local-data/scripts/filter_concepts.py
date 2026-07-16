@@ -17,7 +17,7 @@ if _SKILL_ROOT not in sys.path:
 import argparse
 import sqlite3
 from local_data.db import get_db
-from datetime import datetime, timedelta
+from datetime import datetime
 from typing import Dict, List, Optional, Tuple
 
 import pandas as pd

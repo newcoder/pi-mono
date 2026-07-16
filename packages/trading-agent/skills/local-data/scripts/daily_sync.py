@@ -32,7 +32,7 @@ import warnings
 import urllib.request
 from datetime import datetime, timedelta
 from concurrent.futures import ThreadPoolExecutor, as_completed
-from typing import Dict, List, Optional, Tuple
+from typing import Dict, List, Optional, Tuple, Callable
 
 warnings.filterwarnings('ignore')
 sys.stdout = io.TextIOWrapper(sys.stdout.buffer, encoding="utf-8")
@@ -1087,6 +1087,7 @@ def sync_fundamentals() -> dict:
             if ctype_input and ctype_input.get("value"):
                 return ctype_input["value"]
         except Exception:
+            logger.warning(f"Failed to get company type for {symbol_lower}", exc_info=True)
             pass
         return None
 
@@ -1099,6 +1100,7 @@ def sync_fundamentals() -> dict:
             if "data" in data and data["data"]:
                 return [item["REPORT_DATE"] for item in data["data"] if "REPORT_DATE" in item]
         except Exception:
+            logger.warning(f"Failed to get report dates for {code} via {endpoint}", exc_info=True)
             pass
         return []
 
@@ -1120,6 +1122,7 @@ def sync_fundamentals() -> dict:
                 all_records.extend(data.get("data", []))
             return all_records
         except Exception:
+            logger.warning(f"Failed to fetch statement {endpoint} for {code}", exc_info=True)
             return []
 
     def _safe_float(v):
@@ -1606,7 +1609,7 @@ def run_data_quality_sampling() -> dict:
 
 # ── Main ───────────────────────────────────────────────────────────────────
 
-ALL_PHASES: List[Tuple[str, callable]] = [
+ALL_PHASES: List[Tuple[str, Callable]] = [
     ("stocks", sync_stocks),
     ("quotes", sync_quotes),
     ("klines", sync_klines),

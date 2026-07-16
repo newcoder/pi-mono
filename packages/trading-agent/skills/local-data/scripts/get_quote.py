@@ -17,9 +17,12 @@ if _SKILL_ROOT not in sys.path:
 import argparse
 import json
 import sqlite3
+import logging
 from local_data.db import get_db, get_db_path, db_exists
 import io
 from datetime import datetime
+
+logger = logging.getLogger(__name__)
 
 HEADERS = {
     "User-Agent": (
@@ -50,6 +53,7 @@ def _query_local_db(sql: str, params: tuple = ()) -> list:
         conn.close()
         return rows
     except Exception:
+        logger.warning("Local DB query failed", exc_info=True)
         return []
 
 
@@ -157,6 +161,7 @@ def _fetch_eastmoney_quote(stock_code: str, market: int) -> dict | None:
             "_source": "eastmoney",
         }
     except Exception:
+        logger.warning(f"Eastmoney quote fetch failed for {stock_code}", exc_info=True)
         return None
 
 
@@ -173,6 +178,7 @@ def get_stock_real_quote(stock_code: str, market: int = 1) -> dict:
         from mootdx_data import get_quote
         result = get_quote(stock_code, market)
     except Exception:
+        logger.warning(f"mootdx quote import/fetch failed for {stock_code}", exc_info=True)
         result = None
 
     # 2. Enrich / fallback with Eastmoney HTTP API for fields mootdx lacks

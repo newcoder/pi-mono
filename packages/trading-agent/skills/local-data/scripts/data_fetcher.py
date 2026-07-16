@@ -25,8 +25,11 @@ import sqlite3
 from local_data.db import get_db, get_db_path, db_exists
 from datetime import datetime, timedelta
 from typing import Optional, Callable
+import logging
 from functools import wraps
 from concurrent.futures import ThreadPoolExecutor, as_completed
+
+logger = logging.getLogger(__name__)
 
 try:
     import akshare as ak
@@ -72,6 +75,7 @@ def _query_local_db(sql: str, params: tuple = ()) -> list:
         conn.close()
         return rows
     except Exception:
+        logger.warning("Local DB query failed", exc_info=True)
         return []
 
 
@@ -617,6 +621,7 @@ def get_stock_info(code: str) -> dict:
                 if not result.get("listing_date"):
                     result["listing_date"] = sr.get("list_date")
         except Exception:
+            logger.warning(f"Failed to enrich stock info for {code}", exc_info=True)
             pass
         return result
 
@@ -683,6 +688,7 @@ def get_financial_data(code: str, years: int = 1) -> dict:
                     **em["现金流量表"]["data"]
                 })
     except Exception:
+        logger.warning(f"Eastmoney fundamentals fallback failed for {code}", exc_info=True)
         pass
 
     all_ok = (
@@ -728,6 +734,7 @@ def get_financial_indicators(code: str, limit: int = 8) -> dict:
             if df is not None and not df.empty:
                 return df.head(limit).to_dict(orient='records')
         except Exception:
+            logger.warning("Financial indicators API failed, trying next fallback", exc_info=True)
             continue
 
     return []
@@ -1019,6 +1026,7 @@ def _get_valuation_from_local_db(code: str) -> dict | None:
                 "_source": "local_db",
             }
     except Exception:
+        logger.warning(f"Local valuation lookup failed for {code}", exc_info=True)
         pass
     return None
 
@@ -1100,6 +1108,7 @@ def get_dividend_data(code: str) -> dict:
                     "dividend_count": len(df)
                 }
         except Exception:
+            logger.warning("Dividend API failed, trying next fallback", exc_info=True)
             continue
 
     return {"dividend_history": [], "dividend_count": 0}
