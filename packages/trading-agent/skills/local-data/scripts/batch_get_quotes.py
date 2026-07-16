@@ -120,13 +120,11 @@ def _get_local_quote(code: str, market: int) -> dict | None:
 
 
 def _market_prefix(code: str, market: int) -> str:
-    if code.startswith(("6", "9")) or market == 1:
+    if code.startswith(("60", "68", "90")) or market == 1:
         return "sh"
-    if code.startswith(("0", "3", "4")) or market == 0:
-        return "sz"
-    if code.startswith(("8", "4", "9")):
+    if code.startswith(("8", "4", "92")) or market == 2:
         return "bj"
-    return "sh" if market == 1 else "sz"
+    return "sz"
 
 
 def _sina_symbol(code: str, market: int) -> str:
