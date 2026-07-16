@@ -47,10 +47,12 @@ def list_survivors(conn: sqlite3.Connection, min_rank: int = 0):
         FROM concept_filter_results
         WHERE size_pass = 1 AND dispersion_pass = 1 AND independence_pass = 1
     """
+    params = []
     if min_rank > 0:
-        sql += f" AND rank <= {min_rank}"
+        sql += " AND rank <= ?"
+        params.append(min_rank)
     sql += " ORDER BY rank"
-    rows = conn.execute(sql).fetchall()
+    rows = conn.execute(sql, params).fetchall()
     tagged = set(r[0] for r in conn.execute("SELECT concept FROM tracked_themes").fetchall())
 
     print(f"{'Rank':<5} {'Concept':<20} {'Size':<6} {'Disp':<8} {'Corr':<8} {'Score':<8} {'Status'}")

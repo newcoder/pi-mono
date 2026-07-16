@@ -73,20 +73,21 @@ def _load_stock_prices(
     for chunk in _chunked(constituents, chunk_size):
         codes = [c[0] for c in chunk]
         markets = [str(c[1]) for c in chunk]
-        code_list = ",".join(f"'{c}'" for c in codes)
-        market_list = ",".join(markets)
+        code_placeholders = ",".join("?" for _ in codes)
+        market_placeholders = ",".join("?" for _ in markets)
         sql = f"""
             SELECT k.date, k.code || '_' || k.market as ck, k.close * COALESCE(a.qfq_factor, 1.0) as qfq_close
             FROM klines k
             LEFT JOIN adjust_factors a ON k.code = a.code AND k.market = a.market AND k.date = a.date
-            WHERE k.code IN ({code_list})
-              AND k.market IN ({market_list})
+            WHERE k.code IN ({code_placeholders})
+              AND k.market IN ({market_placeholders})
               AND k.period = 'daily'
               AND k.adjust = 'bfq'
               AND k.close IS NOT NULL
             ORDER BY k.date
         """
-        df = pd.read_sql_query(sql, conn)
+        params = [*codes, *markets]
+        df = pd.read_sql_query(sql, conn, params=params)
         if not df.empty:
             frames.append(df)
     if not frames:

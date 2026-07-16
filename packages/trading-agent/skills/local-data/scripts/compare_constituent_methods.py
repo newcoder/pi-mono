@@ -22,6 +22,7 @@ import pandas as pd
 import numpy as np
 
 from classify_themes import CONCEPT_MERGE_MAP
+from local_data.db import get_db
 
 # Themes to test: parent → child concepts used for concept_stocks lookup and hot_stocks reason search
 TEST_THEMES = {
@@ -241,8 +242,7 @@ def summarize(df: pd.DataFrame):
 
 
 def main():
-    db_path = os.path.expanduser("~/.trading-agent/data/market.db")
-    conn = sqlite3.connect(db_path)
+    conn = get_db()
     try:
         df = run_comparison(conn)
         summarize(df)

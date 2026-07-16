@@ -18,15 +18,10 @@ import sqlite3
 from datetime import datetime
 from typing import Dict, List, Set
 
+from local_data.db import get_db
+
 # Import from sibling scripts
 from classify_themes import CONCEPT_MERGE_MAP
-
-
-def get_db():
-    db_path = os.path.expanduser("~/.trading-agent/data/market.db")
-    conn = sqlite3.connect(db_path)
-    conn.execute("PRAGMA busy_timeout = 10000")
-    return conn
 
 
 def ensure_tables(conn: sqlite3.Connection):
