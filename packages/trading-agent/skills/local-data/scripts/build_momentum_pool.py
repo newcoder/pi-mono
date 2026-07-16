@@ -11,7 +11,7 @@ if _SCRIPT_DIR not in sys.path: sys.path.insert(0, _SCRIPT_DIR)
 if _SKILL_ROOT not in sys.path: sys.path.insert(0, _SKILL_ROOT)
 
 import argparse, sqlite3, math
-from datetime import datetime, timedelta
+from datetime import datetime
 from collections import defaultdict
 
 from local_data.db import get_db
@@ -107,8 +107,6 @@ def build_pool(conn, top_industries=3, min_score=0.2, period_days=20, lookback=2
     )
     pool_id = cur.lastrowid
 
-    total = 0
-    scored_total = 0
     for di, date in enumerate(dates):
         if (di + 1) % 100 == 0:
             print(f"  [{di+1}/{len(dates)}] {date}")
@@ -136,8 +134,6 @@ def build_pool(conn, top_industries=3, min_score=0.2, period_days=20, lookback=2
                 "INSERT INTO dynamic_pool_items (pool_id, date, code, market, name) VALUES (?,?,?,?,?)",
                 (pool_id, date, code, market, name)
             )
-        total += len(stocks)
-        scored_total += len(stocks)
 
     conn.commit()
     cnt = conn.execute("SELECT COUNT(*), COUNT(DISTINCT date), AVG(cnt) FROM (SELECT date, COUNT(*) as cnt FROM dynamic_pool_items WHERE pool_id=? GROUP BY date)", (pool_id,)).fetchone()
