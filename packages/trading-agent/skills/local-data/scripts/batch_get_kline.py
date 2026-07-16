@@ -50,7 +50,9 @@ FQT_MAP = {
     "hfq": "hfq",
 }
 
-# Map our period codes to mootdx/akshare frequency
+# Map our period codes to mootdx/akshare frequency.
+# mootdx native bars are used for daily/week/month/quarter/year;
+# akshare only provides daily, so non-daily periods resample akshare daily bars once.
 FREQ_MAP = {
     "1m": "1m",
     "5m": "5m",
@@ -59,10 +61,10 @@ FREQ_MAP = {
     "60m": "60m",
     "120m": "120m",
     "daily": "daily",
-    "week": "daily",     # fetch daily then resample
-    "month": "daily",    # fetch daily then resample
-    "quarter": "daily",  # fetch daily then resample
-    "year": "daily",     # fetch daily then resample
+    "week": "week",
+    "month": "month",
+    "quarter": "quarter",
+    "year": "year",
 }
 
 
@@ -83,7 +85,7 @@ def _resample_df(df, period, code_col='code'):
         'market': 'first',
     }
     freq = {
-        'week': 'W-MON',
+        'week': 'W-FRI',
         'month': 'ME',
         'quarter': 'QE',
         'year': 'YE',

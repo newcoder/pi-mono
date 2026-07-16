@@ -59,6 +59,10 @@ def main():
         "SELECT DISTINCT date FROM klines WHERE period = 'daily' AND adjust = 'bfq' AND date > ? AND date <= ? ORDER BY date",
         (fill_start, target_date)
     ).fetchall()]
+    if not trade_dates:
+        print(f"Trading dates to fill: 0 (already up to date)")
+        conn.close()
+        return
     print(f"Trading dates to fill: {len(trade_dates)} ({trade_dates[0]} ~ {trade_dates[-1]})")
 
     total_inserted = 0
