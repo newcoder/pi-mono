@@ -1170,8 +1170,8 @@ def get_index_constituents(index_name: str) -> list:
         if df is not None and not df.empty:
             return df['品种代码'].tolist()
         return []
-    except Exception as e:
-        print(f"获取指数成分股失败: {e}")
+    except Exception:
+        logger.warning(f"Failed to fetch index constituents for {index_name}", exc_info=True)
         return []
 
 
@@ -1182,8 +1182,8 @@ def get_all_a_stocks() -> list:
         if df is not None and not df.empty:
             return df['代码'].tolist()
         return []
-    except Exception as e:
-        print(f"获取全部A股失败: {e}")
+    except Exception:
+        logger.warning("Failed to fetch all A-share stocks", exc_info=True)
         return []
 
 

@@ -65,8 +65,8 @@ def fetch_astockdata_eastmoney_news(code: str, limit: int = 10) -> List[Dict]:
                 "url": it.get("url", ""),
             })
         return items
-    except Exception as e:
-        print(f"a-stock-data eastmoney news error for {code}: {e}", file=sys.stderr)
+    except Exception:
+        logger.warning(f"a-stock-data eastmoney news error for {code}", exc_info=True)
         return []
 
 
@@ -78,8 +78,8 @@ def fetch_eastmoney_news(code: str, limit: int = 20) -> List[Dict]:
         items = fetch_astockdata_eastmoney_news(code, limit=limit)
         if items:
             return items
-    except Exception as e:
-        print(f"Eastmoney a-stock-data fetch error for {code}: {e}", file=sys.stderr)
+    except Exception:
+        logger.warning(f"Eastmoney a-stock-data fetch error for {code}", exc_info=True)
 
     try:
         import akshare as ak
@@ -106,8 +106,8 @@ def fetch_eastmoney_news(code: str, limit: int = 20) -> List[Dict]:
                 logger.warning(f"Skipping malformed akshare news row for {code}", exc_info=True)
                 continue
         return results
-    except Exception as e:
-        print(f"Eastmoney fetch error for {code}: {e}", file=sys.stderr)
+    except Exception:
+        logger.warning(f"Eastmoney fetch error for {code}", exc_info=True)
         return []
 
 
@@ -149,8 +149,8 @@ def fetch_stcn_news(code: str, name: str, limit: int = 10) -> List[Dict]:
                 "url": item.get("url", ""),
             })
         return results
-    except Exception as e:
-        print(f"STCN fetch error for {code}: {e}", file=sys.stderr)
+    except Exception:
+        logger.warning(f"STCN fetch error for {code}", exc_info=True)
         return []
 
 
@@ -193,8 +193,8 @@ def fetch_cls_news(code: str, name: str, limit: int = 10) -> List[Dict]:
                 "url": f"https://www.cls.cn/detail/{item.get('id', '')}",
             })
         return results
-    except Exception as e:
-        print(f"CLS fetch error for {code}: {e}", file=sys.stderr)
+    except Exception:
+        logger.warning(f"CLS fetch error for {code}", exc_info=True)
         return []
 
 

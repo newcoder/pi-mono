@@ -67,7 +67,7 @@ def get_stock_kline(
                 }
         except Exception:
             logger.warning(f"mootdx kline fetch failed for {stock_code}", exc_info=True)
-            pass  # fallback to akshare
+            # fallback to akshare
 
     # 2. Fallback: akshare (supports qfq/hfq via stock_zh_a_hist)
     try:
@@ -105,7 +105,7 @@ def get_stock_kline(
             }
     except Exception:
         logger.warning(f"akshare kline fetch failed for {stock_code}", exc_info=True)
-        pass  # all sources failed
+        # all sources failed
 
     return {
         "code": stock_code, "market": "SH" if market == 1 else "SZ",

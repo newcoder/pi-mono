@@ -126,7 +126,7 @@ def _phase(name: str):
                 elapsed = time.time() - start
                 result["elapsed_seconds"] = round(elapsed, 2)
                 _sync_results["phases"][name] = result
-                status_icon = "✓" if result["status"] == "success" else "✗"
+                status_icon = "OK" if result["status"] == "success" else "FAIL"
                 logger.info(f"Phase '{name}' {status_icon} in {elapsed:.1f}s")
             return result
         return wrapper
