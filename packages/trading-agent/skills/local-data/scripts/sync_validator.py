@@ -247,8 +247,10 @@ def validate_industries() -> dict:
         cur.execute("SELECT COUNT(*) FROM industries")
         ind_count = cur.fetchone()[0]
 
-        cur.execute("SELECT COUNT(DISTINCT standard) FROM industries")
-        standards = cur.fetchone()[0]
+        cur.execute("SELECT DISTINCT standard FROM industries")
+        standards_set = {row[0] for row in cur.fetchall()}
+        standards = len(standards_set)
+        expected_standards = {"em"}
 
         cur.execute("SELECT COUNT(*) FROM stock_industries")
         mapping_count = cur.fetchone()[0]
@@ -262,9 +264,9 @@ def validate_industries() -> dict:
         if ind_count == 0:
             status = "FAIL"
             message = "No industry data"
-        elif standards < 3:
+        elif standards_set != expected_standards:
             status = "WARN"
-            message = f"Only {standards} standards (expected 6)"
+            message = f"Unexpected industry standards: {sorted(standards_set)} (expected {sorted(expected_standards)})"
         elif stock_count < 4000:
             status = "WARN"
             message = f"Only {stock_count} stocks have industry mappings (expected 5000+)"

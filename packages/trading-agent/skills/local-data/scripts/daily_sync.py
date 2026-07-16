@@ -1311,6 +1311,7 @@ def sync_industry_momentum() -> dict:
     except Exception as e:
         raise RuntimeError(f"Industry momentum calculation failed: {e}")
 
+# ── Phase 7: Sync Size IC ──────────────────────────────────────────────────
 
 @_phase("size_ic")
 def sync_size_ic() -> dict:
@@ -1323,7 +1324,7 @@ def sync_size_ic() -> dict:
         raise RuntimeError(f"Size IC calculation failed: {e}")
 
 
-# ── Phase 6: Sync Industries ───────────────────────────────────────────────
+# ── Phase 8: Sync Industries ───────────────────────────────────────────────
 
 @_phase("industries")
 def sync_industries() -> dict:
@@ -1336,7 +1337,7 @@ def sync_industries() -> dict:
         raise RuntimeError(f"Industry sync failed: {e}")
 
 
-# ── Phase 6: Sync Concepts ─────────────────────────────────────────────────
+# ── Phase 9: Sync Concepts ─────────────────────────────────────────────────
 
 @_phase("concepts")
 def sync_concepts() -> dict:
@@ -1349,7 +1350,7 @@ def sync_concepts() -> dict:
         raise RuntimeError(f"Concept sync failed: {e}")
 
 
-# ── Phase 6b: Sync Benchmark Index Klines ──────────────────────────────────────
+# ── Phase 10: Sync Benchmark Index Klines ─────────────────────────────────────
 
 @_phase("index_klines")
 def sync_index_klines() -> dict:
@@ -1362,7 +1363,7 @@ def sync_index_klines() -> dict:
         raise RuntimeError(f"Index klines sync failed: {e}")
 
 
-# ── Phase 6c: Build Concept Synthetic Klines ────────────────────────────────────
+# ── Phase 11: Build Concept Synthetic Klines ───────────────────────────────────
 
 @_phase("concept_synthetic_klines")
 def sync_concept_synthetic_klines() -> dict:
@@ -1375,7 +1376,7 @@ def sync_concept_synthetic_klines() -> dict:
         raise RuntimeError(f"Concept synthetic klines failed: {e}")
 
 
-# ── Phase 6d: Run Concept Filter ────────────────────────────────────────────────
+# ── Phase 12: Run Concept Filter ───────────────────────────────────────────────
 
 @_phase("concept_filter")
 def sync_concept_filter() -> dict:
@@ -1388,7 +1389,7 @@ def sync_concept_filter() -> dict:
         raise RuntimeError(f"Concept filter failed: {e}")
 
 
-# ── Phase 6e: Compute Concept Momentum ──────────────────────────────────────────
+# ── Phase 13: Compute Concept Momentum ─────────────────────────────────────────
 
 @_phase("concept_momentum")
 def sync_concept_momentum() -> dict:
@@ -1401,7 +1402,7 @@ def sync_concept_momentum() -> dict:
         raise RuntimeError(f"Concept momentum failed: {e}")
 
 
-# ── Phase 7: Sync Hot Stocks ─────────────────────────────────────────────────
+# ── Phase 14: Sync Hot Stocks ────────────────────────────────────────────────
 
 @_phase("hot_stocks")
 def sync_hot_stocks() -> dict:
@@ -1459,7 +1460,7 @@ def sync_hot_stocks() -> dict:
         conn.close()
 
 
-# ── Phase 7b: Classify Market Themes ────────────────────────────────────────────
+# ── Phase 15: Classify Market Themes ───────────────────────────────────────────
 
 @_phase("classify_themes")
 def sync_classify_themes() -> dict:
@@ -1472,7 +1473,7 @@ def sync_classify_themes() -> dict:
         raise RuntimeError(f"Theme classification failed: {e}")
 
 
-# ── Phase 8: Sync Stock News ───────────────────────────────────────────────
+# ── Phase 16: Sync Stock News ──────────────────────────────────────────────
 
 @_phase("stock_news")
 def sync_stock_news() -> dict:
@@ -1490,7 +1491,7 @@ def sync_stock_news() -> dict:
         raise RuntimeError(f"Stock news sync failed: {e}")
 
 
-# ── Phase 8: Sync Market News ──────────────────────────────────────────────
+# ── Phase 17: Sync Market News ─────────────────────────────────────────────
 
 @_phase("market_news")
 def sync_market_news() -> dict:
@@ -1503,7 +1504,7 @@ def sync_market_news() -> dict:
         raise RuntimeError(f"Market news sync failed: {e}")
 
 
-# ── Phase 9: Validation ────────────────────────────────────────────────────
+# ── Phase 18: Validation ───────────────────────────────────────────────────
 
 @_phase("validation")
 def run_validation() -> dict:
@@ -1528,7 +1529,7 @@ def run_validation() -> dict:
     return report
 
 
-# ── Phase 10: Data Quality Sampling ────────────────────────────────────────
+# ── Phase 19: Data Quality Sampling ─────────────────────────────────────────
 
 @_phase("data_quality")
 def run_data_quality_sampling() -> dict:
@@ -1605,28 +1606,29 @@ def run_data_quality_sampling() -> dict:
 
 # ── Main ───────────────────────────────────────────────────────────────────
 
+ALL_PHASES: List[Tuple[str, callable]] = [
+    ("stocks", sync_stocks),
+    ("quotes", sync_quotes),
+    ("klines", sync_klines),
+    ("fundamentals", sync_fundamentals),
+    ("indicators", sync_indicators),
+    ("industry_momentum", sync_industry_momentum),
+    ("size_ic", sync_size_ic),
+    ("industries", sync_industries),
+    ("concepts", sync_concepts),
+    ("hot_stocks", sync_hot_stocks),
+    ("stock_news", sync_stock_news),
+    ("market_news", sync_market_news),
+    ("validation", run_validation),
+    ("data_quality", run_data_quality_sampling),
+]
+
+
 def run_all_phases(phases: Optional[List[str]] = None):
     """Run all or selected sync phases."""
     ensure_tables()
 
-    all_phases = [
-        ("stocks", sync_stocks),
-        ("quotes", sync_quotes),
-        ("klines", sync_klines),
-        ("fundamentals", sync_fundamentals),
-        ("indicators", sync_indicators),
-        ("industry_momentum", sync_industry_momentum),
-        ("size_ic", sync_size_ic),
-        ("industries", sync_industries),
-        ("concepts", sync_concepts),
-        ("hot_stocks", sync_hot_stocks),
-        ("stock_news", sync_stock_news),
-        ("market_news", sync_market_news),
-        ("validation", run_validation),
-        ("data_quality", run_data_quality_sampling),
-    ]
-
-    for name, func in all_phases:
+    for name, func in ALL_PHASES:
         if phases and name not in phases:
             logger.info(f"Skipping phase: {name}")
             continue
@@ -1689,7 +1691,7 @@ def main():
         for p in args.phase:
             phases.extend([s.strip() for s in p.split(",") if s.strip()])
     if args.skip_fundamentals and not phases:
-        phases = ["stocks", "quotes", "klines", "industry_momentum", "size_ic", "industries", "concepts", "hot_stocks", "stock_news", "market_news", "validation"]
+        phases = [name for name, _ in ALL_PHASES if name != "fundamentals"]
 
     run_all_phases(phases)
 
