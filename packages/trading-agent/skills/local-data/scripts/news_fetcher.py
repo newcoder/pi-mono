@@ -322,8 +322,8 @@ def fetch_cls_telegraph(limit: int = 100) -> List[Dict]:
                 "url": "",
             })
         return news
-    except Exception as e:
-        print(f"CLS telegraph fetch error: {e}", file=sys.stderr)
+    except Exception:
+        logger.warning("CLS telegraph fetch failed", exc_info=True)
         return []
 
 
@@ -361,8 +361,8 @@ def fetch_eastmoney_global_news(limit: int = 100) -> List[Dict]:
                 "url": "",
             })
         return news
-    except Exception as e:
-        print(f"Eastmoney global news fetch error: {e}", file=sys.stderr)
+    except Exception:
+        logger.warning("Eastmoney global news fetch failed", exc_info=True)
         return []
 
 
@@ -390,8 +390,8 @@ def fetch_news(code: str = "", sources: List[str] = None, limit_per_source: int 
                     items.extend(fetch_cls_telegraph(limit=limit_per_source))
                 elif source == "eastmoney_global":
                     items.extend(fetch_eastmoney_global_news(limit=limit_per_source))
-        except Exception as e:
-            print(f"fetch_news error for source {source}: {e}", file=sys.stderr)
+        except Exception:
+            logger.warning(f"fetch_news failed for source {source}", exc_info=True)
 
     # Sort by pub_time descending
     items.sort(key=lambda x: x.get("pub_time", ""), reverse=True)

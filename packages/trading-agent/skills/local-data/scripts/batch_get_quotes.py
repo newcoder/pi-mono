@@ -145,8 +145,8 @@ def fetch_sina_batch_quotes(items: list[dict]) -> list[dict]:
         r = requests.get(url, headers=HEADERS, timeout=20)
         r.encoding = "gbk"
         text = r.text
-    except Exception as e:
-        print(f"Sina batch request failed: {e}", file=sys.stderr)
+    except Exception:
+        logger.warning("Sina batch request failed", exc_info=True)
         return []
 
     results = []

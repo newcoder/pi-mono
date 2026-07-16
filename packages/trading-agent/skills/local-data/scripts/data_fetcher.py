@@ -622,7 +622,6 @@ def get_stock_info(code: str) -> dict:
                     result["listing_date"] = sr.get("list_date")
         except Exception:
             logger.warning(f"Failed to enrich stock info for {code}", exc_info=True)
-            pass
         return result
 
     # 2. Fallback: Eastmoney fast quote for all fields (~0.5-1s)
@@ -689,7 +688,6 @@ def get_financial_data(code: str, years: int = 1) -> dict:
                 })
     except Exception:
         logger.warning(f"Eastmoney fundamentals fallback failed for {code}", exc_info=True)
-        pass
 
     all_ok = (
         result.get("balance_sheet")
@@ -1027,7 +1025,6 @@ def _get_valuation_from_local_db(code: str) -> dict | None:
             }
     except Exception:
         logger.warning(f"Local valuation lookup failed for {code}", exc_info=True)
-        pass
     return None
 
 

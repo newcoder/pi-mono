@@ -157,7 +157,6 @@ def get_stock_fundamentals(stock_code: str, market: int = 1, history: bool = Fal
                 }
         except Exception:
             logger.warning(f"mootdx fundamentals fetch failed for {stock_code}", exc_info=True)
-            pass  # fallback to Eastmoney
 
     # 2. Fallback: Eastmoney F10 HTTP API
     prefix = "sh" if market == 1 else "sz"

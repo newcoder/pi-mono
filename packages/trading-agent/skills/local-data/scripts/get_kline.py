@@ -103,8 +103,8 @@ def get_stock_kline(
                 "count": len(klines), "klines": klines, "factors": [],
                 "_source": "akshare",
             }
-    except Exception as e:
-        logger.warning(f"akshare kline fetch failed for {stock_code}: {e}", exc_info=True)
+    except Exception:
+        logger.warning(f"akshare kline fetch failed for {stock_code}", exc_info=True)
         pass  # all sources failed
 
     return {

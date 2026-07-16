@@ -6,6 +6,7 @@ import os
 import sys
 import io
 import warnings
+import logging
 
 _SCRIPT_DIR = os.path.dirname(os.path.abspath(__file__))
 _SKILL_ROOT = os.path.dirname(_SCRIPT_DIR)
@@ -15,6 +16,8 @@ if _SKILL_ROOT not in sys.path:
     sys.path.insert(0, _SKILL_ROOT)
 
 import pandas as pd
+
+logger = logging.getLogger(__name__)
 
 warnings.filterwarnings('ignore')
 sys.stdout = io.TextIOWrapper(sys.stdout.buffer, encoding="utf-8")
@@ -168,8 +171,8 @@ def batch_get_kline(stock_codes, start_date, end_date, period="daily", adjust="b
                 period=period, adjust=adjust,
                 start=start_date, end=end_date,
             ) or []
-        except Exception as mx_err:
-            print(json.dumps({"_mootdx_error": str(mx_err), "code": item["code"]}, ensure_ascii=False), file=sys.stderr)
+        except Exception:
+            logger.warning(f"mootdx kline fetch failed for {item['code']}", exc_info=True)
             return []
 
     def _from_akshare(item):
@@ -205,8 +208,8 @@ def batch_get_kline(stock_codes, start_date, end_date, period="daily", adjust="b
                     "pre_close": None,
                 })
             return rows
-        except Exception as ak_err:
-            print(json.dumps({"_akshare_error": str(ak_err), "code": code}, ensure_ascii=False), file=sys.stderr)
+        except Exception:
+            logger.warning(f"akshare kline fetch failed for {code}", exc_info=True)
             return []
 
     def _is_bj(code: str) -> bool:

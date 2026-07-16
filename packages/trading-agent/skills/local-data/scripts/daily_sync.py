@@ -1088,7 +1088,6 @@ def sync_fundamentals() -> dict:
                 return ctype_input["value"]
         except Exception:
             logger.warning(f"Failed to get company type for {symbol_lower}", exc_info=True)
-            pass
         return None
 
     def _get_report_dates(endpoint: str, company_type: str, code: str) -> list:
@@ -1101,7 +1100,6 @@ def sync_fundamentals() -> dict:
                 return [item["REPORT_DATE"] for item in data["data"] if "REPORT_DATE" in item]
         except Exception:
             logger.warning(f"Failed to get report dates for {code} via {endpoint}", exc_info=True)
-            pass
         return []
 
     def _fetch_statement(endpoint: str, company_type: str, code: str, report_dates: list) -> list:
