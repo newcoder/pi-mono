@@ -64,7 +64,8 @@ packages/trading-agent/skills/local-data/
 ├── scripts/                  # Executable Python scripts
 └── local_data/               # Shared Python package
     ├── __init__.py
-    └── db.py                 # Canonical DB path and get_db() helper
+    ├── db.py                 # Canonical DB path and get_db() helper
+    └── market.py             # Canonical A-share market judgment
 ```
 
 ### Shared database utilities
@@ -76,6 +77,16 @@ from local_data.db import get_db, get_db_path, db_exists
 ```
 
 Avoid duplicating the hard-coded `~/.trading-agent/data/market.db` path in new scripts.
+
+### Market judgment
+
+All scripts must use `local_data.market` for market-code inference:
+
+```python
+from local_data.market import market_from_code, market_label, market_prefix
+```
+
+Do not inline `code.startswith(...)` market checks.
 
 ### Data read interface
 
