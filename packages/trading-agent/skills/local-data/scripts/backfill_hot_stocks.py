@@ -14,7 +14,6 @@ if _SKILL_ROOT not in sys.path:
     sys.path.insert(0, _SKILL_ROOT)
 
 import argparse
-import importlib.util
 import sqlite3
 from local_data.db import get_db, get_db_path, db_exists
 from local_data.market import market_from_code
@@ -23,17 +22,7 @@ from concurrent.futures import ThreadPoolExecutor, as_completed
 from datetime import date, datetime, timedelta
 from typing import Dict, List, Set
 
-_SCRIPT_DIR = os.path.dirname(os.path.abspath(__file__))
-_A_STOCK_DATA_DIR = os.path.normpath(os.path.join(_SCRIPT_DIR, "..", "..", "a-stock-data", "scripts"))
-
-
-def _load_hot_stocks_module():
-    module_path = os.path.join(_A_STOCK_DATA_DIR, "get_hot_stocks.py")
-    spec = importlib.util.spec_from_file_location("astockdata_get_hot_stocks", module_path)
-    module = importlib.util.module_from_spec(spec)
-    sys.modules[spec.name] = module
-    spec.loader.exec_module(module)
-    return module
+from hot_stocks_fetcher import fetch_hot_stocks
 
 
 def _market_from_code(code: str) -> int:
@@ -76,10 +65,10 @@ def get_existing_dates(conn: sqlite3.Connection) -> Set[str]:
     return {r[0] for r in rows}
 
 
-def fetch_for_day(module, d: date):
+def fetch_for_day(d: date):
     date_str = d.isoformat()
     try:
-        data = module.fetch_hot_stocks(date_str)
+        data = fetch_hot_stocks(date_str)
         return date_str, data.get("rows", []) or data.get("data", [])
     except Exception as e:
         print(f"  {date_str}: fetch failed - {e}", file=sys.stderr)
@@ -158,8 +147,6 @@ def main():
     start = datetime.strptime(args.start_date, "%Y-%m-%d").date()
     end = datetime.strptime(args.end_date, "%Y-%m-%d").date()
 
-    module = _load_hot_stocks_module()
-
     conn = get_db()
     ensure_table(conn)
     existing = get_existing_dates(conn)
@@ -178,7 +165,7 @@ def main():
     fetched_results = {}
     t0 = time.time()
     with ThreadPoolExecutor(max_workers=args.workers) as executor:
-        futures = {executor.submit(fetch_for_day, module, d): d for d in missing}
+        futures = {executor.submit(fetch_for_day, d): d for d in missing}
         for i, future in enumerate(as_completed(futures)):
             d = futures[future]
             date_str, rows = future.result()

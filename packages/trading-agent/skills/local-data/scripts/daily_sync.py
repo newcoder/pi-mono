@@ -64,28 +64,6 @@ logging.basicConfig(
 )
 logger = logging.getLogger('daily_sync')
 
-# ── a-stock-data script runner ─────────────────────────────────────────────
-
-def _run_astockdata_script(script_name: str, args: List[str], timeout: int = 60) -> dict:
-    """Run an a-stock-data Python script and parse its JSON output."""
-    script_path = os.path.normpath(os.path.join(_SCRIPT_DIR, "..", "..", "a-stock-data", "scripts", script_name))
-    proc = subprocess.run(
-        [sys.executable, script_path, *args],
-        capture_output=True,
-        text=True,
-        encoding="utf-8",
-        timeout=timeout,
-        env={**os.environ, "PYTHONIOENCODING": "utf-8"},
-    )
-    if proc.returncode != 0:
-        raise RuntimeError(f"{script_name} failed: {proc.stderr[:500]}")
-    stdout = proc.stdout.strip()
-    start = stdout.find("{")
-    if start == -1:
-        raise RuntimeError(f"No JSON found in {script_name} output")
-    return json.loads(stdout[start:])
-
-
 # ── Result tracking ────────────────────────────────────────────────────────
 _sync_results = {
     "start_time": datetime.now().isoformat(),
@@ -984,12 +962,17 @@ def sync_concept_momentum() -> dict:
 
 @_phase("hot_stocks")
 def sync_hot_stocks() -> dict:
-    """Sync Tonghuashun hot strong stocks snapshot via a-stock-data."""
+    """Sync Tonghuashun hot strong stocks snapshot via local hot_stocks_fetcher."""
     target_date = SYNC_DATE or datetime.now().strftime('%Y-%m-%d')
     now = datetime.now().isoformat()
 
-    script_args = ["--date", target_date] if SYNC_DATE else []
-    data = _run_astockdata_script("get_hot_stocks.py", script_args, timeout=120)
+    from hot_stocks_fetcher import fetch_hot_stocks
+
+    try:
+        data = fetch_hot_stocks(date=target_date)
+    except Exception as e:
+        raise RuntimeError(f"hot_stocks_fetcher failed: {e}")
+
     rows = data.get("rows", []) or data.get("data", [])
     if not rows:
         logger.info(f"No hot stocks returned for {target_date}.")
