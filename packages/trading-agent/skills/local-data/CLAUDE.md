@@ -64,8 +64,10 @@ packages/trading-agent/skills/local-data/
 ├── scripts/                  # Executable Python scripts
 └── local_data/               # Shared Python package
     ├── __init__.py
-    ├── db.py                 # Canonical DB path and get_db() helper
-    └── market.py             # Canonical A-share market judgment
+    ├── db.py                 # Canonical DB path, get_db(), and context managers
+    ├── env.py                # Shared env setup (sys.path, proxy, encoding)
+    ├── market.py             # Canonical A-share market judgment
+    └── schema.py             # Canonical table DDL and migrations
 ```
 
 ### Shared database utilities
@@ -77,6 +79,35 @@ from local_data.db import get_db, get_db_path, db_exists
 ```
 
 Avoid duplicating the hard-coded `~/.trading-agent/data/market.db` path in new scripts.
+
+For write transactions, prefer the context managers:
+
+```python
+from local_data.db import db_cursor, db_connection
+
+with db_cursor() as cur:
+    cur.execute("INSERT ...")
+```
+
+### Environment setup
+
+Scripts should call `local_data.env.init_script_env()` at startup to handle `sys.path`, proxy cleanup, and UTF-8 stdout encoding:
+
+```python
+from local_data.env import init_script_env
+init_script_env()
+```
+
+### Schema management
+
+Table creation and lightweight migrations live in `local_data/schema.py`. Sync scripts should call:
+
+```python
+from local_data.schema import ensure_tables
+ensure_tables()
+```
+
+Do not inline `CREATE TABLE` statements in new scripts.
 
 ### Market judgment
 

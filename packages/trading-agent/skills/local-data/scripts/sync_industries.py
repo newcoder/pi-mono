@@ -184,7 +184,7 @@ def sync_standard(standard, db_path, now):
     if not industries:
         return {"standard": standard, "error": "No industries found"}
 
-    conn = sqlite3.connect(db_path)
+    conn = get_db()
     cur = conn.cursor()
 
     # Save industry definitions

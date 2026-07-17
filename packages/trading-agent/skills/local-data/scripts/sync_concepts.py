@@ -46,7 +46,7 @@ def _get_market_from_code(code):
 
 def _save_concept_stocks(db_path, concept_name, stocks):
     """Save concept stocks to SQLite."""
-    conn = sqlite3.connect(db_path)
+    conn = get_db()
     cur = conn.cursor()
     now = time.strftime('%Y-%m-%dT%H:%M:%S')
 
@@ -247,7 +247,7 @@ def sync_all_concepts():
         print(json.dumps({"error": "No concepts found"}, ensure_ascii=False))
         return {"error": "No concepts found"}
 
-    conn = sqlite3.connect(db_path)
+    conn = get_db()
     cur = conn.cursor()
     now = time.strftime('%Y-%m-%dT%H:%M:%S')
 

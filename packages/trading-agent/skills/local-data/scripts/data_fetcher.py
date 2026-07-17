@@ -68,8 +68,7 @@ def _query_local_db(sql: str, params: tuple = ()) -> list:
     if not os.path.exists(get_db_path()):
         return []
     try:
-        conn = sqlite3.connect(get_db_path())
-        conn.row_factory = sqlite3.Row
+        conn = get_db()
         cur = conn.cursor()
         cur.execute(sql, params)
         rows = [dict(r) for r in cur.fetchall()]

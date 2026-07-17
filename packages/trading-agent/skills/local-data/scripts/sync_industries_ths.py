@@ -122,9 +122,8 @@ def fetch_ths_industry_stocks(industry_code: str, headers: dict) -> list:
 
 def sync_ths_industries() -> dict:
     """Sync THS industry classifications to local DB."""
-    db_path = get_db_path()
     now = time.strftime('%Y-%m-%dT%H:%M:%S')
-    conn = sqlite3.connect(db_path)
+    conn = get_db()
     cur = conn.cursor()
 
     industries = fetch_ths_industry_list()

@@ -28,9 +28,7 @@ def _log(msg):
 
 def calc_growth_factors(year: int, save: bool = False):
     """Calculate YoY revenue and profit growth for the given fiscal year."""
-    db_path = get_db_path()
-    conn = sqlite3.connect(db_path)
-    conn.row_factory = sqlite3.Row
+    conn = get_db()
     cur = conn.cursor()
 
     prev_year = year - 1
