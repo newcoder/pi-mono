@@ -359,7 +359,7 @@ def _get_eastmoney_quote(code: str, timeout: float = 8.0) -> dict:
     """Fetch real-time quote from Eastmoney API (~0.5-1s)."""
     if not HAS_REQUESTS:
         return {"error": "requests not installed"}
-    market = 1 if _market_prefix(code) == "sh" else 0
+    market = market_from_code(code) or 0
     secid = f"{market}.{code}"
     api_url = (
         "https://push2.eastmoney.com/api/qt/stock/get"

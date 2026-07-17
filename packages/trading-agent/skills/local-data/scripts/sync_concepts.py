@@ -19,6 +19,7 @@ import argparse
 import json
 import sqlite3
 from local_data.db import get_db, get_db_path, db_exists
+from local_data.market import market_from_code
 import time
 
 import requests
@@ -40,9 +41,7 @@ def _log(msg):
 
 def _get_market_from_code(code):
     """1=SH, 0=SZ, 2=BJ"""
-    if code.startswith(("8", "4", "92")):
-        return 2
-    return 1 if code.startswith(("60", "68", "90")) else 0
+    return market_from_code(code) or 0
 
 
 def _save_concept_stocks(db_path, concept_name, stocks):

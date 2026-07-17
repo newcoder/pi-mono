@@ -24,6 +24,7 @@ import requests
 import logging
 
 from local_data.db import get_db, get_db_path
+from local_data.market import market_prefix
 
 logger = logging.getLogger(__name__)
 
@@ -120,11 +121,10 @@ def _get_local_quote(code: str, market: int) -> dict | None:
 
 
 def _market_prefix(code: str, market: int) -> str:
-    if code.startswith(("60", "68", "90")) or market == 1:
-        return "sh"
-    if code.startswith(("8", "4", "92")) or market == 2:
-        return "bj"
-    return "sz"
+    prefix = market_prefix(code, "lower")
+    if prefix:
+        return prefix
+    return {1: "sh", 2: "bj", 0: "sz"}.get(market, "sz")
 
 
 def _sina_symbol(code: str, market: int) -> str:

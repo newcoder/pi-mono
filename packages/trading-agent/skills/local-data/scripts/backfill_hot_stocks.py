@@ -17,6 +17,7 @@ import argparse
 import importlib.util
 import sqlite3
 from local_data.db import get_db, get_db_path, db_exists
+from local_data.market import market_from_code
 import time
 from concurrent.futures import ThreadPoolExecutor, as_completed
 from datetime import date, datetime, timedelta
@@ -36,9 +37,7 @@ def _load_hot_stocks_module():
 
 
 def _market_from_code(code: str) -> int:
-    if code.startswith(("8", "4", "92", "43")):
-        return 2
-    return 1 if code.startswith(("60", "68", "90", "689")) else 0
+    return market_from_code(code) or 0
 
 
 def _safe_float(v):

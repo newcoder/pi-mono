@@ -9,6 +9,8 @@ import logging
 import pandas as pd
 from concurrent.futures import ThreadPoolExecutor, as_completed
 
+from local_data.market import market_prefix
+
 logger = logging.getLogger(__name__)
 
 warnings.filterwarnings('ignore')
@@ -22,12 +24,7 @@ if _SKILL_ROOT not in sys.path:
 
 
 def _market_prefix(code: str) -> str:
-    if code.startswith(("60", "68", "90")):
-        return f"sh{code}"
-    elif code.startswith(("8", "4", "92")):
-        return f"bj{code}"
-    else:
-        return f"sz{code}"
+    return market_prefix(code, "lower") or f"sz{code}"
 
 
 def _get_factors_single_akshare(code: str, market: int, start_date: str, end_date: str) -> list:

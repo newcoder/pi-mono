@@ -12,6 +12,8 @@ import sys
 import io
 import warnings
 
+from local_data.market import market_from_code
+
 warnings.filterwarnings('ignore')
 sys.stdout = io.TextIOWrapper(sys.stdout.buffer, encoding="utf-8")
 
@@ -26,8 +28,8 @@ def _is_a_share(code: str) -> bool:
     # Shenzhen main board + SME + ChiNext
     if code.startswith(("000", "001", "002", "003", "300", "301")):
         return True
-    # Beijing Stock Exchange (6-digit)
-    if code.startswith(("430", "830", "87", "88", "89", "92")):
+    # Beijing Stock Exchange (6-digit); exclude Tonghuashun/TX sector indices (88xxxx)
+    if code.startswith(("430", "830", "87", "89", "92")):
         return True
     return False
 
@@ -41,9 +43,7 @@ def _clean_name(name: str) -> str:
 
 def _get_market_from_code(code: str) -> int:
     """1=SH, 0=SZ, 2=BJ."""
-    if code.startswith(("8", "4", "92")):
-        return 2
-    return 1 if code.startswith(("60", "68", "90")) else 0
+    return market_from_code(code) or 0
 
 
 def get_all_stocks_from_mootdx():

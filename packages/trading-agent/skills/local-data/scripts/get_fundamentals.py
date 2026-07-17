@@ -8,6 +8,8 @@ from concurrent.futures import ThreadPoolExecutor, as_completed
 from requests.adapters import HTTPAdapter
 from urllib3.util.retry import Retry
 
+from local_data.market import market_label, market_prefix
+
 logger = logging.getLogger(__name__)
 
 HEADERS = {
@@ -131,7 +133,7 @@ def get_stock_fundamentals(stock_code: str, market: int = 1, history: bool = Fal
             if has_data:
                 return {
                     "stock_code": stock_code,
-                    "market": "SH" if market == 1 else "SZ",
+                    "market": market_label(stock_code) or ("SH" if market == 1 else "SZ"),
                     "company_type": "",
                     "利润表": {
                         "report_date": snap.get("report_date", ""),
@@ -159,7 +161,7 @@ def get_stock_fundamentals(stock_code: str, market: int = 1, history: bool = Fal
             logger.warning(f"mootdx fundamentals fetch failed for {stock_code}", exc_info=True)
 
     # 2. Fallback: Eastmoney F10 HTTP API
-    prefix = "sh" if market == 1 else "sz"
+    prefix = market_prefix(stock_code, "lower") or "sz"
     symbol_lower = f"{prefix}{stock_code}"
     code_upper = f"{prefix.upper()}{stock_code}"
 
@@ -168,7 +170,7 @@ def get_stock_fundamentals(stock_code: str, market: int = 1, history: bool = Fal
         # Stock has no F10 data (delisted, index, or invalid code)
         return {
             "stock_code": stock_code,
-            "market": "SH" if market == 1 else "SZ",
+            "market": market_label(stock_code) or ("SH" if market == 1 else "SZ"),
             "company_type": None,
             "_no_f10_data": True,
             "利润表": {"reports": [], "count": 0},
@@ -241,7 +243,7 @@ def get_stock_fundamentals(stock_code: str, market: int = 1, history: bool = Fal
 
     results = {
         "stock_code": stock_code,
-        "market": "SH" if market == 1 else "SZ",
+        "market": market_label(stock_code) or ("SH" if market == 1 else "SZ"),
         "company_type": company_type,
     }
 
