@@ -24,6 +24,7 @@ import json
 import io
 import sqlite3
 from local_data.db import get_db, get_db_path, db_exists
+from local_data.market import market_from_code, market_prefix
 import subprocess
 import time
 import traceback
@@ -590,11 +591,11 @@ def ensure_tables():
 # ── Phase 1: Sync Stocks ───────────────────────────────────────────────────
 
 def _is_a_share(code: str) -> bool:
-    """Strict A-share 6-digit code filter. Excludes funds, bonds, B-shares."""
+    """Strict A-share 6-digit code filter. Excludes funds, bonds, B-shares, indices."""
     if not code or len(code) != 6 or not code.isdigit():
         return False
     # Shanghai main board + STAR market
-    if code.startswith(("600", "601", "602", "603", "605", "688", "689")):
+    if code.startswith(("600", "601", "602", "603", "605", "688")):
         return True
     # Shenzhen main board + SME + ChiNext
     if code.startswith(("000", "001", "002", "003", "300", "301")):
@@ -602,9 +603,22 @@ def _is_a_share(code: str) -> bool:
     return False
 
 
+def _is_valid_stock_name(name: str) -> bool:
+    """Exclude delisted and ST/*ST names. Keep suspended stocks (their names may appear garbled in mootdx)."""
+    if not name or not name.strip():
+        return False
+    # Skip delisted stocks
+    if "退市" in name or name.endswith("退"):
+        return False
+    # Skip ST/*ST (risk warning boards)
+    if name.startswith("ST") or name.startswith("*ST"):
+        return False
+    return True
+
+
 @_phase("stocks")
 def sync_stocks() -> dict:
-    """Sync full stock list. Priority: akshare -> mootdx fallback."""
+    """Sync full stock list. Priority: mootdx -> akshare fallback."""
     conn = get_db()
     try:
         cur = conn.cursor()
@@ -622,11 +636,11 @@ def sync_stocks() -> dict:
                     code = str(row.get("code", "")).strip()
                     if not _is_a_share(code):
                         continue
-                    market = 1 if code.startswith(("60", "68")) else 0
+                    market = market_from_code(code) or 0
                     name = str(row.get("name", "") or "").replace("\x00", "").replace("\x01", "").strip()
-                    if "退市" in name or name.endswith("退"):
+                    if not _is_valid_stock_name(name):
                         continue
-                    stocks.append({"code": code, "market": market, "name": name or "(unknown)"})
+                    stocks.append({"code": code, "market": market, "name": name})
                 logger.info(f"Fetched {len(stocks)} stocks from mootdx.")
         except Exception as e:
             logger.warning(f"mootdx stock list failed: {e}")
@@ -641,7 +655,9 @@ def sync_stocks() -> dict:
                     name = str(row.get("名称", "")).strip()
                     if not _is_a_share(code):
                         continue
-                    market = 1 if code.startswith(("60", "68")) else 0
+                    market = market_from_code(code) or 0
+                    if not _is_valid_stock_name(name):
+                        continue
                     stocks.append({"code": code, "market": market, "name": name})
                 logger.info(f"Fetched {len(stocks)} stocks from akshare.")
             except Exception as e:
@@ -701,12 +717,7 @@ def _sync_quotes_from_tencent() -> dict:
             raise RuntimeError("No stocks found in DB")
 
         def _prefix(code: str) -> str:
-            if code.startswith(("60", "68", "90")):
-                return f"sh{code}"
-            elif code.startswith(("8", "4", "92")):
-                return f"bj{code}"
-            else:
-                return f"sz{code}"
+            return market_prefix(code, "lower") or f"sz{code}"
 
         def _safe_float(v):
             if v is None or v == '' or v == '-':
@@ -755,7 +766,7 @@ def _sync_quotes_from_tencent() -> dict:
 
                 code = key[2:] if len(key) > 2 else key
                 # Determine market from code prefix in response key
-                market = 1 if key.startswith("sh") else 0
+                market = market_from_code(code) or 0
 
                 name = vals[1] if len(vals) > 1 else None
                 latest = _safe_float(vals[3])   # 当前价
@@ -904,7 +915,7 @@ def sync_quotes() -> dict:
     count = 0
 
     def _market_from_code(code: str) -> int:
-        return 1 if str(code).startswith(("60", "68", "90")) else 0
+        return market_from_code(code) or 0
 
     def _safe_float(v):
         if v is None or v == '' or v == '-':
@@ -972,8 +983,11 @@ def sync_klines() -> dict:
         conn.close()
         raise RuntimeError("No stocks found. Run Phase 1 first.")
 
+    # Filter to valid A-share codes only; skip indices, B-shares, delisted, etc.
+    stocks = [s for s in stocks if _is_a_share(s["code"])]
+
     total = len(stocks)
-    logger.info(f"Found {total} stocks...")
+    logger.info(f"Found {total} valid A-share stocks...")
 
     # Determine target date from existing daily klines and skip stocks already up to date.
     # If no data exists, fall back to fetching the last 90 days for all stocks.
@@ -1074,7 +1088,7 @@ def sync_fundamentals() -> dict:
     }
 
     def _market_prefix(code: str) -> str:
-        return "sh" if code.startswith(("60", "68", "90")) else "sz"
+        return market_prefix(code, "lower") or "sz"
 
     def _get_company_type(symbol_lower: str) -> Optional[str]:
         try:
@@ -1338,7 +1352,19 @@ def sync_industries() -> dict:
         raise RuntimeError(f"Industry sync failed: {e}")
 
 
-# ── Phase 9: Sync Concepts ─────────────────────────────────────────────────
+# ── Phase 9: Sync Industry Klines ───────────────────────────────────────────
+
+def sync_industry_klines_ths_phase() -> dict:
+    """Sync THS industry index klines and quotes."""
+    try:
+        import sync_industry_klines_ths
+        result = sync_industry_klines_ths.sync_industry_klines_ths()
+        return {"detail": result}
+    except Exception as e:
+        raise RuntimeError(f"Industry klines sync failed: {e}")
+
+
+# ── Phase 10: Sync Concepts ─────────────────────────────────────────────────
 
 @_phase("concepts")
 def sync_concepts() -> dict:
@@ -1419,9 +1445,7 @@ def sync_hot_stocks() -> dict:
         return {"count": 0, "date": target_date}
 
     def _market_from_code(code: str) -> int:
-        if code.startswith(("8", "4", "92", "43")):
-            return 2
-        return 1 if code.startswith(("60", "68", "90", "689")) else 0
+        return market_from_code(code) or 0
 
     conn = get_db()
     try:
@@ -1616,6 +1640,7 @@ ALL_PHASES: List[Tuple[str, Callable]] = [
     ("industry_momentum", sync_industry_momentum),
     ("size_ic", sync_size_ic),
     ("industries", sync_industries),
+    ("industry_klines", sync_industry_klines_ths_phase),
     ("concepts", sync_concepts),
     ("hot_stocks", sync_hot_stocks),
     ("stock_news", sync_stock_news),

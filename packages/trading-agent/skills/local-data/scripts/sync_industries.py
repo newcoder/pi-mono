@@ -20,9 +20,15 @@ import argparse
 import json
 import sqlite3
 from local_data.db import get_db, get_db_path, db_exists
+from local_data.market import market_from_code
 import time
 
 import requests
+
+# Avoid unstable local HTTP proxies breaking requests to Eastmoney.
+for _proxy_key in ("HTTP_PROXY", "HTTPS_PROXY", "http_proxy", "https_proxy"):
+    os.environ.pop(_proxy_key, None)
+os.environ.setdefault("NO_PROXY", "*")
 
 _HEADERS = {
     "User-Agent": (
@@ -40,9 +46,7 @@ def _log(msg):
 
 def _get_market_from_code(code):
     """1=SH, 0=SZ, 2=BJ"""
-    if code.startswith(("8", "4", "92")):
-        return 2
-    return 1 if code.startswith(("60", "68", "90")) else 0
+    return market_from_code(code) or 0
 
 
 # ─── Eastmoney API helpers ──────────────────────────────────────────────────
@@ -258,25 +262,37 @@ def sync_standard(standard, db_path, now):
 
 
 def sync_all_standards():
-    """Sync all supported industry standards."""
+    """Sync all supported industry standards. Falls back to THS if Eastmoney is blocked."""
     db_path = get_db_path()
     now = time.strftime('%Y-%m-%dT%H:%M:%S')
 
-    # Only Eastmoney standard is supported without JoinQuant
-    standards = ["em"]
     results = []
 
-    for standard in standards:
-        try:
-            result = sync_standard(standard, db_path, now)
-            results.append(result)
-        except Exception as e:
-            _log(f"[sync_industries] Failed to sync {standard}: {e}")
-            results.append({"standard": standard, "error": str(e)})
+    # Try Eastmoney first
+    try:
+        result = sync_standard("em", db_path, now)
+        results.append(result)
+        if "error" not in result and result.get("mappings", 0) >= 1000:
+            output = {"results": results, "total_standards": 1}
+            print(json.dumps(output, ensure_ascii=False))
+            return output
+        _log(f"[sync_industries] Eastmoney result looks incomplete ({result.get('mappings', 0)} mappings), trying THS fallback...")
+    except Exception as e:
+        _log(f"[sync_industries] Eastmoney sync failed: {e}")
+        results.append({"standard": "em", "error": str(e)})
+
+    # Fallback to Tonghuashun
+    try:
+        import sync_industries_ths
+        ths_result = sync_industries_ths.sync_ths_industries()
+        results.append(ths_result)
+    except Exception as e:
+        _log(f"[sync_industries] THS fallback also failed: {e}")
+        results.append({"standard": "ths", "error": str(e)})
 
     output = {
         "results": results,
-        "total_standards": len(standards),
+        "total_standards": len(results),
     }
     print(json.dumps(output, ensure_ascii=False))
     return output
