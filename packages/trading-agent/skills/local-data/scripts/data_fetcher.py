@@ -1056,15 +1056,12 @@ def get_valuation_data(code: str) -> dict:
         except Exception as e:
             return {"error": str(e)}
 
-    executor = ThreadPoolExecutor(max_workers=2)
-    futures = [executor.submit(_eastmoney_task), executor.submit(_akshare_task)]
-    try:
+    with ThreadPoolExecutor(max_workers=2) as executor:
+        futures = [executor.submit(_eastmoney_task), executor.submit(_akshare_task)]
         for future in as_completed(futures):
             result = future.result()
             if "error" not in result:
                 return result
-    finally:
-        executor.shutdown(wait=False)
 
     return {"error": "估值数据获取失败", "note": "将使用基本信息中的估值"}
 
