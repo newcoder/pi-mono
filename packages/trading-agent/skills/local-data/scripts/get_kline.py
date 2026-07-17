@@ -6,6 +6,8 @@ import logging
 
 import pandas as pd
 
+from local_data.market import market_label
+
 logger = logging.getLogger(__name__)
 
 AK_ADJUST_MAP = {
@@ -23,8 +25,93 @@ AK_PERIOD_MAP = {
     "year": "yearly",
 }
 
+# Sina 分钟线仅支持 1/5/15/30/60 分钟，数据更新到最新交易日
+SINA_PERIOD_MAP = {
+    "1m": "1",
+    "5m": "5",
+    "15m": "15",
+    "30m": "30",
+    "60m": "60",
+}
+
 PERIOD_CHOICES = ["1m", "5m", "15m", "30m", "60m", "120m", "daily", "week", "month", "quarter", "year"]
 ADJUST_CHOICES = ["bfq", "qfq", "hfq"]
+
+
+def _sina_minute_prefix(market: int) -> str:
+    return {1: "sh", 0: "sz", 2: "bj"}.get(market, "sz")
+
+
+def _from_sina_minute(
+    stock_code: str,
+    market: int,
+    period: str,
+    adjust: str,
+    start_date: str,
+    end_date: str,
+) -> list:
+    """Fetch minute klines from Sina via akshare (real-time, covers latest trading day)."""
+    import akshare as ak
+
+    symbol = f"{_sina_minute_prefix(market)}{stock_code}"
+    sina_period = SINA_PERIOD_MAP[period]
+    sina_adjust = AK_ADJUST_MAP.get(adjust, "")
+
+    df = ak.stock_zh_a_minute(symbol=symbol, period=sina_period, adjust=sina_adjust)
+    if df is None or df.empty:
+        return []
+
+    df = df.sort_values("day").reset_index(drop=True)
+
+    # Filter by date range if provided
+    if start_date and len(start_date) == 8:
+        start_iso = f"{start_date[:4]}-{start_date[4:6]}-{start_date[6:8]} 00:00:00"
+        df = df[df["day"] >= start_iso]
+    if end_date and len(end_date) == 8:
+        end_iso = f"{end_date[:4]}-{end_date[4:6]}-{end_date[6:8]} 23:59:59"
+        df = df[df["day"] <= end_iso]
+
+    klines = []
+    prev_close = None
+    for _, row in df.iterrows():
+        dt = str(row["day"])
+        open_p = float(row["open"]) if pd.notna(row.get("open")) else None
+        close_p = float(row["close"]) if pd.notna(row.get("close")) else None
+        high_p = float(row["high"]) if pd.notna(row.get("high")) else None
+        low_p = float(row["low"]) if pd.notna(row.get("low")) else None
+        volume = float(row["volume"]) if pd.notna(row.get("volume")) else None
+        amount = float(row["amount"]) if pd.notna(row.get("amount")) else None
+
+        change_pct = None
+        change_amount = None
+        amplitude = None
+        if close_p is not None and prev_close is not None and prev_close != 0:
+            change_pct = round((close_p - prev_close) / prev_close * 100, 4)
+            change_amount = round(close_p - prev_close, 4)
+        if high_p is not None and low_p is not None and low_p != 0:
+            amplitude = round((high_p - low_p) / low_p * 100, 4)
+
+        klines.append({
+            "code": stock_code,
+            "market": market,
+            "period": period,
+            "adjust": adjust,
+            "date": dt,
+            "open": open_p,
+            "close": close_p,
+            "high": high_p,
+            "low": low_p,
+            "volume": volume,
+            "amount": amount,
+            "turnover": amount,
+            "change_pct": change_pct,
+            "change_amount": change_amount,
+            "amplitude": amplitude,
+            "pre_close": prev_close,
+        })
+        prev_close = close_p
+
+    return klines
 
 
 def get_stock_kline(
@@ -44,6 +131,32 @@ def get_stock_kline(
     - adjust: bfq (不复权), qfq (前复权), hfq (后复权)
     - start_date / end_date: YYYYMMDD
     """
+    # 0. Minute periods: Sina via akshare is real-time and fresher than mootdx
+    #    (mootdx public minute bars lag by multiple days).
+    if period in SINA_PERIOD_MAP:
+        try:
+            klines = _from_sina_minute(
+                stock_code, market, period, adjust, start_date, end_date
+            )
+            if klines:
+                return {
+                    "code": stock_code,
+                    "market": market_label(stock_code) or ("SH" if market == 1 else "SZ" if market == 0 else "BJ"),
+                    "period": period,
+                    "adjust": adjust,
+                    "start_date": start_date,
+                    "end_date": end_date,
+                    "count": len(klines),
+                    "klines": klines,
+                    "factors": [],
+                    "_source": "sina_minute",
+                }
+        except Exception:
+            logger.warning(
+                f"Sina minute fetch failed for {stock_code} {period}", exc_info=True
+            )
+            # fall through to mootdx/akshare
+
     # 1. Primary: mootdx for bfq (TCP direct, ~77ms for daily)
     if adjust == "bfq":
         try:
@@ -55,7 +168,7 @@ def get_stock_kline(
             if klines:
                 return {
                     "code": stock_code,
-                    "market": "SH" if market == 1 else "SZ",
+                    "market": market_label(stock_code) or ("SH" if market == 1 else "SZ"),
                     "period": period,
                     "adjust": adjust,
                     "start_date": start_date,
@@ -97,7 +210,7 @@ def get_stock_kline(
                     "turnover": None, "pre_close": None,
                 })
             return {
-                "code": stock_code, "market": "SH" if market == 1 else "SZ",
+                "code": stock_code, "market": market_label(stock_code) or ("SH" if market == 1 else "SZ"),
                 "period": period, "adjust": adjust,
                 "start_date": start_date, "end_date": end_date,
                 "count": len(klines), "klines": klines, "factors": [],
@@ -108,7 +221,7 @@ def get_stock_kline(
         # all sources failed
 
     return {
-        "code": stock_code, "market": "SH" if market == 1 else "SZ",
+        "code": stock_code, "market": market_label(stock_code) or ("SH" if market == 1 else "SZ"),
         "period": period, "adjust": adjust,
         "start_date": start_date, "end_date": end_date,
         "count": 0, "klines": [], "factors": [],

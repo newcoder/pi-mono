@@ -17,6 +17,8 @@ if _SKILL_ROOT not in sys.path:
 
 import pandas as pd
 
+from local_data.market import market_from_code, market_prefix
+
 logger = logging.getLogger(__name__)
 
 warnings.filterwarnings('ignore')
@@ -156,11 +158,7 @@ def batch_get_kline(stock_codes, start_date, end_date, period="daily", adjust="b
     ak_adjust = AK_ADJUST_MAP.get(adjust, "")
 
     def _symbol_prefix(code: str) -> str:
-        if code.startswith(("60", "68", "90")):
-            return f"sh{code}"
-        if code.startswith(("8", "4", "92")):
-            return f"bj{code}"
-        return f"sz{code}"
+        return market_prefix(code, "lower") or f"sz{code}"
 
     def _from_mootdx(item):
         if mootdx_kline is None or adjust != "bfq":
@@ -213,10 +211,22 @@ def batch_get_kline(stock_codes, start_date, end_date, period="daily", adjust="b
             return []
 
     def _is_bj(code: str) -> bool:
-        return code.startswith(("8", "4", "92"))
+        return market_from_code(code) == 2
+
+    def _is_a_share(code: str) -> bool:
+        """Strict A-share 6-digit code filter. Excludes funds, bonds, B-shares, indices."""
+        if not code or len(code) != 6 or not code.isdigit():
+            return False
+        if code.startswith(("600", "601", "602", "603", "605", "688", "689")):
+            return True
+        if code.startswith(("000", "001", "002", "003", "300", "301")):
+            return True
+        return False
 
     def _fetch_one(item):
         code = item["code"]
+        if not _is_a_share(code):
+            return []
         # Use mootdx for SH/SZ; akshare does not reliably cover delisted/suspended stocks.
         # For Beijing stocks, mootdx std market does not support them, so use akshare directly.
         if _is_bj(code):

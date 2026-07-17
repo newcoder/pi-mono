@@ -23,6 +23,7 @@ import json
 import time
 import sqlite3
 from local_data.db import get_db, get_db_path, db_exists
+from local_data.market import market_from_code, market_prefix
 from datetime import datetime, timedelta
 from typing import Optional, Callable
 import logging
@@ -58,8 +59,8 @@ _SESSION_CACHE = {}
 
 
 def _get_market_from_code(code: str) -> int:
-    """Infer market from code prefix: 1=SH, 0=SZ."""
-    return 1 if code.startswith(("60", "68", "90")) else 0
+    """Infer market from code prefix: 0=SZ, 1=SH, 2=BJ."""
+    return market_from_code(code) or 0
 
 
 def _query_local_db(sql: str, params: tuple = ()) -> list:
@@ -311,17 +312,13 @@ def safe_float(value) -> Optional[float]:
 
 
 def _to_akshare_symbol(code: str) -> str:
-    """Convert 6-digit code to SH600519 / SZ000001 format for akshare financial APIs."""
-    if code.startswith(('60', '68', '90')):
-        return f"SH{code}"
-    return f"SZ{code}"
+    """Convert 6-digit code to SH600519 / SZ000001 / BJ430047 format for akshare financial APIs."""
+    return market_prefix(code, "upper") or code
 
 
 def _to_akshare_lower_symbol(code: str) -> str:
-    """Convert 6-digit code to sh600519 / sz000001 format for akshare holder APIs."""
-    if code.startswith(('60', '68', '90')):
-        return f"sh{code}"
-    return f"sz{code}"
+    """Convert 6-digit code to sh600519 / sz000001 / bj430047 format for akshare holder APIs."""
+    return market_prefix(code, "lower") or code
 
 
 def _latest_report_date() -> str:
@@ -354,8 +351,8 @@ _EASTMONEY_HEADERS = {
 
 
 def _market_prefix(code: str) -> str:
-    """Return 'sh' or 'sz' prefix for Eastmoney APIs."""
-    return "sh" if code.startswith(('60', '68', '90')) else "sz"
+    """Return 'sh' / 'sz' / 'bj' prefix for Eastmoney APIs."""
+    return market_prefix(code, "lower") or "sz"
 
 
 def _get_eastmoney_quote(code: str, timeout: float = 8.0) -> dict:

@@ -16,6 +16,8 @@ import time
 import logging
 from typing import Optional, Dict, Any, List
 
+from local_data.market import market_prefix
+
 logger = logging.getLogger(__name__)
 
 # ─── mootdx client singleton ──────────────────────────────────
@@ -33,10 +35,8 @@ def _get_client():
 
 
 def _market_prefix(code: str) -> str:
-    """Return sh/sz prefix for mootdx."""
-    if code.startswith(("6", "9")):
-        return f"sh{code}"
-    return f"sz{code}"
+    """Return sh/sz/bj prefix for mootdx."""
+    return market_prefix(code, "lower") or f"sz{code}"
 
 
 # ─── Real-time Quote ──────────────────────────────────────────
@@ -121,6 +121,7 @@ def get_kline(
             "year": 11,
         }
         frequency = freq_map.get(period, 9)
+        is_intraday = period in ("1m", "5m", "15m", "30m", "60m", "120m")
 
         df = client.bars(symbol=code, frequency=frequency)
         if df is None or df.empty:
@@ -136,9 +137,19 @@ def get_kline(
         for _, row in df.iterrows():
             dt_val = row.get("datetime", "")
             if hasattr(dt_val, "strftime"):
-                date_str = dt_val.strftime("%Y-%m-%d")
+                if is_intraday:
+                    date_str = dt_val.strftime("%Y-%m-%d %H:%M:%S")
+                else:
+                    date_str = dt_val.strftime("%Y-%m-%d")
             else:
-                date_str = str(dt_val)[:10] if dt_val else ""
+                s = str(dt_val) if dt_val else ""
+                if is_intraday and len(s) >= 16:
+                    # mootdx returns 'YYYY-MM-DD HH:MM' (no seconds), append :00
+                    date_str = s[:16] + ":00"
+                elif len(s) >= 10:
+                    date_str = s[:10]
+                else:
+                    date_str = s
 
             open_p = float(row["open"]) if pd_notna(row.get("open")) else None
             close_p = float(row["close"]) if pd_notna(row.get("close")) else None
