@@ -8,7 +8,9 @@ sync/compute scripts do not duplicate them.
 
 import os
 import sqlite3
+from contextlib import contextmanager
 from pathlib import Path
+from typing import Generator
 
 
 def get_db_path() -> str:
@@ -32,6 +34,41 @@ def get_db() -> sqlite3.Connection:
     conn.row_factory = sqlite3.Row
     conn.execute("PRAGMA busy_timeout = 30000")
     return conn
+
+
+@contextmanager
+def db_cursor() -> Generator[sqlite3.Cursor, None, None]:
+    """Context manager yielding a cursor with automatic commit/rollback/close.
+
+    Usage:
+        with db_cursor() as cur:
+            cur.execute("INSERT ...")
+    """
+    conn = get_db()
+    try:
+        cur = conn.cursor()
+        yield cur
+        conn.commit()
+    except Exception:
+        conn.rollback()
+        raise
+    finally:
+        conn.close()
+
+
+@contextmanager
+def db_connection() -> Generator[sqlite3.Connection, None, None]:
+    """Context manager yielding a connection with automatic close.
+
+    Usage:
+        with db_connection() as conn:
+            conn.execute("SELECT ...")
+    """
+    conn = get_db()
+    try:
+        yield conn
+    finally:
+        conn.close()
 
 
 def db_exists() -> bool:
