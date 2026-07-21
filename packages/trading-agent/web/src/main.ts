@@ -1297,14 +1297,14 @@ async function selectSymbol(code: string, type: "stock" | "index" = "stock", kno
 	renderWatchlist();
 	renderIndices();
 
-	// Fetch quote, klines, and intraday in parallel
-	const klinesPromise = state.selectedType === "index"
-		? apiClient.getIndustryKlines(code, { period: state.selectedPeriod, limit: 10000 })
-		: apiClient.getKlines(code, { period: state.selectedPeriod, limit: 10000 });
-	const [quoteResult, klinesResult, intradayResult] = await Promise.allSettled([
+	// Fetch quote + klines first, render panel as soon as they arrive.
+	// Intraday (1m) is fetched separately to avoid blocking the panel
+	// on a slow Python subprocess + Sina API round-trip.
+	const [quoteResult, klinesResult] = await Promise.allSettled([
 		apiClient.getQuote(code),
-		klinesPromise,
-		apiClient.getKlines(code, { period: "1m", limit: 240 }),
+		state.selectedType === "index"
+			? apiClient.getIndustryKlines(code, { period: state.selectedPeriod, limit: 10000 })
+			: apiClient.getKlines(code, { period: state.selectedPeriod, limit: 10000 }),
 	]);
 
 	// Fetch news in background (fire-and-forget)
@@ -1332,25 +1332,10 @@ async function selectSymbol(code: string, type: "stock" | "index" = "stock", kno
 		console.error("Failed to fetch klines:", klinesResult.reason);
 	}
 
-	if (intradayResult.status === "fulfilled") {
-		const today = getTodayStr();
-		state.selectedIntraday = intradayResult.value
-			.filter((k: any) => typeof k.date === "string" && k.date.startsWith(today))
-			.map((k: any) => ({
-				date: k.date,
-				open: k.open,
-				high: k.high,
-				low: k.low,
-				close: k.close,
-				volume: k.volume,
-			}));
-	} else {
-		console.error("Failed to fetch intraday:", intradayResult.reason);
-	}
-
+	// Render panel immediately with quote + klines; intraday loads async below
 	renderStockChartPanel();
 
-	// Add to recent pool (fire-and-forget) - use knownName if provided, else from quote
+	// Add to recent pool (fire-and-forget)
 	if (type === "stock") {
 		const name = knownName || (quoteResult.status === "fulfilled" ? quoteResult.value?.name : null);
 		if (name) {
@@ -1358,6 +1343,9 @@ async function selectSymbol(code: string, type: "stock" | "index" = "stock", kno
 			addToRecentPool(code, name, market).catch((err) => console.error("[RecentPool] add failed:", err));
 		}
 	}
+
+	// Fetch intraday in background — does not block the main panel
+	loadIntradayData(code);
 
 	// Start real-time polling for intraday data during trading hours
 	startIntradayPolling(code);
