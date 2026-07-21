@@ -1,8 +1,16 @@
 import argparse
 import json
+import os
 import sys
 import io
 import logging
+
+_SCRIPT_DIR = os.path.dirname(os.path.abspath(__file__))
+_SKILL_ROOT = os.path.dirname(_SCRIPT_DIR)
+if _SCRIPT_DIR not in sys.path:
+    sys.path.insert(0, _SCRIPT_DIR)
+if _SKILL_ROOT not in sys.path:
+    sys.path.insert(0, _SKILL_ROOT)
 
 import pandas as pd
 
@@ -232,7 +240,7 @@ def get_stock_kline(
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description="Fetch A-share K-line data (mootdx/akshare, no JoinQuant)")
     parser.add_argument("stock_code", help="6-digit stock code, e.g. 600845")
-    parser.add_argument("--market", type=int, default=1, choices=[0, 1], help="1=Shanghai (default), 0=Shenzhen")
+    parser.add_argument("--market", type=int, default=1, choices=[0, 1, 2], help="1=Shanghai (default), 0=Shenzhen, 2=Beijing")
     parser.add_argument("--period", default="daily", choices=PERIOD_CHOICES, help="K-line period")
     parser.add_argument("--adjust", default="bfq", choices=ADJUST_CHOICES, help="Adjustment type")
     parser.add_argument("--start", default="19700101", help="Start date YYYYMMDD")

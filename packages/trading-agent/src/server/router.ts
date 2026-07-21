@@ -546,22 +546,69 @@ export async function handleRequest(
 			const market = marketFromCode(code);
 			const period = (query.period as any) || "daily";
 			const limit = query.limit ? Number(query.limit) : 100;
+			const INTRADAY_PERIODS = new Set(["1m", "5m", "15m", "30m", "60m"]);
+			const NON_DAILY_PERIODS = new Set(["week", "month", "quarter", "year"]);
 
 			let klines: any[] = [];
 			const store = requireStore();
+			const sync = requireSync();
 			const adjust = (query.adjust as any) || "bfq";
 
-			// 1. DB cache first — 统一周期命名为 week/month
-			klines = await store.getKlines({
-				code,
-				market,
-				period,
-				adjust,
-				limit,
-			});
+			// 1. DB cache first
+			klines = await store.getKlines({ code, market, period, adjust, limit });
 			console.log(`[Klines] DB cache for ${code} ${period}: ${klines.length} bars`);
 
-			// 2. Fallback: mootdx (TCP direct) with a short timeout
+			// 2. Determine if data is stale and needs a fresh sync
+			let needsSync = false;
+			const latestBarDate =
+				klines.length > 0 && typeof klines[klines.length - 1]?.date === "string"
+					? klines[klines.length - 1].date.slice(0, 10)
+					: null;
+
+			if (klines.length === 0) {
+				needsSync = true;
+			} else if (INTRADAY_PERIODS.has(period)) {
+				// Intraday: stale if latest bar is before today
+				if (latestBarDate && latestBarDate < todayStr()) {
+					needsSync = true;
+				}
+			} else if (NON_DAILY_PERIODS.has(period)) {
+				// week/month/quarter/year: stale if latest bar is before last period boundary
+				const now = new Date();
+				let threshold: Date;
+				switch (period) {
+					case "week":
+						threshold = new Date(now); threshold.setDate(now.getDate() - 7); break;
+					case "month":
+						threshold = new Date(now); threshold.setMonth(now.getMonth() - 1); break;
+					case "quarter":
+						threshold = new Date(now); threshold.setMonth(now.getMonth() - 3); break;
+					default: // year
+						threshold = new Date(now); threshold.setFullYear(now.getFullYear() - 1); break;
+				}
+				const thresholdStr = threshold.toISOString().slice(0, 10);
+				if (latestBarDate && latestBarDate < thresholdStr) {
+					needsSync = true;
+				}
+			}
+
+			// 3. Sync if needed (covers intraday + week/month/quarter/year)
+			if (needsSync && sync) {
+				const today = todayStr();
+				const start = new Date(Date.now() - 2 * 86400000).toISOString().slice(0, 10).replace(/-/g, "");
+				console.log(`[Klines] Syncing ${period} data for ${code} (latest bar: ${latestBarDate || "none"})`);
+				try {
+					const synced = await sync.syncKline(code, market, period, "bfq", start, today.replace(/-/g, ""));
+					console.log(`[Klines] Synced ${synced} ${period} bars for ${code}`);
+					if (synced > 0) {
+						klines = await store.getKlines({ code, market, period, adjust, limit });
+					}
+				} catch (e) {
+					console.warn(`[Klines] Sync failed for ${code} ${period}:`, e);
+				}
+			}
+
+			// 3. Fallback: mootdx (TCP direct) with a short timeout
 			if (klines.length === 0 && mootdxDaemon) {
 				console.log(`[Klines] Falling back to mootdx for ${code} ${period} (market=${market})`);
 				try {
