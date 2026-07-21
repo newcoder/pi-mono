@@ -26,11 +26,18 @@ _mootdx_client = None
 
 
 def _get_client():
-    """Lazy-init mootdx Quotes client."""
+    """Lazy-init mootdx Quotes client.
+
+    timeout=15 prevents hanging on sluggish server discovery and avoids
+    the factory picking a bad server node that returns empty DataFrames.
+    Without an explicit timeout, first-call server negotiation in some
+    network conditions can race against the default socket timeout and
+    produce empty responses instead of raising.
+    """
     global _mootdx_client
     if _mootdx_client is None:
         from mootdx.quotes import Quotes
-        _mootdx_client = Quotes.factory(market="std")
+        _mootdx_client = Quotes.factory(market="std", timeout=15)
     return _mootdx_client
 
 
@@ -137,10 +144,15 @@ def get_kline(
         for _, row in df.iterrows():
             dt_val = row.get("datetime", "")
             if hasattr(dt_val, "strftime"):
-                if is_intraday:
-                    date_str = dt_val.strftime("%Y-%m-%d %H:%M:%S")
-                else:
-                    date_str = dt_val.strftime("%Y-%m-%d")
+                try:
+                    if is_intraday:
+                        date_str = dt_val.strftime("%Y-%m-%d %H:%M:%S")
+                    else:
+                        date_str = dt_val.strftime("%Y-%m-%d")
+                except (ValueError, OverflowError, OSError):
+                    # mootdx occasionally returns invalid dates for delisted
+                    # stocks (e.g. '0-00-00'), skip the row
+                    continue
             else:
                 s = str(dt_val) if dt_val else ""
                 if is_intraday and len(s) >= 16:
@@ -371,7 +383,7 @@ if __name__ == "__main__":
 
     parser = argparse.ArgumentParser(description="mootdx data fetcher (TCP direct)")
     parser.add_argument("code", help="6-digit stock code")
-    parser.add_argument("--market", type=int, default=1, choices=[0, 1])
+    parser.add_argument("--market", type=int, default=1, choices=[0, 1, 2], help="1=Shanghai (default), 0=Shenzhen, 2=Beijing")
     parser.add_argument("--type", choices=["quote", "kline", "f10", "finance"], default="quote")
     parser.add_argument("--period", default="daily")
     parser.add_argument("--start")

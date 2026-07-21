@@ -18,7 +18,10 @@ if _SCRIPT_DIR not in sys.path:
 if _SKILL_ROOT not in sys.path:
     sys.path.insert(0, _SKILL_ROOT)
 
+import logging
 import requests
+
+logger = logging.getLogger(__name__)
 
 from local_data.market import market_prefix
 
@@ -80,7 +83,11 @@ def fetch_hot_stocks(date: str = None):
     )
     # Force GBK encoding — the server may claim UTF-8 but send GBK
     r.encoding = "gbk"
-    data = r.json()
+    try:
+        data = r.json()
+    except (ValueError, Exception):
+        logger.warning(f"Failed to parse JSON response for hot stocks")
+        return []
 
     if data.get("errocode", 0) != 0:
         raise RuntimeError(f"THS error: {data.get('errormsg', '')}")

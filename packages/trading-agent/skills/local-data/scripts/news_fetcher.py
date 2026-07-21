@@ -22,6 +22,23 @@ from urllib3.util.retry import Retry
 
 logger = logging.getLogger(__name__)
 
+
+def _safe_json(resp):
+    """Safely parse JSON from a requests Response.
+
+    Returns parsed dict/list, or {} on empty/parse-failed body.
+    Avoids JSONDecodeError crashes when upstream (Eastmoney, CLS, etc.)
+    returns 200 OK with an empty or malformed body for delisted stocks.
+    """
+    text = resp.text if hasattr(resp, "text") else ""
+    if not text or not text.strip():
+        return {}
+    try:
+        return resp.json()
+    except (ValueError, json.JSONDecodeError):
+        logger.debug(f"JSON parse failed for {resp.url} (status={resp.status_code})")
+        return {}
+
 _SCRIPT_DIR = os.path.dirname(os.path.abspath(__file__))
 if _SCRIPT_DIR not in sys.path:
     sys.path.insert(0, _SCRIPT_DIR)
@@ -131,7 +148,7 @@ def fetch_stcn_news(code: str, name: str, limit: int = 10) -> List[Dict]:
         }
         resp = _SESSION.get(STCN_SEARCH_URL, params=params, headers=headers, timeout=15)
         resp.raise_for_status()
-        data = resp.json()
+        data = _safe_json(resp)
 
         results = []
         items = data.get("data", {}).get("list", []) if isinstance(data, dict) else []
@@ -176,7 +193,7 @@ def fetch_cls_news(code: str, name: str, limit: int = 10) -> List[Dict]:
         }
         resp = _SESSION.get(CLS_API_URL, params=params, headers=headers, timeout=15)
         resp.raise_for_status()
-        data = resp.json()
+        data = _safe_json(resp)
 
         results = []
         items = data.get("data", {}).get("roll_data", []) if isinstance(data, dict) else []
@@ -309,7 +326,7 @@ def fetch_cls_telegraph(limit: int = 100) -> List[Dict]:
     try:
         r = _SESSION.get(url, params=params, headers=headers, timeout=15)
         r.raise_for_status()
-        data = r.json()
+        data = _safe_json(r)
         items = data.get("data", {}).get("roll_data", []) or []
         news = []
         for item in items:
@@ -348,7 +365,7 @@ def fetch_eastmoney_global_news(limit: int = 100) -> List[Dict]:
     try:
         r = _SESSION.get(url, params=params, headers=headers, timeout=15)
         r.raise_for_status()
-        data = r.json()
+        data = _safe_json(r)
         items = data.get("data", {}).get("fastNewsList", []) or []
         news = []
         for item in items:

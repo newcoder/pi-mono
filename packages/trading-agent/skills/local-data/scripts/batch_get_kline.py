@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Batch fetch K-line data for multiple stocks from JoinQuant."""
+"""Batch fetch K-line data for multiple stocks via mootdx (TDX TCP)."""
 import argparse
 import json
 import os
@@ -7,6 +7,7 @@ import sys
 import io
 import warnings
 import logging
+from concurrent.futures import ThreadPoolExecutor, as_completed
 
 _SCRIPT_DIR = os.path.dirname(os.path.abspath(__file__))
 _SKILL_ROOT = os.path.dirname(_SCRIPT_DIR)
@@ -15,38 +16,18 @@ if _SCRIPT_DIR not in sys.path:
 if _SKILL_ROOT not in sys.path:
     sys.path.insert(0, _SKILL_ROOT)
 
-import pandas as pd
-
-from local_data.market import market_from_code, market_prefix
+from local_data.market import is_a_share, market_from_code
 
 logger = logging.getLogger(__name__)
 
 warnings.filterwarnings('ignore')
 sys.stdout = io.TextIOWrapper(sys.stdout.buffer, encoding="utf-8")
 
-# Avoid unstable local HTTP proxies breaking akshare/requests fallbacks.
-for _proxy_key in ("HTTP_PROXY", "HTTPS_PROXY", "http_proxy", "https_proxy"):
-    os.environ.pop(_proxy_key, None)
-os.environ.setdefault("NO_PROXY", "*")
-
-# mootdx primary (TCP direct, no auth)
+# mootdx — TCP direct to TDX quote servers, no auth required
 try:
     from mootdx_data import get_kline as mootdx_kline
 except ImportError:
     mootdx_kline = None
-
-# akshare fallback
-try:
-    import akshare as ak
-except ImportError:
-    ak = None
-
-# Map our adjust codes to akshare param
-AK_ADJUST_MAP = {
-    "bfq": "",
-    "qfq": "qfq",
-    "hfq": "hfq",
-}
 
 # Map our adjust codes for argparse choices
 FQT_MAP = {
@@ -55,9 +36,7 @@ FQT_MAP = {
     "hfq": "hfq",
 }
 
-# Map our period codes to mootdx/akshare frequency.
-# mootdx native bars are used for daily/week/month/quarter/year;
-# akshare only provides daily, so non-daily periods resample akshare daily bars once.
+# Map our period codes for argparse choices (mootdx supports all natively)
 FREQ_MAP = {
     "1m": "1m",
     "5m": "5m",
@@ -73,95 +52,24 @@ FREQ_MAP = {
 }
 
 
-def _resample_df(df, period, code_col='code'):
-    """Resample daily data to week/month/quarter/year per stock."""
-    if df is None or len(df) == 0:
-        return df
-
-    agg_map = {
-        'open': 'first',
-        'high': 'max',
-        'low': 'min',
-        'close': 'last',
-        'volume': 'sum',
-        'amount': 'sum',
-        'turnover': 'sum',
-        'pre_close': 'first',
-        'market': 'first',
-    }
-    freq = {
-        'week': 'W-FRI',
-        'month': 'ME',
-        'quarter': 'QE',
-        'year': 'YE',
-    }.get(period)
-    if freq is None:
-        return df
-
-    resampled = []
-    for jq_code, group in df.groupby(code_col):
-        g = group.copy()
-        g['date'] = pd.to_datetime(g['date'])
-        g = g.set_index('date').sort_index()
-        # Only keep columns that exist
-        cols = {k: v for k, v in agg_map.items() if k in g.columns}
-        rg = g.resample(freq).agg(cols)
-        rg[code_col] = jq_code
-        rg = rg.reset_index()
-        resampled.append(rg)
-
-    return pd.concat(resampled, ignore_index=True)
-
-
-def _normalize_df(df):
-    """Ensure DataFrame is in long format with 'code' and 'date' columns."""
-    if df is None or len(df) == 0:
-        return df
-    # If columns are MultiIndex (panel format), unstack
-    if isinstance(df.columns, pd.MultiIndex):
-        df = df.stack(level=1).reset_index()
-        if 'level_1' in df.columns:
-            df.rename(columns={'level_1': 'code'}, inplace=True)
-        if 'level_0' in df.columns:
-            df.rename(columns={'level_0': 'date'}, inplace=True)
-    # Ensure code column exists
-    if 'code' not in df.columns:
-        df = df.reset_index()
-        for col in list(df.columns):
-            if col in ('level_1', 'minor') and 'code' not in df.columns:
-                df.rename(columns={col: 'code'}, inplace=True)
-    # Ensure date column exists
-    if 'date' not in df.columns and 'time' in df.columns:
-        df.rename(columns={'time': 'date'}, inplace=True)
-    # Fallback: if date still missing, try first datetime-like column
-    if 'date' not in df.columns:
-        for col in df.columns:
-            if col in ('date', 'time', 'datetime', 'level_0'):
-                df.rename(columns={col: 'date'}, inplace=True)
-                break
-    return df
-
-
 def batch_get_kline(stock_codes, start_date, end_date, period="daily", adjust="bfq"):
     """
-    Fetch K-line for multiple stocks.
+    Fetch K-line for multiple stocks via mootdx (TDX TCP).
+
     stock_codes: list of dicts with {code, market}
     Returns: list of kline dicts with code, market, date, open, close, etc.
 
-    Per stock: try mootdx (TCP direct) first, then fall back to akshare.
-    No JoinQuant dependency.
+    mootdx supports daily/week/month/quarter/year frequencies natively.
+    Only bfq (unadjusted) is supported by the TCP protocol; qfq/hfq callers
+    should apply factor adjustments afterwards.
     """
     all_klines = []
 
-    ak_start = f"{start_date[:4]}{start_date[5:7]}{start_date[8:10]}" if len(start_date) == 10 else start_date
-    ak_end = f"{end_date[:4]}{end_date[5:7]}{end_date[8:10]}" if len(end_date) == 10 else end_date
-    ak_adjust = AK_ADJUST_MAP.get(adjust, "")
-
-    def _symbol_prefix(code: str) -> str:
-        return market_prefix(code, "lower") or f"sz{code}"
-
-    def _from_mootdx(item):
-        if mootdx_kline is None or adjust != "bfq":
+    def _fetch_one(item):
+        code = item["code"]
+        if not is_a_share(code):
+            return []
+        if mootdx_kline is None:
             return []
         try:
             return mootdx_kline(
@@ -169,111 +77,27 @@ def batch_get_kline(stock_codes, start_date, end_date, period="daily", adjust="b
                 period=period, adjust=adjust,
                 start=start_date, end=end_date,
             ) or []
-        except Exception:
-            logger.warning(f"mootdx kline fetch failed for {item['code']}", exc_info=True)
+        except Exception as e:
+            logger.debug(f"mootdx kline fetch failed for {code}: {e}")
             return []
 
-    def _from_akshare(item):
-        if ak is None:
-            return []
-        code = item["code"]
-        market = item.get("market", 0)
-        try:
-            df = ak.stock_zh_a_daily(
-                symbol=_symbol_prefix(code),
-                start_date=ak_start,
-                end_date=ak_end,
-                adjust=ak_adjust,
-            )
-            if df is None or df.empty:
-                return []
-            rows = []
-            for _, row in df.iterrows():
-                rows.append({
-                    "code": code,
-                    "market": market,
-                    "date": str(row.get("date", "")),
-                    "open": float(row["open"]) if pd.notna(row.get("open")) else None,
-                    "close": float(row["close"]) if pd.notna(row.get("close")) else None,
-                    "low": float(row["low"]) if pd.notna(row.get("low")) else None,
-                    "high": float(row["high"]) if pd.notna(row.get("high")) else None,
-                    "volume": float(row["volume"]) if pd.notna(row.get("volume")) else None,
-                    "amount": float(row["amount"]) if pd.notna(row.get("amount")) else None,
-                    "amplitude": None,
-                    "change_pct": float(row["pct_change"]) if pd.notna(row.get("pct_change")) else None,
-                    "change_amount": None,
-                    "turnover": None,
-                    "pre_close": None,
-                })
-            return rows
-        except Exception:
-            logger.warning(f"akshare kline fetch failed for {code}", exc_info=True)
-            return []
-
-    def _is_bj(code: str) -> bool:
-        return market_from_code(code) == 2
-
-    def _is_a_share(code: str) -> bool:
-        """Strict A-share 6-digit code filter. Excludes funds, bonds, B-shares, indices."""
-        if not code or len(code) != 6 or not code.isdigit():
-            return False
-        if code.startswith(("600", "601", "602", "603", "605", "688", "689")):
-            return True
-        if code.startswith(("000", "001", "002", "003", "300", "301")):
-            return True
-        return False
-
-    def _fetch_one(item):
-        code = item["code"]
-        if not _is_a_share(code):
-            return []
-        # Use mootdx for SH/SZ; akshare does not reliably cover delisted/suspended stocks.
-        # For Beijing stocks, mootdx std market does not support them, so use akshare directly.
-        if _is_bj(code):
-            return _from_akshare(item)
-        rows = _from_mootdx(item)
-        if not rows:
-            return _from_akshare(item)
-        return rows
-
-    for item in stock_codes:
-        all_klines.extend(_fetch_one(item))
-
-    # For non-daily periods, mootdx returns native-frequency bars directly.
-    # Only the akshare daily portion needs to be resampled once.
-    if period != "daily" and all_klines:
-        mootdx_klines = [k for k in all_klines if str(k.get("_source", "")).startswith("mootdx")]
-        akshare_klines = [k for k in all_klines if not str(k.get("_source", "")).startswith("mootdx")]
-        resampled = []
-        if akshare_klines:
-            df = pd.DataFrame(akshare_klines)
-            if 'date' in df.columns and 'code' in df.columns and len(df) > 0:
-                df = _resample_df(df, period)
-                if df is not None and len(df) > 0:
-                    for _, row in df.iterrows():
-                        resampled.append({
-                            "code": str(row.get("code", "")),
-                            "market": int(row.get("market")) if pd.notna(row.get("market")) else 0,
-                            "date": str(row.get("date", ""))[:10] if pd.notna(row.get("date")) else "",
-                            "open": float(row["open"]) if pd.notna(row.get("open")) else None,
-                            "close": float(row["close"]) if pd.notna(row.get("close")) else None,
-                            "low": float(row["low"]) if pd.notna(row.get("low")) else None,
-                            "high": float(row["high"]) if pd.notna(row.get("high")) else None,
-                            "volume": float(row["volume"]) if pd.notna(row.get("volume")) else None,
-                            "amount": float(row["amount"]) if "amount" in row and pd.notna(row.get("amount")) else None,
-                            "turnover": float(row["turnover"]) if "turnover" in row and pd.notna(row.get("turnover")) else None,
-                            "amplitude": None,
-                            "change_pct": None,
-                            "change_amount": None,
-                            "pre_close": float(row["pre_close"]) if "pre_close" in row and pd.notna(row.get("pre_close")) else None,
-                        })
-        all_klines = mootdx_klines + resampled
+    # Concurrent fetch — mootdx TCP is lightweight, 8 workers is safe
+    max_workers = min(8, max(1, len(stock_codes)))
+    with ThreadPoolExecutor(max_workers=max_workers) as executor:
+        future_to_item = {executor.submit(_fetch_one, item): item for item in stock_codes}
+        for future in as_completed(future_to_item):
+            item = future_to_item[future]
+            try:
+                rows = future.result()
+                all_klines.extend(rows)
+            except Exception as e:
+                logger.debug(f"fetch failed for {item['code']}: {e}")
 
     return all_klines
 
 
 def main():
-    parser = argparse.ArgumentParser(description="Batch fetch A-share K-line (mootdx/akshare, no JoinQuant)")
+    parser = argparse.ArgumentParser(description="Batch fetch A-share K-line (mootdx TDX TCP)")
     parser.add_argument("--codes", required=True, help="Comma-separated 6-digit stock codes")
     parser.add_argument("--markets", default="", help="Comma-separated markets (1=SH,0=SZ), same order as codes")
     parser.add_argument("--start", default="20240101", help="Start date YYYYMMDD")
@@ -287,7 +111,7 @@ def main():
 
     stock_codes = []
     for i, code in enumerate(codes):
-        market = markets[i] if i < len(markets) else (1 if code.startswith("6") else 0)
+        market = markets[i] if i < len(markets) else (market_from_code(code) or 0)
         stock_codes.append({"code": code, "market": market})
 
     klines = batch_get_kline(stock_codes, args.start, args.end, args.period, args.adjust)
