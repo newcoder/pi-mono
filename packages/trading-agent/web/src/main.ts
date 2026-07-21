@@ -682,8 +682,13 @@ function renderIntradayChart() {
 	if (!container) return;
 
 	if (state.selectedIntraday.length === 0) {
-		container.innerHTML = `<div class="chart-empty">暂无分时数据</div>`;
+		container.innerHTML = `<div class="chart-loading">加载中...</div>`;
 		return;
+	}
+
+	// Clear any placeholder from a previous render before creating the chart
+	if (!intradayChart) {
+		container.innerHTML = "";
 	}
 
 	initIntradayChart(container);
@@ -780,7 +785,8 @@ async function loadIntradayData(code: string) {
 				close: k.close,
 				volume: k.volume,
 			}));
-		renderIntradayChart();
+		// Use rAF to ensure DOM layout is complete before creating chart
+		requestAnimationFrame(() => renderIntradayChart());
 	} catch (err) {
 		console.error("Failed to fetch intraday:", err);
 		state.selectedIntraday = [];
