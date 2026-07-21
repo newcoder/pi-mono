@@ -42,6 +42,39 @@ function todayStr(): string {
 	return new Date().toISOString().slice(0, 10);
 }
 
+/** Fetch minute klines direct from Sina HTTP — ~200ms, no Python subprocess.
+ *  URL: money.finance.sina.com.cn/quotes_service/api/json_v2.php/CN_MarketData.getKLineData */
+async function fetchSinaMinuteKlines(code: string, market: number, period: string) {
+	const prefix = market === 1 ? "sh" : "sz";
+	const scale = { "1m": "5", "5m": "5", "15m": "15", "30m": "30", "60m": "60" }[period] || "5";
+	const url = `https://money.finance.sina.com.cn/quotes_service/api/json_v2.php/CN_MarketData.getKLineData?symbol=${prefix}${code}&scale=${scale}&ma=no&datalen=240`;
+	try {
+		const resp = await fetch(url, { headers: { "User-Agent": "Mozilla/5.0" }, signal: AbortSignal.timeout(8000) });
+		if (!resp.ok) return [];
+		const raw = await resp.json() as any[];
+		if (!Array.isArray(raw) || raw.length === 0) return [];
+		const rows: any[] = [];
+		for (const bar of raw) {
+			const date = bar.day;
+			if (!date) continue;
+			rows.push({
+				code, market, period, adjust: "bfq", date,
+				open: parseFloat(bar.open) || null,
+				high: parseFloat(bar.high) || null,
+				low: parseFloat(bar.low) || null,
+				close: parseFloat(bar.close) || null,
+				volume: parseFloat(bar.volume) || null,
+				turnover: null,
+				change_pct: null, change_amount: null, amplitude: null, pre_close: null,
+			});
+		}
+		return rows;
+	} catch (e) {
+		console.warn(`[Sina] Minute fetch failed for ${code}:`, e);
+		return [];
+	}
+}
+
 /** Route incoming HTTP requests to handlers */
 export async function handleRequest(
 	req: IncomingMessage,
@@ -596,15 +629,30 @@ export async function handleRequest(
 			if (needsSync && sync) {
 				const today = todayStr();
 				const start = new Date(Date.now() - 2 * 86400000).toISOString().slice(0, 10).replace(/-/g, "");
-				console.log(`[Klines] Syncing ${period} data for ${code} (latest bar: ${latestBarDate || "none"})`);
-				try {
-					const synced = await sync.syncKline(code, market, period, "bfq", start, today.replace(/-/g, ""));
-					console.log(`[Klines] Synced ${synced} ${period} bars for ${code}`);
-					if (synced > 0) {
-						klines = await store.getKlines({ code, market, period, adjust, limit });
+				// Intraday: fast direct Sina HTTP (no Python subprocess overhead)
+				if (INTRADAY_PERIODS.has(period)) {
+					console.log(`[Klines] Fetching intraday from Sina for ${code} ${period}`);
+					try {
+						const intradayRows = await fetchSinaMinuteKlines(code, market, period);
+						if (intradayRows.length > 0) {
+							await store.saveKlines(intradayRows);
+							klines = await store.getKlines({ code, market, period, adjust, limit });
+							console.log(`[Klines] Sina intraday: ${intradayRows.length} bars for ${code}`);
+						}
+					} catch (e) {
+						console.warn(`[Klines] Sina intraday failed for ${code}:`, e);
 					}
-				} catch (e) {
-					console.warn(`[Klines] Sync failed for ${code} ${period}:`, e);
+				} else {
+					console.log(`[Klines] Syncing ${period} data for ${code} (latest bar: ${latestBarDate || "none"})`);
+					try {
+						const synced = await sync.syncKline(code, market, period, "bfq", start, today.replace(/-/g, ""));
+						console.log(`[Klines] Synced ${synced} ${period} bars for ${code}`);
+						if (synced > 0) {
+							klines = await store.getKlines({ code, market, period, adjust, limit });
+						}
+					} catch (e) {
+						console.warn(`[Klines] Sync failed for ${code} ${period}:`, e);
+					}
 				}
 			}
 
