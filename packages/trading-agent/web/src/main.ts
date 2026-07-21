@@ -157,7 +157,7 @@ function getTodayStr(): string {
 // ─── Real-time polling ──────────────────────────────────────
 
 let intradayPollTimer: number | null = null;
-const INTRADAY_POLL_INTERVAL = 30000; // 30 seconds
+const INTRADAY_POLL_INTERVAL = 5000; // 5 seconds
 
 /** Check if current time is within A-share trading hours */
 function isTradingTime(): boolean {
@@ -494,7 +494,12 @@ function renderWatchlist() {
 		for (const item of displayItems) {
 			const isSelected = state.selectedSymbol === item.code;
 			const changePct = item.change_pct;
+			const latest = item.latest;
+			let priceHtml = "";
 			let changeHtml = "";
+			if (latest != null) {
+				priceHtml = `<span class="stock-item-price">${latest.toFixed(2)}</span>`;
+			}
 			if (changePct != null) {
 				const isUp = changePct > 0;
 				const isDown = changePct < 0;
@@ -506,6 +511,7 @@ function renderWatchlist() {
 				<div class="stock-item ${isSelected ? 'active' : ''}" data-stock-code="${item.code}" data-stock-name="${escapeHtml(item.name)}">
 					<span class="stock-item-code">${item.code}</span>
 					<span class="stock-item-name">${escapeHtml(item.name)}</span>
+					${priceHtml}
 					${changeHtml}
 				</div>
 			`;
@@ -629,7 +635,7 @@ function renderStockChartPanel() {
 			if (period !== state.selectedPeriod) {
 				state.selectedPeriod = period;
 				renderStockChartPanel();
-				loadKlineData(code, period);
+				loadKlineData(code, period, type);
 			}
 		});
 	});
@@ -737,10 +743,12 @@ function renderKlineChart() {
 	}
 }
 
-async function loadKlineData(code: string, period: "daily" | "week" | "month") {
+async function loadKlineData(code: string, period: "daily" | "week" | "month", type: "stock" | "index" = state.selectedType) {
 	const limit = 10000;
 	try {
-		const klines = await apiClient.getKlines(code, { period, limit });
+		const klines = type === "index"
+			? await apiClient.getIndustryKlines(code, { period, limit })
+			: await apiClient.getKlines(code, { period, limit });
 		state.selectedKlines = klines.map((k: any) => ({
 			date: k.date,
 			open: k.open,
@@ -1270,9 +1278,8 @@ async function selectPool(poolId: number) {
 }
 
 async function selectSymbol(code: string, type: "stock" | "index" = "stock", knownName?: string) {
-	// Dispose old charts and stop polling before re-rendering
-	disposeCharts();
-
+	// Keep previous chart DOM until new data arrives — avoid blank-panel flash.
+	// Only show loading indicator in the chart containers.
 	state.selectedSymbol = code;
 	state.selectedType = type;
 	state.selectedName = knownName || null;
@@ -1281,14 +1288,22 @@ async function selectSymbol(code: string, type: "stock" | "index" = "stock", kno
 	state.selectedIntraday = [];
 	state.chartPanelCollapsed = false;
 
+	// Show loading indicator in chart area immediately
+	const intradayCtr = document.getElementById("intraday-chart-container");
+	if (intradayCtr) intradayCtr.innerHTML = `<div class="chart-loading">加载中...</div>`;
+	const klineCtr = document.getElementById("kline-chart-container");
+	if (klineCtr) klineCtr.innerHTML = `<div class="chart-loading">加载中...</div>`;
+
 	renderWatchlist();
-	renderStockChartPanel();
 	renderIndices();
 
 	// Fetch quote, klines, and intraday in parallel
+	const klinesPromise = state.selectedType === "index"
+		? apiClient.getIndustryKlines(code, { period: state.selectedPeriod, limit: 10000 })
+		: apiClient.getKlines(code, { period: state.selectedPeriod, limit: 10000 });
 	const [quoteResult, klinesResult, intradayResult] = await Promise.allSettled([
 		apiClient.getQuote(code),
-		apiClient.getKlines(code, { period: state.selectedPeriod, limit: 10000 }),
+		klinesPromise,
 		apiClient.getKlines(code, { period: "1m", limit: 240 }),
 	]);
 
