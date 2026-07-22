@@ -1,15 +1,45 @@
-import { spawnSync } from "node:child_process";
+import { spawn } from "node:child_process";
 
 export interface IndexPoint {
 	date: string;
 	close: number;
 }
 
+/** Run Python subprocess and return stdout. Times out after `timeoutMs`. */
+function runPythonAsync(code: string, args: string[], timeoutMs = 30_000): Promise<string> {
+	return new Promise((resolve, reject) => {
+		const proc = spawn("python", ["-c", code, ...args], {
+			stdio: ["ignore", "pipe", "pipe"],
+		});
+		let stdout = "";
+		let stderr = "";
+		const timer = setTimeout(() => {
+			proc.kill("SIGTERM");
+			setTimeout(() => proc.kill("SIGKILL"), 3000);
+			reject(new Error("Python index fetch timed out"));
+		}, timeoutMs);
+
+		proc.stdout.setEncoding("utf-8");
+		proc.stderr.setEncoding("utf-8");
+		proc.stdout.on("data", (d: string) => { stdout += d; });
+		proc.stderr.on("data", (d: string) => { stderr += d; });
+		proc.on("close", (code) => {
+			clearTimeout(timer);
+			if (code !== 0) reject(new Error(stderr.trim() || `exit code ${code}`));
+			else resolve(stdout.trim());
+		});
+		proc.on("error", (err) => {
+			clearTimeout(timer);
+			reject(err);
+		});
+	});
+}
+
 /**
  * Fetch daily index closes from akshare for the given symbol (e.g. "sh000905").
  * Dates are inclusive and formatted as YYYY-MM-DD.
  */
-export function fetchIndexCurve(symbol: string, start: string, end: string): IndexPoint[] {
+export async function fetchIndexCurve(symbol: string, start: string, end: string): Promise<IndexPoint[]> {
 	const pythonCode = `
 import akshare as ak
 import json, sys
@@ -26,19 +56,8 @@ df = df.loc[mask].sort_values('date')
 records = [{'date': d.strftime('%Y-%m-%d'), 'close': float(c)} for d, c in zip(df['date'], df['close'])]
 print(json.dumps(records))
 `;
-	const result = spawnSync("python", ["-c", pythonCode, symbol, start, end], {
-		encoding: "utf-8",
-		maxBuffer: 50 * 1024 * 1024,
-	});
 
-	if (result.error) {
-		throw new Error(`Failed to spawn Python for index ${symbol}: ${result.error.message}`);
-	}
-	if (result.status !== 0) {
-		throw new Error(`Failed to fetch index ${symbol}: ${result.stderr || "unknown error"}`);
-	}
-
-	const stdout = result.stdout?.trim() ?? "[]";
+	const stdout = await runPythonAsync(pythonCode, [symbol, start, end], 30_000);
 	try {
 		return JSON.parse(stdout) as IndexPoint[];
 	} catch {

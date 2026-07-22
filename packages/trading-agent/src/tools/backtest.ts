@@ -514,7 +514,7 @@ export const backtestStrategyTool: AgentTool<typeof backtestParams, BacktestTool
 					.filter(Boolean);
 				for (const symbol of symbols) {
 					try {
-						const raw = fetchIndexCurve(symbol, result.startDate, result.endDate);
+						const raw = await fetchIndexCurve(symbol, result.startDate, result.endDate);
 						benchmarks.push(buildBenchmarkCurve(symbol, raw, result.equityCurve, result.initialCapital));
 					} catch (err) {
 						console.warn(`[backtest_strategy] Failed to fetch benchmark ${symbol}:`, err);
@@ -794,7 +794,7 @@ export const backtestStrategyTool: AgentTool<typeof backtestParams, BacktestTool
 					.filter(Boolean);
 				for (const symbol of symbols) {
 					try {
-						const raw = fetchIndexCurve(symbol, reportData.startDate, reportData.endDate);
+						const raw = await fetchIndexCurve(symbol, reportData.startDate, reportData.endDate);
 						benchmarks.push(buildBenchmarkCurve(symbol, raw, reportData.equityCurve, reportData.initialCapital));
 					} catch (err) {
 						console.warn(`[backtest_strategy] Failed to fetch benchmark ${symbol}:`, err);

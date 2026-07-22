@@ -80,19 +80,19 @@ function localDateString(d = new Date()): string {
 	return d.toLocaleDateString("sv-SE");
 }
 
-/** Check if a kline is at limit-up (cannot buy). Covers all A-share boards (10/20/30%). */
+/** Check if a kline is at limit-up (cannot buy). Covers all A-share boards including ST (5/10/20/30%). */
 function isLimitUp(kline: KlineRow): boolean {
 	const chg = kline.change_pct;
 	if (chg == null) return false;
-	// Boards: main ±10%, ChiNext/STAR ±20%, Beijing ±30%. 0.5% tolerance for rounding.
-	return Math.abs(chg - 10) < 0.5 || Math.abs(chg - 20) < 0.5 || Math.abs(chg - 30) < 0.5;
+	// Boards: ST ±5%, main ±10%, ChiNext/STAR ±20%, Beijing ±30%. 0.5% tolerance.
+	return Math.abs(chg - 5) < 0.5 || Math.abs(chg - 10) < 0.5 || Math.abs(chg - 20) < 0.5 || Math.abs(chg - 30) < 0.5;
 }
 
 /** Check if a kline is at limit-down (cannot sell). */
 function isLimitDown(kline: KlineRow): boolean {
 	const chg = kline.change_pct;
 	if (chg == null) return false;
-	return Math.abs(chg + 10) < 0.5 || Math.abs(chg + 20) < 0.5 || Math.abs(chg + 30) < 0.5;
+	return Math.abs(chg + 5) < 0.5 || Math.abs(chg + 10) < 0.5 || Math.abs(chg + 20) < 0.5 || Math.abs(chg + 30) < 0.5;
 }
 
 /** Check if a kline is tradeable (not suspended / zero volume / missing prices). */
@@ -494,7 +494,13 @@ export async function runPoolBacktest(
 		const markets = stocks.map((s) => s.market);
 		const quotes = await store.getLatestQuotes(codes, markets);
 		for (const q of quotes) {
-			if (q.code) quoteMap.set(q.code, { pe: q.pe ?? null, pb: q.pb ?? null, total_cap: q.total_cap ?? null });
+			if (q.code)
+				quoteMap.set(q.code, {
+					pe: q.pe ?? null,
+					pb: q.pb ?? null,
+					total_cap: q.total_cap ?? null,
+					float_cap: q.float_cap ?? null,
+				});
 		}
 	} catch (_) {
 		/* quotes optional */
@@ -822,6 +828,35 @@ export async function runPoolBacktest(
 	// (e.g. the signal date for new candidates, or the previous trading day for
 	// existing positions). Do not pass the execution date to avoid lookahead bias.
 	// Rank score registry — add new rank_by here (one entry, no switch changes needed)
+	// Load stock-level factor IC for dynamic rank selection
+	const dynamicRankMap = new Map();
+	if (config.rankBy === "dynamic") {
+		try {
+			const icRows = await store.getFactorIc("stock_%_forward5d");
+			const factorMap = {
+				stock_momentum_forward5d: "momentum",
+				stock_value_tag_forward5d: "value",
+				stock_turnover_forward5d: "turnover",
+				stock_market_cap_forward5d: "market_cap",
+				stock_turnover_rate_forward5d: "turnover_rate",
+				stock_low_volatility_forward5d: "low_volatility",
+			};
+			const icByDate = new Map();
+			for (const r of icRows) {
+				const mapped = (factorMap as Record<string, string>)[r.factor_name];
+				if (!mapped) continue;
+				if (!icByDate.has(r.date)) icByDate.set(r.date, []);
+				icByDate.get(r.date).push({ factor: mapped, ic: r.ic_value ?? 0 });
+			}
+			for (const [date, items] of icByDate) {
+				items.sort((a: any, b: any) => Math.abs(b.ic) - Math.abs(a.ic));
+				if (items.length > 0) dynamicRankMap.set(date, items[0].factor);
+			}
+		} catch (_) {
+			/* IC optional */
+		}
+	}
+
 	const rankScorers: Record<
 		string,
 		(stock: (typeof stockData)[number], scoreDate: string, recencyDays?: number) => number
@@ -856,17 +891,22 @@ export async function runPoolBacktest(
 		turnover: (_s, sd) => {
 			const k = klineMapByCode.get(_s.code)?.get(sd);
 			const raw = k?.turnover ?? k?.volume ?? 0;
-			return Math.log10(raw + 1);
+			return raw > 0 ? Math.log10(raw) : 0;
+		},
+		turnover_rate: (_s, sd) => {
+			const k = klineMapByCode.get(_s.code)?.get(sd);
+			const q = quoteMap.get(_s.code);
+			const amount = k?.turnover ?? 0;
+			const floatCap = q?.float_cap ?? null;
+			if (amount > 0 && floatCap != null && floatCap > 0) {
+				return (amount / floatCap) * 100;
+			}
+			return 0;
 		},
 		market_cap: (_s, _sd) => {
 			const q = quoteMap.get(_s.code);
 			const cap = q?.total_cap ?? null;
 			return cap != null && cap > 0 ? Math.log10(cap) : 0;
-		},
-		amount: (_s, sd) => {
-			const k = klineMapByCode.get(_s.code)?.get(sd);
-			const raw = k?.turnover ?? 0;
-			return raw > 0 ? Math.log10(raw) : 0;
 		},
 		technical: (_s, sd) => {
 			const k = klineMapByCode.get(_s.code)?.get(sd);
@@ -894,6 +934,11 @@ export async function runPoolBacktest(
 			return -Math.sqrt(v);
 		},
 		signal_recency: (_s, _sd, rd) => (rd != null ? -rd : 0),
+		dynamic: (_s, sd, _rd) => {
+			const best = dynamicRankMap.get(sd);
+			if (best && rankScorers[best]) return rankScorers[best](_s, sd, _rd);
+			return rankScorers["turnover"](_s, sd, _rd); // fallback
+		},
 		ma_alignment: (_s, sd) => {
 			const li = _s.dateToIndex.get(sd);
 			if (li == null) return 0;
@@ -1348,6 +1393,7 @@ export async function runPoolBacktest(
 								const buyPrice = (kline?.open ?? pos.lastClose) * (1 + slippage);
 								const currentValue = pos.shares * buyPrice;
 								const maxAddValue = Math.max(0, totalValue * maxPositionWeight - currentValue);
+								if (remaining <= 0) break;
 								const cashPerStock = cash / remaining;
 								const cashToUse = Math.min(cashPerStock, maxAddValue);
 								const rawShares = Math.floor(cashToUse / buyPrice);
@@ -1588,6 +1634,7 @@ export async function runPoolBacktest(
 								}
 								const currentValue = pos ? pos.shares * buyPrice : 0;
 								const maxAddValue = Math.max(0, totalValue * maxPositionWeight - currentValue);
+								if (remaining <= 0) break;
 								const cashPerStock = cash / remaining;
 								const cashToUse = Math.min(cashPerStock, maxAddValue);
 								const rawShares = Math.floor(cashToUse / buyPrice);
