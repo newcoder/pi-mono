@@ -10,6 +10,7 @@ import type { TradingSession } from "../core/trading-session.js";
 import { marketFromCode, requireStore, requireSync } from "../data/index.js";
 import { runAStockDataJsonScript, runJsonScript, runLocalDataJsonScript } from "../tools/_utils.js";
 import { predictStockRankingTool } from "../tools/ml-prediction.js";
+import { BACKTEST_PARAMS_SCHEMA } from "../tools/backtest.js";
 import type { BackgroundSyncService } from "./background-sync.js";
 import type { MootdxDaemon } from "./mootdx-daemon.js";
 
@@ -36,6 +37,21 @@ function parseQuery(url: string): Record<string, string> {
 		query[key] = value;
 	}
 	return query;
+}
+
+/** Read and parse JSON request body with a size limit (prevents OOM). */
+const MAX_BODY_SIZE = 256 * 1024; // 256 KB
+async function readJsonBody(req: IncomingMessage): Promise<any> {
+	let chunks: Buffer[] = [];
+	let total = 0;
+	for await (const chunk of req) {
+		const buf = typeof chunk === "string" ? Buffer.from(chunk) : chunk;
+		total += buf.length;
+		if (total > MAX_BODY_SIZE) throw new Error("Request body too large");
+		chunks.push(buf);
+	}
+	const raw = Buffer.concat(chunks).toString("utf-8");
+	return raw ? JSON.parse(raw) : {};
 }
 
 function todayStr(): string {
@@ -531,20 +547,34 @@ export async function handleRequest(
 
 		// Backtest runner
 		if (path === "/api/backtest/run" && method === "POST") {
-			let body = "";
-			for await (const chunk of req) {
-				body += chunk;
-			}
-			const params = body ? JSON.parse(body) : {};
-			const poolId = params.poolId;
-			const config = params.config || {};
-
-			if (!poolId) {
-				badRequest(res, "poolId is required");
-				return;
-			}
-
 			try {
+				const params = await readJsonBody(req);
+				const poolId = params.poolId;
+				const config = params.config || {};
+
+				if (!poolId) {
+					badRequest(res, "poolId is required");
+					return;
+				}
+
+				// Validate critical config fields
+				if (config.random_runs != null && (config.random_runs <= 0 || config.random_runs > 100)) {
+					badRequest(res, "random_runs must be 1-100");
+					return;
+				}
+				if (config.positionSize != null && (config.positionSize < 0 || config.positionSize > 1)) {
+					badRequest(res, "positionSize must be 0-1");
+					return;
+				}
+				if (config.min_lot != null && config.min_lot <= 0) {
+					badRequest(res, "min_lot must be > 0");
+					return;
+				}
+				if (config.rebalance_frequency != null && config.rebalance_frequency < 1) {
+					badRequest(res, "rebalance_frequency must be >= 1");
+					return;
+				}
+
 				const store = requireStore();
 				const pool = await store.getStockPoolById(poolId);
 				if (!pool) {
@@ -563,7 +593,12 @@ export async function handleRequest(
 
 				json(res, 200, result);
 			} catch (err) {
-				json(res, 500, { error: err instanceof Error ? err.message : String(err) });
+				const message = err instanceof Error ? err.message : String(err);
+				if (message.includes("too large")) {
+					json(res, 413, { error: "Request body too large (max 256KB)" });
+				} else {
+					json(res, 500, { error: message });
+				}
 			}
 			return;
 		}

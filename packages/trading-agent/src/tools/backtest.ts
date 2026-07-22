@@ -256,8 +256,8 @@ const backtestParams = Type.Object({
 	),
 
 	random_runs: Type.Optional(
-		Type.Number({
-			description: "随机选择时运行次数，>1时多次采样取中位数",
+		Type.Number({ maximum: 100,
+			description: "随机选择时运行次数，1-100，>1时多次采样取中位数",
 			default: 1,
 		}),
 	),
@@ -302,6 +302,9 @@ interface BacktestToolDetails {
 	holdingsPoolName?: string;
 }
 
+/** Exported for reuse by router /api/backtest/run validation. */
+export const BACKTEST_PARAMS_SCHEMA = backtestParams;
+
 export const backtestStrategyTool: AgentTool<typeof backtestParams, BacktestToolDetails> = {
 	name: "backtest_strategy",
 	label: "回测策略",
@@ -322,6 +325,13 @@ export const backtestStrategyTool: AgentTool<typeof backtestParams, BacktestTool
 			return {
 				content: [{ type: "text", text: "参数错误: rebalance_frequency 必须 >= 1（交易日）。" }],
 				details: { error: `invalid rebalance_frequency: ${rf}` },
+			};
+		}
+		const rr = params.random_runs;
+		if (rr != null && (rr <= 0 || rr > 100)) {
+			return {
+				content: [{ type: "text", text: "参数错误: random_runs 必须在 1-100 之间。" }],
+				details: { error: `invalid random_runs: ${rr}` },
 			};
 		}
 		if (params.industry_filter) {

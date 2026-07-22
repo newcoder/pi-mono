@@ -2076,6 +2076,7 @@ function renderApp() {
 				<!-- Search bar -->
 			<div class="search-bar">
 				<span class="search-bar-label">RESEARCH</span>
+				<a href="/public/backtest.html" target="_blank" class="backtest-nav-link" title="回测策略">📊 回测</a>
 				<div class="search-input-wrapper">
 					<input type="text" id="stock-search-input" placeholder="搜索股票 (代码/名称/拼音)" autocomplete="off" />
 					<div id="search-dropdown" class="search-dropdown hidden"></div>
