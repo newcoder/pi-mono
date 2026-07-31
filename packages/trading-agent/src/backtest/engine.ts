@@ -487,20 +487,14 @@ export async function runPoolBacktest(
 		adjust !== "bfq" ? store.getAdjustFactorsForCodes(stocks, defaultStart, defaultEnd) : Promise.resolve(null),
 	]);
 
-	// Load latest quotes for value ranking (PE/PB)
-	const quoteMap = new Map();
+	// Load latest quotes for PE/PB/turnover_rate ranking only
+	const quoteMap = new Map<string, { pe: number | null; pb: number | null; float_cap: number | null }>();
 	try {
-		const codes = stocks.map((s) => s.code);
-		const markets = stocks.map((s) => s.market);
-		const quotes = await store.getLatestQuotes(codes, markets);
+		const qcodes = stocks.map((s) => s.code);
+		const qmarkets = stocks.map((s) => s.market);
+		const quotes = await store.getLatestQuotes(qcodes, qmarkets);
 		for (const q of quotes) {
-			if (q.code)
-				quoteMap.set(q.code, {
-					pe: q.pe ?? null,
-					pb: q.pb ?? null,
-					total_cap: q.total_cap ?? null,
-					float_cap: q.float_cap ?? null,
-				});
+			if (q.code) quoteMap.set(q.code, { pe: q.pe ?? null, pb: q.pb ?? null, float_cap: q.float_cap ?? null });
 		}
 	} catch (_) {
 		/* quotes optional */
@@ -636,6 +630,45 @@ export async function runPoolBacktest(
 	});
 
 	for (const km of klineMaps) klineMapByCode.set(km.code, km.map);
+	// Build historical market-cap lookup from klines × fundamentals total_shares.
+	// Avoids look-ahead bias: using today's quotes.total_cap for historical ranking
+	// lets stocks that grew 10× dominate every past ranking date.
+	const histMarketCap = new Map<string, Map<string, number>>();
+	try {
+		const codesForFund = stocks.map((s) => s.code);
+		const fundRows: any[] = await store.getAllFundamentalsForCodes(codesForFund);
+		// Build per-code sorted report-date → total_shares map
+		const sharesByCode = new Map<string, Array<{ date: string; shares: number }>>();
+		for (const r of fundRows) {
+			if (!r.code || r.total_shares == null || r.total_shares <= 0) continue;
+			let arr = sharesByCode.get(r.code);
+			if (!arr) { arr = []; sharesByCode.set(r.code, arr); }
+			arr.push({ date: r.report_date.slice(0, 10), shares: r.total_shares });
+		}
+		// Sort by date ascending, forward-fill for each stock
+		for (const [code, rows] of sharesByCode) {
+			rows.sort((a, b) => a.date.localeCompare(b.date));
+			const km = klineMapByCode.get(code);
+			if (!km) continue;
+			const dateMap = new Map<string, number>();
+			let lastShares = rows[0].shares;
+			let rowIdx = 0;
+			for (const [date] of [...km].sort((a, b) => a[0].localeCompare(b[0]))) {
+				while (rowIdx < rows.length && rows[rowIdx].date <= date) {
+					lastShares = rows[rowIdx].shares;
+					rowIdx++;
+				}
+				const kline = km.get(date);
+				if (kline?.close != null && kline.close > 0) {
+					dateMap.set(date, kline.close * lastShares);
+				}
+			}
+			histMarketCap.set(code, dateMap);
+		}
+	} catch (_) {
+		/* fundamentals optional — fall back to no market_cap scoring */
+	}
+
 
 	// 3a. Build weekly close series for weekly MA ranking
 	const weeklyCloseSeries = new Map<string, Array<{ endDate: string; close: number }>>();
@@ -903,9 +936,8 @@ export async function runPoolBacktest(
 			}
 			return 0;
 		},
-		market_cap: (_s, _sd) => {
-			const q = quoteMap.get(_s.code);
-			const cap = q?.total_cap ?? null;
+		market_cap: (_s, sd) => {
+			const cap = histMarketCap.get(_s.code)?.get(sd);
 			return cap != null && cap > 0 ? Math.log10(cap) : 0;
 		},
 		technical: (_s, sd) => {

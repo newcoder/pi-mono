@@ -818,14 +818,16 @@ export class DataStore {
 
 	private async queryKlines(filter: KlineFilter): Promise<KlineRow[]> {
 		if (!this.db) return [];
-		let sql = `SELECT * FROM klines WHERE code = ${s(filter.code)} AND open IS NOT NULL`;
-		if (filter.market != null) sql += ` AND market = ${filter.market}`;
-		if (filter.period) sql += ` AND period = ${s(filter.period)}`;
-		if (filter.adjust) sql += ` AND adjust = ${s(filter.adjust)}`;
-		if (filter.start) sql += ` AND date >= ${s(filter.start)}`;
-		if (filter.end) sql += ` AND date <= ${s(filter.end)}`;
-		sql += ` ORDER BY date`;
-		if (filter.limit) sql += ` LIMIT ${filter.limit}`;
+		let inner = `SELECT * FROM klines WHERE code = ${s(filter.code)} AND open IS NOT NULL`;
+		if (filter.market != null) inner += ` AND market = ${filter.market}`;
+		if (filter.period) inner += ` AND period = ${s(filter.period)}`;
+		if (filter.adjust) inner += ` AND adjust = ${s(filter.adjust)}`;
+		if (filter.start) inner += ` AND date >= ${s(filter.start)}`;
+		if (filter.end) inner += ` AND date <= ${s(filter.end)}`;
+		inner += ` ORDER BY date DESC`;
+		if (filter.limit) inner += ` LIMIT ${filter.limit}`;
+		// Re-order ascending so consumers can compute pre_close/changes chronologically
+		const sql = `SELECT * FROM (${inner}) ORDER BY date ASC`;
 		return promisifyQuery(this.db, sql);
 	}
 
@@ -1009,6 +1011,17 @@ export class DataStore {
 		return promisifyQuery(
 			this.db,
 			`SELECT * FROM fundamentals WHERE code = ${s(code)} AND market = ${market} ORDER BY report_date DESC`,
+		);
+	}
+
+	/** Bulk-fetch total_shares + report_date for a list of codes. Used by backtest engine
+	 *  to compute historical market cap from klines.close × total_shares. */
+	async getAllFundamentalsForCodes(codes: string[]): Promise<Array<{ code: string; report_date: string; total_shares: number }>> {
+		if (!this.db || codes.length === 0) return [];
+		const codeList = codes.map((c) => s(c)).join(", ");
+		return promisifyQuery(
+			this.db,
+			`SELECT code, report_date, total_shares FROM fundamentals WHERE code IN (${codeList}) AND total_shares > 0 ORDER BY code, report_date`,
 		);
 	}
 
@@ -1623,7 +1636,7 @@ export class DataStore {
 
 	async getFactorIc(factorName: string, start?: string, end?: string): Promise<FactorIcRow[]> {
 		if (!this.db) return [];
-		let sql = `SELECT * FROM factor_ic WHERE factor_name = ${s(factorName)}`;
+		let sql = `SELECT * FROM factor_ic WHERE factor_name LIKE ${s(factorName)}`;
 		if (start) sql += ` AND date >= ${s(start)}`;
 		if (end) sql += ` AND date <= ${s(end)}`;
 		sql += ` ORDER BY date`;
