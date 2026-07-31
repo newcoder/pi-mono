@@ -583,6 +583,108 @@ export async function handleRequest(
 			return;
 		}
 
+		// Batch backtest grid — cartesian product of strategies × ranks × positions × pools
+		if (path === "/api/backtest/batch" && method === "POST") {
+			try {
+				const params = await readJsonBody(req, 4 * 1024 * 1024);
+				const strategies: string[] = Array.isArray(params.strategies) ? params.strategies : [];
+				const rankBys: string[] = Array.isArray(params.rankBys) ? params.rankBys : [];
+				const maxPositionsList: number[] = Array.isArray(params.maxPositionsList) ? params.maxPositionsList : [];
+				const poolIds: number[] = Array.isArray(params.poolIds) ? params.poolIds : [];
+
+				if (strategies.length === 0 || poolIds.length === 0) {
+					badRequest(res, "strategies and poolIds are required");
+					return;
+				}
+				const maxPositions = maxPositionsList.length > 0 ? maxPositionsList : [10];
+				const ranks = rankBys.length > 0 ? rankBys : [null];
+
+				const store = requireStore();
+				const total = strategies.length * ranks.length * maxPositions.length * poolIds.length;
+				const results: any[] = [];
+				let done = 0;
+
+				// Load pools upfront
+				const poolMap = new Map<number, { name: string; is_dynamic: boolean }>();
+				for (const pid of poolIds) {
+					const pool = await store.getStockPoolById(pid);
+					if (pool) poolMap.set(pid, { name: pool.name, is_dynamic: !!pool.is_dynamic });
+				}
+
+				// Run grid sequentially, emit progress after each combo
+				for (const strategy of strategies) {
+					for (const rankBy of ranks) {
+						for (const maxPos of maxPositions) {
+							for (const pid of poolIds) {
+								const pool = poolMap.get(pid);
+								const combo = { strategy, rankBy, maxPos, poolId: pid, poolName: pool?.name ?? String(pid) };
+								const t0 = Date.now();
+								try {
+									let result: any;
+									if (pool?.is_dynamic) {
+										result = await runDynamicPoolBacktest(pid, {
+											strategy: strategy as any,
+											rankBy: rankBy as any,
+											maxPositions: maxPos,
+											start: params.start,
+											end: params.end,
+											initialCapital: params.initialCapital ?? 100_000_000,
+											fullPosition: true,
+											skipNoVolume: true,
+										});
+									} else {
+										const items = await store.getStockPoolItems(pid);
+										const stocks = items.map((i: any) => ({ code: i.code, market: i.market, name: i.name || undefined }));
+										result = await runPoolBacktest(stocks, {
+											strategy: strategy as any,
+											rankBy: rankBy as any,
+											maxPositions: maxPos,
+											start: params.start,
+											end: params.end,
+											initialCapital: params.initialCapital ?? 100_000_000,
+											fullPosition: true,
+											skipNoVolume: true,
+										});
+									}
+									const m = result.metrics;
+									results.push({
+										...combo,
+										totalReturn: m?.totalReturn ?? null,
+										annualizedReturn: m?.annualizedReturn ?? null,
+										sharpeRatio: m?.sharpeRatio ?? null,
+										maxDrawdown: m?.maxDrawdown ?? null,
+										winRate: m?.winRate ?? null,
+										profitFactor: m?.profitFactor ?? null,
+										totalTrades: m?.totalTrades ?? 0,
+										elapsedMs: Date.now() - t0,
+										error: null,
+									});
+								} catch (e) {
+									results.push({
+										...combo,
+										totalReturn: null, annualizedReturn: null, sharpeRatio: null,
+										maxDrawdown: null, winRate: null, profitFactor: null, totalTrades: 0,
+										elapsedMs: Date.now() - t0,
+										error: e instanceof Error ? e.message : String(e),
+									});
+								}
+								done++;
+								// Emit progress event for the frontend progress bar
+								if (session) {
+									session.emit("trading_event", { type: "batch_progress", done, total, current: combo });
+								}
+							}
+						}
+					}
+				}
+
+				json(res, 200, { total, results });
+			} catch (err) {
+				json(res, 500, { error: err instanceof Error ? err.message : String(err) });
+			}
+			return;
+		}
+
 		// Backtest strategies metadata
 		if (path === "/api/backtest/strategies" && method === "GET") {
 			json(res, 200, STRATEGY_META);
