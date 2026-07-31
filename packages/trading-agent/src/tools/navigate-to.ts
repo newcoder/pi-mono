@@ -4,6 +4,7 @@ import { Type } from "@sinclair/typebox";
 /** Registry mapping symbolic targets to page URLs. Add new entries here to support new navigable pages. */
 const PAGE_REGISTRY: Record<string, { url: string; label: string; newTab: boolean }> = {
 	backtest: { url: "/public/backtest.html", label: "策略回测", newTab: true },
+	batch_backtest: { url: "/public/batch-backtest.html", label: "批量回测", newTab: true },
 };
 
 const VALID_TARGETS = Object.keys(PAGE_REGISTRY);
@@ -28,7 +29,7 @@ interface NavigateDetails {
 export const navigateToTool: AgentTool<typeof navigateParams, NavigateDetails> = {
 	name: "navigate_to",
 	label: "页面导航",
-	description: `打开指定的工具页面。可用目标: ${VALID_TARGETS.map((t) => `${t} (${PAGE_REGISTRY[t].label})`).join(", ")}。当用户要求打开回测、运行回测、使用某个工具页面时，使用此工具导航到对应页面。`,
+	description: `打开指定的工具页面。可用目标: ${VALID_TARGETS.map((t) => `${t} (${PAGE_REGISTRY[t].label})`).join(", ")}。当用户要求打开回测、运行回测、批量回测、使用某个工具页面时，使用此工具导航到对应页面。`,
 	parameters: navigateParams,
 
 	execute: async (_id, params) => {
