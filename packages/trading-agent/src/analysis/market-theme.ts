@@ -155,11 +155,14 @@ function detectBoardLimit(code: string, name?: string | null): { up: number; dow
 }
 
 function isLimitUp(changePct: number, limit: number): boolean {
-	return changePct >= limit * 0.99;
+	// Must be within 0.5% of the exact board limit — consistent with backtest engine.
+	// Previous `>= limit * 0.99` was too loose (e.g. 9.91% counted as limit-up on 10% board).
+	return Math.abs(changePct - limit) < 0.5;
 }
 
 function isLimitDown(changePct: number, limit: number): boolean {
-	return changePct <= limit * 0.99;
+	// limit is already negative (e.g., -10). Check within 0.5% of exact limit.
+	return Math.abs(changePct - limit) < 0.5;
 }
 
 function avg(values: number[]): number {
