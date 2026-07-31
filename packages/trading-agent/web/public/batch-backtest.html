@@ -184,7 +184,7 @@ function renderResults() {
     const trCls = r.totalReturn >= 0 ? 'metric-pos' : 'metric-neg';
     const errHtml = r.error ? `<span class="err">${r.error}</span>` : '-';
     return `<tr>
-      <td>${r.strategy}</td><td>${r.rankBy ?? '-'}</td><td>${r.maxPositions}</td><td>${r.poolName}</td>
+      <td>${r.strategy}</td><td>${r.rankBy ?? '-'}</td><td>${r.maxPos}</td><td>${r.poolName}</td>
       <td class="${trCls}">${fmt(r.totalReturn)}</td><td>${fmt(r.annualizedReturn)}</td><td>${fmt(r.sharpeRatio)}</td>
       <td>${fmt(r.maxDrawdown)}</td><td>${fmt(r.winRate)}</td><td>${fmt(r.profitFactor)}</td>
       <td>${r.totalTrades}</td><td>${fmt(r.elapsedMs / 1000, 1)}</td><td>${errHtml}</td>
@@ -248,7 +248,7 @@ ws.onmessage = (ev) => {
       const { done, total } = msg.event;
       $('progress-fill').style.width = `${(done / total) * 100}%`;
       const c = msg.event.current;
-      $('progress-text').textContent = `运行中 ${done}/${total}: ${c.strategy} / ${c.rankBy ?? '-'} / ${c.maxPositions}只 / ${c.poolName}`;
+      $('progress-text').textContent = `运行中 ${done}/${total}: ${c.strategy} / ${c.rankBy ?? '-'} / ${c.maxPos}只 / ${c.poolName}`;
     }
   } catch {}
 };
