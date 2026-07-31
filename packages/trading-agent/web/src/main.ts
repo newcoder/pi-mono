@@ -1452,6 +1452,13 @@ function handleTradingEvent(ev: any) {
 	if (ev.type === "mode_change") {
 		state.marketPhase = ev.mode;
 	}
+	if (ev.type === "navigate" && ev.url) {
+		if (ev.newTab) {
+			window.open(ev.url, "_blank");
+		} else {
+			window.location.href = ev.url;
+		}
+	}
 }
 
 // ─── Event wiring ───────────────────────────────────────────

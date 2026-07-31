@@ -14,4 +14,5 @@ export type TradingEvent =
 	| { type: "mode_change"; mode: TradingMode }
 	| { type: "model_change"; model: TradingSessionConfig["model"] }
 	| { type: "routine_start"; name: string }
-	| { type: "routine_end"; name: string; summary: string };
+	| { type: "routine_end"; name: string; summary: string }
+	| { type: "navigate"; target: string; url: string; label?: string; newTab?: boolean };

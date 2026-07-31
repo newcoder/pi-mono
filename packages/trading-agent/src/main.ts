@@ -35,6 +35,7 @@ import { getFundamentalsTool, getKlineTool, getQuoteTool } from "./tools/market-
 import { predictStockRankingTool } from "./tools/ml-prediction.js";
 import { getMarketNewsTool, getStockNewsTool, screenByNewsTool } from "./tools/news-analysis.js";
 import { managePortfolioTool } from "./tools/portfolio.js";
+import { navigateToTool } from "./tools/navigate-to.js";
 import { generateReportTool } from "./tools/report.js";
 import { saveHotStocksAsPoolTool } from "./tools/save-hot-stocks-as-pool.js";
 import { screenStocksTool } from "./tools/screening.js";
@@ -88,12 +89,13 @@ async function handleSyncCommands(): Promise<boolean> {
 		const code = args[klineIdx + 1];
 		if (!code) {
 			console.error(
-				"Usage: --sync-kline <code> [--period daily] [--adjust bfq] [--start YYYYMMDD] [--end YYYYMMDD]",
+				"Usage: --sync-kline <code> [--period daily|week|month] [--adjust bfq] [--start YYYYMMDD] [--end YYYYMMDD]",
 			);
 			process.exit(1);
 		}
 		const periodIdx = args.indexOf("--period");
-		const period = periodIdx >= 0 ? args[periodIdx + 1] : "daily";
+		const rawPeriod = periodIdx >= 0 ? args[periodIdx + 1] : "daily";
+		const period = rawPeriod === "weekly" ? "week" : rawPeriod === "monthly" ? "month" : rawPeriod;
 		const adjustIdx = args.indexOf("--adjust");
 		const adjust = adjustIdx >= 0 ? args[adjustIdx + 1] : "bfq";
 		const startIdx = args.indexOf("--start");
@@ -294,6 +296,7 @@ const BUILTIN_TOOLS = new Map<string, AgentTool<any>>([
 	["analyze_concept_persistence", analyzeConceptPersistenceTool],
 	["scan_stock_radar", scanStockRadarTool],
 	["predict_stock_ranking", predictStockRankingTool],
+	["navigate_to", navigateToTool],
 	["generate_report", generateReportTool],
 ]);
 
@@ -457,6 +460,20 @@ async function main() {
 						bottomSectors: d.bottom_sectors ?? [],
 					},
 				});
+			}
+
+			// Emit navigate event for web frontend when navigate_to succeeds
+			if (!isError && toolCall.name === "navigate_to" && result.details) {
+				const d = result.details;
+				if (d.action === "navigate" && d.url) {
+					session.emit("trading_event", {
+						type: "navigate",
+						target: d.target as string,
+						url: d.url as string,
+						label: d.label as string | undefined,
+						newTab: d.newTab as boolean | undefined,
+					});
+				}
 			}
 
 			return Promise.resolve(undefined);
