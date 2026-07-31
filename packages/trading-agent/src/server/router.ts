@@ -40,15 +40,15 @@ function parseQuery(url: string): Record<string, string> {
 	return query;
 }
 
-/** Read and parse JSON request body with a size limit (prevents OOM). */
-const MAX_BODY_SIZE = 256 * 1024; // 256 KB
-async function readJsonBody(req: IncomingMessage): Promise<any> {
+/** Read and parse JSON request body with a configurable size limit (prevents OOM). */
+const DEFAULT_MAX_BODY = 256 * 1024; // 256 KB
+async function readJsonBody(req: IncomingMessage, maxSize = DEFAULT_MAX_BODY): Promise<any> {
 	let chunks: Buffer[] = [];
 	let total = 0;
 	for await (const chunk of req) {
 		const buf = typeof chunk === "string" ? Buffer.from(chunk) : chunk;
 		total += buf.length;
-		if (total > MAX_BODY_SIZE) throw new Error("Request body too large");
+		if (total > maxSize) throw new Error("Request body too large (max " + Math.round(maxSize/1024) + "KB)");
 		chunks.push(buf);
 	}
 	const raw = Buffer.concat(chunks).toString("utf-8");
@@ -544,7 +544,7 @@ export async function handleRequest(
 		// Save backtest report
 		if (path === "/api/backtest/save" && method === "POST") {
 			try {
-				const params = await readJsonBody(req);
+				const params = await readJsonBody(req, 4 * 1024 * 1024); // 4MB — large pools generate big trade lists
 				const { generatePoolBacktestReport } = await import("../report/pool-report.js");
 				const outputDir = join(homedir(), ".trading-agent", "reports");
 				const genResult = await generatePoolBacktestReport(params, outputDir, "http://localhost:3000");
