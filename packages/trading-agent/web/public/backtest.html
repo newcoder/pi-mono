@@ -64,11 +64,6 @@ tr:hover td{background:rgba(37,99,235,.05)}
     <h1>策略回测</h1>
     <div class="sub">选择股池 → 配置策略 → 运行 → 查看结果</div>
   </div>
-  <div class="header-right">
-    <select id="pool-select" style="min-width:200px"><option value="">加载中...</option></select>
-    <button id="run-btn" onclick="runBacktest()">▶ 运行回测</button>
-    <button id="save-btn" class="hidden" onclick="saveReport()" style="background:#1a1d2b;color:#e0e0e0;border:1px solid #333;border-radius:6px;padding:8px 14px;cursor:pointer;font-size:13px">📄 保存报告</button>
-  </div>
 </div>
 
 <!-- Saved reports list -->
@@ -95,6 +90,9 @@ tr:hover td{background:rgba(37,99,235,.05)}
   </select></label>
   <label>起始 <input type="date" id="startDate"></label>
   <label>结束 <input type="date" id="endDate"></label>
+  <label>股池 <select id="pool-select" style="min-width:200px"><option value="">加载中...</option></select></label>
+  <button id="run-btn" onclick="runBacktest()">▶ 运行回测</button>
+  <button id="save-btn" class="hidden" onclick="saveReport()" style="background:#1a1d2b;color:#e0e0e0;border:1px solid #333;border-radius:6px;padding:8px 14px;cursor:pointer;font-size:13px">📄 保存报告</button>
 </div>
 
 <div class="advanced-toggle" onclick="toggleAdvanced()">▶ 高级设置</div>
