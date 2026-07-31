@@ -1,5 +1,5 @@
 import type { DataStore } from "../data/index.js";
-import type { QuoteRow } from "../data/types.js";
+import type { KlineRow, QuoteRow } from "../data/types.js";
 
 const DEFAULT_LOOKBACK_DAYS = 5;
 const MAIN_BOARD_LIMIT = 9.9;
@@ -284,6 +284,18 @@ async function fetchQuotesInWindow(store: DataStore, startDate: string, endDate:
 		}));
 }
 
+/** Fetch daily klines that had meaningful price changes in the window.
+ *  Klines have contiguous daily coverage — unlike quotes which only have
+ *  snapshotted dates — so klines are used for 连板 streak detection. */
+async function fetchKlinesInWindow(store: DataStore, startDate: string, endDate: string): Promise<KlineRow[]> {
+	return store.query<KlineRow>(
+		`SELECT code, market, date, open, high, low, close, volume, amount, change_pct, turnover, pre_close
+		 FROM klines WHERE period = 'daily' AND adjust = 'bfq' AND date >= ? AND date <= ? AND change_pct IS NOT NULL
+		 ORDER BY date`,
+		[startDate, endDate],
+	);
+}
+
 export function computeBoardStats(quotes: QuoteRow[]): BoardStats[] {
 	const byDate = new Map<string, QuoteRow[]>();
 	for (const q of quotes) {
@@ -323,31 +335,70 @@ export function computeBoardStats(quotes: QuoteRow[]): BoardStats[] {
 	});
 }
 
-export function computeLianbanStocks(quotes: QuoteRow[], _endDate: string): LianbanStock[] {
-	const byStock = new Map<string, QuoteRow[]>();
+/** Minimal row needed for 连板 detection — accepts both KlineRow and QuoteRow. */
+interface LianbanInputRow {
+	code: string;
+	market: number;
+	date: string;
+	change_pct: number | null;
+	close: number | null;
+}
+
+export function computeLianbanStocks(
+	rows: LianbanInputRow[],
+	quotes: QuoteRow[],
+	_endDate: string,
+): LianbanStock[] {
+	// Build quote lookup for name and marketCap (klines don't have these)
+	const quoteByName = new Map<string, { name: string; marketCap: number | null }>();
 	for (const q of quotes) {
 		const key = `${q.code}:${q.market}`;
+		if (!quoteByName.has(key)) {
+			quoteByName.set(key, { name: q.name ?? q.code, marketCap: q.total_cap ?? null });
+		}
+	}
+
+	// Group klines by stock, sorted by date
+	const byStock = new Map<string, LianbanInputRow[]>();
+	for (const k of rows) {
+		if (k.close == null) continue; // skip suspended
+		const key = `${k.code}:${k.market}`;
 		if (!byStock.has(key)) byStock.set(key, []);
-		byStock.get(key)!.push(q);
+		byStock.get(key)!.push(k);
+	}
+
+	/** Days between two YYYY-MM-DD strings. Uses simple diff; close enough for trading-day check. */
+	function daysBetween(a: string, b: string): number {
+		const d = new Date(a).getTime() - new Date(b).getTime();
+		return Math.round(d / 86_400_000);
 	}
 
 	const result: LianbanStock[] = [];
-	for (const [, dayQuotes] of byStock) {
-		const sorted = dayQuotes.sort((a, b) => a.snapshot_date.localeCompare(b.snapshot_date));
-		const hasStName = sorted.some((q) => isStName(q.name));
-		const hasIpoName = sorted.some((q) => isIpoName(q.name));
-		if (hasStName || hasIpoName) continue;
+	for (const [, dayKlines] of byStock) {
+		const sorted = dayKlines.sort((a, b) => a.date.localeCompare(b.date));
+		if (sorted.length < 2) continue;
+
+		const qInfo = quoteByName.get(`${sorted[0].code}:${sorted[0].market}`);
+		if (qInfo && isStName(qInfo.name)) continue;
+
+		// Count consecutive limit-ups from the most recent date backward
 		let streak = 0;
 		let totalLimitUps = 0;
+		let prevDate: string | null = null;
 		for (let i = sorted.length - 1; i >= 0; i--) {
-			const q = sorted[i];
-			const pct = q.change_pct ?? 0;
-			const limit = detectBoardLimit(q.code, q.name);
+			const k = sorted[i];
+			const pct = k.change_pct ?? 0;
+			const limit = detectBoardLimit(k.code, qInfo?.name);
 			if (isLimitUp(pct, limit.up)) {
 				totalLimitUps++;
-				if (i === sorted.length - 1 - streak) {
+				// Check date continuity: at most 4 calendar days between bars
+				// (handles weekends and single-day holidays; >4 days = gap/suspension)
+				if (prevDate === null || daysBetween(prevDate, k.date) <= 4) {
 					streak++;
+				} else {
+					break; // date gap — streak broken
 				}
+				prevDate = k.date;
 			} else {
 				break;
 			}
@@ -357,11 +408,11 @@ export function computeLianbanStocks(quotes: QuoteRow[], _endDate: string): Lian
 			result.push({
 				code: latest.code,
 				market: latest.market,
-				name: latest.name ?? latest.code,
+				name: qInfo?.name ?? latest.code,
 				streak,
 				totalLimitUpsInWindow: totalLimitUps,
 				latestChangePct: latest.change_pct ?? 0,
-				marketCap: latest.total_cap ?? null,
+				marketCap: qInfo?.marketCap ?? null,
 			});
 		}
 	}
@@ -1254,7 +1305,8 @@ export async function analyzeMarketTheme(store: DataStore, options?: ThemeOption
 
 	const boardStats = computeBoardStats(quotes);
 	const latestStats = boardStats[boardStats.length - 1];
-	const lianbanStocks = computeLianbanStocks(quotes, endDate);
+	const dailyKlines = await fetchKlinesInWindow(store, startDate, endDate);
+	const lianbanStocks = computeLianbanStocks(dailyKlines, quotes, endDate);
 	const [rawSectors, newsThemes, openBoardRate] = await Promise.all([
 		fetchSectorMomentum(store, quotes, startDate, endDate),
 		fetchNewsThemes(store, startDate),

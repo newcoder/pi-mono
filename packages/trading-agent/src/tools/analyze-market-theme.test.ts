@@ -241,7 +241,7 @@ describe("market-theme analysis helpers", () => {
 			makeQuote({ code: "B", snapshot_date: "2026-06-23", change_pct: 10 }),
 			makeQuote({ code: "B", snapshot_date: "2026-06-24", change_pct: 10 }),
 		];
-		const lianban = computeLianbanStocks(quotes, "2026-06-24");
+		const lianban = computeLianbanStocks(quotes as any, [], "2026-06-24");
 		expect(lianban.length).toBeGreaterThan(0);
 		const b = lianban.find((l) => l.code === "B");
 		expect(b?.streak).toBe(3);
@@ -277,7 +277,7 @@ describe("market-theme analysis helpers", () => {
 				turnover: 70000,
 			}),
 		];
-		const lianban = computeLianbanStocks(quotes, "2026-06-24");
+		const lianban = computeLianbanStocks(quotes as any, [], "2026-06-24");
 		const leaders = identifyLeaders(quotes, lianban);
 		const leaderA = leaders.find((l) => l.code === "A");
 		const leaderB = leaders.find((l) => l.code === "B");
