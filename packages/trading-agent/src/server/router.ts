@@ -11,6 +11,7 @@ import { marketFromCode, requireStore, requireSync } from "../data/index.js";
 import { runAStockDataJsonScript, runJsonScript, runLocalDataJsonScript } from "../tools/_utils.js";
 import { predictStockRankingTool } from "../tools/ml-prediction.js";
 import { BACKTEST_PARAMS_SCHEMA } from "../tools/backtest.js";
+import { addReport, listReports, removeReport } from "../report/report-store.js";
 import type { BackgroundSyncService } from "./background-sync.js";
 import type { MootdxDaemon } from "./mootdx-daemon.js";
 
@@ -522,16 +523,59 @@ export async function handleRequest(
 		}
 
 		// Backtest report save
-		if (path === "/api/backtest/save" && method === "POST") {
-			let body = "";
-			for await (const chunk of req) {
-				body += chunk;
+		// List saved backtest reports
+		if (path === "/api/backtest/reports" && method === "GET") {
+			json(res, 200, listReports());
+			return;
+		}
+
+		// Delete a saved backtest report
+		if (path.startsWith("/api/backtest/reports/") && method === "DELETE") {
+			const fileName = decodeURIComponent(path.slice("/api/backtest/reports/".length));
+			if (!fileName || fileName.includes("..")) {
+				badRequest(res, "Invalid file name");
+				return;
 			}
-			const params = body ? JSON.parse(body) : {};
+			const ok = removeReport(fileName);
+			json(res, ok ? 200 : 404, ok ? { deleted: true } : { error: "Report not found" });
+			return;
+		}
+
+		// Save backtest report
+		if (path === "/api/backtest/save" && method === "POST") {
 			try {
+				const params = await readJsonBody(req);
 				const { generatePoolBacktestReport } = await import("../report/pool-report.js");
 				const outputDir = join(homedir(), ".trading-agent", "reports");
 				const genResult = await generatePoolBacktestReport(params, outputDir, "http://localhost:3000");
+
+				// Extract fileName from URL (last segment)
+				const urlParts = genResult.url.split("/");
+				const fileName = urlParts[urlParts.length - 1];
+
+				// Save metadata to index for list/restore
+				addReport({
+					fileName,
+					title: params.title || "",
+					poolId: params.poolId ?? 0,
+					poolName: params.poolName || "",
+					strategy: params.strategy || "",
+					startDate: params.startDate || "",
+					endDate: params.endDate || "",
+					initialCapital: params.initialCapital ?? 100000,
+					createdAt: new Date().toISOString(),
+					metrics: {
+						totalReturn: params.strategyMetrics?.totalReturn ?? 0,
+						annualizedReturn: params.strategyMetrics?.annualizedReturn ?? 0,
+						maxDrawdown: params.strategyMetrics?.maxDrawdown ?? 0,
+						winRate: params.strategyMetrics?.winRate ?? 0,
+						totalTrades: params.strategyMetrics?.totalTrades ?? 0,
+						sharpeRatio: params.strategyMetrics?.sharpeRatio ?? 0,
+						profitFactor: params.strategyMetrics?.profitFactor ?? 0,
+					},
+					config: params.config || {},
+				});
+
 				json(res, 200, { url: genResult.url });
 			} catch (err) {
 				json(res, 500, { error: err instanceof Error ? err.message : String(err) });

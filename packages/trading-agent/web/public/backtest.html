@@ -24,6 +24,24 @@ select:focus,input:focus{outline:none;border-color:#2563eb}
 #run-btn:hover:not(:disabled){background:#1d4ed8}
 #loading{text-align:center;padding:40px;color:#888;font-size:15px}
 .hidden{display:none!important}
+/* Report list panel */
+.report-list-panel{border-bottom:1px solid #1a1d2b;background:#0a0c12}
+.report-list-header{cursor:pointer;padding:10px 24px;display:flex;align-items:center;gap:8px;font-size:13px;color:#888;user-select:none}
+.report-list-header:hover{color:#e0e0e0}
+.report-list-header .arrow{transition:transform .2s;font-size:10px}
+.report-list-header .arrow.open{transform:rotate(90deg)}
+.report-list-body{overflow-x:auto;padding:0 24px 8px}
+.report-list-body table{width:100%;border-collapse:collapse;font-size:12px}
+.report-list-body th{text-align:left;padding:6px 8px;color:#666;font-weight:500;border-bottom:1px solid #1a1d2b;white-space:nowrap}
+.report-list-body td{padding:6px 8px;border-bottom:1px solid #111;white-space:nowrap}
+.report-list-body tr.report-row{cursor:pointer;transition:background .15s}
+.report-list-body tr.report-row:hover{background:#1a1d2b}
+.report-list-body tr.report-row:active{background:#252840}
+.report-list-body .metric-pos{color:#ef4444}
+.report-list-body .metric-neg{color:#22c55e}
+.report-list-body .action-btn{background:none;border:1px solid #333;color:#888;border-radius:4px;padding:2px 6px;cursor:pointer;font-size:11px;margin:0 2px}
+.report-list-body .action-btn:hover{color:#e0e0e0;border-color:#666}
+.report-list-body .action-btn.danger:hover{color:#ef4444;border-color:#ef4444}
 #error{background:rgba(239,68,68,.1);border:1px solid #ef4444;color:#ef4444;padding:12px 16px;border-radius:6px;margin:12px 24px}
 .metrics-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:12px;padding:16px 24px}
 .metric-card{background:#1a1d2b;border-radius:8px;padding:16px;border:1px solid #222;text-align:center}
@@ -50,6 +68,16 @@ tr:hover td{background:rgba(37,99,235,.05)}
     <select id="pool-select" style="min-width:200px"><option value="">加载中...</option></select>
     <button id="run-btn" onclick="runBacktest()">▶ 运行回测</button>
     <button id="save-btn" class="hidden" onclick="saveReport()" style="background:#1a1d2b;color:#e0e0e0;border:1px solid #333;border-radius:6px;padding:8px 14px;cursor:pointer;font-size:13px">📄 保存报告</button>
+  </div>
+</div>
+
+<!-- Saved reports list -->
+<div class="report-list-panel hidden" id="report-list-panel">
+  <div class="report-list-header" onclick="toggleReportList()">
+    <span class="arrow" id="report-arrow">▶</span> 📋 已保存报告 (<span id="report-count">0</span>)
+  </div>
+  <div class="report-list-body hidden" id="report-list-body">
+    <table><thead><tr><th>股池</th><th>策略</th><th>区间</th><th>总收益</th><th>年化</th><th>回撤</th><th>胜率</th><th>交易</th><th>保存时间</th><th>操作</th></tr></thead><tbody id="report-tbody"></tbody></table>
   </div>
 </div>
 
@@ -104,7 +132,7 @@ tr:hover td{background:rgba(37,99,235,.05)}
 </div>
 
 <script>
-const state = { pools: [], strategies: {}, running: false, result: null, chart: null };
+const state = { pools: [], strategies: {}, running: false, result: null, chart: null, reportsOpen: false, reports: [] };
 const STRATEGIES = [
   'ma_cross','macd_cross','rsi_reversal','bollinger_breakout','supertrend',
   'hammer','bullish_engulf','morning_star','three_soldiers','tech_composite',
@@ -146,6 +174,8 @@ async function init(){
   setVal('endDate', now.toISOString().slice(0,10));
   const yago = new Date(now); yago.setFullYear(yago.getFullYear()-2);
   setVal('startDate', yago.toISOString().slice(0,10));
+  // Load saved reports in background
+  loadReports().catch(() => {});
   } catch(e) {
     $('pool-select').innerHTML = '<option value="">加载失败 — 请刷新重试</option>';
     console.error('Backtest init error:', e);
@@ -155,31 +185,162 @@ document.addEventListener('DOMContentLoaded', init);
 
 async function saveReport(){
   if(!state.lastResult||!state.lastConfig) return;
-  const btn=$('save-btn'); btn.textContent='保存中...'; btn.disabled=true;
+  const btn=$('save-btn'); const origText=btn.textContent;
+  btn.textContent='保存中...'; btn.disabled=true;
   try {
-    const poolName=state.pools.find(p=>p.id==Number(getVal('pool-select')))?.name||'';
+    const poolId = Number(getVal('pool-select'));
+    const poolName = state.pools.find(p=>p.id===poolId)?.name||'';
+    const strategy = getVal('strategy');
+    // Build clean config with strategy-relevant fields
+    const config = {
+      strategy, maxPositions: Number(getVal('maxPositions')),
+      rankBy: getVal('rankBy'), fullPosition: getVal('fullPosition')==='true',
+      positionSizingMethod: getVal('positionSizingMethod'),
+      fullPositionMode: getVal('fullPositionMode'),
+      maxPositionWeight: Number(getVal('maxPositionWeight')),
+      slippage: Number(getVal('slippage'))/100,
+      commission: Number(getVal('commission'))/100,
+      taxRate: Number(getVal('taxRate'))/100,
+      maxHoldingDays: Number(getVal('maxHoldingDays'))||undefined,
+      rebalanceFrequency: Number(getVal('rFreq')),
+      initialCapital: Number(getVal('initialCapital'))*10000,
+      start: getVal('startDate').replace(/-/g,''),
+      end: getVal('endDate').replace(/-/g,''),
+    };
     const res=await fetch('/api/backtest/save',{
       method:'POST',headers:{'Content-Type':'application/json'},
       body:JSON.stringify({
-        title:poolName+' '+getVal('strategy')+' 回测报告',
-        poolName, strategy:getVal('strategy'),
-        startDate:state.lastResult.startDate, endDate:state.lastResult.endDate,
-        initialCapital:state.lastResult.initialCapital,
-        strategyCurve:state.lastResult.equityCurve.map(p=>({date:p.date,equity:p.equity})),
-        strategyMetrics:{totalReturn:state.lastResult.metrics.totalReturn,annualizedReturn:state.lastResult.metrics.annualizedReturn,sharpeRatio:state.lastResult.metrics.sharpeRatio,maxDrawdown:state.lastResult.metrics.maxDrawdown,winRate:state.lastResult.metrics.winRate,profitFactor:state.lastResult.metrics.profitFactor,totalTrades:state.lastResult.trades.filter(t=>t.direction==='sell').length},
-        benchmarks:[], trades:state.lastResult.trades,
-        config:state.lastConfig
+        title: poolName + ' ' + strategy + ' 回测报告',
+        poolId, poolName, strategy,
+        startDate: state.lastResult.startDate, endDate: state.lastResult.endDate,
+        initialCapital: state.lastResult.initialCapital,
+        strategyCurve: state.lastResult.equityCurve.map(p=>({date:p.date,equity:p.equity})),
+        strategyMetrics: {
+          totalReturn: state.lastResult.metrics.totalReturn,
+          annualizedReturn: state.lastResult.metrics.annualizedReturn,
+          sharpeRatio: state.lastResult.metrics.sharpeRatio,
+          maxDrawdown: state.lastResult.metrics.maxDrawdown,
+          winRate: state.lastResult.metrics.winRate,
+          profitFactor: state.lastResult.metrics.profitFactor,
+          totalTrades: state.lastResult.trades.filter(t=>t.direction==='sell').length
+        },
+        benchmarks:[], trades: state.lastResult.trades,
+        config
       })
     });
     const data=await res.json();
     if(data.url) window.open(data.url,'_blank');
-    btn.textContent='📄 保存报告'; btn.disabled=false;
-  }catch(e){ btn.textContent='❌ 失败'; btn.disabled=false; console.error(e); }
+    btn.textContent = origText; btn.disabled = false;
+    // Refresh the report list
+    await loadReports();
+    // Auto-expand the list after first save
+    if (!state.reportsOpen) toggleReportList();
+  } catch(e) {
+    btn.textContent = '❌ 失败';
+    btn.disabled = false;
+    setTimeout(() => { if (btn.textContent === '❌ 失败') btn.textContent = origText; }, 3000);
+    console.error(e);
+  }
 }
 
 function toggleAdvanced(){
   const p = $('advancedPanel');
   p.style.display = p.style.display === 'flex' ? 'none' : 'flex';
+}
+
+// ─── Report list management ─────────────────────────────────
+
+async function loadReports(){
+  try {
+    const res = await fetch('/api/backtest/reports');
+    state.reports = await res.json();
+    renderReportList();
+  } catch(e) { console.error('loadReports:', e); }
+}
+
+function toggleReportList(){
+  state.reportsOpen = !state.reportsOpen;
+  $('report-arrow').className = 'arrow' + (state.reportsOpen ? ' open' : '');
+  $('report-list-body').classList.toggle('hidden', !state.reportsOpen);
+}
+
+function renderReportList(){
+  const panel = $('report-list-panel');
+  const tbody = $('report-tbody');
+  const count = $('report-count');
+  count.textContent = state.reports.length;
+  panel.classList.toggle('hidden', state.reports.length === 0);
+
+  if (state.reports.length === 0) { tbody.innerHTML = ''; return; }
+
+  const fmt = (n, d=2) => n != null ? n.toFixed(d) : '-';
+  const fmtDate = (s) => s ? s.slice(0,10) : '-';
+
+  tbody.innerHTML = state.reports.map((r, idx) => {
+    const trCls = r.totalReturn >= 0 ? 'metric-neg' : 'metric-pos';
+    return `<tr class="report-row" ondblclick="restoreReportConfig(${idx})" title="双击恢复回测参数">
+      <td>${esc(r.poolName)}</td><td>${esc(r.strategy)}</td>
+      <td>${fmtDate(r.startDate)}~${fmtDate(r.endDate)}</td>
+      <td class="${trCls}">${r.metrics.totalReturn >= 0 ? '+' : ''}${fmt(r.metrics.totalReturn)}%</td>
+      <td>${fmt(r.metrics.annualizedReturn)}%</td>
+      <td>${fmt(r.metrics.maxDrawdown)}%</td>
+      <td>${fmt(r.metrics.winRate)}%</td>
+      <td>${r.metrics.totalTrades}</td>
+      <td style="color:#666;font-size:11px">${fmtDate(r.createdAt)}</td>
+      <td>
+        <button class="action-btn" onclick="event.stopPropagation();window.open('/reports/${r.fileName}','_blank')">打开</button>
+        <button class="action-btn danger" onclick="event.stopPropagation();deleteReport('${r.fileName}')">🗑</button>
+      </td></tr>`;
+  }).join('');
+}
+
+function esc(s) { return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
+
+async function deleteReport(fileName) {
+  if (!confirm('确定删除这条回测报告？')) return;
+  try {
+    const res = await fetch('/api/backtest/reports/' + encodeURIComponent(fileName), { method: 'DELETE' });
+    if (!res.ok) throw new Error('Delete failed');
+    await loadReports();
+  } catch(e) { alert('删除失败: ' + e.message); }
+}
+
+function restoreReportConfig(idx) {
+  const r = state.reports[idx];
+  if (!r || !r.config) return alert('该报告缺少回测参数');
+
+  const c = r.config;
+  // Restore pool selection
+  if (r.poolId) {
+    const sel = $('pool-select');
+    for (let i = 0; i < sel.options.length; i++) {
+      if (Number(sel.options[i].value) === r.poolId) { sel.selectedIndex = i; break; }
+    }
+  }
+  // Restore form fields (use config values, fallback to current)
+  if (c.strategy) setVal('strategy', c.strategy);
+  if (c.start) { const s = String(c.start); setVal('startDate', s.slice(0,4)+'-'+s.slice(4,6)+'-'+s.slice(6,8)); }
+  if (c.end) { const s = String(c.end); setVal('endDate', s.slice(0,4)+'-'+s.slice(4,6)+'-'+s.slice(6,8)); }
+  if (c.initialCapital != null) setVal('initialCapital', String(c.initialCapital / 10000));
+  if (c.maxPositions != null) setVal('maxPositions', String(c.maxPositions));
+  if (c.rankBy) setVal('rankBy', c.rankBy);
+  if (c.period) setVal('period', c.period);
+  if (c.fullPosition != null) setVal('fullPosition', String(c.fullPosition));
+  if (c.positionSizingMethod) setVal('positionSizingMethod', c.positionSizingMethod);
+  if (c.fullPositionMode) setVal('fullPositionMode', c.fullPositionMode);
+  if (c.maxPositionWeight != null) setVal('maxPositionWeight', String(c.maxPositionWeight));
+  if (c.slippage != null) setVal('slippage', String(Math.round(c.slippage * 100)));
+  if (c.commission != null) setVal('commission', String(Math.round(c.commission * 100)));
+  if (c.taxRate != null) setVal('taxRate', String(Math.round(c.taxRate * 100)));
+  if (c.maxHoldingDays != null) setVal('maxHoldingDays', String(c.maxHoldingDays));
+  if (c.rebalanceFrequency != null) setVal('rFreq', String(c.rebalanceFrequency));
+  if (c.minLot != null) setVal('minLot', String(c.minLot));
+
+  // Scroll to run button
+  $('run-btn').scrollIntoView({ behavior: 'smooth' });
+  // Flash the run button
+  $('run-btn').style.boxShadow = '0 0 12px #2563eb';
+  setTimeout(() => { $('run-btn').style.boxShadow = ''; }, 1500);
 }
 
 async function runBacktest(){
