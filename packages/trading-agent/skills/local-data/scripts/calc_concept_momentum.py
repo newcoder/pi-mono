@@ -18,6 +18,7 @@ if _SKILL_ROOT not in sys.path:
 import argparse
 import sqlite3
 from local_data.db import get_db
+from local_data.schema import ensure_tables
 from datetime import datetime
 from typing import Dict, List, Optional, Sequence
 
@@ -25,23 +26,6 @@ import pandas as pd
 import numpy as np
 
 from calc_industry_momentum import compute_ic
-
-
-def ensure_tables(conn: sqlite3.Connection):
-    conn.execute("""
-        CREATE TABLE IF NOT EXISTS concept_indicators (
-            concept TEXT NOT NULL,
-            date TEXT NOT NULL,
-            period_days INTEGER NOT NULL,
-            momentum_return REAL,
-            momentum_rank INTEGER,
-            has_momentum INTEGER,
-            updated_at TEXT,
-            PRIMARY KEY (concept, date, period_days)
-        )
-    """)
-    conn.execute("CREATE INDEX IF NOT EXISTS idx_concept_indicators_date ON concept_indicators(date, period_days)")
-    conn.commit()
 
 
 def get_tracked_concepts(conn: sqlite3.Connection) -> List[str]:
@@ -140,7 +124,7 @@ def calc_all(
     forwards: Sequence[int] = (5,),
     since: Optional[str] = None,
 ) -> dict:
-    ensure_tables(conn)
+    ensure_tables()
 
     if concepts is None:
         concepts = get_tracked_concepts(conn)
@@ -169,7 +153,7 @@ def calc_all(
             fwd = forward_dict[f]
             ic = compute_ic(mom, fwd)
             if ic is not None and not ic.empty:
-                mean_ic = ic.mean()
+                mean_ic = float(ic["ic_value"].mean())
                 n = save_concept_ic(conn, ic, p, f)
                 total_ic += n
                 print(f"  IC concept_momentum_{p}d_forward{f}d: mean={mean_ic:.4f}, rows={n}")

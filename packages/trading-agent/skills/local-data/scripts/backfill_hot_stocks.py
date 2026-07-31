@@ -16,6 +16,7 @@ if _SKILL_ROOT not in sys.path:
 import argparse
 import sqlite3
 from local_data.db import get_db, get_db_path, db_exists
+from local_data.schema import ensure_tables
 from local_data.market import market_from_code
 import time
 from concurrent.futures import ThreadPoolExecutor, as_completed
@@ -112,30 +113,6 @@ def save_day(conn: sqlite3.Connection, date_str: str, rows: List[Dict]) -> int:
     return inserted
 
 
-def ensure_table(conn: sqlite3.Connection):
-    conn.execute("""
-        CREATE TABLE IF NOT EXISTS hot_stocks (
-            date TEXT NOT NULL,
-            code TEXT NOT NULL,
-            market INTEGER NOT NULL,
-            name TEXT,
-            reason TEXT,
-            price REAL,
-            change_pct REAL,
-            turnover_pct REAL,
-            amount REAL,
-            pe_ttm REAL,
-            pb REAL,
-            mcap_yi REAL,
-            updated_at TEXT,
-            PRIMARY KEY (date, code, market)
-        )
-    """)
-    conn.execute("CREATE INDEX IF NOT EXISTS idx_hot_stocks_date ON hot_stocks(date)")
-    conn.execute("CREATE INDEX IF NOT EXISTS idx_hot_stocks_reason ON hot_stocks(reason)")
-    conn.commit()
-
-
 def main():
     parser = argparse.ArgumentParser(description="Backfill historical hot_stocks")
     parser.add_argument("--start-date", default="2024-01-01", help="Start date YYYY-MM-DD")
@@ -148,7 +125,7 @@ def main():
     end = datetime.strptime(args.end_date, "%Y-%m-%d").date()
 
     conn = get_db()
-    ensure_table(conn)
+    ensure_tables()
     existing = get_existing_dates(conn)
     conn.close()
 
@@ -181,7 +158,7 @@ def main():
 
     conn = get_db()
     try:
-        ensure_table(conn)
+        ensure_tables()
         total_inserted = 0
         days_inserted = 0
         for d in sorted(fetched_results):

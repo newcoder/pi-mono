@@ -48,13 +48,20 @@ function tradingDaysAgo(dateStr: string, days: number): string {
  *   + tradeAdj     = totalTrades < 5 ? -15 : min(5, totalTrades * 0.1)
  */
 export function metricsToConfidence(metrics: BacktestMetrics): number {
-	const sharpeScore = Math.max(-10, Math.min(25, metrics.sharpeRatio * 10));
-	const winRateScore = Math.max(-15, Math.min(15, (metrics.winRate - 50) * 0.5));
-	const pfScore = Math.max(-10, Math.min(15, (metrics.profitFactor - 1) * 8));
-	const ddPenalty = Math.max(-20, Math.min(0, -metrics.maxDrawdown * 0.33));
-	const tradeAdj = metrics.totalTrades < 5 ? -15 : Math.min(5, metrics.totalTrades * 0.1);
+	const sharpeRatio = Number.isFinite(metrics.sharpeRatio) ? metrics.sharpeRatio : 0;
+	const winRate = Number.isFinite(metrics.winRate) ? metrics.winRate : 50;
+	const profitFactor = Number.isFinite(metrics.profitFactor) ? metrics.profitFactor : 1;
+	const maxDrawdown = Number.isFinite(metrics.maxDrawdown) ? metrics.maxDrawdown : 0;
+	const totalTrades = Number.isFinite(metrics.totalTrades) ? metrics.totalTrades : 0;
 
-	return Math.max(0, Math.min(100, 40 + sharpeScore + winRateScore + pfScore + ddPenalty + tradeAdj));
+	const sharpeScore = Math.max(-10, Math.min(25, sharpeRatio * 10));
+	const winRateScore = Math.max(-15, Math.min(15, (winRate - 50) * 0.5));
+	const pfScore = Math.max(-10, Math.min(15, (profitFactor - 1) * 8));
+	const ddPenalty = Math.max(-20, Math.min(0, -maxDrawdown * 0.33));
+	const tradeAdj = totalTrades < 5 ? -15 : Math.min(5, totalTrades * 0.1);
+
+	const score = 40 + sharpeScore + winRateScore + pfScore + ddPenalty + tradeAdj;
+	return Number.isFinite(score) ? Math.max(0, Math.min(100, score)) : 0;
 }
 
 function median(values: number[]): number {
@@ -287,14 +294,14 @@ async function sampledValidateIdea(
 		annualizedReturn: median(validResults.map((r) => r.metrics.annualizedReturn)),
 		sharpeRatio: median(validResults.map((r) => r.metrics.sharpeRatio)),
 		maxDrawdown: median(validResults.map((r) => r.metrics.maxDrawdown)),
-		maxDrawdownDuration: 0,
+		maxDrawdownDuration: Math.round(median(validResults.map((r) => r.metrics.maxDrawdownDuration))),
 		winRate: median(validResults.map((r) => r.metrics.winRate)),
 		profitFactor: median(validResults.map((r) => r.metrics.profitFactor)),
-		avgWin: 0,
-		avgLoss: 0,
+		avgWin: median(validResults.map((r) => r.metrics.avgWin)),
+		avgLoss: median(validResults.map((r) => r.metrics.avgLoss)),
 		totalTrades: Math.round(median(validResults.map((r) => r.metrics.totalTrades))),
-		winningTrades: 0,
-		losingTrades: 0,
+		winningTrades: Math.round(median(validResults.map((r) => r.metrics.winningTrades))),
+		losingTrades: Math.round(median(validResults.map((r) => r.metrics.losingTrades))),
 		avgHoldingDays: Math.round(median(validResults.map((r) => r.metrics.avgHoldingDays))),
 	};
 

@@ -9,9 +9,14 @@ import os
 import sys
 
 _SCRIPT_DIR = os.path.dirname(os.path.abspath(__file__))
-_SKILL_ROOT = os.path.dirname(_SCRIPT_DIR)
+_SCRIPTS_DIR = os.path.dirname(_SCRIPT_DIR)
+_SKILL_ROOT = os.path.dirname(_SCRIPTS_DIR)
 if _SCRIPT_DIR not in sys.path:
     sys.path.insert(0, _SCRIPT_DIR)
+if _SCRIPTS_DIR not in sys.path:
+    sys.path.insert(0, _SCRIPTS_DIR)
+if _SKILL_ROOT not in sys.path:
+    sys.path.insert(0, _SKILL_ROOT)
 
 import argparse
 import sqlite3
@@ -19,9 +24,10 @@ from datetime import datetime
 from typing import Dict, List, Set
 
 from local_data.db import get_db
+from local_data.market import market_from_code
 
 # Import from sibling scripts
-from classify_themes import CONCEPT_MERGE_MAP
+from analysis.classify_themes import CONCEPT_MERGE_MAP
 
 
 def ensure_tables(conn: sqlite3.Connection):
@@ -57,13 +63,12 @@ def get_concept_stocks(conn: sqlite3.Connection, theme: str, children: List[str]
     stocks = {}
     for concept in all_concepts:
         rows = conn.execute(
-            "SELECT cs.code, s.name, CASE WHEN cs.code LIKE '6%' OR cs.code LIKE '9%' THEN 1 ELSE 0 END as market "
-            "FROM concept_stocks cs JOIN stocks s ON cs.code = s.code WHERE cs.concept = ?",
+            "SELECT cs.code, s.name FROM concept_stocks cs JOIN stocks s ON cs.code = s.code WHERE cs.concept = ?",
             (concept,),
         ).fetchall()
-        for code, name, market in rows:
+        for code, name in rows:
             if code not in stocks:
-                stocks[code] = {"code": code, "name": name, "market": market}
+                stocks[code] = {"code": code, "name": name, "market": market_from_code(code) or 0}
     return stocks
 
 

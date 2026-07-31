@@ -250,7 +250,7 @@ def validate_industries() -> dict:
         cur.execute("SELECT DISTINCT standard FROM industries")
         standards_set = {row[0] for row in cur.fetchall()}
         standards = len(standards_set)
-        expected_standards = {"em"}
+        expected_standards = {"em", "jq_l1", "jq_l2", "sw_l1", "sw_l2", "sw_l3", "ths", "zjw"}
 
         cur.execute("SELECT COUNT(*) FROM stock_industries")
         mapping_count = cur.fetchone()[0]

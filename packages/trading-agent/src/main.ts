@@ -2,7 +2,7 @@
 import { join, resolve } from "node:path";
 import { createInterface } from "node:readline";
 import type { AgentTool } from "@mariozechner/pi-agent-core";
-import { streamSimple } from "@mariozechner/pi-ai";
+import { streamSimple } from "@mariozechner/pi-ai/compat";
 import { loadUserConfig } from "./config/user-config.js";
 import { loadModelRegistry, selectDefaultModel } from "./core/model-config.js";
 import { SessionMemory } from "./core/session-memory.js";
@@ -335,7 +335,7 @@ async function main() {
 	setDataSync(sync);
 	globalStore = store;
 	console.log(`[DataStore] Initialized at ${dataDir}/market.db`);
-	const modelRegistry = loadModelRegistry();
+	const modelRegistry = await loadModelRegistry();
 	const error = modelRegistry.getError();
 	if (error) {
 		console.warn("Warning: failed to load models.json:", error);
@@ -424,7 +424,7 @@ async function main() {
 		model,
 		baseSystemPrompt: systemPrompt,
 		tools,
-		getApiKey: (provider) => modelRegistry.authStorage.getApiKey(provider, { includeFallback: true }),
+		getApiKey: (provider) => modelRegistry.getApiKeyForProvider(provider),
 		streamFn,
 		beforeToolCall: (context) => {
 			const { toolCall } = context;

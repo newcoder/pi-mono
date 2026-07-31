@@ -1,6 +1,6 @@
 import type { AgentEvent } from "@mariozechner/pi-agent-core";
 import type { Component } from "@mariozechner/pi-tui";
-import { Input, Markdown, ProcessTerminal, Text, TUI } from "@mariozechner/pi-tui";
+import { Input, Markdown, ProcessTerminal, Text, TuiMainScreen, type TUI } from "@mariozechner/pi-tui";
 import chalk from "chalk";
 import type { TradingSession } from "../core/trading-session.js";
 import { CommandBar } from "./command-bar.js";
@@ -40,7 +40,7 @@ export class TradingApp {
 		private session: TradingSession,
 		private onCommand?: (cmd: string) => Promise<boolean>,
 	) {
-		this.tui = new TUI(new ProcessTerminal());
+		this.tui = new TuiMainScreen(new ProcessTerminal());
 
 		// ─── Top header bars ────────────────────────────────────────
 		this.indexQuotesBar = new IndexQuotesBar();

@@ -142,11 +142,14 @@ test.describe("Stock Search & Recent Pool", () => {
 		await page.waitForTimeout(1500);
 
 		// Click on 最近访问 pool to see if stock was added
-		await page.locator(".pool-card").filter({ hasText: "最近访问" }).click();
-		await page.waitForTimeout(500);
+		// Match only the real recent-visits pool card; backtest report pools may contain "最近访问" in their names.
+		await page
+			.locator(".pool-card")
+			.filter({ has: page.locator(".pool-name", { hasText: /\[\d+\]\s*最近访问$/ }) })
+			.click();
 
-		// The watchlist should contain 600519
-		await expect(page.locator("#watchlist-panel")).toContainText("600519");
+		// Wait for the pool items panel to show the selected stock
+		await expect(page.locator("#pool-items .stock-item").filter({ hasText: "600519" })).toBeVisible({ timeout: 10000 });
 	});
 
 	test("market status bar is removed from UI", async ({ page }) => {

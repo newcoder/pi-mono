@@ -9,9 +9,14 @@ import os
 import sys
 
 _SCRIPT_DIR = os.path.dirname(os.path.abspath(__file__))
-_SKILL_ROOT = os.path.dirname(_SCRIPT_DIR)
+_SCRIPTS_DIR = os.path.dirname(_SCRIPT_DIR)
+_SKILL_ROOT = os.path.dirname(_SCRIPTS_DIR)
 if _SCRIPT_DIR not in sys.path:
     sys.path.insert(0, _SCRIPT_DIR)
+if _SCRIPTS_DIR not in sys.path:
+    sys.path.insert(0, _SCRIPTS_DIR)
+if _SKILL_ROOT not in sys.path:
+    sys.path.insert(0, _SKILL_ROOT)
 
 import sqlite3
 from collections import defaultdict
@@ -21,7 +26,7 @@ from typing import Dict, List, Set, Tuple
 import pandas as pd
 import numpy as np
 
-from classify_themes import CONCEPT_MERGE_MAP
+from analysis.classify_themes import CONCEPT_MERGE_MAP
 from local_data.db import get_db
 
 # Themes to test: parent → child concepts used for concept_stocks lookup and hot_stocks reason search

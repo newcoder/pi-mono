@@ -27,63 +27,10 @@ import argparse
 import json
 import sqlite3
 from local_data.db import get_db, get_db_path, db_exists
+from local_data.schema import ensure_tables
 from collections import defaultdict
 from datetime import datetime
 from typing import Dict, List, Optional, Tuple
-
-def ensure_table(conn: sqlite3.Connection):
-    """Create fundamental_indicators table if not exists."""
-    conn.execute("""
-        CREATE TABLE IF NOT EXISTS fundamental_indicators (
-            code TEXT NOT NULL,
-            market INTEGER NOT NULL,
-            report_date TEXT NOT NULL,
-
-            -- Growth indicators
-            revenue_yoy REAL,
-            revenue_qoq REAL,
-            revenue_cagr_3y REAL,
-            revenue_cagr_5y REAL,
-            net_profit_yoy REAL,
-            net_profit_qoq REAL,
-            net_profit_cagr_3y REAL,
-            net_profit_cagr_5y REAL,
-            operate_cash_flow_yoy REAL,
-            operate_cash_flow_qoq REAL,
-            fcf REAL,
-            fcf_yoy REAL,
-            roe REAL,
-            roe_change REAL,
-            research_expense_yoy REAL,
-            research_expense_ratio REAL,
-            capex REAL,
-            capex_yoy REAL,
-            capex_ratio REAL,
-
-            -- Financial health indicators
-            debt_ratio REAL,
-            debt_ratio_change REAL,
-            current_ratio REAL,
-            quick_ratio REAL,
-            interest_coverage REAL,
-            cash_to_profit REAL,
-            cash_to_debt REAL,
-            equity_ratio REAL,
-
-            -- Risk control indicators
-            interest_bearing_debt_ratio REAL,
-            short_debt_ratio REAL,
-
-            updated_at TEXT,
-            PRIMARY KEY (code, market, report_date)
-        )
-    """)
-    conn.execute("""
-        CREATE INDEX IF NOT EXISTS idx_fi_code_date
-        ON fundamental_indicators(code, report_date)
-    """)
-    conn.commit()
-
 
 def _safe_div(numerator, denominator):
     """Safe division: returns None if either operand is None or denominator is 0."""
@@ -439,7 +386,7 @@ def main():
     args = parser.parse_args()
 
     conn = get_db()
-    ensure_table(conn)
+    ensure_tables()
 
     if args.all:
         result = calc_all(conn, since=args.since)

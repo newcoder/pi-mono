@@ -45,6 +45,17 @@ export interface RSIResult {
 	values: (number | null)[];
 }
 
+export interface KDConfig {
+	period: number;
+	smoothK: number;
+	smoothD: number;
+}
+
+export interface KDResult {
+	k: (number | null)[];
+	d: (number | null)[];
+}
+
 export type CrossType = "golden" | "death" | "none";
 
 export interface CrossResult {
@@ -187,6 +198,41 @@ export function computeRSI(closes: (number | null)[], config: RSIConfig = { peri
 		}
 	}
 	return { values };
+}
+
+// ─── KD (Stochastic Oscillator) ─────────────────────────────────
+
+export function computeKD(klines: KlineRow[], config: KDConfig = { period: 9, smoothK: 3, smoothD: 3 }): KDResult {
+	const { period, smoothK, smoothD } = config;
+	const n = klines.length;
+	const k: (number | null)[] = new Array(n).fill(null);
+	const d: (number | null)[] = new Array(n).fill(null);
+	let prevK = 50;
+	let prevD = 50;
+
+	for (let i = period - 1; i < n; i++) {
+		let highestHigh = -Infinity;
+		let lowestLow = Infinity;
+		for (let j = i - period + 1; j <= i; j++) {
+			const h = klines[j].high;
+			const l = klines[j].low;
+			if (h != null) highestHigh = Math.max(highestHigh, h);
+			if (l != null) lowestLow = Math.min(lowestLow, l);
+		}
+		const close = klines[i].close;
+		if (highestHigh === -Infinity || lowestLow === Infinity || close == null) continue;
+
+		const rsv = highestHigh === lowestLow ? 50 : ((close - lowestLow) / (highestHigh - lowestLow)) * 100;
+		const currK: number = ((smoothK - 1) / smoothK) * prevK + (1 / smoothK) * rsv;
+		const currD: number = ((smoothD - 1) / smoothD) * prevD + (1 / smoothD) * currK;
+
+		k[i] = currK;
+		d[i] = currD;
+		prevK = currK;
+		prevD = currD;
+	}
+
+	return { k, d };
 }
 
 // ─── Average True Range ─────────────────────────────────────────

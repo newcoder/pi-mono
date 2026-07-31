@@ -23,6 +23,7 @@ import json
 import re
 import sqlite3
 from local_data.db import get_db, get_db_path, db_exists
+from local_data.schema import ensure_tables
 import time
 from datetime import datetime
 from typing import Any
@@ -122,18 +123,7 @@ def sync_all_concepts() -> dict[str, Any]:
     conn.row_factory = sqlite3.Row
     cur = conn.cursor()
 
-    # Ensure table exists
-    cur.execute(
-        """
-        CREATE TABLE IF NOT EXISTS concept_stocks (
-            concept TEXT NOT NULL,
-            code TEXT NOT NULL,
-            name TEXT,
-            updated_at TEXT,
-            PRIMARY KEY (concept, code)
-        )
-        """
-    )
+    ensure_tables()
 
     # Clear old data for a full refresh
     cur.execute("DELETE FROM concept_stocks")
@@ -216,17 +206,7 @@ def sync_single_concept(concept_name: str) -> dict[str, Any]:
     conn = get_db()
     conn.row_factory = sqlite3.Row
     cur = conn.cursor()
-    cur.execute(
-        """
-        CREATE TABLE IF NOT EXISTS concept_stocks (
-            concept TEXT NOT NULL,
-            code TEXT NOT NULL,
-            name TEXT,
-            updated_at TEXT,
-            PRIMARY KEY (concept, code)
-        )
-        """
-    )
+    ensure_tables()
     now = datetime.now().isoformat()
     # Delete old data for this concept
     cur.execute("DELETE FROM concept_stocks WHERE concept = ?", (actual_name,))

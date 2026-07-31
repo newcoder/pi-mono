@@ -17,43 +17,12 @@ import argparse
 import json
 import sqlite3
 from local_data.db import get_db, get_db_path, db_exists
+from local_data.schema import ensure_tables
 from datetime import datetime, timedelta
 from typing import Dict, List
 
 from market_news_fetcher import fetch_market_news
 from market_news_classifier import classify_market_news_batch
-
-def ensure_market_news_table(conn: sqlite3.Connection):
-    """Create market_news table if not exists."""
-    conn.execute("""
-        CREATE TABLE IF NOT EXISTS market_news (
-            id INTEGER PRIMARY KEY AUTOINCREMENT,
-            title TEXT NOT NULL,
-            content TEXT,
-            source TEXT NOT NULL,
-            source_type TEXT,
-            pub_time TEXT,
-            url TEXT,
-            news_type TEXT,
-            sentiment TEXT,
-            impact_scope TEXT,
-            affected_sectors TEXT
-        )
-    """)
-    # Migrate legacy schema
-    cols = {r[1] for r in conn.execute("PRAGMA table_info(market_news)").fetchall()}
-    if "content" not in cols:
-        conn.execute("ALTER TABLE market_news ADD COLUMN content TEXT")
-    if "source_type" not in cols:
-        conn.execute("ALTER TABLE market_news ADD COLUMN source_type TEXT")
-    conn.commit()
-
-    conn.execute("CREATE INDEX IF NOT EXISTS idx_mnews_type ON market_news(news_type)")
-    conn.execute("CREATE INDEX IF NOT EXISTS idx_mnews_sentiment ON market_news(sentiment)")
-    conn.execute("CREATE INDEX IF NOT EXISTS idx_mnews_time ON market_news(pub_time)")
-    conn.execute("CREATE INDEX IF NOT EXISTS idx_mnews_source_type ON market_news(source_type)")
-    conn.commit()
-
 
 def cleanup_old_market_news(conn: sqlite3.Connection, days: int = 60):
     """Delete market news older than N days to keep DB lean."""
@@ -105,7 +74,7 @@ def sync_market_news(sources: List[str] = None, limit: int = 100) -> Dict:
     """Sync market news to DB."""
     conn = get_db()
     try:
-        ensure_market_news_table(conn)
+        ensure_tables()
 
         news = fetch_market_news(sources=sources, limit_per_source=limit)
         fetched = len(news)

@@ -1,6 +1,6 @@
 import { mkdir } from "node:fs/promises";
 import { dirname } from "node:path";
-import { runAStockDataJsonScript, runJsonScript, runLocalDataJsonScript } from "../tools/_utils.js";
+import { runAStockDataJsonScript, runLocalDataJsonScript } from "../tools/_utils.js";
 import type { DataStore } from "./data-store.js";
 import type {
 	ConceptStockRow,
@@ -51,11 +51,44 @@ function todayStr(): string {
 	return new Date().toISOString().slice(0, 10);
 }
 
-function _marketFromCode(code: string): number {
+export function marketFromCode(code: string): number {
 	if (code.startsWith("8") || code.startsWith("4") || code.startsWith("92") || code.startsWith("43")) {
 		return 2;
 	}
 	return code.startsWith("6") || code.startsWith("9") || code.startsWith("689") ? 1 : 0;
+}
+
+/** 将行情脚本返回的数值归一化为 number | null。
+ *  数据源常把缺失值表示为 "-"、"" 等字符串，直接落库会导致 SQL 语法错误。 */
+function _num(v: unknown): number | null {
+	if (v == null || v === "" || v === "-" || v === "—") return null;
+	if (typeof v === "number") return Number.isFinite(v) ? v : null;
+	const n = Number(v);
+	return Number.isFinite(n) ? n : null;
+}
+
+/** Run async tasks with limited concurrency and optional delay between starts. */
+async function runWithConcurrency<T>(
+	tasks: Array<() => Promise<T>>,
+	concurrency: number,
+	startDelayMs: number,
+): Promise<T[]> {
+	const results: T[] = new Array(tasks.length);
+	let index = 0;
+
+	async function worker(): Promise<void> {
+		while (index < tasks.length) {
+			const i = index++;
+			if (i > 0 && startDelayMs > 0) {
+				await new Promise((resolve) => setTimeout(resolve, startDelayMs));
+			}
+			results[i] = await tasks[i]();
+		}
+	}
+
+	const workers = Array.from({ length: Math.min(concurrency, tasks.length) }, () => worker());
+	await Promise.all(workers);
+	return results;
 }
 
 export class DataSyncService {
@@ -231,7 +264,7 @@ export class DataSyncService {
 			console.log(`[syncAllKlines] Batch ${batchNum}/${totalBatches} (${batch.length} stocks)...`);
 
 			try {
-				const data = await runJsonScript(
+				const data = await runLocalDataJsonScript(
 					"batch_get_kline.py",
 					[
 						"--codes",
@@ -243,11 +276,11 @@ export class DataSyncService {
 						"--end",
 						endDate.replace(/-/g, ""),
 						"--period",
-						period === "weekly" ? "week" : period === "monthly" ? "month" : period,
+						period,
 						"--adjust",
 						adjust,
 					],
-					120_000,
+					300_000,
 				);
 
 				if (data.klines && data.klines.length > 0) {
@@ -277,7 +310,7 @@ export class DataSyncService {
 
 				// Sync adjustment factors alongside bfq data
 				try {
-					const factorData = await runJsonScript(
+					const factorData = await runLocalDataJsonScript(
 						"batch_get_factors.py",
 						["--codes", codes, "--markets", markets, "--start", syncStart, "--end", endDate.replace(/-/g, "")],
 						300_000,
@@ -316,20 +349,20 @@ export class DataSyncService {
 			market,
 			snapshot_date: todayStr(),
 			name: data.name,
-			latest: data.latest ?? null,
-			open: data.open ?? null,
-			high: data.high ?? null,
-			low: data.low ?? null,
-			prev_close: data.prev_close ?? null,
-			volume: data.volume ?? null,
-			turnover: data.turnover ?? null,
-			change_pct: data.change_pct ?? null,
-			pe: data.pe ?? null,
-			pb: null,
-			total_cap: data.total_cap ?? null,
-			float_cap: data.float_cap ?? null,
-			high_52w: data["52w_high"] ?? null,
-			low_52w: data["52w_low"] ?? null,
+			latest: _num(data.latest),
+			open: _num(data.open),
+			high: _num(data.high),
+			low: _num(data.low),
+			prev_close: _num(data.prev_close),
+			volume: _num(data.volume),
+			turnover: _num(data.turnover),
+			change_pct: _num(data.change_pct),
+			pe: _num(data.pe),
+			pb: _num(data.pb),
+			total_cap: _num(data.total_cap),
+			float_cap: _num(data.float_cap),
+			high_52w: _num(data["52w_high"]),
+			low_52w: _num(data["52w_low"]),
 			updated_at: new Date().toISOString(),
 		};
 
@@ -524,7 +557,9 @@ export class DataSyncService {
 	 * @returns total number of report rows synced
 	 */
 	async syncAllFundamentals(batchSize = 100, historyLimit = 12, force = false): Promise<number> {
-		const stocks = await this.fetchAllAshareList();
+		const allStocks = await this.fetchAllAshareList();
+		// get_fundamentals.py only supports SH/SZ (market 0/1); skip BJ/indices (market 2)
+		const stocks = allStocks.filter((s) => s.market === 0 || s.market === 1);
 		console.log(`[syncAllFundamentals] Total stocks: ${stocks.length}, historyLimit=${historyLimit}, force=${force}`);
 
 		let totalSynced = 0;
@@ -537,26 +572,27 @@ export class DataSyncService {
 
 			console.log(`[syncAllFundamentals] Batch ${batchNum}/${totalBatches} (${batch.length} stocks)...`);
 
-			for (let j = 0; j < batch.length; j++) {
-				const stock = batch[j];
-				try {
-					// Incremental: skip if recently synced (unless force=true)
-					if (!force) {
-						const latest = await this.store.getLatestFundamentals(stock.code, stock.market);
-						if (latest && isFresh(latest.updated_at, TTL.fundamentals)) {
-							continue;
+			const results = await runWithConcurrency(
+				batch.map((stock) => async () => {
+					try {
+						// Incremental: skip if recently synced (unless force=true)
+						if (!force) {
+							const latest = await this.store.getLatestFundamentals(stock.code, stock.market);
+							if (latest && isFresh(latest.updated_at, TTL.fundamentals)) {
+								return 0;
+							}
 						}
+						const rows = await this.syncFundamentals(stock.code, stock.market, historyLimit);
+						return rows.length;
+					} catch (e) {
+						console.warn(`[syncAllFundamentals] Failed to sync ${stock.code}:`, e);
+						return 0;
 					}
-					const rows = await this.syncFundamentals(stock.code, stock.market, historyLimit);
-					totalSynced += rows.length;
-				} catch (e) {
-					console.warn(`[syncAllFundamentals] Failed to sync ${stock.code}:`, e);
-				}
-				// Small delay between stocks to avoid rate limiting Eastmoney F10 page
-				if (j < batch.length - 1) {
-					await new Promise((resolve) => setTimeout(resolve, 100));
-				}
-			}
+				}),
+				3,
+				100,
+			);
+			totalSynced += results.reduce((sum, n) => sum + n, 0);
 
 			// Small delay between batches to avoid rate limiting
 			if (i + batchSize < stocks.length) {
@@ -792,10 +828,9 @@ export class DataSyncService {
 			return 0;
 		}
 
-		const periodArg = period === "weekly" ? "week" : period === "monthly" ? "month" : "daily";
 		const data = await runAStockDataJsonScript(
 			"get_industry_index_em.py",
-			["klines", "--symbol", code, "--start", fetchStart, "--end", today.replace(/-/g, ""), "--period", periodArg],
+			["klines", "--symbol", code, "--start", fetchStart, "--end", today.replace(/-/g, ""), "--period", period],
 			60_000,
 		);
 		const rows: IndustryKlineRow[] = (data.data || []).map((k: any) => ({
@@ -847,7 +882,7 @@ export class DataSyncService {
 		const rows: HotStockRow[] = (data.rows || []).map((r: any) => ({
 			date: targetDate,
 			code: String(r.code || ""),
-			market: _marketFromCode(String(r.code || "")),
+			market: marketFromCode(String(r.code || "")),
 			name: r.name ?? null,
 			reason: r.reason ?? null,
 			price: r.price ?? null,

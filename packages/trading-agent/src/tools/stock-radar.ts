@@ -122,9 +122,9 @@ const scanStockRadarParams = Type.Object({
 			},
 		),
 	),
-	top: Type.Optional(Type.Number({ description: "机会/风险榜各显示多少只", default: 30 })),
+	top: Type.Optional(Type.Number({ description: "机会/风险榜各显示多少只", default: 10 })),
 	minScore: Type.Optional(Type.Number({ description: "最小绝对评分过滤", default: 0.5 })),
-	enrich: Type.Optional(Type.Number({ description: "对TOP N个股补充个股新闻，0=关闭", default: 20 })),
+	enrich: Type.Optional(Type.Number({ description: "对TOP N个股补充个股新闻，0=关闭", default: 5 })),
 });
 
 export const scanStockRadarTool: AgentTool<typeof scanStockRadarParams, RadarReport> = {
@@ -135,9 +135,9 @@ export const scanStockRadarTool: AgentTool<typeof scanStockRadarParams, RadarRep
 	parameters: scanStockRadarParams,
 	execute: async (_id, params) => {
 		const universe = params.universe ?? "all";
-		const top = params.top ?? 30;
+		const top = params.top ?? 10;
 		const minScore = params.minScore ?? 0.5;
-		const enrich = params.enrich ?? 20;
+		const enrich = params.enrich ?? 5;
 
 		const args: string[] = [
 			"--format",
@@ -157,7 +157,7 @@ export const scanStockRadarTool: AgentTool<typeof scanStockRadarParams, RadarRep
 		console.log(`[scan_stock_radar] 启动雷达扫描 (universe=${universe}, top=${top})...`);
 		const startTime = Date.now();
 
-		const stdout = await runPython(scriptPath, args, 300_000);
+		const stdout = await runPython(scriptPath, args, 600_000);
 
 		// Extract JSON from stdout
 		const start = stdout.search(/[[{]/);

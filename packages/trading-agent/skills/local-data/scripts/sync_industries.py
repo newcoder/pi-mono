@@ -1,9 +1,9 @@
 #!/usr/bin/env python3
 """
 同步行业分类数据到本地SQLite数据库
-优先: 东方财富HTTP API -> akshare fallback (不再依赖JoinQuant)
-支持标准: em (Eastmoney行业分类)
-用法: python sync_industries_jq.py [--standard em] [--all]
+优先: 东方财富HTTP API -> akshare fallback -> 同花顺 fallback (不再依赖JoinQuant)
+支持标准: em (Eastmoney行业分类), ths (同花顺行业分类)
+用法: python sync_industries.py [--standard em] [--all]
 """
 
 import os
@@ -19,7 +19,7 @@ if _SKILL_ROOT not in sys.path:
 import argparse
 import json
 import sqlite3
-from local_data.db import get_db, get_db_path, db_exists
+from local_data.db import get_db
 from local_data.market import market_from_code
 import time
 
@@ -160,13 +160,13 @@ def _fetch_akshare_industry_stocks(industry_code):
 
 # ─── Public API ─────────────────────────────────────────────────────────────
 
-def sync_standard(standard, db_path, now):
-    """Sync a single industry standard. Currently only supports 'em'."""
+def sync_standard(standard, now):
+    """Sync a single industry standard. Supports 'em' (Eastmoney)."""
     _log(f"[sync_industries] Syncing standard: {standard}...")
 
     if standard != "em":
-        _log(f"[sync_industries] Standard '{standard}' not supported without JoinQuant. Use 'em' (Eastmoney).")
-        return {"standard": standard, "error": f"Standard '{standard}' requires JoinQuant"}
+        _log(f"[sync_industries] Standard '{standard}' not supported by this sync path. Use 'em' (Eastmoney) or run sync_industries_ths.py for 'ths'.")
+        return {"standard": standard, "error": f"Standard '{standard}' not supported by sync_standard"}
 
     industries = None
     try:
@@ -263,14 +263,13 @@ def sync_standard(standard, db_path, now):
 
 def sync_all_standards():
     """Sync all supported industry standards. Falls back to THS if Eastmoney is blocked."""
-    db_path = get_db_path()
     now = time.strftime('%Y-%m-%dT%H:%M:%S')
 
     results = []
 
     # Try Eastmoney first
     try:
-        result = sync_standard("em", db_path, now)
+        result = sync_standard("em", now)
         results.append(result)
         if "error" not in result and result.get("mappings", 0) >= 1000:
             output = {"results": results, "total_standards": 1}
@@ -305,9 +304,8 @@ def main():
     args = parser.parse_args()
 
     if args.standard:
-        db_path = get_db_path()
         now = time.strftime('%Y-%m-%dT%H:%M:%S')
-        result = sync_standard(args.standard, db_path, now)
+        result = sync_standard(args.standard, now)
         print(json.dumps(result, ensure_ascii=False))
     else:
         sync_all_standards()

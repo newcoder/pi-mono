@@ -166,8 +166,9 @@ export interface PoolBacktestConfig {
 		| "signal_recency"
 		| "ma_alignment"
 		| "weekly_ma_alignment"
+		| "turnover_rate"
 		| "market_cap"
-		| "amount"
+		| "dynamic"
 		| "random";
 	maxPositions?: number;
 	randomRuns?: number;

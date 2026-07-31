@@ -18,45 +18,12 @@ import argparse
 import json
 import sqlite3
 from local_data.db import get_db, get_db_path, db_exists
+from local_data.schema import ensure_tables
 from datetime import datetime, timedelta
 from typing import Dict, List, Optional, Tuple
 
 from news_fetcher import fetch_stock_news
 from news_classifier import classify_news_batch
-
-def ensure_news_table(conn: sqlite3.Connection):
-    """Create stock_news table if not exists."""
-    conn.execute("""
-        CREATE TABLE IF NOT EXISTS stock_news (
-            id INTEGER PRIMARY KEY AUTOINCREMENT,
-            code TEXT NOT NULL,
-            title TEXT NOT NULL,
-            content TEXT,
-            source TEXT NOT NULL,
-            source_type TEXT,
-            pub_time TEXT NOT NULL,
-            url TEXT,
-            event_type TEXT,
-            sentiment TEXT,
-            impact_level TEXT
-        )
-    """)
-    # Migrate legacy schema
-    cols = {r[1] for r in conn.execute("PRAGMA table_info(stock_news)").fetchall()}
-    if "content" not in cols:
-        conn.execute("ALTER TABLE stock_news ADD COLUMN content TEXT")
-    if "source_type" not in cols:
-        conn.execute("ALTER TABLE stock_news ADD COLUMN source_type TEXT")
-    conn.commit()
-
-    # Create indexes
-    conn.execute("CREATE INDEX IF NOT EXISTS idx_news_code_time ON stock_news(code, pub_time)")
-    conn.execute("CREATE INDEX IF NOT EXISTS idx_news_event_type ON stock_news(event_type)")
-    conn.execute("CREATE INDEX IF NOT EXISTS idx_news_sentiment ON stock_news(sentiment)")
-    conn.execute("CREATE INDEX IF NOT EXISTS idx_news_pub_time ON stock_news(pub_time)")
-    conn.execute("CREATE INDEX IF NOT EXISTS idx_news_source_type ON stock_news(source_type)")
-    conn.commit()
-
 
 def cleanup_old_news(conn: sqlite3.Connection, days: int = 60):
     """Delete news older than N days to keep DB lean."""
@@ -131,7 +98,7 @@ def sync_stock_news(code: str, name: str = "", sources: List[str] = None,
         close_conn = True
 
     try:
-        ensure_news_table(conn)
+        ensure_tables()
 
         # Fetch
         news = fetch_stock_news(code, name, sources=sources, limit_per_source=limit_per_source)
@@ -178,7 +145,7 @@ def sync_batch(codes_names: List[Tuple[str, str]], sources: List[str] = None,
 
     conn = get_db()
     try:
-        ensure_news_table(conn)
+        ensure_tables()
 
         total_stocks = len(codes_names)
         print(f"Batch syncing news for {total_stocks} stocks (concurrent mode)...", file=sys.stderr)

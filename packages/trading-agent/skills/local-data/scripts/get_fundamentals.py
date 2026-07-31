@@ -340,7 +340,7 @@ if __name__ == "__main__":
 
     parser = argparse.ArgumentParser(description="Fetch A-share fundamentals from Eastmoney")
     parser.add_argument("stock_code", help="6-digit stock code, e.g. 600875")
-    parser.add_argument("--market", type=int, default=1, choices=[0, 1], help="1=Shanghai (default), 0=Shenzhen")
+    parser.add_argument("--market", type=int, default=1, choices=[0, 1, 2], help="1=Shanghai (default), 0=Shenzhen, 2=Beijing")
     parser.add_argument("--history", action="store_true", help="Fetch all available historical reports")
     parser.add_argument("--limit", type=int, default=0, help="Limit number of historical reports (0 = no limit)")
     args = parser.parse_args()

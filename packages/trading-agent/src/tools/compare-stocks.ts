@@ -62,15 +62,15 @@ async function fetchFromApi(codes: string[]): Promise<Record<string, StockQuote>
 			const parts = m[2].split("~");
 			if (parts.length < 45) continue;
 			result[m[1]] = {
-				code: parts[2],
-				name: parts[1],
-				price: parseFloat(parts[3]) || null,
-				changePct: parseFloat(parts[5]) || null,
-				pe: parseFloat(parts[39]) || null,
-				pb: parseFloat(parts[46]) || null,
-				marketCap: parseFloat(parts[44]) || null,
-				volume: parseFloat(parts[36]) || null,
-				turnover: parseFloat(parts[37]) || null,
+				code: parts[2].replace(/\0/g, "").trim(),
+				name: parts[1].replace(/\0/g, "").trim(),
+				price: parseFloat(parts[3].replace(/\0/g, "").trim()) || null,
+				changePct: parseFloat(parts[5].replace(/\0/g, "").trim()) || null,
+				pe: parseFloat(parts[39].replace(/\0/g, "").trim()) || null,
+				pb: parseFloat(parts[46].replace(/\0/g, "").trim()) || null,
+				marketCap: parseFloat(parts[44].replace(/\0/g, "").trim()) || null,
+				volume: parseFloat(parts[36].replace(/\0/g, "").trim()) || null,
+				turnover: parseFloat(parts[37].replace(/\0/g, "").trim()) || null,
 			};
 		}
 		return result;

@@ -98,6 +98,13 @@ export class TradingApiClient extends EventTarget {
 		return this.httpGet(`/api/klines?${query}`);
 	}
 
+	async getIndustryKlines(code: string, options?: { period?: string; limit?: number }) {
+		const params = new URLSearchParams({ code });
+		if (options?.period) params.set("period", options.period);
+		if (options?.limit != null) params.set("limit", String(options.limit));
+		return this.httpGet(`/api/industry/klines?${params.toString()}`);
+	}
+
 	async getStockPools() {
 		return this.httpGet("/api/stock-pools");
 	}

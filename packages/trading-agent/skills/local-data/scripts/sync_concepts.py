@@ -2,7 +2,7 @@
 """
 同步概念股数据到本地SQLite数据库
 优先: 东方财富HTTP API -> akshare fallback (不再依赖JoinQuant)
-用法: python sync_concepts_jq.py [--concept <概念名称>] [--all]
+用法: python sync_concepts.py [--concept <概念名称>] [--all]
 """
 
 import os
@@ -18,7 +18,7 @@ if _SKILL_ROOT not in sys.path:
 import argparse
 import json
 import sqlite3
-from local_data.db import get_db, get_db_path, db_exists
+from local_data.db import get_db
 from local_data.market import market_from_code
 import time
 
@@ -44,7 +44,7 @@ def _get_market_from_code(code):
     return market_from_code(code) or 0
 
 
-def _save_concept_stocks(db_path, concept_name, stocks):
+def _save_concept_stocks(concept_name, stocks):
     """Save concept stocks to SQLite."""
     conn = get_db()
     cur = conn.cursor()
@@ -180,8 +180,6 @@ def _fetch_akshare_concept_stocks(concept_code):
 
 def sync_single_concept(concept_name):
     """Sync a single concept by name."""
-    db_path = get_db_path()
-
     # Step 1: Search for concept by name (akshare primary, Eastmoney fallback)
     concepts = None
     try:
@@ -220,15 +218,13 @@ def sync_single_concept(concept_name):
         except Exception as e2:
             _log(f"Eastmoney fallback also failed: {e2}")
 
-    count = _save_concept_stocks(db_path, actual_name, stocks)
+    count = _save_concept_stocks(actual_name, stocks)
     print(json.dumps({"concept": actual_name, "count": count}, ensure_ascii=False))
     return count
 
 
 def sync_all_concepts():
     """Sync all concepts."""
-    db_path = get_db_path()
-
     concepts = None
     try:
         concepts = _fetch_akshare_concept_list()

@@ -17,30 +17,18 @@ import argparse
 import sqlite3
 import pandas as pd
 from local_data.db import get_db, get_db_path, db_exists
+from local_data.schema import ensure_tables
 from datetime import datetime
 
 INDEX_CODES = ["000300", "000905"]  # 沪深300, 中证500
 AK_SYMBOL_MAP = {"000300": "sh000300", "000905": "sh000905"}
 
 
-def ensure_tables(conn: sqlite3.Connection):
-    conn.execute("""
-        CREATE TABLE IF NOT EXISTS index_klines (
-            code TEXT NOT NULL,
-            date TEXT NOT NULL,
-            close REAL,
-            PRIMARY KEY (code, date)
-        )
-    """)
-    conn.execute("CREATE INDEX IF NOT EXISTS idx_index_klines_code ON index_klines(code)")
-    conn.commit()
-
-
 def sync_index_klines(conn: sqlite3.Connection, since: str = "2020-01-01") -> dict:
     """Fetch benchmark index klines from akshare and upsert into index_klines."""
     import akshare as ak
 
-    ensure_tables(conn)
+    ensure_tables()
     saved = 0
 
     for code in INDEX_CODES:

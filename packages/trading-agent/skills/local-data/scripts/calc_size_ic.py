@@ -29,45 +29,7 @@ from typing import Dict, List, Optional, Sequence
 import pandas as pd
 
 from calc_industry_momentum import compute_ic
-
-def ensure_tables(conn: sqlite3.Connection):
-    """Ensure required tables exist."""
-    conn.execute("""
-        CREATE TABLE IF NOT EXISTS factor_ic (
-            date TEXT NOT NULL,
-            factor_name TEXT NOT NULL,
-            ic_value REAL,
-            sample_count INTEGER,
-            updated_at TEXT,
-            PRIMARY KEY (date, factor_name)
-        )
-    """)
-    conn.execute("""
-        CREATE INDEX IF NOT EXISTS idx_factor_ic_lookup
-        ON factor_ic(factor_name, date)
-    """)
-    conn.execute("""
-        CREATE TABLE IF NOT EXISTS stock_indicators (
-            code TEXT NOT NULL,
-            market INTEGER NOT NULL,
-            date TEXT NOT NULL,
-            indicator_name TEXT NOT NULL,
-            indicator_value REAL,
-            indicator_rank INTEGER,
-            has_signal INTEGER,
-            updated_at TEXT,
-            PRIMARY KEY (code, market, date, indicator_name)
-        )
-    """)
-    conn.execute("""
-        CREATE INDEX IF NOT EXISTS idx_stock_indicators_lookup
-        ON stock_indicators(code, market, date, indicator_name)
-    """)
-    conn.execute("""
-        CREATE INDEX IF NOT EXISTS idx_stock_indicators_name_date
-        ON stock_indicators(indicator_name, date)
-    """)
-    conn.commit()
+from local_data.schema import ensure_tables
 
 
 def load_stock_universe(conn: sqlite3.Connection) -> pd.DataFrame:
@@ -289,7 +251,7 @@ def calc_all(
     min_samples: int = 50,
 ) -> Dict:
     """Compute size factor IC for all available stocks."""
-    ensure_tables(conn)
+    ensure_tables()
 
     universe = load_stock_universe(conn)
     print(f"[calc_size_ic] Universe: {len(universe)} stocks", file=sys.stderr)

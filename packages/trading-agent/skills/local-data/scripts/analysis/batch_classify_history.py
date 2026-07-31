@@ -5,11 +5,16 @@ import sys
 import os
 
 _SCRIPT_DIR = os.path.dirname(os.path.abspath(__file__))
-_SKILL_ROOT = os.path.dirname(_SCRIPT_DIR)
+_SCRIPTS_DIR = os.path.dirname(_SCRIPT_DIR)
+_SKILL_ROOT = os.path.dirname(_SCRIPTS_DIR)
 if _SCRIPT_DIR not in sys.path:
     sys.path.insert(0, _SCRIPT_DIR)
+if _SCRIPTS_DIR not in sys.path:
+    sys.path.insert(0, _SCRIPTS_DIR)
+if _SKILL_ROOT not in sys.path:
+    sys.path.insert(0, _SKILL_ROOT)
 
-from classify_themes import run_classification
+from analysis.classify_themes import run_classification
 from local_data.db import get_db
 
 

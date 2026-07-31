@@ -88,6 +88,13 @@ describe("metricsToConfidence", () => {
 		expect(metricsToConfidence(makeMetrics({ sharpeRatio: 100 }))).toBeLessThanOrEqual(100);
 		expect(metricsToConfidence(makeMetrics({ sharpeRatio: -100, maxDrawdown: 100 }))).toBeGreaterThanOrEqual(0);
 	});
+
+	it("treats NaN metrics as neutral values", () => {
+		expect(Number.isFinite(metricsToConfidence(makeMetrics({ sharpeRatio: NaN })))).toBe(true);
+		const c = metricsToConfidence(makeMetrics({ sharpeRatio: NaN, winRate: NaN, profitFactor: NaN, maxDrawdown: 0 }));
+		expect(c).toBeGreaterThanOrEqual(35);
+		expect(c).toBeLessThanOrEqual(45);
+	});
 });
 
 // ─── validateIdea tests ──────────────────────────────────────────────

@@ -1,3 +1,5 @@
+#!/usr/bin/env python3
+"""Incremental sync adjust_factors from latest date in DB to today."""
 import os
 import sys
 
@@ -7,9 +9,6 @@ if _SCRIPT_DIR not in sys.path:
     sys.path.insert(0, _SCRIPT_DIR)
 if _SKILL_ROOT not in sys.path:
     sys.path.insert(0, _SKILL_ROOT)
-
-#!/usr/bin/env python3
-"""Incremental sync adjust_factors from latest date in DB to today."""
 import sqlite3
 from local_data.db import get_db, get_db_path, db_exists
 from datetime import datetime, timedelta

@@ -8,38 +8,25 @@ import os
 import sys
 
 _SCRIPT_DIR = os.path.dirname(os.path.abspath(__file__))
-_SKILL_ROOT = os.path.dirname(_SCRIPT_DIR)
+_SCRIPTS_DIR = os.path.dirname(_SCRIPT_DIR)
+_SKILL_ROOT = os.path.dirname(_SCRIPTS_DIR)
 if _SCRIPT_DIR not in sys.path:
     sys.path.insert(0, _SCRIPT_DIR)
+if _SCRIPTS_DIR not in sys.path:
+    sys.path.insert(0, _SCRIPTS_DIR)
 if _SKILL_ROOT not in sys.path:
     sys.path.insert(0, _SKILL_ROOT)
 
 import argparse
 import sqlite3
 from local_data.db import get_db
+from local_data.schema import ensure_tables
+from local_data.market import market_from_code
 from datetime import datetime
 from typing import Dict, List, Optional, Tuple
 
 import pandas as pd
 import numpy as np
-
-
-def ensure_tables(conn: sqlite3.Connection):
-    conn.execute("""
-        CREATE TABLE IF NOT EXISTS concept_filter_results (
-            concept TEXT PRIMARY KEY,
-            constituent_count INTEGER,
-            dispersion REAL,
-            max_benchmark_correlation REAL,
-            size_pass INTEGER,
-            dispersion_pass INTEGER,
-            independence_pass INTEGER,
-            rank_score REAL,
-            rank INTEGER,
-            updated_at TEXT
-        )
-    """)
-    conn.commit()
 
 
 def filter_by_size(
@@ -89,13 +76,13 @@ def compute_dispersion(
 
     # Get constituents
     rows = conn.execute(
-        "SELECT code, CASE WHEN code LIKE '6%' OR code LIKE '9%' THEN 1 ELSE 0 END FROM concept_stocks WHERE concept = ?",
+        "SELECT code FROM concept_stocks WHERE concept = ?",
         (concept,),
     ).fetchall()
     if len(rows) < 3:
         return None
 
-    constituents = [(r[0], r[1]) for r in rows]
+    constituents = [(r[0], market_from_code(r[0]) or 0) for r in rows]
     codes = [c[0] for c in constituents]
     markets = [str(c[1]) for c in constituents]
 
@@ -261,7 +248,7 @@ def run_filter(
     max_size: int = 120,
     correlation_threshold: float = 0.85,
 ) -> dict:
-    ensure_tables(conn)
+    ensure_tables()
 
     # Step 1: Size filter
     size_passed, size_excluded = filter_by_size(conn, min_size, max_size)

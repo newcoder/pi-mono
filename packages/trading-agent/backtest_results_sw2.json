@@ -1,0 +1,200 @@
+[
+  {
+    "mode": "equal_weight",
+    "rank_by": "momentum",
+    "elapsedMs": 34897,
+    "totalReturn": -93.18840973625025,
+    "annualizedReturn": -60.694504339445,
+    "maxDrawdown": 93.23045884875238,
+    "winRate": 46.291208791208796,
+    "trades": 21112,
+    "reportUrl": "http://localhost:3000/reports/2026-07-01T07-13-10_sw2龙头股池_always_buy_批量回测报告.html"
+  },
+  {
+    "mode": "equal_weight",
+    "rank_by": "value",
+    "elapsedMs": 12553,
+    "totalReturn": 25.027001912277207,
+    "annualizedReturn": 8.072995428229902,
+    "maxDrawdown": 19.62350666110536,
+    "winRate": 39.771822764659056,
+    "trades": 15076,
+    "reportUrl": "http://localhost:3000/reports/2026-07-01T07-13-23_sw2龙头股池_always_buy_批量回测报告.html"
+  },
+  {
+    "mode": "equal_weight",
+    "rank_by": "turnover",
+    "elapsedMs": 80140,
+    "totalReturn": -4.970795255104572,
+    "annualizedReturn": -1.7565892526317128,
+    "maxDrawdown": 35.788674004023314,
+    "winRate": 56.260626669905264,
+    "trades": 16468,
+    "reportUrl": "http://localhost:3000/reports/2026-07-01T07-14-43_sw2龙头股池_always_buy_批量回测报告.html"
+  },
+  {
+    "mode": "equal_weight",
+    "rank_by": "technical",
+    "elapsedMs": 43794,
+    "totalReturn": -92.40351151085855,
+    "annualizedReturn": -59.17591323632825,
+    "maxDrawdown": 92.44163721479455,
+    "winRate": 46.896121950050336,
+    "trades": 20861,
+    "reportUrl": "http://localhost:3000/reports/2026-07-01T07-15-26_sw2龙头股池_always_buy_批量回测报告.html"
+  },
+  {
+    "mode": "equal_weight",
+    "rank_by": "low_volatility",
+    "elapsedMs": 79708,
+    "totalReturn": -61.94179880291303,
+    "annualizedReturn": -28.522459330870852,
+    "maxDrawdown": 62.19511744470266,
+    "winRate": 42.60657073038284,
+    "trades": 18415,
+    "reportUrl": "http://localhost:3000/reports/2026-07-01T07-16-46_sw2龙头股池_always_buy_批量回测报告.html"
+  },
+  {
+    "mode": "equal_weight",
+    "rank_by": "signal_recency",
+    "elapsedMs": 41864,
+    "totalReturn": -74.38918998058762,
+    "annualizedReturn": -37.71605624845695,
+    "maxDrawdown": 74.74802929913243,
+    "winRate": 47.605746209098164,
+    "trades": 17542,
+    "reportUrl": "http://localhost:3000/reports/2026-07-01T07-17-28_sw2龙头股池_always_buy_批量回测报告.html"
+  },
+  {
+    "mode": "equal_weight",
+    "rank_by": "ma_alignment",
+    "elapsedMs": 28750,
+    "totalReturn": -35.90298824307022,
+    "annualizedReturn": -14.323941708627997,
+    "maxDrawdown": 56.402764585486544,
+    "winRate": 66.60506375900943,
+    "trades": 16233,
+    "reportUrl": "http://localhost:3000/reports/2026-07-01T07-17-57_sw2龙头股池_always_buy_批量回测报告.html"
+  },
+  {
+    "mode": "equal_weight",
+    "rank_by": "weekly_ma_alignment",
+    "elapsedMs": 95042,
+    "totalReturn": -4.139798987788349,
+    "annualizedReturn": -1.458824511250778,
+    "maxDrawdown": 45.356545228322325,
+    "winRate": 64.26572924887007,
+    "trades": 13939,
+    "reportUrl": "http://localhost:3000/reports/2026-07-01T07-19-32_sw2龙头股池_always_buy_批量回测报告.html"
+  },
+  {
+    "mode": "equal_weight",
+    "rank_by": "random",
+    "elapsedMs": 73772,
+    "totalReturn": -85.10987574001227,
+    "annualizedReturn": -48.416493010502826,
+    "maxDrawdown": 85.30300382964397,
+    "winRate": 42.183109007543266,
+    "trades": 20283,
+    "reportUrl": "http://localhost:3000/reports/2026-07-01T07-20-45_sw2龙头股池_always_buy_批量回测报告.html"
+  },
+  {
+    "mode": "linear",
+    "rank_by": "momentum",
+    "elapsedMs": 26411,
+    "totalReturn": -96.21495381930032,
+    "annualizedReturn": -67.95523021474823,
+    "maxDrawdown": 96.24628730019992,
+    "winRate": 41.34330605893278,
+    "trades": 19921,
+    "reportUrl": "http://localhost:3000/reports/2026-07-01T07-21-12_sw2龙头股池_always_buy_批量回测报告.html"
+  },
+  {
+    "mode": "linear",
+    "rank_by": "value",
+    "elapsedMs": 58121,
+    "totalReturn": 41.78592688857415,
+    "annualizedReturn": 12.903026360600101,
+    "maxDrawdown": 18.90884749836507,
+    "winRate": 47.84976005906238,
+    "trades": 10836,
+    "reportUrl": "http://localhost:3000/reports/2026-07-01T07-22-10_sw2龙头股池_always_buy_批量回测报告.html"
+  },
+  {
+    "mode": "linear",
+    "rank_by": "turnover",
+    "elapsedMs": 46055,
+    "totalReturn": -11.972170243272021,
+    "annualizedReturn": -4.335529051580867,
+    "maxDrawdown": 42.51199863803453,
+    "winRate": 45.86224908588911,
+    "trades": 13401,
+    "reportUrl": "http://localhost:3000/reports/2026-07-01T07-22-56_sw2龙头股池_always_buy_批量回测报告.html"
+  },
+  {
+    "mode": "linear",
+    "rank_by": "technical",
+    "elapsedMs": 4472,
+    "totalReturn": -95.8596664314444,
+    "annualizedReturn": -66.94017451632402,
+    "maxDrawdown": 95.90799830489625,
+    "winRate": 41.43206854345165,
+    "trades": 19608,
+    "reportUrl": "http://localhost:3000/reports/2026-07-01T07-23-00_sw2龙头股池_always_buy_批量回测报告.html"
+  },
+  {
+    "mode": "linear",
+    "rank_by": "low_volatility",
+    "elapsedMs": 4303,
+    "totalReturn": -68.73802932805182,
+    "annualizedReturn": -33.246406612066835,
+    "maxDrawdown": 68.84053371443153,
+    "winRate": 42.29992426155012,
+    "trades": 15844,
+    "reportUrl": "http://localhost:3000/reports/2026-07-01T07-23-05_sw2龙头股池_always_buy_批量回测报告.html"
+  },
+  {
+    "mode": "linear",
+    "rank_by": "signal_recency",
+    "elapsedMs": 4081,
+    "totalReturn": -74.81142882515503,
+    "annualizedReturn": -38.074915588232784,
+    "maxDrawdown": 75.04060883858084,
+    "winRate": 44.07065706570657,
+    "trades": 17776,
+    "reportUrl": "http://localhost:3000/reports/2026-07-01T07-23-09_sw2龙头股池_always_buy_批量回测报告.html"
+  },
+  {
+    "mode": "linear",
+    "rank_by": "ma_alignment",
+    "elapsedMs": 4154,
+    "totalReturn": -43.561834538165556,
+    "annualizedReturn": -18.030900766897616,
+    "maxDrawdown": 64.50165529213918,
+    "winRate": 49.02991419958259,
+    "trades": 12937,
+    "reportUrl": "http://localhost:3000/reports/2026-07-01T07-23-13_sw2龙头股池_always_buy_批量回测报告.html"
+  },
+  {
+    "mode": "linear",
+    "rank_by": "weekly_ma_alignment",
+    "elapsedMs": 3747,
+    "totalReturn": -6.147793081950501,
+    "annualizedReturn": -2.1812554467391054,
+    "maxDrawdown": 54.0925920374801,
+    "winRate": 57.72961635934632,
+    "trades": 11443,
+    "reportUrl": "http://localhost:3000/reports/2026-07-01T07-23-18_sw2龙头股池_always_buy_批量回测报告.html"
+  },
+  {
+    "mode": "linear",
+    "rank_by": "random",
+    "elapsedMs": 4520,
+    "totalReturn": -87.91537377634934,
+    "annualizedReturn": -52.02699459685576,
+    "maxDrawdown": 87.91537377634934,
+    "winRate": 41.10486433634808,
+    "trades": 20455,
+    "reportUrl": "http://localhost:3000/reports/2026-07-01T07-23-21_sw2龙头股池_always_buy_批量回测报告.html"
+  }
+]

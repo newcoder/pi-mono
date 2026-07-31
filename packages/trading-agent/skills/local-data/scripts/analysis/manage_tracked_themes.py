@@ -12,9 +12,12 @@ import os
 import sys
 
 _SCRIPT_DIR = os.path.dirname(os.path.abspath(__file__))
-_SKILL_ROOT = os.path.dirname(_SCRIPT_DIR)
+_SCRIPTS_DIR = os.path.dirname(_SCRIPT_DIR)
+_SKILL_ROOT = os.path.dirname(_SCRIPTS_DIR)
 if _SCRIPT_DIR not in sys.path:
     sys.path.insert(0, _SCRIPT_DIR)
+if _SCRIPTS_DIR not in sys.path:
+    sys.path.insert(0, _SCRIPTS_DIR)
 if _SKILL_ROOT not in sys.path:
     sys.path.insert(0, _SKILL_ROOT)
 
@@ -22,23 +25,9 @@ import argparse
 import sqlite3
 import json
 from local_data.db import get_db
+from local_data.schema import ensure_tables
 from datetime import datetime
 from typing import Dict, List, Optional
-
-
-def ensure_tables(conn: sqlite3.Connection):
-    conn.execute("""
-        CREATE TABLE IF NOT EXISTS tracked_themes (
-            concept TEXT NOT NULL,
-            master_theme TEXT NOT NULL,
-            status TEXT NOT NULL DEFAULT 'tracked',
-            notes TEXT,
-            updated_at TEXT,
-            PRIMARY KEY (concept)
-        )
-    """)
-    conn.execute("CREATE INDEX IF NOT EXISTS idx_tracked_themes_master ON tracked_themes(master_theme)")
-    conn.commit()
 
 
 def list_survivors(conn: sqlite3.Connection, min_rank: int = 0):
@@ -164,7 +153,7 @@ def main():
 
     conn = get_db()
     try:
-        ensure_tables(conn)
+        ensure_tables()
         if args.command == "list-survivors":
             list_survivors(conn, getattr(args, "min_rank", 0))
         elif args.command == "list-themes":

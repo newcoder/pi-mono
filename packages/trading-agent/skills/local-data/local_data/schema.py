@@ -385,6 +385,29 @@ def ensure_tables() -> None:
         ON fundamental_indicators(code, report_date)
     """)
 
+    # stock_indicators (pre-computed per-stock derived indicators)
+    cur.execute("""
+        CREATE TABLE IF NOT EXISTS stock_indicators (
+            code TEXT NOT NULL,
+            market INTEGER NOT NULL,
+            date TEXT NOT NULL,
+            indicator_name TEXT NOT NULL,
+            indicator_value REAL,
+            indicator_rank INTEGER,
+            has_signal INTEGER,
+            updated_at TEXT,
+            PRIMARY KEY (code, market, date, indicator_name)
+        )
+    """)
+    cur.execute("""
+        CREATE INDEX IF NOT EXISTS idx_stock_indicators_lookup
+        ON stock_indicators(code, market, date, indicator_name)
+    """)
+    cur.execute("""
+        CREATE INDEX IF NOT EXISTS idx_stock_indicators_name_date
+        ON stock_indicators(indicator_name, date)
+    """)
+
     # industry_indices (canonical industry index list)
     cur.execute("""
         CREATE TABLE IF NOT EXISTS industry_indices (
@@ -452,6 +475,67 @@ def ensure_tables() -> None:
         CREATE INDEX IF NOT EXISTS idx_industry_quotes_date
         ON industry_quotes(snapshot_date)
     """)
+
+    # stock_news
+    cur.execute("""
+        CREATE TABLE IF NOT EXISTS stock_news (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            code TEXT NOT NULL,
+            title TEXT NOT NULL,
+            content TEXT,
+            source TEXT NOT NULL,
+            source_type TEXT,
+            pub_time TEXT NOT NULL,
+            url TEXT,
+            event_type TEXT,
+            sentiment TEXT,
+            impact_level TEXT
+        )
+    """)
+    _stock_news_new_cols = {
+        "content": "TEXT",
+        "source_type": "TEXT",
+    }
+    cur.execute("PRAGMA table_info(stock_news)")
+    _stock_news_existing_cols = {row["name"] for row in cur.fetchall()}
+    for col_name, col_type in _stock_news_new_cols.items():
+        if col_name not in _stock_news_existing_cols:
+            cur.execute(f"ALTER TABLE stock_news ADD COLUMN {col_name} {col_type}")
+    cur.execute("CREATE INDEX IF NOT EXISTS idx_news_code_time ON stock_news(code, pub_time)")
+    cur.execute("CREATE INDEX IF NOT EXISTS idx_news_event_type ON stock_news(event_type)")
+    cur.execute("CREATE INDEX IF NOT EXISTS idx_news_sentiment ON stock_news(sentiment)")
+    cur.execute("CREATE INDEX IF NOT EXISTS idx_news_pub_time ON stock_news(pub_time)")
+    cur.execute("CREATE INDEX IF NOT EXISTS idx_news_source_type ON stock_news(source_type)")
+
+    # market_news
+    cur.execute("""
+        CREATE TABLE IF NOT EXISTS market_news (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            title TEXT NOT NULL,
+            content TEXT,
+            source TEXT NOT NULL,
+            source_type TEXT,
+            pub_time TEXT,
+            url TEXT,
+            news_type TEXT,
+            sentiment TEXT,
+            impact_scope TEXT,
+            affected_sectors TEXT
+        )
+    """)
+    _market_news_new_cols = {
+        "content": "TEXT",
+        "source_type": "TEXT",
+    }
+    cur.execute("PRAGMA table_info(market_news)")
+    _market_news_existing_cols = {row["name"] for row in cur.fetchall()}
+    for col_name, col_type in _market_news_new_cols.items():
+        if col_name not in _market_news_existing_cols:
+            cur.execute(f"ALTER TABLE market_news ADD COLUMN {col_name} {col_type}")
+    cur.execute("CREATE INDEX IF NOT EXISTS idx_mnews_type ON market_news(news_type)")
+    cur.execute("CREATE INDEX IF NOT EXISTS idx_mnews_sentiment ON market_news(sentiment)")
+    cur.execute("CREATE INDEX IF NOT EXISTS idx_mnews_time ON market_news(pub_time)")
+    cur.execute("CREATE INDEX IF NOT EXISTS idx_mnews_source_type ON market_news(source_type)")
 
     conn.commit()
     conn.close()

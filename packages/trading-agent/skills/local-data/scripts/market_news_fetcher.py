@@ -14,9 +14,6 @@ from datetime import datetime
 from typing import Dict, List
 
 _SCRIPT_DIR = os.path.dirname(os.path.abspath(__file__))
-_A_STOCK_DATA_DIR = os.path.normpath(os.path.join(_SCRIPT_DIR, "..", "..", "a-stock-data", "scripts"))
-if _A_STOCK_DATA_DIR not in sys.path:
-    sys.path.insert(0, _A_STOCK_DATA_DIR)
 
 from news_fetcher import fetch_news
 

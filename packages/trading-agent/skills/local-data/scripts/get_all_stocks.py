@@ -12,26 +12,10 @@ import sys
 import io
 import warnings
 
-from local_data.market import market_from_code
+from local_data.market import is_a_share, market_from_code
 
 warnings.filterwarnings('ignore')
 sys.stdout = io.TextIOWrapper(sys.stdout.buffer, encoding="utf-8")
-
-
-def _is_a_share(code: str) -> bool:
-    """Strict A-share 6-digit code filter. Excludes funds, bonds, B-shares, indices."""
-    if not code or len(code) != 6 or not code.isdigit():
-        return False
-    # Shanghai main board + STAR market
-    if code.startswith(("600", "601", "602", "603", "605", "688", "689")):
-        return True
-    # Shenzhen main board + SME + ChiNext
-    if code.startswith(("000", "001", "002", "003", "300", "301")):
-        return True
-    # Beijing Stock Exchange (6-digit); exclude Tonghuashun/TX sector indices (88xxxx)
-    if code.startswith(("430", "830", "87", "89", "92")):
-        return True
-    return False
 
 
 def _clean_name(name: str) -> str:
@@ -55,7 +39,7 @@ def get_all_stocks_from_mootdx():
     stocks = []
     for _, row in df.iterrows():
         code = str(row.get("code", "")).strip()
-        if not _is_a_share(code):
+        if not is_a_share(code):
             continue
         raw_name = str(row.get("name", "") or "").strip()
         name = _clean_name(raw_name)
@@ -79,7 +63,7 @@ def get_all_stocks_from_akshare():
     for _, row in df.iterrows():
         code = str(row.get("代码", "")).strip()
         name = str(row.get("名称", "")).strip()
-        if not _is_a_share(code):
+        if not is_a_share(code):
             continue
         stocks.append({
             "code": code,

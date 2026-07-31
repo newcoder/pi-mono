@@ -23,6 +23,7 @@ import argparse
 import json
 import sqlite3
 from local_data.db import get_db, get_db_path, db_exists
+from local_data.schema import ensure_tables
 from datetime import datetime
 from typing import Dict, List, Optional, Sequence, Tuple
 
@@ -30,40 +31,6 @@ import pandas as pd
 
 # Reuse IC computation from the BK-sector momentum script
 from calc_industry_momentum import compute_ic
-
-def ensure_tables(conn: sqlite3.Connection):
-    """Create required tables if not exists."""
-    conn.execute("""
-        CREATE TABLE IF NOT EXISTS industry_synthetic_klines (
-            code TEXT NOT NULL,
-            standard TEXT NOT NULL,
-            date TEXT NOT NULL,
-            close REAL,
-            constituent_count INTEGER,
-            updated_at TEXT,
-            PRIMARY KEY (code, standard, date)
-        )
-    """)
-    conn.execute("""
-        CREATE INDEX IF NOT EXISTS idx_industry_synthetic_klines_lookup
-        ON industry_synthetic_klines(code, standard, date)
-    """)
-    conn.execute("""
-        CREATE TABLE IF NOT EXISTS factor_ic (
-            date TEXT NOT NULL,
-            factor_name TEXT NOT NULL,
-            ic_value REAL,
-            sample_count INTEGER,
-            updated_at TEXT,
-            PRIMARY KEY (date, factor_name)
-        )
-    """)
-    conn.execute("""
-        CREATE INDEX IF NOT EXISTS idx_factor_ic_lookup
-        ON factor_ic(factor_name, date)
-    """)
-    conn.commit()
-
 
 def load_industries(conn: sqlite3.Connection, standard: str) -> List[Tuple[str, str]]:
     """Load (code, name) list for a given industry standard."""
@@ -346,7 +313,7 @@ def calc_all(
     since: Optional[str] = None,
 ) -> Dict:
     """Build synthetic indices and compute IC for a given industry standard."""
-    ensure_tables(conn)
+    ensure_tables()
 
     industries = load_industries(conn, standard)
     if not industries:

@@ -212,7 +212,7 @@ if __name__ == "__main__":
         pass
     parser = argparse.ArgumentParser(description="Fetch A-share quote (live or local fallback)")
     parser.add_argument("stock_code", help="6-digit stock code, e.g. 600875")
-    parser.add_argument("--market", type=int, default=1, choices=[0, 1], help="1=Shanghai (default), 0=Shenzhen")
+    parser.add_argument("--market", type=int, default=1, choices=[0, 1, 2], help="1=Shanghai (default), 0=Shenzhen, 2=Beijing")
     args = parser.parse_args()
 
     result = get_stock_real_quote(args.stock_code, market=args.market)

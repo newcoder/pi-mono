@@ -11,8 +11,8 @@ import { resolveLocalDataScript, runPython } from "./_utils.js";
 
 const syncKlineParams = Type.Object({
 	period: Type.Optional(
-		Type.Union([Type.Literal("daily"), Type.Literal("weekly"), Type.Literal("monthly")], {
-			description: "K线周期: daily(日线)/weekly(周线)/monthly(月线)",
+		Type.Union([Type.Literal("daily"), Type.Literal("week"), Type.Literal("month")], {
+			description: "K线周期: daily(日线)/week(周线)/month(月线)",
 			default: "daily",
 		}),
 	),
@@ -36,7 +36,7 @@ export const syncKlineTool: AgentTool<typeof syncKlineParams, { synced: number; 
 
 		const period = params.period || "daily";
 		const batchSize = params.batchSize || 500;
-		const label = period === "weekly" ? "周线" : period === "monthly" ? "月线" : "日线";
+		const label = period === "week" ? "周线" : period === "month" ? "月线" : "日线";
 
 		console.log(`[sync_kline] 开始同步全市场${label}...`);
 		const startTime = Date.now();

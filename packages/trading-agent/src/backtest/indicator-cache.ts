@@ -1,5 +1,5 @@
 import type { KlineRow } from "../data/types.js";
-import { computeMA, computeMACD, computeRSI, computeSupertrend, getCloses } from "../indicators/engine.js";
+import { computeKD, computeMA, computeMACD, computeRSI, computeSupertrend, getCloses } from "../indicators/engine.js";
 
 export interface IndicatorCacheKey {
 	code: string;
@@ -110,6 +110,13 @@ export function cachedRSI(klines: KlineRow[], config: { period: number }) {
 	const { code, market } = getStockKey(klines);
 	return indicatorCache.getOrCompute(cacheKey(code, market, getKlinePeriod(klines), "rsi", config), () =>
 		computeRSI(getCloses(klines), config),
+	);
+}
+
+export function cachedKD(klines: KlineRow[], config: { period: number; smoothK: number; smoothD: number }) {
+	const { code, market } = getStockKey(klines);
+	return indicatorCache.getOrCompute(cacheKey(code, market, getKlinePeriod(klines), "kd", config), () =>
+		computeKD(klines, config),
 	);
 }
 

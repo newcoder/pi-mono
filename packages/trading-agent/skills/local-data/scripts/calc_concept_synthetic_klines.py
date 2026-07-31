@@ -17,28 +17,12 @@ if _SKILL_ROOT not in sys.path:
 import argparse
 import sqlite3
 from local_data.db import get_db
+from local_data.schema import ensure_tables
+from local_data.market import market_from_code
 from datetime import datetime
 from typing import Dict, List, Optional, Tuple
 
 import pandas as pd
-
-
-def ensure_tables(conn: sqlite3.Connection):
-    conn.execute("""
-        CREATE TABLE IF NOT EXISTS concept_synthetic_klines (
-            concept TEXT NOT NULL,
-            date TEXT NOT NULL,
-            close REAL,
-            constituent_count INTEGER,
-            updated_at TEXT,
-            PRIMARY KEY (concept, date)
-        )
-    """)
-    conn.execute("""
-        CREATE INDEX IF NOT EXISTS idx_concept_synthetic_klines_lookup
-        ON concept_synthetic_klines(concept, date)
-    """)
-    conn.commit()
 
 
 def load_concepts(conn: sqlite3.Connection) -> List[str]:
@@ -48,15 +32,14 @@ def load_concepts(conn: sqlite3.Connection) -> List[str]:
 
 def load_constituents(conn: sqlite3.Connection, concept: str) -> List[Tuple[str, int]]:
     rows = conn.execute(
-        """SELECT cs.code,
-                  CASE WHEN cs.code LIKE '6%' OR cs.code LIKE '9%' THEN 1 ELSE 0 END as market
+        """SELECT cs.code
            FROM concept_stocks cs
            JOIN stocks s ON cs.code = s.code
            WHERE cs.concept = ? AND s.name NOT LIKE '%退%'
            ORDER BY cs.code""",
         (concept,),
     ).fetchall()
-    return [(r[0], r[1]) for r in rows]
+    return [(r[0], market_from_code(r[0]) or 0) for r in rows]
 
 
 def _chunked(items: list, size: int):
@@ -152,7 +135,7 @@ def save_synthetic_klines(
 
 
 def calc_all(conn: sqlite3.Connection, min_constituents: int = 3, since: Optional[str] = None) -> dict:
-    ensure_tables(conn)
+    ensure_tables()
     concepts = load_concepts(conn)
     print(f"Total concepts: {len(concepts)}")
 

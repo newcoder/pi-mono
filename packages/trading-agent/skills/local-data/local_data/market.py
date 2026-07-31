@@ -7,6 +7,20 @@ MARKET_SH = 1
 MARKET_BJ = 2
 
 
+def is_a_share(code: str) -> bool:
+    """Return True if code is a 6-digit A-share stock code (SH/SZ/BJ).
+
+    Excludes B-shares (200/900), sector indices (88xxxx), funds, bonds,
+    and any code that ``market_from_code`` cannot resolve.
+    """
+    if not code or len(code) != 6 or not code.isdigit():
+        return False
+    # B-shares and Tonghuashun sector indices are not A-share stocks.
+    if code.startswith(("200", "900", "88")):
+        return False
+    return market_from_code(code) is not None
+
+
 def market_from_code(code: str) -> Optional[int]:
     """Infer market from a 6-digit A-share code.
 

@@ -27,45 +27,11 @@ import argparse
 import json
 import sqlite3
 from local_data.db import get_db, get_db_path, db_exists
+from local_data.schema import ensure_tables
 from datetime import datetime
 from typing import Dict, List, Optional, Sequence, Tuple
 
 import pandas as pd
-
-def ensure_tables(conn: sqlite3.Connection):
-    """Create industry_indicators and factor_ic tables if not exists."""
-    conn.execute("""
-        CREATE TABLE IF NOT EXISTS industry_indicators (
-            code TEXT NOT NULL,
-            date TEXT NOT NULL,
-            period_days INTEGER NOT NULL,
-            momentum_return REAL,
-            momentum_rank INTEGER,
-            has_momentum INTEGER,
-            updated_at TEXT,
-            PRIMARY KEY (code, date, period_days)
-        )
-    """)
-    conn.execute("""
-        CREATE INDEX IF NOT EXISTS idx_industry_indicators_date
-        ON industry_indicators(date, period_days)
-    """)
-    conn.execute("""
-        CREATE TABLE IF NOT EXISTS factor_ic (
-            date TEXT NOT NULL,
-            factor_name TEXT NOT NULL,
-            ic_value REAL,
-            sample_count INTEGER,
-            updated_at TEXT,
-            PRIMARY KEY (date, factor_name)
-        )
-    """)
-    conn.execute("""
-        CREATE INDEX IF NOT EXISTS idx_factor_ic_lookup
-        ON factor_ic(factor_name, date)
-    """)
-    conn.commit()
-
 
 def load_klines(conn: sqlite3.Connection) -> pd.DataFrame:
     """Load all daily industry klines into a DataFrame."""
@@ -230,7 +196,7 @@ def calc_all(
     since: Optional[str] = None,
 ) -> Dict:
     """Recalculate industry momentum and IC for all industries."""
-    ensure_tables(conn)
+    ensure_tables()
 
     print("[calc_industry_momentum] Loading industry klines...", file=sys.stderr)
     df = load_klines(conn)

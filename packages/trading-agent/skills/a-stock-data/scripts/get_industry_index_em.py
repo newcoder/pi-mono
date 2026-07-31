@@ -17,6 +17,9 @@
 import argparse
 import io
 import json
+import os
+import re
+import ssl
 import sys
 import time
 import urllib.error
@@ -29,21 +32,17 @@ from typing import Any, Dict, List, Optional
 
 LIST_URL = "https://17.push2.eastmoney.com/api/qt/clist/get"
 SPOT_URL_TEMPLATE = "https://{host}.push2.eastmoney.com/api/qt/stock/get"
-KLINE_URL = "http://7.push2his.eastmoney.com/api/qt/stock/kline/get"
+KLINE_URL_TEMPLATE = "https://{host}.push2his.eastmoney.com/api/qt/stock/kline/get"
 CONS_URL_TEMPLATE = "https://{host}.push2.eastmoney.com/api/qt/clist/get"
 
 USER_AGENT = "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36"
 
-# 行业板块列表字段（与 akshare 对齐）
-LIST_FIELDS = (
-    "f1,f2,f3,f4,f5,f6,f7,f8,f9,f10,f12,f13,f14,f15,f16,f17,f18,f20,f21,"
-    "f23,f24,f25,f26,f22,f33,f11,f62,f128,f136,f115,f152,f124,f107,f104,f105,"
-    "f140,f141,f207,f208,f209,f222"
-)
+# 行业板块列表字段。Eastmoney 对 Python TLS 指纹的 URL 长度敏感，过长的字段串会
+# 触发 RemoteDisconnected；这里只保留后端实际使用的字段。
+LIST_FIELDS = "f2,f3,f4,f5,f6,f7,f8,f12,f14,f15,f16,f17,f18,f20,f21,f104,f105,f107"
 
 # f-field -> 中文含义映射（列表页）
 LIST_FIELD_MAP = {
-    "f1": "_",
     "f2": "最新价",
     "f3": "涨跌幅",
     "f4": "涨跌额",
@@ -51,11 +50,7 @@ LIST_FIELD_MAP = {
     "f6": "成交额",
     "f7": "振幅",
     "f8": "换手率",
-    "f9": "市盈率",
-    "f10": "市净率",
-    "f11": "_",
     "f12": "板块代码",
-    "f13": "市场代码",
     "f14": "板块名称",
     "f15": "最高",
     "f16": "最低",
@@ -63,27 +58,9 @@ LIST_FIELD_MAP = {
     "f18": "昨收",
     "f20": "总市值",
     "f21": "流通市值",
-    "f22": "_",
-    "f23": "_",
-    "f24": "近一月涨跌幅",
-    "f25": "近一年涨跌幅",
-    "f26": "上市日期",
-    "f33": "_",
-    "f62": "主力净流入",
     "f104": "上涨家数",
     "f105": "下跌家数",
     "f107": "平盘家数",
-    "f115": "_",
-    "f124": "更新时间戳",
-    "f128": "领涨股票",
-    "f136": "领涨股票-涨跌幅",
-    "f140": "领涨股票代码",
-    "f141": "领涨股票市场",
-    "f152": "_",
-    "f207": "领跌股票",
-    "f208": "领跌股票代码",
-    "f209": "领跌股票市场",
-    "f222": "领跌股票-涨跌幅",
 }
 
 # 单个板块实时行情字段
@@ -107,14 +84,10 @@ KLINE_COLUMNS = [
     "成交量", "成交额", "振幅", "涨跌幅", "涨跌额", "换手率",
 ]
 
-# 成份股字段
-CONS_FIELDS = (
-    "f1,f2,f3,f4,f5,f6,f7,f8,f9,f10,f12,f13,f14,f15,f16,f17,f18,f20,f21,"
-    "f23,f24,f25,f22,f11,f62,f128,f136,f115,f152,f45"
-)
+# 成份股字段。同样避免 URL 过长导致连接被断开。
+CONS_FIELDS = "f2,f3,f4,f5,f6,f7,f8,f12,f13,f14,f15,f16,f17,f18,f20,f21"
 
 CONS_FIELD_MAP = {
-    "f1": "_",
     "f2": "最新价",
     "f3": "涨跌幅",
     "f4": "涨跌额",
@@ -122,9 +95,6 @@ CONS_FIELD_MAP = {
     "f6": "成交额",
     "f7": "振幅",
     "f8": "换手率",
-    "f9": "市盈率-动态",
-    "f10": "_",
-    "f11": "_",
     "f12": "代码",
     "f13": "市场代码",
     "f14": "名称",
@@ -134,30 +104,71 @@ CONS_FIELD_MAP = {
     "f18": "昨收",
     "f20": "总市值",
     "f21": "流通市值",
-    "f22": "_",
-    "f23": "_",
-    "f24": "近一月涨跌幅",
-    "f25": "近一年涨跌幅",
-    "f45": "_",
-    "f62": "主力净流入",
-    "f128": "_",
-    "f136": "_",
-    "f140": "_",
-    "f141": "_",
-    "f115": "_",
-    "f152": "_",
 }
 
 
 # ─── HTTP helpers ───────────────────────────────────────────────────────────
 
-def _http_get(url: str, params: Optional[Dict[str, Any]] = None, timeout: int = 20) -> Dict[str, Any]:
-    """执行 GET 请求并解析 JSON，失败时抛出异常。"""
+def _create_tls_context() -> ssl.SSLContext:
+    """为 Eastmoney API 构造兼容的 SSL 上下文。
+
+    Eastmoney 的 CDN 对 Python 默认 TLS 指纹敏感，直接使用 urllib 的默认
+    HTTPSHandler 会被远端断开连接（RemoteDisconnected）。强制 TLS 1.2 并
+    关闭证书校验后可稳定获取数据。数据抓取场景下关闭校验可接受。
+    """
+    ctx = ssl.SSLContext(ssl.PROTOCOL_TLS_CLIENT)
+    ctx.check_hostname = False
+    ctx.verify_mode = ssl.CERT_NONE
+    ctx.minimum_version = ssl.TLSVersion.TLSv1_2
+    ctx.maximum_version = ssl.TLSVersion.TLSv1_2
+    return ctx
+
+
+def _http_get(url: str, params: Optional[Dict[str, Any]] = None, timeout: int = 15, retries: int = 3) -> Dict[str, Any]:
+    """执行 GET 请求并解析 JSON，失败时重试。
+
+    对 Eastmoney 域名始终使用直连（忽略系统代理），并使用固定的 TLS 1.2
+    SSL 上下文，避免本地 Privoxy/Clash 等代理返回 500 或非 JSON 内容。
+    """
     if params:
         url = url + "?" + urllib.parse.urlencode(params)
-    req = urllib.request.Request(url, headers={"User-Agent": USER_AGENT})
-    with urllib.request.urlopen(req, timeout=timeout) as resp:
-        return json.loads(resp.read().decode("utf-8"))
+
+    headers = {
+        "User-Agent": USER_AGENT,
+        "Accept": "application/json, text/javascript, */*; q=0.01",
+        "Accept-Language": "zh-CN,zh;q=0.9,en;q=0.8",
+        "Referer": "https://quote.eastmoney.com/",
+    }
+
+    ssl_ctx = _create_tls_context()
+    last_error: Exception | None = None
+    for attempt in range(retries):
+        # Replace host prefix with a new random one on each retry
+        current_url = url
+        if attempt > 0:
+            current_url = re.sub(
+                r"https?://\d+\.(push2|push2his)\.",
+                lambda m: f"{m.group(0).split('://')[0]}://{_random_host()}.",
+                url,
+            )
+
+        req = urllib.request.Request(current_url, headers=headers)
+        # 始终直连，忽略系统代理；Eastmoney 在国内可直连，且本地代理常返回 500
+        opener = urllib.request.build_opener(
+            urllib.request.ProxyHandler({}),
+            urllib.request.HTTPSHandler(context=ssl_ctx),
+        )
+        try:
+            with opener.open(req, timeout=timeout) as resp:
+                raw = resp.read()
+                text = raw.decode("utf-8-sig") if raw.startswith(b"\xef\xbb\xbf") else raw.decode("utf-8")
+                return json.loads(text)
+        except Exception as e:
+            last_error = e
+            if attempt < retries - 1:
+                time.sleep(0.5 * (2 ** attempt))
+
+    raise last_error if last_error else RuntimeError(f"HTTP request failed after {retries} retries")
 
 
 def _random_host() -> str:
@@ -296,7 +307,7 @@ def fetch_klines(
         "smplmt": "10000",
         "lmt": "1000000",
     }
-    data = _http_get(KLINE_URL, params)
+    data = _http_get(KLINE_URL_TEMPLATE.format(host=_random_host()), params)
     klines_raw = data.get("data", {}).get("klines", [])
     if not klines_raw:
         return []

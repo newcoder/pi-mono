@@ -48,7 +48,12 @@ function serveStatic(req: IncomingMessage, res: ServerResponse, staticDir: strin
 	}
 
 	const content = readFileSync(filePath);
-	res.writeHead(200, { "Content-Type": getContentType(filePath) });
+	res.writeHead(200, {
+		"Content-Type": getContentType(filePath),
+		"Cache-Control": "no-cache, no-store, must-revalidate",
+		Pragma: "no-cache",
+		Expires: "0",
+	});
 	res.end(content);
 	return true;
 }

@@ -8,7 +8,7 @@ export interface TradingSessionOptions {
 	baseSystemPrompt: string;
 	tools: TradingSessionConfig["tools"];
 	getApiKey?: (provider: string) => Promise<string | undefined> | string | undefined;
-	streamFn?: StreamFn;
+	streamFn: StreamFn;
 	beforeToolCall?: Agent["beforeToolCall"];
 	afterToolCall?: Agent["afterToolCall"];
 }

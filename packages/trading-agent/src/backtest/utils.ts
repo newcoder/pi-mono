@@ -41,3 +41,26 @@ export function yyyymmddToDate(yyyymmdd: string | undefined, fallback: string): 
 	if (!yyyymmdd || yyyymmdd.length !== 8) return fallback;
 	return `${yyyymmdd.slice(0, 4)}-${yyyymmdd.slice(4, 6)}-${yyyymmdd.slice(6, 8)}`;
 }
+
+export type Rng = () => number;
+
+/** Create a deterministic PRNG from a 32-bit seed. */
+export function createRng(seed: number): Rng {
+	let t = seed >>> 0;
+	return () => {
+		t += 0x6d2b79f5;
+		let r = Math.imul(t ^ (t >>> 15), 1 | t);
+		r ^= r + Math.imul(r ^ (r >>> 7), 61 | r);
+		return ((r ^ (r >>> 14)) >>> 0) / 2 ** 32;
+	};
+}
+
+/** Hash a string into a 32-bit unsigned integer. */
+export function hashString(str: string): number {
+	let h = 0x811c9dc5;
+	for (let i = 0; i < str.length; i++) {
+		h ^= str.charCodeAt(i);
+		h = Math.imul(h, 0x01000193);
+	}
+	return h >>> 0;
+}

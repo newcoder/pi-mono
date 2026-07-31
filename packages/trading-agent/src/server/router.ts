@@ -1215,7 +1215,7 @@ export async function handleRequest(
 
 			// Update auth.json with API key if provided
 			if (apiKey) {
-				modelRegistry.authStorage.set(provider, { type: "api_key", key: apiKey });
+				await modelRegistry.setApiKey(provider, apiKey);
 			}
 
 			// Update models.json with baseUrl if provided

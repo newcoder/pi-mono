@@ -360,8 +360,8 @@ async function main() {
 	// Resolve pools
 	const resolvedPools: Array<{ name: string; stocks: Array<{ code: string; market: number; name?: string }> }> = [];
 	for (const def of POOLS) {
-		if (singlePoolId !== undefined && typeof def.lookup === "number" && def.lookup !== singlePoolId) continue;
 		if (singlePoolName !== undefined && def.name !== singlePoolName) continue;
+		if (singlePoolId !== undefined && def.lookup !== singlePoolId) continue;
 		const resolved = await resolvePool(store, def);
 		if (resolved) {
 			resolvedPools.push({ name: resolved.name, stocks: resolved.stocks });
