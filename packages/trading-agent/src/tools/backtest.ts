@@ -152,8 +152,8 @@ const backtestParams = Type.Object({
 		}),
 	),
 	slippage: Type.Optional(Type.Number({ description: "滑点比例，默认0.001(0.1%)", default: 0.001 })),
-	commission: Type.Optional(Type.Number({ description: "手续费比例，默认0.0003(0.03%)", default: 0.0003 })),
-	tax_rate: Type.Optional(Type.Number({ description: "印花税比例，仅卖出时扣除，默认0", default: 0 })),
+	commission: Type.Optional(Type.Number({ description: "手续费比例，默认0.0002(0.02%)", default: 0.0002 })),
+	tax_rate: Type.Optional(Type.Number({ description: "印花税比例，仅卖出时扣除，默认0.001(0.1%)", default: 0.001 })),
 	transfer_fee: Type.Optional(Type.Number({ description: "过户费比例，买卖双向，默认0", default: 0 })),
 	skip_no_volume: Type.Optional(
 		Type.Boolean({ description: "是否跳过成交量为0或价格缺失的交易日（停牌），默认true", default: true }),

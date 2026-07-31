@@ -141,8 +141,8 @@ export async function runBacktest(config: BacktestConfig): Promise<BacktestResul
 	// 3. Simulate trades
 	const initialCapital = config.initialCapital ?? 100_000;
 	const slippage = config.slippage ?? 0.001;
-	const commission = config.commission ?? 0.0003;
-	const taxRate = config.taxRate ?? 0;
+	const commission = config.commission ?? 0.0002;
+	const taxRate = config.taxRate ?? 0.001;
 	const transferFee = config.transferFee ?? 0;
 	const positionSize = config.positionSize ?? 1.0;
 	const minLot = config.minLot ?? 100;
@@ -442,8 +442,8 @@ export async function runPoolBacktest(
 	const initialCapital = config.initialCapital ?? 100_000;
 
 	const slippage = config.slippage ?? 0.001;
-	const commission = config.commission ?? 0.0003;
-	const taxRate = config.taxRate ?? 0;
+	const commission = config.commission ?? 0.0002;
+	const taxRate = config.taxRate ?? 0.001;
 	const transferFee = config.transferFee ?? 0;
 	const minLot = config.minLot ?? 100;
 	const skipNoVolume = config.skipNoVolume ?? true;
