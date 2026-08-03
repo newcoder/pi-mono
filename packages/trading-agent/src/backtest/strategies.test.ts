@@ -365,4 +365,169 @@ describe("generateSignals", () => {
 			expect(signalsMTop.some((s) => s.type === "buy")).toBe(false);
 		});
 	});
+
+	describe("ma_alignment", () => {
+		it("should buy when MA5>10>20>60 aligns", () => {
+			// V-shape: downtrend then strong uptrend — alignment flips from bearish to bullish
+			const closes: (number | null)[] = [];
+			for (let i = 0; i < 60; i++) closes.push(100 - i * 0.3);
+			for (let i = 0; i < 40; i++) closes.push(82 + i * 1.5);
+			const klines = makeKlines(closes);
+			const signals = generateSignals(klines, "ma_alignment", {});
+			expect(signals.some((s) => s.type === "buy")).toBe(true);
+			expect(signals.find((s) => s.type === "buy")?.reason).toContain("多头排列");
+		});
+
+		it("should sell when MA alignment reverses to bearish", () => {
+			// Inverted V: uptrend then downtrend — alignment flips from bullish to bearish
+			const closes: (number | null)[] = [];
+			for (let i = 0; i < 60; i++) closes.push(100 + i * 0.3);
+			for (let i = 0; i < 40; i++) closes.push(117.7 - i * 1.5);
+			const klines = makeKlines(closes);
+			const signals = generateSignals(klines, "ma_alignment", {});
+			expect(signals.some((s) => s.type === "sell")).toBe(true);
+		});
+	});
+
+	describe("ema_cross", () => {
+		it("should buy on EMA golden cross", () => {
+			const closes: (number | null)[] = [];
+			for (let i = 0; i < 30; i++) closes.push(100 - i * 0.5);
+			for (let i = 0; i < 30; i++) closes.push(85 + i * 1.2);
+			const klines = makeKlines(closes);
+			const signals = generateSignals(klines, "ema_cross", { fast: 3, slow: 10 });
+			expect(signals.some((s) => s.type === "buy")).toBe(true);
+		});
+	});
+
+	describe("ma_weekly_trend", () => {
+		it("should buy when weekly bullish and daily pulls back to MA20", () => {
+			const closes: (number | null)[] = [];
+			for (let i = 0; i < 55; i++) closes.push(100 + i * 0.3);
+			// Spike up, then pullback into MA20
+			closes.push(118.5, 119.2, 116.0);
+			const klines = makeKlines(closes);
+			const signals = generateSignals(klines, "ma_weekly_trend", { maPeriod: 20, weekMa: 5 });
+			expect(signals.some((s) => s.type === "buy")).toBe(true);
+		});
+	});
+
+	describe("donchian_breakout", () => {
+		it("should buy on breakout above N-day high", () => {
+			const closes: (number | null)[] = [];
+			for (let i = 0; i < 20; i++) closes.push(100);
+			closes.push(105);
+			const klines = makeKlines(closes);
+			const signals = generateSignals(klines, "donchian_breakout", { period: 20 });
+			expect(signals.some((s) => s.type === "buy")).toBe(true);
+		});
+
+		it("should sell on breakdown below N-day low", () => {
+			const closes: (number | null)[] = [];
+			for (let i = 0; i < 20; i++) closes.push(100);
+			closes.push(95);
+			const klines = makeKlines(closes);
+			const signals = generateSignals(klines, "donchian_breakout", { period: 20 });
+			expect(signals.some((s) => s.type === "sell")).toBe(true);
+		});
+	});
+
+	describe("roc_momentum", () => {
+		it("should buy when momentum exceeds threshold", () => {
+			const closes: (number | null)[] = [];
+			for (let i = 0; i < 10; i++) closes.push(100);
+			closes.push(110);
+			const klines = makeKlines(closes);
+			const signals = generateSignals(klines, "roc_momentum", { period: 10, threshold: 5 });
+			expect(signals.some((s) => s.type === "buy")).toBe(true);
+		});
+
+		it("should sell when momentum drops below -threshold", () => {
+			const closes: (number | null)[] = [];
+			for (let i = 0; i < 10; i++) closes.push(100);
+			closes.push(90);
+			const klines = makeKlines(closes);
+			const signals = generateSignals(klines, "roc_momentum", { period: 10, threshold: 5 });
+			expect(signals.some((s) => s.type === "sell")).toBe(true);
+		});
+	});
+
+	describe("macd_hist_reversal", () => {
+		it("should buy on MACD golden cross", () => {
+			const closes: (number | null)[] = [];
+			for (let i = 0; i < 40; i++) closes.push(100 - i * 0.3);
+			for (let i = 0; i < 30; i++) closes.push(88 + i * 0.5);
+			const klines = makeKlines(closes);
+			const signals = generateSignals(klines, "macd_hist_reversal", { fast: 3, slow: 8, signal: 3 });
+			expect(signals.some((s) => s.type === "buy")).toBe(true);
+		});
+	});
+
+	describe("rsi_divergence", () => {
+		it("should produce valid output without crashing", () => {
+			const closes: (number | null)[] = [];
+			for (let i = 0; i < 30; i++) closes.push(100 - i);
+			closes.push(68, 66, 64);
+			const klines = makeKlines(closes);
+			const signals = generateSignals(klines, "rsi_divergence", { period: 2, lookback: 10 });
+			expect(Array.isArray(signals)).toBe(true);
+		});
+	});
+
+	describe("volume_breakout", () => {
+		it("should buy on price breakout with volume surge", () => {
+			const data: Array<{ close: number; volume: number; high: number; low: number }> = [];
+			for (let i = 0; i < 30; i++) data.push({ close: 100, volume: 10000, high: 101, low: 99 });
+			data.push({ close: 103, volume: 30000, high: 103, low: 99 });
+			const klines = makeKlinesWithVolume(data);
+			const signals = generateSignals(klines, "volume_breakout", { period: 20, volPeriod: 10, volRatio: 1.5 });
+			expect(signals.some((s) => s.type === "buy")).toBe(true);
+			expect(signals.find((s) => s.type === "buy")?.reason).toContain("放量突破");
+		});
+	});
+
+	describe("shrink_volume_pullback", () => {
+		it("should buy on shrinking volume pullback in uptrend", () => {
+			const data: Array<{ close: number; volume: number; high: number; low: number }> = [];
+			for (let i = 0; i < 30; i++) data.push({ close: 100 + i, volume: 20000, high: 101 + i, low: 99 + i });
+			data.push({ close: 128, volume: 5000, high: 129, low: 127 });
+			data.push({ close: 126, volume: 4000, high: 127, low: 125 });
+			const klines = makeKlinesWithVolume(data);
+			const signals = generateSignals(klines, "shrink_volume_pullback", { maPeriod: 20, volPeriod: 10 });
+			expect(signals.some((s) => s.type === "buy")).toBe(true);
+		});
+	});
+
+	describe("obv_trend", () => {
+		it("should buy when OBV makes new high and price above MA", () => {
+			const data: Array<{ close: number; volume: number; high: number; low: number }> = [];
+			for (let i = 0; i < 25; i++) data.push({ close: 100 + i * 0.5, volume: 10000, high: 101 + i * 0.5, low: 99 + i * 0.5 });
+			const klines = makeKlinesWithVolume(data);
+			const signals = generateSignals(klines, "obv_trend", { period: 20 });
+			expect(signals.some((s) => s.type === "buy")).toBe(true);
+		});
+	});
+
+	describe("harami", () => {
+		it("should buy on bullish harami", () => {
+			const klines = makeKlinesOHLC([
+				{ open: 110, high: 111, low: 105, close: 106 },
+				{ open: 107, high: 108.5, low: 106.5, close: 108 },
+			]);
+			const signals = generateSignals(klines, "harami", { minBodyRatio: 0.02 });
+			expect(signals.some((s) => s.type === "buy")).toBe(true);
+			expect(signals.find((s) => s.type === "buy")?.reason).toContain("看涨孕线");
+		});
+	});
+
+	describe("doji_reversal", () => {
+		it("should buy on low-position doji with long lower shadow", () => {
+			const klines = makeKlinesOHLC([
+				{ open: 110, high: 111, low: 105, close: 106 },
+				{ open: 105.5, high: 106, low: 101, close: 105.2 },
+			]);
+			const signals = generateSignals(klines, "doji_reversal", { minBodyRatio: 0.02 });
+			expect(signals.some((s) => s.type === "buy")).toBe(true);
+		});
+	});
 });

@@ -1,5 +1,14 @@
 import type { KlineRow } from "../data/types.js";
-import { computeKD, computeMA, computeMACD, computeRSI, computeSupertrend, getCloses } from "../indicators/engine.js";
+import {
+	computeEMA,
+	computeKD,
+	computeMA,
+	computeMACD,
+	computeOBV,
+	computeRSI,
+	computeSupertrend,
+	getCloses,
+} from "../indicators/engine.js";
 
 export interface IndicatorCacheKey {
 	code: string;
@@ -124,5 +133,19 @@ export function cachedSupertrend(klines: KlineRow[], config: { period: number; m
 	const { code, market } = getStockKey(klines);
 	return indicatorCache.getOrCompute(cacheKey(code, market, getKlinePeriod(klines), "supertrend", config), () =>
 		computeSupertrend(klines, config),
+	);
+}
+
+export function cachedEMA(klines: KlineRow[], period: number) {
+	const { code, market } = getStockKey(klines);
+	return indicatorCache.getOrCompute(cacheKey(code, market, getKlinePeriod(klines), "ema", { period }), () =>
+		computeEMA(getCloses(klines), period),
+	);
+}
+
+export function cachedOBV(klines: KlineRow[]) {
+	const { code, market } = getStockKey(klines);
+	return indicatorCache.getOrCompute(cacheKey(code, market, getKlinePeriod(klines), "obv", {}), () =>
+		computeOBV(klines),
 	);
 }

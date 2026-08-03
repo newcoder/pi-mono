@@ -21,7 +21,19 @@ export type StrategyType =
 	| "time_exit"
 	| "always_buy"
 	| "kd_daily"
-	| "kd_weekly";
+	| "kd_weekly"
+	| "ma_alignment"
+	| "ema_cross"
+	| "ma_weekly_trend"
+	| "donchian_breakout"
+	| "roc_momentum"
+	| "macd_hist_reversal"
+	| "rsi_divergence"
+	| "volume_breakout"
+	| "shrink_volume_pullback"
+	| "obv_trend"
+	| "harami"
+	| "doji_reversal";
 
 export interface SignalSource {
 	strategy: StrategyType;

@@ -134,13 +134,20 @@ const state = { pools: [], strategies: {}, running: false, result: null, chart: 
 const STRATEGIES = [
   'ma_cross','macd_cross','rsi_reversal','bollinger_breakout','supertrend',
   'hammer','bullish_engulf','morning_star','three_soldiers','tech_composite',
-  'breakout','volume_contraction','always_buy','kd_daily','kd_weekly'
+  'breakout','volume_contraction','always_buy','kd_daily','kd_weekly',
+  'ma_alignment','ema_cross','ma_weekly_trend','donchian_breakout','roc_momentum',
+  'macd_hist_reversal','rsi_divergence','volume_breakout','shrink_volume_pullback',
+  'obv_trend','harami','doji_reversal'
 ];
 const STRAT_LABELS = {
   ma_cross:'MA金叉/死叉',macd_cross:'MACD金叉/死叉',rsi_reversal:'RSI超卖/超买',bollinger_breakout:'布林带突破',
   supertrend:'Supertrend',hammer:'锤子线',bullish_engulf:'阳包阴',morning_star:'晨星',three_soldiers:'红三兵',
   tech_composite:'技术综合',breakout:'突破买入',volume_contraction:'缩量调整',always_buy:'全买入',
-  kd_daily:'日线KD',kd_weekly:'周线KD'
+  kd_daily:'日线KD',kd_weekly:'周线KD',
+  ma_alignment:'均线多头排列',ema_cross:'EMA交叉',ma_weekly_trend:'周线趋势回踩',
+  donchian_breakout:'唐奇安通道突破',roc_momentum:'ROC动量',macd_hist_reversal:'MACD柱缩短',
+  rsi_divergence:'RSI底背离',volume_breakout:'放量突破',shrink_volume_pullback:'缩量回踩',
+  obv_trend:'OBV趋势',harami:'孕线',doji_reversal:'十字星反转'
 };
 
 function $(id){return document.getElementById(id)}

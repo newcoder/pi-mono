@@ -90,7 +90,7 @@ export function computeMA(closes: (number | null)[], period: number): MAResult {
 
 // ─── Exponential Moving Average ─────────────────────────────────
 
-function computeEMA(values: (number | null)[], period: number): (number | null)[] {
+export function computeEMA(values: (number | null)[], period: number): (number | null)[] {
 	const result: (number | null)[] = [];
 	let ema: number | null = null;
 	const multiplier = 2 / (period + 1);
@@ -392,6 +392,34 @@ export function getCloses(klines: KlineRow[]): (number | null)[] {
 
 export function getVolumes(klines: KlineRow[]): (number | null)[] {
 	return klines.map((k) => k.volume);
+}
+
+/** On-Balance Volume: cumulative volume, +/- by close direction. */
+export function computeOBV(klines: KlineRow[]): (number | null)[] {
+	const obv: (number | null)[] = [];
+	let cum = 0;
+	for (let i = 0; i < klines.length; i++) {
+		const k = klines[i];
+		const vol = k.volume;
+		if (vol == null || k.close == null) {
+			obv.push(i === 0 ? cum : obv[i - 1]);
+			continue;
+		}
+		if (i === 0) {
+			cum = vol;
+		} else {
+			const prevClose = klines[i - 1].close;
+			if (prevClose == null) {
+				// keep cum unchanged
+			} else if (k.close > prevClose) {
+				cum += vol;
+			} else if (k.close < prevClose) {
+				cum -= vol;
+			}
+		}
+		obv.push(cum);
+	}
+	return obv;
 }
 
 /**
