@@ -8,10 +8,9 @@ import { STRATEGY_META } from "../backtest/strategies.js";
 import { loadUserConfig, saveUserConfig } from "../config/user-config.js";
 import type { TradingSession } from "../core/trading-session.js";
 import { marketFromCode, requireStore, requireSync } from "../data/index.js";
+import { addReport, listReports, removeReport } from "../report/report-store.js";
 import { runAStockDataJsonScript, runJsonScript, runLocalDataJsonScript } from "../tools/_utils.js";
 import { predictStockRankingTool } from "../tools/ml-prediction.js";
-import { BACKTEST_PARAMS_SCHEMA } from "../tools/backtest.js";
-import { addReport, listReports, removeReport } from "../report/report-store.js";
 import type { BackgroundSyncService } from "./background-sync.js";
 import type { MootdxDaemon } from "./mootdx-daemon.js";
 
@@ -43,12 +42,12 @@ function parseQuery(url: string): Record<string, string> {
 /** Read and parse JSON request body with a configurable size limit (prevents OOM). */
 const DEFAULT_MAX_BODY = 256 * 1024; // 256 KB
 async function readJsonBody(req: IncomingMessage, maxSize = DEFAULT_MAX_BODY): Promise<any> {
-	let chunks: Buffer[] = [];
+	const chunks: Buffer[] = [];
 	let total = 0;
 	for await (const chunk of req) {
 		const buf = typeof chunk === "string" ? Buffer.from(chunk) : chunk;
 		total += buf.length;
-		if (total > maxSize) throw new Error("Request body too large (max " + Math.round(maxSize/1024) + "KB)");
+		if (total > maxSize) throw new Error(`Request body too large (max ${Math.round(maxSize / 1024)}KB)`);
 		chunks.push(buf);
 	}
 	const raw = Buffer.concat(chunks).toString("utf-8");
@@ -63,26 +62,34 @@ function todayStr(): string {
  *  URL: money.finance.sina.com.cn/quotes_service/api/json_v2.php/CN_MarketData.getKLineData */
 async function fetchSinaMinuteKlines(code: string, market: number, period: string) {
 	const prefix = market === 1 ? "sh" : "sz";
-	const scale = { "1m": "5", "5m": "5", "15m": "15", "30m": "30", "60m": "60" }[period] || "5";
+	// Sina supports 1-minute bars via scale=1; anything else falls back to 5m.
+	const scale = { "1m": "1", "5m": "5", "15m": "15", "30m": "30", "60m": "60" }[period] || "5";
 	const url = `https://money.finance.sina.com.cn/quotes_service/api/json_v2.php/CN_MarketData.getKLineData?symbol=${prefix}${code}&scale=${scale}&ma=no&datalen=240`;
 	try {
 		const resp = await fetch(url, { headers: { "User-Agent": "Mozilla/5.0" }, signal: AbortSignal.timeout(8000) });
 		if (!resp.ok) return [];
-		const raw = await resp.json() as any[];
+		const raw = (await resp.json()) as any[];
 		if (!Array.isArray(raw) || raw.length === 0) return [];
 		const rows: any[] = [];
 		for (const bar of raw) {
 			const date = bar.day;
 			if (!date) continue;
 			rows.push({
-				code, market, period, adjust: "bfq", date,
+				code,
+				market,
+				period,
+				adjust: "bfq",
+				date,
 				open: parseFloat(bar.open) || null,
 				high: parseFloat(bar.high) || null,
 				low: parseFloat(bar.low) || null,
 				close: parseFloat(bar.close) || null,
 				volume: parseFloat(bar.volume) || null,
 				turnover: null,
-				change_pct: null, change_amount: null, amplitude: null, pre_close: null,
+				change_pct: null,
+				change_amount: null,
+				amplitude: null,
+				pre_close: null,
 			});
 		}
 		return rows;
@@ -634,7 +641,11 @@ export async function handleRequest(
 										});
 									} else {
 										const items = await store.getStockPoolItems(pid);
-										const stocks = items.map((i: any) => ({ code: i.code, market: i.market, name: i.name || undefined }));
+										const stocks = items.map((i: any) => ({
+											code: i.code,
+											market: i.market,
+											name: i.name || undefined,
+										}));
 										result = await runPoolBacktest(stocks, {
 											strategy: strategy as any,
 											rankBy: rankBy as any,
@@ -662,8 +673,13 @@ export async function handleRequest(
 								} catch (e) {
 									results.push({
 										...combo,
-										totalReturn: null, annualizedReturn: null, sharpeRatio: null,
-										maxDrawdown: null, winRate: null, profitFactor: null, totalTrades: 0,
+										totalReturn: null,
+										annualizedReturn: null,
+										sharpeRatio: null,
+										maxDrawdown: null,
+										winRate: null,
+										profitFactor: null,
+										totalTrades: 0,
 										elapsedMs: Date.now() - t0,
 										error: e instanceof Error ? e.message : String(e),
 									});
@@ -719,6 +735,18 @@ export async function handleRequest(
 				if (config.rebalance_frequency != null && config.rebalance_frequency < 1) {
 					badRequest(res, "rebalance_frequency must be >= 1");
 					return;
+				}
+				for (const key of [
+					"stop_loss_percent",
+					"take_profit_percent",
+					"trailing_stop_percent",
+					"drawdown_limit_percent",
+				]) {
+					const v = (config as Record<string, unknown>)[key];
+					if (v != null && (typeof v !== "number" || v < 0 || v >= 1)) {
+						badRequest(res, `${key} must be a number in 0-1 (0 = disabled)`);
+						return;
+					}
 				}
 
 				const store = requireStore();
@@ -792,13 +820,21 @@ export async function handleRequest(
 				let threshold: Date;
 				switch (period) {
 					case "week":
-						threshold = new Date(now); threshold.setDate(now.getDate() - 7); break;
+						threshold = new Date(now);
+						threshold.setDate(now.getDate() - 7);
+						break;
 					case "month":
-						threshold = new Date(now); threshold.setMonth(now.getMonth() - 1); break;
+						threshold = new Date(now);
+						threshold.setMonth(now.getMonth() - 1);
+						break;
 					case "quarter":
-						threshold = new Date(now); threshold.setMonth(now.getMonth() - 3); break;
+						threshold = new Date(now);
+						threshold.setMonth(now.getMonth() - 3);
+						break;
 					default: // year
-						threshold = new Date(now); threshold.setFullYear(now.getFullYear() - 1); break;
+						threshold = new Date(now);
+						threshold.setFullYear(now.getFullYear() - 1);
+						break;
 				}
 				const thresholdStr = threshold.toISOString().slice(0, 10);
 				if (latestBarDate && latestBarDate < thresholdStr) {

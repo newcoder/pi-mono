@@ -159,6 +159,23 @@ const backtestParams = Type.Object({
 		Type.Boolean({ description: "是否跳过成交量为0或价格缺失的交易日（停牌），默认true", default: true }),
 	),
 	maxHoldingDays: Type.Optional(Type.Number({ description: "最大持仓天数，超出强制平仓" })),
+	stop_loss_percent: Type.Optional(
+		Type.Number({ description: "固定止损比例（0-1）。如 0.08 表示开盘价跌破买入价 8% 时卖出。0=关闭（默认）。" }),
+	),
+	take_profit_percent: Type.Optional(
+		Type.Number({ description: "止盈比例（0-1）。如 0.2 表示开盘价超过买入价 20% 时卖出。0=关闭（默认）。" }),
+	),
+	trailing_stop_percent: Type.Optional(
+		Type.Number({
+			description: "移动止损比例（0-1）。从持仓最高价回撤该比例时卖出（按开盘价检测）。0=关闭（默认）。",
+		}),
+	),
+	drawdown_limit_percent: Type.Optional(
+		Type.Number({
+			description:
+				"组合回撤熔断（0-1）。总资金相对峰值回撤超过该比例时清仓并停止买入，回撤收窄至一半后恢复。0=关闭（默认）。",
+		}),
+	),
 	min_lot: Type.Optional(Type.Number({ description: "最小交易单位（股），默认100", default: 100 })),
 	params: Type.Optional(
 		Type.Record(Type.String(), Type.Number(), {
@@ -237,7 +254,6 @@ const backtestParams = Type.Object({
 				Type.Literal("ma_alignment", { description: "按10/20/60日均线多头排列强度排序，越强越靠前" }),
 				Type.Literal("weekly_ma_alignment", { description: "按5/10/20周均线多头排列强度排序，越强越靠前" }),
 				Type.Literal("market_cap", { description: "按总市值排序，市值越大越靠前" }),
-				Type.Literal("amount", { description: "按成交额排序，成交额越大越靠前" }),
 				Type.Literal("random", { description: "随机选择，多次运行取平均" }),
 			],
 			{ description: "买入候选的二级排序因子" },
@@ -256,10 +272,7 @@ const backtestParams = Type.Object({
 	),
 
 	random_runs: Type.Optional(
-		Type.Number({ maximum: 100,
-			description: "随机选择时运行次数，1-100，>1时多次采样取中位数",
-			default: 1,
-		}),
+		Type.Number({ maximum: 100, description: "随机选择时运行次数，1-100，>1时多次采样取中位数", default: 1 }),
 	),
 	seed: Type.Optional(
 		Type.Number({
@@ -333,6 +346,20 @@ export const backtestStrategyTool: AgentTool<typeof backtestParams, BacktestTool
 				content: [{ type: "text", text: "参数错误: random_runs 必须在 1-100 之间。" }],
 				details: { error: `invalid random_runs: ${rr}` },
 			};
+		}
+		for (const key of [
+			"stop_loss_percent",
+			"take_profit_percent",
+			"trailing_stop_percent",
+			"drawdown_limit_percent",
+		] as const) {
+			const v = params[key];
+			if (v != null && (v < 0 || v >= 1)) {
+				return {
+					content: [{ type: "text", text: `参数错误: ${key} 必须在 0-1 之间（0 表示关闭）。` }],
+					details: { error: `invalid ${key}: ${v}` },
+				};
+			}
 		}
 		if (params.industry_filter) {
 			const ic = params.industry_filter.ic_period_days;
@@ -416,6 +443,10 @@ export const backtestStrategyTool: AgentTool<typeof backtestParams, BacktestTool
 				taxRate: params.tax_rate ?? 0,
 				transferFee: params.transfer_fee ?? 0,
 				maxHoldingDays: params.maxHoldingDays,
+				stopLossPercent: params.stop_loss_percent,
+				takeProfitPercent: params.take_profit_percent,
+				trailingStopPercent: params.trailing_stop_percent,
+				drawdownLimitPercent: params.drawdown_limit_percent,
 				skipNoVolume: params.skip_no_volume ?? true,
 				minLot: params.min_lot,
 				strategyParams: params.params,
@@ -447,7 +478,6 @@ export const backtestStrategyTool: AgentTool<typeof backtestParams, BacktestTool
 					| "ma_alignment"
 					| "weekly_ma_alignment"
 					| "market_cap"
-					| "amount"
 					| undefined,
 				maxPositions: params.max_positions,
 				randomRuns: params.random_runs,
@@ -505,8 +535,8 @@ export const backtestStrategyTool: AgentTool<typeof backtestParams, BacktestTool
 			const report = formatPoolBacktestResult(result);
 			const tradeList = formatPoolTradeList(result.trades);
 
-			// Build benchmark curves if requested
-			const benchmarks = [];
+			// Default pool benchmark (equal-weight avg) + any requested index benchmarks
+			const benchmarks = result.benchmarks ? [...result.benchmarks] : [];
 			if (params.benchmark_index) {
 				const symbols = params.benchmark_index
 					.split(",")
@@ -674,6 +704,10 @@ export const backtestStrategyTool: AgentTool<typeof backtestParams, BacktestTool
 			taxRate: params.tax_rate ?? 0,
 			transferFee: params.transfer_fee ?? 0,
 			maxHoldingDays: params.maxHoldingDays,
+			stopLossPercent: params.stop_loss_percent,
+			takeProfitPercent: params.take_profit_percent,
+			trailingStopPercent: params.trailing_stop_percent,
+			drawdownLimitPercent: params.drawdown_limit_percent,
 			skipNoVolume: params.skip_no_volume ?? true,
 			minLot: minLot,
 			strategyParams: params.params,
@@ -785,8 +819,8 @@ export const backtestStrategyTool: AgentTool<typeof backtestParams, BacktestTool
 				},
 			};
 
-			// Build benchmark curves if requested
-			const benchmarks: ReportBenchmark[] = [];
+			// Default buy & hold benchmark + any requested index benchmarks
+			const benchmarks: ReportBenchmark[] = result.benchmarks ? [...result.benchmarks] : [];
 			if (params.benchmark_index) {
 				const symbols = params.benchmark_index
 					.split(",")
@@ -800,8 +834,8 @@ export const backtestStrategyTool: AgentTool<typeof backtestParams, BacktestTool
 						console.warn(`[backtest_strategy] Failed to fetch benchmark ${symbol}:`, err);
 					}
 				}
-				reportData.benchmarks = benchmarks;
 			}
+			reportData.benchmarks = benchmarks;
 
 			const outputDir = join(homedir(), ".trading-agent", "reports");
 			const genResult = await generateReport(reportData, outputDir, "http://localhost:3000");

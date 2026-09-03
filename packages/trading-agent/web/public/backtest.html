@@ -19,6 +19,20 @@ select:focus,input:focus{outline:none;border-color:#2563eb}
 .advanced-toggle{cursor:pointer;padding:8px 24px;font-size:13px;color:#2563eb;user-select:none}
 #advancedPanel{display:none;padding:8px 24px 16px;display:none;flex-wrap:wrap;gap:12px}
 #advancedPanel label{display:flex;flex-direction:column;font-size:12px;color:#888;gap:4px}
+/* Buy/sell condition sections */
+.condition-section{background:#1a1d2b;border:1px solid #333;border-radius:8px;padding:10px 12px;min-width:340px;max-width:620px}
+.condition-header{font-size:12px;color:#888;margin-bottom:6px;display:flex;gap:8px;align-items:baseline}
+.condition-note{font-size:11px;color:#666}
+.condition-row{display:flex;gap:8px;align-items:center;margin-bottom:6px;flex-wrap:wrap}
+.cond-strategy{width:180px}
+.cond-params{display:flex;gap:8px;flex-wrap:wrap}
+.cond-params label{display:flex;flex-direction:column;font-size:11px;color:#888;gap:2px}
+.cond-param{width:90px;padding:4px 6px}
+.cond-remove{background:none;border:1px solid #333;color:#888;border-radius:4px;padding:2px 8px;cursor:pointer;font-size:12px}
+.cond-remove:hover{color:#ef4444;border-color:#ef4444}
+.cond-remove:disabled{opacity:.3;cursor:not-allowed;color:#888;border-color:#333}
+.add-cond-btn{background:none;border:1px dashed #333;color:#2563eb;border-radius:6px;padding:4px 12px;cursor:pointer;font-size:12px;margin-top:4px}
+.add-cond-btn:hover{border-color:#2563eb}
 #run-btn{background:#2563eb;color:#fff;border:none;border-radius:6px;padding:8px 20px;cursor:pointer;font-size:14px;white-space:nowrap}
 #run-btn:disabled{opacity:.5;cursor:not-allowed}
 #run-btn:hover:not(:disabled){background:#1d4ed8}
@@ -77,7 +91,16 @@ tr:hover td{background:rgba(37,99,235,.05)}
 </div>
 
 <div class="controls">
-  <label>策略 <select id="strategy"></select></label>
+  <div class="condition-section">
+    <div class="condition-header">买入条件 <span class="condition-note">任一触发即买入</span></div>
+    <div id="buy-rows"></div>
+    <button class="add-cond-btn" id="add-buy-btn" onclick="addConditionRow('buy')">＋ 添加买入条件</button>
+  </div>
+  <div class="condition-section">
+    <div class="condition-header">卖出条件 <span class="condition-note">任一触发即卖出（留空 = 仅被动卖出）</span></div>
+    <div id="sell-rows"></div>
+    <button class="add-cond-btn" id="add-sell-btn" onclick="addConditionRow('sell')">＋ 添加卖出条件</button>
+  </div>
   <label>最大持仓 <input type="number" id="maxPositions" value="10" min="1" max="100"></label>
   <label>初始资金(万) <input type="number" id="initialCapital" value="100" step="10"></label>
   <label>排序 <select id="rankBy">
@@ -106,6 +129,10 @@ tr:hover td{background:rgba(37,99,235,.05)}
   <label>印花税(%) <input type="number" id="taxRate" value="0.1" step="0.01" min="0"></label>
   <!-- removed: dead #rebalanceFrequency control (was never read) -->
   <label>最大持仓天数 <input type="number" id="maxHoldingDays" value="0" min="0"></label>
+  <label>止损(%) <input type="number" id="stopLossPct" value="0" step="0.5" min="0" max="50"><span style="color:#888;font-size:11px">0=关闭，开盘跌破买入价x%卖出</span></label>
+  <label>止盈(%) <input type="number" id="takeProfitPct" value="0" step="1" min="0" max="100"><span style="color:#888;font-size:11px">0=关闭，开盘超过买入价x%卖出</span></label>
+  <label>移动止损(%) <input type="number" id="trailingStopPct" value="0" step="0.5" min="0" max="50"><span style="color:#888;font-size:11px">0=关闭，从持仓最高价回撤x%卖出</span></label>
+  <label>回撤熔断(%) <input type="number" id="drawdownLimitPct" value="0" step="1" min="0" max="50"><span style="color:#888;font-size:11px">0=关闭，总资金回撤超x%清仓，收窄至一半恢复</span></label>
   <label>调仓频率 <input type="number" id="rFreq" value="1" min="1"><span style="color:#888;font-size:11px">(天)</span></label>
 </div>
 
@@ -130,29 +157,96 @@ tr:hover td{background:rgba(37,99,235,.05)}
 </div>
 
 <script>
-const state = { pools: [], strategies: {}, running: false, result: null, chart: null, reportsOpen: false, reports: [] };
-const STRATEGIES = [
-  'ma_cross','macd_cross','rsi_reversal','bollinger_breakout','supertrend',
-  'hammer','bullish_engulf','morning_star','three_soldiers','tech_composite',
-  'breakout','volume_contraction','always_buy','kd_daily','kd_weekly',
-  'ma_alignment','ema_cross','ma_weekly_trend','donchian_breakout','roc_momentum',
-  'macd_hist_reversal','rsi_divergence','volume_breakout','shrink_volume_pullback',
-  'obv_trend','harami','doji_reversal'
-];
-const STRAT_LABELS = {
-  ma_cross:'MA金叉/死叉',macd_cross:'MACD金叉/死叉',rsi_reversal:'RSI超卖/超买',bollinger_breakout:'布林带突破',
-  supertrend:'Supertrend',hammer:'锤子线',bullish_engulf:'阳包阴',morning_star:'晨星',three_soldiers:'红三兵',
-  tech_composite:'技术综合',breakout:'突破买入',volume_contraction:'缩量调整',always_buy:'全买入',
-  kd_daily:'日线KD',kd_weekly:'周线KD',
-  ma_alignment:'均线多头排列',ema_cross:'EMA交叉',ma_weekly_trend:'周线趋势回踩',
-  donchian_breakout:'唐奇安通道突破',roc_momentum:'ROC动量',macd_hist_reversal:'MACD柱缩短',
-  rsi_divergence:'RSI底背离',volume_breakout:'放量突破',shrink_volume_pullback:'缩量回踩',
-  obv_trend:'OBV趋势',harami:'孕线',doji_reversal:'十字星反转'
-};
+const state = { pools: [], strategies: {}, running: false, result: null, chart: null, reportsOpen: false, reports: [], buyRows: [], sellRows: [] };
 
 function $(id){return document.getElementById(id)}
 function getVal(id){return $(id).value}
-function setVal(id,v){$(id).value=v}
+function setVal(id,v){const el=$(id); if(el) el.value=v}
+
+// ─── Buy/sell condition rows ───────────────────────────────────────
+function strategyOptions(dir){
+  const ids = Object.keys(state.strategies);
+  const list = ids.length ? ids.filter(k => dir==='buy' ? state.strategies[k].buys : state.strategies[k].sells)
+                          : (dir==='buy' ? ['volume_contraction'] : []); // degraded: API meta unavailable
+  return list.map(k => ({id:k, label: state.strategies[k]?.description || (k==='volume_contraction' ? '缩量调整' : k)}));
+}
+function defaultFor(dir){ return strategyOptions(dir)[0]?.id || 'volume_contraction'; }
+function labelFor(id){ return state.strategies[id]?.description || (id==='volume_contraction' ? '缩量调整' : id); }
+function conditionLabel(){
+  const buys = state.buyRows.map(r=>labelFor(r.strategy));
+  const sells = state.sellRows.map(r=>labelFor(r.strategy));
+  if (!sells.length) return buys.join('+');
+  return buys.join('+') + ' / 卖出:' + sells.join('+');
+}
+function renderConditionSections(){
+  renderConditionSection('buy');
+  renderConditionSection('sell');
+}
+function renderConditionSection(dir){
+  const rows = dir==='buy' ? state.buyRows : state.sellRows;
+  const wrap = $(dir+'-rows');
+  wrap.innerHTML = rows.map((row, idx) => renderConditionRow(dir, idx, row)).join('');
+}
+function renderConditionRow(dir, idx, row){
+  const opts = strategyOptions(dir).map(o =>
+    `<option value="${o.id}" ${o.id===row.strategy?'selected':''}>${o.label}</option>`).join('');
+  const isLastBuy = dir==='buy' && state.buyRows.length===1;
+  return `<div class="condition-row" data-dir="${dir}" data-idx="${idx}">
+    <select class="cond-strategy">${opts}</select>
+    <span class="cond-params">${renderRowParamsHTML(dir, idx, row)}</span>
+    <button class="cond-remove" ${isLastBuy?'disabled title="至少保留一个买入条件"':'title="删除该条件"'}>✕</button>
+  </div>`;
+}
+function renderRowParamsHTML(dir, idx, row){
+  const meta = state.strategies[row.strategy];
+  if (!meta || !meta.params) return '';
+  const rowParams = state[dir+'Rows'][idx].params;
+  return Object.entries(meta.params).map(([key, def]) => {
+    const v = rowParams[key] ?? def.default;
+    const step = def.step ?? 1;
+    const min = def.min ?? ''; const max = def.max ?? '';
+    return `<label>${def.label} <input class="cond-param" data-param="${key}" type="number" value="${v}" min="${min}" max="${max}" step="${step}"></label>`;
+  }).join('');
+}
+function addConditionRow(dir){
+  const rows = dir==='buy' ? state.buyRows : state.sellRows;
+  rows.push({ strategy: defaultFor(dir), params: {} });
+  renderConditionSections();
+}
+function removeConditionRow(dir, idx){
+  const rows = dir==='buy' ? state.buyRows : state.sellRows;
+  if (dir==='buy' && rows.length===1) return; // keep at least one buy condition
+  rows.splice(idx, 1);
+  renderConditionSections();
+}
+function onStrategyChange(rowEl){
+  const dir = rowEl.dataset.dir; const idx = Number(rowEl.dataset.idx);
+  const rows = dir==='buy' ? state.buyRows : state.sellRows;
+  const next = rowEl.querySelector('.cond-strategy').value;
+  rows[idx].strategy = next;
+  rows[idx].params = {}; // reset params when switching strategy
+  rowEl.querySelector('.cond-params').innerHTML = renderRowParamsHTML(dir, idx, rows[idx]);
+}
+function readRowParams(rowEl){
+  const params = {};
+  rowEl.querySelectorAll('.cond-param').forEach(inp => {
+    const v = Number(inp.value);
+    if (inp.value !== '' && !Number.isNaN(v)) params[inp.dataset.param] = v;
+  });
+  return Object.keys(params).length ? params : undefined;
+}
+function buildConditionsConfig(){
+  const config = {};
+  const readRows = dir => [...$(dir+'-rows').querySelectorAll('.condition-row')].map(rowEl => ({
+    strategy: rowEl.querySelector('.cond-strategy').value,
+    params: readRowParams(rowEl),
+  }));
+  const buys = readRows('buy');
+  const sells = readRows('sell');
+  if (buys.length) config.buyStrategies = buys;
+  if (sells.length) config.sellStrategies = sells;
+  return config;
+}
 
 async function init(){
   try {
@@ -170,9 +264,22 @@ async function init(){
   try {
     state.strategies = await fetch('/api/backtest/strategies').then(r=>r.json());
   } catch(e){}
-  $('strategy').innerHTML = STRATEGIES.map(s =>
-    `<option value="${s}" ${s==='volume_contraction'?'selected':''}>${STRAT_LABELS[s]||s}</option>`
-  ).join('');
+  // Initialize buy/sell condition rows and wire row events (delegated)
+  state.buyRows = [{ strategy: 'volume_contraction', params: {} }];
+  state.sellRows = [];
+  renderConditionSections();
+  ['buy','sell'].forEach(dir => {
+    const wrap = $(dir+'-rows');
+    wrap.addEventListener('change', e => {
+      if (e.target.classList.contains('cond-strategy')) onStrategyChange(e.target.closest('.condition-row'));
+    });
+    wrap.addEventListener('click', e => {
+      if (e.target.classList.contains('cond-remove')) {
+        const row = e.target.closest('.condition-row');
+        removeConditionRow(row.dataset.dir, Number(row.dataset.idx));
+      }
+    });
+  });
 
   // Default dates
   const now = new Date();
@@ -195,10 +302,11 @@ async function saveReport(){
   try {
     const poolId = Number(getVal('pool-select'));
     const poolName = state.pools.find(p=>p.id===poolId)?.name||'';
-    const strategy = getVal('strategy');
+    const strategy = conditionLabel();
     // Build clean config with strategy-relevant fields
     const config = {
-      strategy, maxPositions: Number(getVal('maxPositions')),
+      ...buildConditionsConfig(),
+      maxPositions: Number(getVal('maxPositions')),
       rankBy: getVal('rankBy'), fullPosition: getVal('fullPosition')==='true',
       positionSizingMethod: getVal('positionSizingMethod'),
       fullPositionMode: getVal('fullPositionMode'),
@@ -207,6 +315,10 @@ async function saveReport(){
       commission: Number(getVal('commission'))/100,
       taxRate: Number(getVal('taxRate'))/100,
       maxHoldingDays: Number(getVal('maxHoldingDays'))||undefined,
+      stopLossPercent: Number(getVal('stopLossPct'))/100 || undefined,
+      takeProfitPercent: Number(getVal('takeProfitPct'))/100 || undefined,
+      trailingStopPercent: Number(getVal('trailingStopPct'))/100 || undefined,
+      drawdownLimitPercent: Number(getVal('drawdownLimitPct'))/100 || undefined,
       rebalanceFrequency: Number(getVal('rFreq')),
       initialCapital: Number(getVal('initialCapital'))*10000,
       start: getVal('startDate').replace(/-/g,''),
@@ -229,7 +341,7 @@ async function saveReport(){
           profitFactor: state.lastResult.metrics.profitFactor,
           totalTrades: state.lastResult.trades.filter(t=>t.direction==='sell').length
         },
-        benchmarks:[], trades: state.lastResult.trades,
+        benchmarks: state.lastResult.benchmarks || [], trades: state.lastResult.trades,
         config
       })
     });
@@ -322,8 +434,22 @@ function restoreReportConfig(idx) {
       if (Number(sel.options[i].value) === r.poolId) { sel.selectedIndex = i; break; }
     }
   }
+  // Restore buy/sell condition rows (new-style arrays, or legacy single strategy)
+  if (Array.isArray(c.buyStrategies)) {
+    state.buyRows = c.buyStrategies.map(s => ({ strategy: s.strategy, params: s.params ? { ...s.params } : {} }));
+  } else if (c.strategy) {
+    state.buyRows = [{ strategy: c.strategy, params: c.strategyParams ? { ...c.strategyParams } : {} }];
+  } else {
+    state.buyRows = [{ strategy: 'volume_contraction', params: {} }];
+  }
+  state.sellRows = Array.isArray(c.sellStrategies) ? c.sellStrategies.map(s => ({ strategy: s.strategy, params: s.params ? { ...s.params } : {} })) : [];
+  // Sanitize rows: unknown strategies fall back to the section default (skip when meta unavailable)
+  if (Object.keys(state.strategies).length) {
+    state.buyRows.forEach(r => { if (!state.strategies[r.strategy]?.buys) { console.warn('回测恢复: 未知买入策略', r.strategy); r.strategy = defaultFor('buy'); } });
+    state.sellRows.forEach(r => { if (!state.strategies[r.strategy]?.sells) { console.warn('回测恢复: 未知卖出策略', r.strategy); r.strategy = defaultFor('sell'); } });
+  }
+  renderConditionSections();
   // Restore form fields (use config values, fallback to current)
-  if (c.strategy) setVal('strategy', c.strategy);
   if (c.start) { const s = String(c.start); setVal('startDate', s.slice(0,4)+'-'+s.slice(4,6)+'-'+s.slice(6,8)); }
   if (c.end) { const s = String(c.end); setVal('endDate', s.slice(0,4)+'-'+s.slice(4,6)+'-'+s.slice(6,8)); }
   if (c.initialCapital != null) setVal('initialCapital', String(c.initialCapital / 10000));
@@ -338,6 +464,10 @@ function restoreReportConfig(idx) {
   if (c.commission != null) setVal('commission', String(Math.round(c.commission * 100)));
   if (c.taxRate != null) setVal('taxRate', String(Math.round(c.taxRate * 100)));
   if (c.maxHoldingDays != null) setVal('maxHoldingDays', String(c.maxHoldingDays));
+  if (c.stopLossPercent != null) setVal('stopLossPct', String(c.stopLossPercent*100));
+  if (c.takeProfitPercent != null) setVal('takeProfitPct', String(c.takeProfitPercent*100));
+  if (c.trailingStopPercent != null) setVal('trailingStopPct', String(c.trailingStopPercent*100));
+  if (c.drawdownLimitPercent != null) setVal('drawdownLimitPct', String(c.drawdownLimitPercent*100));
   if (c.rebalanceFrequency != null) setVal('rFreq', String(c.rebalanceFrequency));
   if (c.minLot != null) setVal('minLot', String(c.minLot));
 
@@ -357,7 +487,7 @@ async function runBacktest(){
   $('results').classList.add('hidden');
 
   const config = {
-    strategy: getVal('strategy'),
+    ...buildConditionsConfig(),
     start: getVal('startDate').replace(/-/g,''),
     end: getVal('endDate').replace(/-/g,''),
     initialCapital: Number(getVal('initialCapital')) * 10000,
@@ -371,6 +501,10 @@ async function runBacktest(){
     commission: Number(getVal('commission'))/100,
     taxRate: Number(getVal('taxRate'))/100,
     maxHoldingDays: Number(getVal('maxHoldingDays'))||undefined,
+    stopLossPercent: Number(getVal('stopLossPct'))/100 || undefined,
+    takeProfitPercent: Number(getVal('takeProfitPct'))/100 || undefined,
+    trailingStopPercent: Number(getVal('trailingStopPct'))/100 || undefined,
+    drawdownLimitPercent: Number(getVal('drawdownLimitPct'))/100 || undefined,
     rebalanceFrequency: Number(getVal('rFreq')),
     skipNoVolume: true,
   };
@@ -403,7 +537,7 @@ function renderResults(r){
   // Store result for save
   state.lastResult = r;
   state.lastConfig = {
-    策略: getVal('strategy'), 股池: state.pools.find(p=>p.id==Number(getVal('pool-select')))?.name||'',
+    策略: conditionLabel(), 股池: state.pools.find(p=>p.id==Number(getVal('pool-select')))?.name||'',
     区间: getVal('startDate')+' ~ '+getVal('endDate'),
     初始资金: (Number(getVal('initialCapital'))*10000).toLocaleString(),
     最大持仓: getVal('maxPositions'), 排序: getVal('rankBy'),
@@ -485,9 +619,16 @@ function renderResults(r){
     timeScale:{borderColor:'rgba(255,255,255,0.08)'},
   });
   const area = state.chart.addSeries(LightweightCharts.AreaSeries,{
-    lineColor:'#3b82f6',topColor:'rgba(59,130,246,0.3)',bottomColor:'rgba(59,130,246,0.02)',lineWidth:2
+    lineColor:'#3b82f6',topColor:'rgba(59,130,246,0.3)',bottomColor:'rgba(59,130,246,0.02)',lineWidth:2,title:'策略'
   });
   area.setData(r.equityCurve.map(p=>({time:p.date,value:p.equity})));
+  const bench = r.benchmarks && r.benchmarks.length ? r.benchmarks[0] : null;
+  if (bench && bench.equityCurve.length) {
+    const line = state.chart.addSeries(LightweightCharts.LineSeries,{
+      color:'#f59e0b',lineWidth:1.5,lineStyle:LightweightCharts.LineStyle.Dashed,priceLineVisible:false,title:bench.label||'基准'
+    });
+    line.setData(bench.equityCurve.map(p=>({time:p.date,value:p.equity})));
+  }
   } catch(e) {
     container.innerHTML = '<div style="padding:40px;text-align:center;color:#888">图表加载失败: '+e.message+'<br><small>请检查网络连接后刷新</small></div>';
     console.error('Chart error:', e);

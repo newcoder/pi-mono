@@ -169,7 +169,7 @@ ${metricCards}
 </section>
 
 <section class="chart-section">
-  <h2>策略 vs 指数 资金曲线</h2>
+  <h2>策略 vs 基准 资金曲线</h2>
   <div class="chart-wrapper"><canvas id="equityChart"></canvas></div>
 </section>
 

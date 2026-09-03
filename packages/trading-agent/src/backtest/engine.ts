@@ -1,5 +1,6 @@
 import { getDataStore } from "../data/index.js";
 import type { KlineRow } from "../data/types.js";
+import { computeCurveStats, computeEqualWeightBenchmark } from "./benchmark.js";
 import { cachedMA, indicatorCache } from "./indicator-cache.js";
 import { computeMetrics } from "./metrics.js";
 import { adjustWeightByVolatility, computeATRPct } from "./position-sizing.js";
@@ -147,7 +148,7 @@ export async function runBacktest(config: BacktestConfig): Promise<BacktestResul
 	const positionSize = config.positionSize ?? 1.0;
 	const minLot = config.minLot ?? 100;
 
-	const { trades, equityCurve, filteredTradeCount } = simulateTrades(
+	const { trades, equityCurve, buyHoldCurve, filteredTradeCount } = simulateTrades(
 		klines,
 		signals,
 		initialCapital,
@@ -159,10 +160,18 @@ export async function runBacktest(config: BacktestConfig): Promise<BacktestResul
 		transferFee,
 		config.skipNoVolume ?? true,
 		config.maxHoldingDays ?? Infinity,
+		config.stopLossPercent ?? 0,
+		config.takeProfitPercent ?? 0,
+		config.trailingStopPercent ?? 0,
+		config.drawdownLimitPercent ?? 0,
 	);
 
 	// 4. Compute metrics
 	const metrics = computeMetrics(trades, equityCurve, initialCapital, config.period);
+
+	// Buy & hold benchmark curve
+	const { totalReturn, maxDrawdown } = computeCurveStats(buyHoldCurve, initialCapital);
+	const benchmarks = [{ label: "买入持有", equityCurve: buyHoldCurve, totalReturn, maxDrawdown }];
 
 	return {
 		config,
@@ -171,6 +180,7 @@ export async function runBacktest(config: BacktestConfig): Promise<BacktestResul
 		trades,
 		equityCurve,
 		metrics,
+		benchmarks,
 		filteredTradeCount,
 		elapsedMs: Math.round(performance.now() - t0),
 	};
@@ -252,18 +262,37 @@ export function simulateTrades(
 	transferFee = 0,
 	skipNoVolume = true,
 	maxHoldingDays = Infinity,
-): { trades: Trade[]; equityCurve: EquityPoint[]; filteredTradeCount: number } {
+	stopLossPercent = 0,
+	takeProfitPercent = 0,
+	trailingStopPercent = 0,
+	drawdownLimitPercent = 0,
+): { trades: Trade[]; equityCurve: EquityPoint[]; buyHoldCurve: EquityPoint[]; filteredTradeCount: number } {
 	const trades: Trade[] = [];
 	const equityCurve: EquityPoint[] = [];
+	const buyHoldCurve: EquityPoint[] = [];
 	let capital = initialCapital;
 	let entryIndex = -1;
 	let entryPrice = 0;
 	let shares = 0;
 	let signalIdx = 0;
 	let lastClose = 0;
+	let bhBase: number | null = null; // first valid close for buy & hold benchmark
+	let peakClose = 0; // trailing stop peak
+	let peakEquity = initialCapital; // drawdown circuit breaker peak
+	let circuitBroken = false;
 	let filteredTradeCount = 0;
 
 	for (let i = 0; i < klines.length; i++) {
+		// Drawdown circuit breaker: estimate equity at open, track peak, trip/recover
+		if (drawdownLimitPercent > 0) {
+			const open = klines[i].open ?? lastClose;
+			const equityNow = capital + shares * open;
+			peakEquity = Math.max(peakEquity, equityNow);
+			if (equityNow < peakEquity * (1 - drawdownLimitPercent)) circuitBroken = true;
+			// Recover once drawdown shrinks below half the limit (hysteresis)
+			if (circuitBroken && equityNow >= peakEquity * (1 - drawdownLimitPercent / 2)) circuitBroken = false;
+		}
+
 		// Execute signals whose trading day is today (signal at index i-1 executes at index i)
 		while (signalIdx < signals.length) {
 			const signal = signals[signalIdx];
@@ -276,6 +305,11 @@ export function simulateTrades(
 
 			if (signal.type === "buy" && entryIndex < 0) {
 				const execKline = klines[execIdx];
+				if (circuitBroken) {
+					// Circuit breaker: no new buys until recovery
+					signalIdx++;
+					continue;
+				}
 				if (!execKline || execKline.open == null) {
 					signalIdx++;
 					continue;
@@ -292,6 +326,7 @@ export function simulateTrades(
 				}
 
 				entryPrice = execKline.open * (1 + slippage);
+				peakClose = entryPrice;
 				const tradeCapital = capital * positionSize;
 				const rawShares = Math.floor(tradeCapital / entryPrice);
 				const newShares = Math.floor(rawShares / minLot) * minLot;
@@ -380,13 +415,87 @@ export function simulateTrades(
 			}
 		}
 
+		// Circuit breaker: liquidate the position on the trip day
+		if (circuitBroken && entryIndex >= 0) {
+			const k = klines[i];
+			if (k && (k.open != null || k.close != null)) {
+				const exitPrice = (k.open ?? k.close!) * (1 - slippage);
+				const proceeds = shares * exitPrice * (1 - commission - transferFee - taxRate);
+				const costBasis = shares * entryPrice * (1 + commission + transferFee);
+				const pnl = proceeds - costBasis;
+				const pnlPct = costBasis > 0 ? (pnl / costBasis) * 100 : 0;
+				trades.push({
+					entryIndex,
+					entryDate: klines[entryIndex].date,
+					entryPrice,
+					exitIndex: i,
+					exitDate: k.date,
+					exitPrice,
+					shares,
+					pnl,
+					pnlPct,
+					daysHeld: i - entryIndex,
+					result: pnl > 0 ? "win" : pnl < 0 ? "loss" : "breakeven",
+					memo: "回撤熔断",
+				});
+				capital += proceeds;
+				entryIndex = -1;
+				shares = 0;
+			}
+		}
+
+		// Risk exits: stop-loss / take-profit / trailing stop (checked at open)
+		if (entryIndex >= 0 && (stopLossPercent > 0 || takeProfitPercent > 0 || trailingStopPercent > 0)) {
+			const price = klines[i].open ?? lastClose;
+			let memo: string | null = null;
+			if (trailingStopPercent > 0) {
+				peakClose = Math.max(peakClose, price);
+				if (price < peakClose * (1 - trailingStopPercent)) memo = "移动止损";
+			}
+			if (memo == null && stopLossPercent > 0 && price < entryPrice * (1 - stopLossPercent)) memo = "止损";
+			if (memo == null && takeProfitPercent > 0 && price > entryPrice * (1 + takeProfitPercent)) memo = "止盈";
+			if (memo != null) {
+				const exitPrice = price * (1 - slippage);
+				const proceeds = shares * exitPrice * (1 - commission - transferFee - taxRate);
+				const costBasis = shares * entryPrice * (1 + commission + transferFee);
+				const pnl = proceeds - costBasis;
+				const pnlPct = costBasis > 0 ? (pnl / costBasis) * 100 : 0;
+				trades.push({
+					entryIndex,
+					entryDate: klines[entryIndex].date,
+					entryPrice,
+					exitIndex: i,
+					exitDate: klines[i].date,
+					exitPrice,
+					shares,
+					pnl,
+					pnlPct,
+					daysHeld: i - entryIndex,
+					result: pnl > 0 ? "win" : pnl < 0 ? "loss" : "breakeven",
+					memo,
+				});
+				capital += proceeds;
+				entryIndex = -1;
+				shares = 0;
+			}
+		}
+
 		// Mark position to market at today's close
 		const closeValue = klines[i].close;
 		const close = closeValue ?? lastClose;
 		if (closeValue != null) {
 			lastClose = closeValue;
+			peakClose = Math.max(peakClose, closeValue);
 		}
 		equityCurve.push({ date: klines[i].date, equity: capital + shares * close });
+
+		// Buy & hold benchmark: initialCapital compounded by the stock's own daily returns
+		if (bhBase == null && closeValue != null && closeValue > 0) bhBase = closeValue;
+		if (bhBase != null && close > 0) {
+			buyHoldCurve.push({ date: klines[i].date, equity: (initialCapital * close) / bhBase });
+		} else {
+			buyHoldCurve.push({ date: klines[i].date, equity: initialCapital });
+		}
 	}
 
 	// Force-close any open position at the end (use open like regular signal exits)
@@ -422,7 +531,7 @@ export function simulateTrades(
 		}
 	}
 
-	return { trades, equityCurve, filteredTradeCount };
+	return { trades, equityCurve, buyHoldCurve, filteredTradeCount };
 }
 
 // ─── Pool Backtest ────────────────────────────────────────────────
@@ -448,6 +557,10 @@ export async function runPoolBacktest(
 	const minLot = config.minLot ?? 100;
 	const skipNoVolume = config.skipNoVolume ?? true;
 	const maxHoldingDays = config.maxHoldingDays ?? Infinity;
+	const stopLossPercent = config.stopLossPercent ?? 0;
+	const takeProfitPercent = config.takeProfitPercent ?? 0;
+	const trailingStopPercent = config.trailingStopPercent ?? 0;
+	const drawdownLimitPercent = config.drawdownLimitPercent ?? 0;
 	const positionSizingMethod = config.positionSizingMethod ?? "fixed";
 	const fullPosition = config.fullPosition ?? true;
 	const fullPositionMode = config.fullPositionMode ?? "equal_weight";
@@ -630,6 +743,9 @@ export async function runPoolBacktest(
 	});
 
 	for (const km of klineMaps) klineMapByCode.set(km.code, km.map);
+
+	// Equal-weight pool benchmark curve (RNG-independent, computed once)
+	const poolBenchmark = computeEqualWeightBenchmark(klineMaps, allDates, initialCapital);
 	// Build historical market-cap lookup from klines × fundamentals total_shares.
 	// Avoids look-ahead bias: using today's quotes.total_cap for historical ranking
 	// lets stocks that grew 10× dominate every past ranking date.
@@ -642,7 +758,10 @@ export async function runPoolBacktest(
 		for (const r of fundRows) {
 			if (!r.code || r.total_shares == null || r.total_shares <= 0) continue;
 			let arr = sharesByCode.get(r.code);
-			if (!arr) { arr = []; sharesByCode.set(r.code, arr); }
+			if (!arr) {
+				arr = [];
+				sharesByCode.set(r.code, arr);
+			}
 			arr.push({ date: r.report_date.slice(0, 10), shares: r.total_shares });
 		}
 		// Sort by date ascending, forward-fill for each stock
@@ -668,7 +787,6 @@ export async function runPoolBacktest(
 	} catch (_) {
 		/* fundamentals optional — fall back to no market_cap scoring */
 	}
-
 
 	// 3a. Build weekly close series for weekly MA ranking
 	const weeklyCloseSeries = new Map<string, Array<{ endDate: string; close: number }>>();
@@ -969,7 +1087,7 @@ export async function runPoolBacktest(
 		dynamic: (_s, sd, _rd) => {
 			const best = dynamicRankMap.get(sd);
 			if (best && rankScorers[best]) return rankScorers[best](_s, sd, _rd);
-			return rankScorers["turnover"](_s, sd, _rd); // fallback
+			return rankScorers.turnover(_s, sd, _rd); // fallback
 		},
 		ma_alignment: (_s, sd) => {
 			const li = _s.dateToIndex.get(sd);
@@ -1024,11 +1142,21 @@ export async function runPoolBacktest(
 		let cash = initialCapital;
 		const positions = new Map<
 			string,
-			{ shares: number; entryPrice: number; entryDate: string; daysHeld: number; lastClose: number }
+			{
+				shares: number;
+				entryPrice: number;
+				entryDate: string;
+				daysHeld: number;
+				lastClose: number;
+				peakPrice: number;
+			}
 		>();
 		const trades: PoolTrade[] = [];
 		const equityCurve: EquityPoint[] = [];
 		let filteredTradeCount = 0;
+		// Drawdown circuit breaker state
+		let peakEquity = initialCapital;
+		let circuitBroken = false;
 
 		function checkTradeable(kline: KlineRow | undefined): boolean {
 			if (!skipNoVolume) return true;
@@ -1080,8 +1208,44 @@ export async function runPoolBacktest(
 			const prevDate = dateIdx > 0 ? allDates[dateIdx - 1] : undefined;
 			const allowedCodes = getAllowedCodes(date);
 
+			// 5.0 Drawdown circuit breaker: estimate equity at open, track peak, trip/recover
+			if (drawdownLimitPercent > 0) {
+				let equityNow = cash;
+				for (const [code, pos] of positions) {
+					const k = klineMapByCode.get(code)?.get(date);
+					equityNow += pos.shares * (k?.open ?? pos.lastClose);
+				}
+				peakEquity = Math.max(peakEquity, equityNow);
+				if (equityNow < peakEquity * (1 - drawdownLimitPercent)) circuitBroken = true;
+				// Recover once drawdown shrinks below half the limit (hysteresis)
+				if (circuitBroken && equityNow >= peakEquity * (1 - drawdownLimitPercent / 2)) circuitBroken = false;
+			}
+
 			// 5.1 Increment holding days
 			for (const pos of positions.values()) pos.daysHeld++;
+
+			// 5.1a Circuit breaker: liquidate all positions on the trip day
+			if (circuitBroken && positions.size > 0) {
+				for (const code of [...positions.keys()].sort()) {
+					const pos = positions.get(code)!;
+					const stock = stockMap.get(code);
+					if (!stock) continue;
+					const klineMap = klineMapByCode.get(code);
+					const kline = klineMap?.get(date);
+					if (!checkTradeable(kline)) continue;
+					closePosition(
+						code,
+						stock.market,
+						pos.shares,
+						pos.entryPrice,
+						(kline?.open ?? pos.lastClose) * (1 - slippage),
+						pos.daysHeld,
+						"回撤熔断",
+						date,
+						true,
+					);
+				}
+			}
 
 			// 5.1b Force-sell positions that dropped out of the dynamic pool
 			if (isDynamic) {
@@ -1162,10 +1326,50 @@ export async function runPoolBacktest(
 				}
 			}
 
+			// 5.2c Risk exits: stop-loss / take-profit / trailing stop (checked at open, before rank)
+			if (stopLossPercent > 0 || takeProfitPercent > 0 || trailingStopPercent > 0) {
+				for (const code of [...positions.keys()].sort()) {
+					const pos = positions.get(code)!;
+					const stock = stockMap.get(code);
+					if (!stock) continue;
+
+					const klineMap = klineMapByCode.get(code);
+					const kline = klineMap?.get(date);
+					if (!checkTradeable(kline)) continue;
+					const price = kline?.open ?? pos.lastClose;
+
+					let memo: string | null = null;
+					if (trailingStopPercent > 0) {
+						pos.peakPrice = Math.max(pos.peakPrice, price);
+						if (price < pos.peakPrice * (1 - trailingStopPercent)) memo = "移动止损";
+					}
+					if (memo == null && stopLossPercent > 0 && price < pos.entryPrice * (1 - stopLossPercent)) {
+						memo = "止损";
+					}
+					if (memo == null && takeProfitPercent > 0 && price > pos.entryPrice * (1 + takeProfitPercent)) {
+						memo = "止盈";
+					}
+					if (memo != null) {
+						closePosition(
+							code,
+							stock.market,
+							pos.shares,
+							pos.entryPrice,
+							price * (1 - slippage),
+							pos.daysHeld,
+							memo,
+							date,
+							true,
+						);
+					}
+				}
+			}
+
 			const tRankStart = performance.now();
 
 			// 5.3 Build target holdings from existing positions + today's buy candidates
-			const buyCandidates = stockData
+			// (circuitBroken suppresses all new buys until recovery)
+			const buyCandidates = (circuitBroken ? [] : stockData)
 				.filter((s) => allowedCodes.has(s.code))
 				.filter((s) => !positions.has(s.code))
 				.filter((s) => {
@@ -1325,6 +1529,7 @@ export async function runPoolBacktest(
 								entryDate: date,
 								daysHeld: 0,
 								lastClose: buyPrice,
+								peakPrice: buyPrice,
 							});
 							trades.push({
 								code,
@@ -1386,6 +1591,7 @@ export async function runPoolBacktest(
 										entryDate: date,
 										daysHeld: 0,
 										lastClose: buyPrice,
+										peakPrice: buyPrice,
 									});
 									trades.push({
 										code,
@@ -1625,6 +1831,7 @@ export async function runPoolBacktest(
 									entryDate: date,
 									daysHeld: 0,
 									lastClose: buyPrice,
+									peakPrice: buyPrice,
 								});
 							}
 							trades.push({
@@ -1689,6 +1896,7 @@ export async function runPoolBacktest(
 													entryDate: date,
 													daysHeld: 0,
 													lastClose: buyPrice,
+													peakPrice: buyPrice,
 												});
 											}
 											trades.push({
@@ -1721,11 +1929,14 @@ export async function runPoolBacktest(
 				if (kline?.close != null) {
 					marketValue += pos.shares * kline.close;
 					pos.lastClose = kline.close;
+					pos.peakPrice = Math.max(pos.peakPrice, kline.close);
 				} else {
 					marketValue += pos.shares * pos.lastClose;
 				}
 			}
-			equityCurve.push({ date, equity: cash + marketValue });
+			const closeEquity = cash + marketValue;
+			if (drawdownLimitPercent > 0) peakEquity = Math.max(peakEquity, closeEquity);
+			equityCurve.push({ date, equity: closeEquity });
 		}
 
 		return { trades, equityCurve, filteredTradeCount, rankLoopTime, execLoopTime };
@@ -1810,6 +2021,7 @@ export async function runPoolBacktest(
 		trades: allTrades,
 		equityCurve: finalEquityCurve,
 		metrics,
+		benchmarks: [poolBenchmark],
 		filteredTradeCount: finalFilteredCount,
 		elapsedMs: Math.round(performance.now() - t0),
 	};

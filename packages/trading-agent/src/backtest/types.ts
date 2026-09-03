@@ -1,4 +1,5 @@
 import type { KlineRow } from "../data/types.js";
+import type { BenchmarkCurve } from "./benchmark.js";
 
 export type StrategyType =
 	| "ma_cross"
@@ -60,6 +61,10 @@ export interface BacktestConfig {
 	maxHoldingDays?: number;
 	skipNoVolume?: boolean; // skip trading on days with zero or missing volume (suspended)
 	minLot?: number; // minimum lot size, e.g. 100 for A-shares
+	stopLossPercent?: number; // 0-1, fixed stop-loss: sell when open < entry*(1-x)
+	takeProfitPercent?: number; // 0-1, take profit: sell when open > entry*(1+x)
+	trailingStopPercent?: number; // 0-1, trailing stop: sell on x% drawdown from position peak
+	drawdownLimitPercent?: number; // 0-1, portfolio drawdown circuit breaker: liquidate when total equity drawdown exceeds x
 	strategyParams?: Record<string, number>;
 	exitStrategyParams?: Record<string, number>;
 }
@@ -82,6 +87,7 @@ export interface Trade {
 	shares: number;
 	pnl: number; // profit/loss in currency
 	pnlPct: number; // profit/loss percent
+	memo?: string; // exit reason, e.g. "止损" | "止盈" | "移动止损" | "回撤熔断"
 	daysHeld: number;
 	result: "win" | "loss" | "breakeven";
 }
@@ -114,6 +120,7 @@ export interface BacktestResult {
 	trades: Trade[];
 	equityCurve: EquityPoint[];
 	metrics: BacktestMetrics;
+	benchmarks?: BenchmarkCurve[];
 	filteredTradeCount: number;
 	elapsedMs: number;
 }
@@ -161,6 +168,10 @@ export interface PoolBacktestConfig {
 	taxRate?: number;
 	transferFee?: number;
 	maxHoldingDays?: number;
+	stopLossPercent?: number; // 0-1, fixed stop-loss: sell when open < entry*(1-x)
+	takeProfitPercent?: number; // 0-1, take profit: sell when open > entry*(1+x)
+	trailingStopPercent?: number; // 0-1, trailing stop: sell on x% drawdown from position peak
+	drawdownLimitPercent?: number; // 0-1, portfolio drawdown circuit breaker: liquidate when total equity drawdown exceeds x
 	positionSizingMethod?: string; // 仓位调整方法: "fixed"(默认) | "atr"(波动率倒数)
 	filterPeriod?: string; // 多周期过滤: "week" 表示仅在上周线趋势向上时允许日线买入
 	skipNoVolume?: boolean;
@@ -220,6 +231,7 @@ export interface PoolBacktestResult {
 	trades: PoolTrade[];
 	equityCurve: EquityPoint[];
 	metrics: BacktestMetrics;
+	benchmarks?: BenchmarkCurve[];
 	filteredTradeCount: number;
 	elapsedMs: number;
 }

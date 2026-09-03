@@ -1,8 +1,32 @@
 import type { KlineRow } from "../data/types.js";
 import { getCloses, getVolumes } from "../indicators/engine.js";
-import { cachedEMA, cachedKD, cachedMA, cachedMACD, cachedOBV, cachedRSI, cachedSupertrend } from "./indicator-cache.js";
+import {
+	cachedEMA,
+	cachedKD,
+	cachedMA,
+	cachedMACD,
+	cachedOBV,
+	cachedRSI,
+	cachedSupertrend,
+} from "./indicator-cache.js";
 import type { Signal, StrategyType } from "./types.js";
 import { average } from "./utils.js";
+
+/** Param metadata for a strategy, used by the web UI to render param inputs. */
+export interface StrategyParamDef {
+	label: string; // 中文标签，UI 渲染用
+	default: number;
+	min?: number;
+	max?: number;
+	step?: number; // 默认 1
+}
+
+export interface StrategyMeta {
+	buys: boolean;
+	sells: boolean;
+	description: string;
+	params?: Record<string, StrategyParamDef>;
+}
 
 export interface StrategyParams {
 	fast?: number;
@@ -77,41 +101,240 @@ export function generateSignals(klines: KlineRow[], strategy: StrategyType, para
 	return (registry[strategy] ?? (() => []))(klines, params);
 }
 
-/** Strategy metadata: which signal directions each strategy generates. */
-export const STRATEGY_META: Record<string, { buys: boolean; sells: boolean; description: string }> = {
-	ma_cross: { buys: true, sells: true, description: "MA均线金叉/死叉" },
-	macd_cross: { buys: true, sells: true, description: "MACD金叉/死叉" },
-	rsi_reversal: { buys: true, sells: true, description: "RSI超卖买入/超买卖出" },
-	bollinger_breakout: { buys: true, sells: true, description: "布林带下轨反弹/上轨回落" },
-	supertrend: { buys: true, sells: true, description: "Supertrend趋势跟踪：转多买入/转空卖出" },
-	tech_composite: { buys: true, sells: true, description: "技术综合打分：趋势+动量+量能+波动率四维评分" },
-	hammer: { buys: true, sells: false, description: "锤子线反转：长下影+小实体，前日阴线" },
+/** Strategy metadata: which signal directions each strategy generates, plus UI param defs. */
+export const STRATEGY_META: Record<string, StrategyMeta> = {
+	ma_cross: {
+		buys: true,
+		sells: true,
+		description: "MA均线金叉/死叉",
+		params: {
+			fast: { label: "快线周期", default: 5, min: 2, max: 250 },
+			slow: { label: "慢线周期", default: 10, min: 2, max: 250 },
+		},
+	},
+	macd_cross: {
+		buys: true,
+		sells: true,
+		description: "MACD金叉/死叉",
+		params: {
+			fast: { label: "快线EMA", default: 12, min: 2, max: 250 },
+			slow: { label: "慢线EMA", default: 26, min: 2, max: 250 },
+			signal: { label: "信号线", default: 9, min: 2, max: 100 },
+		},
+	},
+	rsi_reversal: {
+		buys: true,
+		sells: true,
+		description: "RSI超卖买入/超买卖出",
+		params: {
+			period: { label: "周期", default: 14, min: 2, max: 250 },
+			oversold: { label: "超卖阈值", default: 30, min: 0, max: 100 },
+			overbought: { label: "超买阈值", default: 70, min: 0, max: 100 },
+		},
+	},
+	bollinger_breakout: {
+		buys: true,
+		sells: true,
+		description: "布林带下轨反弹/上轨回落",
+		params: {
+			period: { label: "周期", default: 20, min: 2, max: 250 },
+			stdDev: { label: "标准差倍数", default: 2, min: 0.5, max: 5, step: 0.1 },
+		},
+	},
+	supertrend: {
+		buys: true,
+		sells: true,
+		description: "Supertrend趋势跟踪：转多买入/转空卖出",
+		params: {
+			period: { label: "周期", default: 10, min: 2, max: 250 },
+			multiplier: { label: "倍数", default: 3, min: 0.5, max: 10, step: 0.1 },
+		},
+	},
+	tech_composite: {
+		buys: true,
+		sells: true,
+		description: "技术综合打分：趋势+动量+量能+波动率四维评分",
+		params: {
+			compositeThreshold: { label: "买入阈值", default: 65, min: 0, max: 100 },
+			compositeExitThreshold: { label: "卖出阈值", default: 40, min: 0, max: 100 },
+		},
+	},
+	hammer: {
+		buys: true,
+		sells: false,
+		description: "锤子线反转：长下影+小实体，前日阴线",
+		params: { minBodyRatio: { label: "最小实体比例", default: 0.02, min: 0.01, max: 0.2, step: 0.01 } },
+	},
 	bullish_engulf: { buys: true, sells: false, description: "阳包阴：阳线实体完全吞没前日阴线" },
-	morning_star: { buys: true, sells: false, description: "晨星：大阴→小星→大阳，底部反转" },
+	morning_star: {
+		buys: true,
+		sells: false,
+		description: "晨星：大阴→小星→大阳，底部反转",
+		params: { minBodyRatio: { label: "最小实体比例", default: 0.02, min: 0.01, max: 0.2, step: 0.01 } },
+	},
 	three_soldiers: { buys: true, sells: false, description: "红三兵：连续三阳，逐步放量" },
-	breakout: { buys: true, sells: false, description: "突破买入：放量上涨，量比阈值+涨幅阈值" },
-	volume_contraction: { buys: true, sells: false, description: "缩量调整：价格下跌+成交量萎缩+波动率收敛后买入" },
-	shooting_star: { buys: false, sells: true, description: "流星线反转：长上影+小实体，顶部卖出信号" },
+	breakout: {
+		buys: true,
+		sells: false,
+		description: "突破买入：放量上涨，量比阈值+涨幅阈值",
+		params: {
+			volRatio: { label: "量比阈值", default: 1.5, min: 1, max: 5, step: 0.1 },
+			minChange: { label: "最小涨幅%", default: 2, min: 0.5, max: 20, step: 0.5 },
+		},
+	},
+	volume_contraction: {
+		buys: true,
+		sells: false,
+		description: "缩量调整：价格下跌+成交量萎缩+波动率收敛后买入",
+		params: {
+			lookbackDays: { label: "回看天数", default: 20, min: 5, max: 120 },
+			contractionDays: { label: "缩量天数", default: 5, min: 1, max: 30 },
+			priceDropPct: { label: "最大回调%", default: 5, min: 1, max: 30, step: 0.5 },
+			volumeRatioMax: { label: "量比上限", default: 0.7, min: 0.1, max: 0.99, step: 0.05 },
+			volatilityRatioMax: { label: "波动率比上限", default: 0.6, min: 0.1, max: 0.99, step: 0.05 },
+			requireFreshHigh: { label: "仅新高后首次回调", default: 0, min: 0, max: 1 },
+		},
+	},
+	shooting_star: {
+		buys: false,
+		sells: true,
+		description: "流星线反转：长上影+小实体，顶部卖出信号",
+		params: { minBodyRatio: { label: "最小实体比例", default: 0.02, min: 0.01, max: 0.2, step: 0.01 } },
+	},
 	bearish_engulf: { buys: false, sells: true, description: "阴包阳：阴线实体完全吞没前日阳线，卖出信号" },
-	evening_star: { buys: false, sells: true, description: "暮星：大阳→小星→大阴，顶部反转卖出信号" },
+	evening_star: {
+		buys: false,
+		sells: true,
+		description: "暮星：大阳→小星→大阴，顶部反转卖出信号",
+		params: { minBodyRatio: { label: "最小实体比例", default: 0.02, min: 0.01, max: 0.2, step: 0.01 } },
+	},
 	three_crows: { buys: false, sells: true, description: "三只乌鸦：连续三阴，逐步下跌，卖出信号" },
-	rsi_overbought_sell: { buys: false, sells: true, description: "RSI超买回落：RSI从超买区下穿，卖出信号" },
-	time_exit: { buys: false, sells: true, description: "定时换仓：每N个交易日强制卖出，用作固定周期再平衡" },
+	rsi_overbought_sell: {
+		buys: false,
+		sells: true,
+		description: "RSI超买回落：RSI从超买区下穿，卖出信号",
+		params: {
+			period: { label: "周期", default: 14, min: 2, max: 250 },
+			overbought: { label: "超买阈值", default: 70, min: 0, max: 100 },
+		},
+	},
+	time_exit: {
+		buys: false,
+		sells: true,
+		description: "定时换仓：每N个交易日强制卖出，用作固定周期再平衡",
+		params: { period: { label: "强制卖出周期(交易日)", default: 5, min: 1, max: 60 } },
+	},
 	always_buy: { buys: true, sells: false, description: "每日全买入：用于排序测试，每天给所有股票发买入信号" },
-	kd_daily: { buys: true, sells: true, description: "日线KD：K线上穿D线买入，下穿卖出" },
-	kd_weekly: { buys: true, sells: true, description: "周线KD：基于周线KDJ计算，信号在次一交易日执行" },
+	kd_daily: {
+		buys: true,
+		sells: true,
+		description: "日线KD：K线上穿D线买入，下穿卖出",
+		params: {
+			period: { label: "周期", default: 9, min: 2, max: 250 },
+			smoothK: { label: "K平滑", default: 3, min: 1, max: 20 },
+			smoothD: { label: "D平滑", default: 3, min: 1, max: 20 },
+		},
+	},
+	kd_weekly: {
+		buys: true,
+		sells: true,
+		description: "周线KD：基于周线KDJ计算，信号在次一交易日执行",
+		params: {
+			period: { label: "周期", default: 9, min: 2, max: 250 },
+			smoothK: { label: "K平滑", default: 3, min: 1, max: 20 },
+			smoothD: { label: "D平滑", default: 3, min: 1, max: 20 },
+		},
+	},
 	ma_alignment: { buys: true, sells: true, description: "均线多头排列：MA5>10>20>60买入，空头排列卖出" },
-	ema_cross: { buys: true, sells: true, description: "EMA快慢交叉：EMA12/26金叉买入，死叉卖出" },
-	ma_weekly_trend: { buys: true, sells: false, description: "周线多头+日线回踩MA20买入（多周期）" },
-	donchian_breakout: { buys: true, sells: true, description: "唐奇安通道：突破N日高点买入，跌破N日低点卖出" },
-	roc_momentum: { buys: true, sells: true, description: "ROC动量：N日涨幅超阈值买入，跌幅超阈值卖出" },
-	macd_hist_reversal: { buys: true, sells: true, description: "MACD柱状图：金叉买入，零轴上柱缩短卖出" },
-	rsi_divergence: { buys: true, sells: false, description: "RSI底背离：价格新低但RSI未新低买入" },
-	volume_breakout: { buys: true, sells: false, description: "放量突破：突破N日高点+量比放大买入" },
-	shrink_volume_pullback: { buys: true, sells: false, description: "缩量回踩：上升趋势中缩量回踩MA10买入" },
-	obv_trend: { buys: true, sells: false, description: "OBV趋势：OBV创新高+站上MA20买入" },
-	harami: { buys: true, sells: true, description: "孕线：看涨孕线买入，看跌孕线卖出" },
-	doji_reversal: { buys: true, sells: false, description: "低位十字星：长下影十字星买入" },
+	ema_cross: {
+		buys: true,
+		sells: true,
+		description: "EMA快慢交叉：EMA12/26金叉买入，死叉卖出",
+		params: {
+			fast: { label: "快线EMA", default: 12, min: 2, max: 250 },
+			slow: { label: "慢线EMA", default: 26, min: 2, max: 250 },
+		},
+	},
+	ma_weekly_trend: {
+		buys: true,
+		sells: false,
+		description: "周线多头+日线回踩MA20买入（多周期）",
+		params: {
+			maPeriod: { label: "日线MA周期", default: 20, min: 2, max: 250 },
+			weekMa: { label: "周线MA周期", default: 5, min: 2, max: 20 },
+		},
+	},
+	donchian_breakout: {
+		buys: true,
+		sells: true,
+		description: "唐奇安通道：突破N日高点买入，跌破N日低点卖出",
+		params: { period: { label: "周期", default: 20, min: 2, max: 250 } },
+	},
+	roc_momentum: {
+		buys: true,
+		sells: true,
+		description: "ROC动量：N日涨幅超阈值买入，跌幅超阈值卖出",
+		params: {
+			period: { label: "周期", default: 10, min: 2, max: 120 },
+			threshold: { label: "阈值%", default: 5, min: 0.5, max: 50, step: 0.5 },
+		},
+	},
+	macd_hist_reversal: {
+		buys: true,
+		sells: true,
+		description: "MACD柱状图：金叉买入，零轴上柱缩短卖出",
+		params: {
+			fast: { label: "快线EMA", default: 12, min: 2, max: 250 },
+			slow: { label: "慢线EMA", default: 26, min: 2, max: 250 },
+			signal: { label: "信号线", default: 9, min: 2, max: 100 },
+		},
+	},
+	rsi_divergence: {
+		buys: true,
+		sells: false,
+		description: "RSI底背离：价格新低但RSI未新低买入",
+		params: {
+			period: { label: "周期", default: 14, min: 2, max: 250 },
+			lookback: { label: "回看窗口", default: 20, min: 2, max: 120 },
+		},
+	},
+	volume_breakout: {
+		buys: true,
+		sells: false,
+		description: "放量突破：突破N日高点+量比放大买入",
+		params: {
+			period: { label: "突破周期", default: 20, min: 2, max: 250 },
+			volPeriod: { label: "量能周期", default: 10, min: 2, max: 120 },
+			volRatio: { label: "量比阈值", default: 1.5, min: 1, max: 5, step: 0.1 },
+		},
+	},
+	shrink_volume_pullback: {
+		buys: true,
+		sells: false,
+		description: "缩量回踩：上升趋势中缩量回踩MA10买入",
+		params: {
+			maPeriod: { label: "均线周期", default: 20, min: 2, max: 250 },
+			volPeriod: { label: "量能周期", default: 10, min: 2, max: 120 },
+		},
+	},
+	obv_trend: {
+		buys: true,
+		sells: false,
+		description: "OBV趋势：OBV创新高+站上MA20买入",
+		params: { period: { label: "周期", default: 20, min: 2, max: 250 } },
+	},
+	harami: {
+		buys: true,
+		sells: true,
+		description: "孕线：看涨孕线买入，看跌孕线卖出",
+		params: { minBodyRatio: { label: "最小实体比例", default: 0.02, min: 0.01, max: 0.2, step: 0.01 } },
+	},
+	doji_reversal: {
+		buys: true,
+		sells: false,
+		description: "低位十字星：长下影十字星买入",
+		params: { minBodyRatio: { label: "最小实体比例", default: 0.02, min: 0.01, max: 0.2, step: 0.01 } },
+	},
 };
 
 function maCrossSignals(klines: KlineRow[], params: StrategyParams): Signal[] {
@@ -822,7 +1045,7 @@ function kdWeeklySignals(klines: KlineRow[], params: StrategyParams): Signal[] {
 }
 // ─── MA Alignment (多头排列) ─────────────────────────────────────
 
-function maAlignmentSignals(klines: KlineRow[], params: StrategyParams): Signal[] {
+function maAlignmentSignals(klines: KlineRow[], _params: StrategyParams): Signal[] {
 	const periods = [5, 10, 20, 60];
 	if (klines.length < 60) return [];
 	const mas = periods.map((p) => cachedMA(klines, p).values);
@@ -839,9 +1062,21 @@ function maAlignmentSignals(klines: KlineRow[], params: StrategyParams): Signal[
 		const bearPrev = prev[0]! < prev[1]! && prev[1]! < prev[2]! && prev[2]! < prev[3]!;
 
 		if (bullCur && !bullPrev) {
-			signals.push({ index: i, date: klines[i].date, type: "buy", price: klines[i].close ?? 0, reason: "MA5/10/20/60多头排列" });
+			signals.push({
+				index: i,
+				date: klines[i].date,
+				type: "buy",
+				price: klines[i].close ?? 0,
+				reason: "MA5/10/20/60多头排列",
+			});
 		} else if (bearCur && !bearPrev) {
-			signals.push({ index: i, date: klines[i].date, type: "sell", price: klines[i].close ?? 0, reason: "MA5/10/20/60空头排列" });
+			signals.push({
+				index: i,
+				date: klines[i].date,
+				type: "sell",
+				price: klines[i].close ?? 0,
+				reason: "MA5/10/20/60空头排列",
+			});
 		}
 	}
 	return signals;
@@ -859,14 +1094,28 @@ function emaCrossSignals(klines: KlineRow[], params: StrategyParams): Signal[] {
 	const signals: Signal[] = [];
 
 	for (let i = 1; i < klines.length; i++) {
-		const fPrev = emaFast[i - 1], sPrev = emaSlow[i - 1];
-		const fCurr = emaFast[i], sCurr = emaSlow[i];
+		const fPrev = emaFast[i - 1],
+			sPrev = emaSlow[i - 1];
+		const fCurr = emaFast[i],
+			sCurr = emaSlow[i];
 		if (fPrev == null || sPrev == null || fCurr == null || sCurr == null) continue;
 
 		if (fPrev <= sPrev && fCurr > sCurr) {
-			signals.push({ index: i, date: klines[i].date, type: "buy", price: klines[i].close ?? 0, reason: "EMA" + fast + "金叉EMA" + slow });
+			signals.push({
+				index: i,
+				date: klines[i].date,
+				type: "buy",
+				price: klines[i].close ?? 0,
+				reason: `EMA${fast}金叉EMA${slow}`,
+			});
 		} else if (fPrev >= sPrev && fCurr < sCurr) {
-			signals.push({ index: i, date: klines[i].date, type: "sell", price: klines[i].close ?? 0, reason: "EMA" + fast + "死叉EMA" + slow });
+			signals.push({
+				index: i,
+				date: klines[i].date,
+				type: "sell",
+				price: klines[i].close ?? 0,
+				reason: `EMA${fast}死叉EMA${slow}`,
+			});
 		}
 	}
 	return signals;
@@ -885,7 +1134,10 @@ function maWeeklyTrendSignals(klines: KlineRow[], params: StrategyParams): Signa
 	const weekCloses = weekly.map((w) => w.close ?? 0);
 	const weekMaValues: (number | null)[] = [];
 	for (let i = 0; i < weekCloses.length; i++) {
-		if (i < weekMa - 1) { weekMaValues.push(null); continue; }
+		if (i < weekMa - 1) {
+			weekMaValues.push(null);
+			continue;
+		}
 		let sum = 0;
 		for (let j = i - weekMa + 1; j <= i; j++) sum += weekCloses[j];
 		weekMaValues.push(sum / weekMa);
@@ -898,7 +1150,10 @@ function maWeeklyTrendSignals(klines: KlineRow[], params: StrategyParams): Signa
 		const date = klines[i].date;
 		let wIdx: number | null = null;
 		for (let j = weekly.length - 1; j >= 0; j--) {
-			if (weekly[j].date <= date) { wIdx = j; break; }
+			if (weekly[j].date <= date) {
+				wIdx = j;
+				break;
+			}
 		}
 		if (wIdx == null) continue;
 		const wma = weekMaValues[wIdx];
@@ -914,9 +1169,10 @@ function maWeeklyTrendSignals(klines: KlineRow[], params: StrategyParams): Signa
 				// True pullback: previous day was clearly ABOVE the touch zone
 				const prevClose = klines[i - 1]?.close;
 				const prevMa = dailyMa[i - 1];
-				const prevAbove = prevClose != null && prevMa != null && prevMa > 0 && (prevClose - prevMa) / prevMa > 0.015;
+				const prevAbove =
+					prevClose != null && prevMa != null && prevMa > 0 && (prevClose - prevMa) / prevMa > 0.015;
 				if (prevAbove) {
-					signals.push({ index: i, date, type: "buy", price: close, reason: "周线多头+回踩MA" + maPeriod });
+					signals.push({ index: i, date, type: "buy", price: close, reason: `周线多头+回踩MA${maPeriod}` });
 				}
 			}
 		}
@@ -932,7 +1188,8 @@ function donchianBreakoutSignals(klines: KlineRow[], params: StrategyParams): Si
 
 	const signals: Signal[] = [];
 	for (let i = period; i < klines.length; i++) {
-		let hi = -Infinity, lo = Infinity;
+		let hi = -Infinity,
+			lo = Infinity;
 		for (let j = i - period; j < i; j++) {
 			if (klines[j].high != null) hi = Math.max(hi, klines[j].high!);
 			if (klines[j].low != null) lo = Math.min(lo, klines[j].low!);
@@ -941,9 +1198,21 @@ function donchianBreakoutSignals(klines: KlineRow[], params: StrategyParams): Si
 		const prevClose = klines[i - 1].close ?? 0;
 
 		if (close > hi && prevClose <= hi) {
-			signals.push({ index: i, date: klines[i].date, type: "buy", price: close, reason: "突破" + period + "日高点" });
+			signals.push({
+				index: i,
+				date: klines[i].date,
+				type: "buy",
+				price: close,
+				reason: `突破${period}日高点`,
+			});
 		} else if (close < lo && prevClose >= lo) {
-			signals.push({ index: i, date: klines[i].date, type: "sell", price: close, reason: "跌破" + period + "日低点" });
+			signals.push({
+				index: i,
+				date: klines[i].date,
+				type: "sell",
+				price: close,
+				reason: `跌破${period}日低点`,
+			});
 		}
 	}
 	return signals;
@@ -964,9 +1233,21 @@ function rocMomentumSignals(klines: KlineRow[], params: StrategyParams): Signal[
 		const roc = ((close - prevClose) / prevClose) * 100;
 
 		if (roc > threshold) {
-			signals.push({ index: i, date: klines[i].date, type: "buy", price: close, reason: "ROC" + period + "动量" + roc.toFixed(1) + "%" });
+			signals.push({
+				index: i,
+				date: klines[i].date,
+				type: "buy",
+				price: close,
+				reason: `ROC${period}动量${roc.toFixed(1)}%`,
+			});
 		} else if (roc < -threshold) {
-			signals.push({ index: i, date: klines[i].date, type: "sell", price: close, reason: "ROC" + period + "动量" + roc.toFixed(1) + "%" });
+			signals.push({
+				index: i,
+				date: klines[i].date,
+				type: "sell",
+				price: close,
+				reason: `ROC${period}动量${roc.toFixed(1)}%`,
+			});
 		}
 	}
 	return signals;
@@ -987,8 +1268,10 @@ function macdHistReversalSignals(klines: KlineRow[], params: StrategyParams): Si
 	const signals: Signal[] = [];
 	let inPosition = false;
 	for (let i = 1; i < dif.length; i++) {
-		const dPrev = dif[i - 1], dCurr = dif[i];
-		const ePrev = dea[i - 1], eCurr = dea[i];
+		const dPrev = dif[i - 1],
+			dCurr = dif[i];
+		const ePrev = dea[i - 1],
+			eCurr = dea[i];
 		if (dPrev == null || dCurr == null || ePrev == null || eCurr == null) continue;
 
 		const histPrev = dPrev - ePrev;
@@ -998,7 +1281,13 @@ function macdHistReversalSignals(klines: KlineRow[], params: StrategyParams): Si
 			signals.push({ index: i, date: klines[i].date, type: "buy", price: klines[i].close ?? 0, reason: "MACD金叉" });
 			inPosition = true;
 		} else if (inPosition && dCurr > 0 && histCurr < histPrev) {
-			signals.push({ index: i, date: klines[i].date, type: "sell", price: klines[i].close ?? 0, reason: "MACD柱状图缩短" });
+			signals.push({
+				index: i,
+				date: klines[i].date,
+				type: "sell",
+				price: klines[i].close ?? 0,
+				reason: "MACD柱状图缩短",
+			});
 			inPosition = false;
 		}
 	}
@@ -1022,17 +1311,32 @@ function rsiDivergenceSignals(klines: KlineRow[], params: StrategyParams): Signa
 		const closeCurr = klines[i]?.close;
 		if (rsiCurr == null || closeCurr == null) continue;
 
-		let priceLow = Infinity, priceLowIdx = -1, rsiLow = Infinity, rsiLowIdx = -1;
+		let priceLow = Infinity,
+			priceLowIdx = -1,
+			rsiLow = Infinity,
+			rsiLowIdx = -1;
 		for (let j = i - lookback; j <= i; j++) {
 			const c = klines[j]?.close;
-			if (c != null && c < priceLow) { priceLow = c; priceLowIdx = j; }
+			if (c != null && c < priceLow) {
+				priceLow = c;
+				priceLowIdx = j;
+			}
 			const r = rsi[j];
-			if (r != null && r < rsiLow) { rsiLow = r; rsiLowIdx = j; }
+			if (r != null && r < rsiLow) {
+				rsiLow = r;
+				rsiLowIdx = j;
+			}
 		}
 		if (priceLowIdx < 0 || rsiLowIdx < 0) continue;
 
 		if (closeCurr <= priceLow * 1.001 && rsiCurr > rsiLow + 3) {
-			signals.push({ index: i, date: klines[i].date, type: "buy", price: closeCurr, reason: "RSI底背离(价格新低RSI未新低)" });
+			signals.push({
+				index: i,
+				date: klines[i].date,
+				type: "buy",
+				price: closeCurr,
+				reason: "RSI底背离(价格新低RSI未新低)",
+			});
 			inPosition = true;
 		}
 	}
@@ -1057,15 +1361,25 @@ function volumeBreakoutSignals(klines: KlineRow[], params: StrategyParams): Sign
 		const vol = klines[i]?.volume;
 		if (close == null || vol == null) continue;
 
-		let volSum = 0, volCount = 0;
+		let volSum = 0,
+			volCount = 0;
 		for (let j = i - volPeriod; j < i; j++) {
-			if (klines[j].volume != null) { volSum += klines[j].volume!; volCount++; }
+			if (klines[j].volume != null) {
+				volSum += klines[j].volume!;
+				volCount++;
+			}
 		}
 		if (volCount === 0) continue;
 		const avgVol = volSum / volCount;
 
 		if (close > hi && vol > avgVol * volRatio) {
-			signals.push({ index: i, date: klines[i].date, type: "buy", price: close, reason: "放量突破" + period + "日高点" });
+			signals.push({
+				index: i,
+				date: klines[i].date,
+				type: "buy",
+				price: close,
+				reason: `放量突破${period}日高点`,
+			});
 		}
 	}
 	return signals;
@@ -1094,9 +1408,13 @@ function shrinkVolumePullbackSignals(klines: KlineRow[], params: StrategyParams)
 		if (ma10Val == null) continue;
 		if (close > ma10Val * 1.02) continue;
 
-		let volSum = 0, volCount = 0;
+		let volSum = 0,
+			volCount = 0;
 		for (let j = i - volPeriod; j < i; j++) {
-			if (klines[j].volume != null) { volSum += klines[j].volume!; volCount++; }
+			if (klines[j].volume != null) {
+				volSum += klines[j].volume!;
+				volCount++;
+			}
 		}
 		if (volCount === 0) continue;
 		const avgVol = volSum / volCount;
@@ -1129,7 +1447,13 @@ function obvTrendSignals(klines: KlineRow[], params: StrategyParams): Signal[] {
 			if (obv[j] != null) obvHi = Math.max(obvHi, obv[j]!);
 		}
 		if (obvCurr > obvHi && close > maVal) {
-			signals.push({ index: i, date: klines[i].date, type: "buy", price: close, reason: "OBV创新高+站上MA" + period });
+			signals.push({
+				index: i,
+				date: klines[i].date,
+				type: "buy",
+				price: close,
+				reason: `OBV创新高+站上MA${period}`,
+			});
 		}
 	}
 	return signals;
@@ -1142,14 +1466,18 @@ function haramiSignals(klines: KlineRow[], params: StrategyParams): Signal[] {
 	const signals: Signal[] = [];
 
 	for (let i = 1; i < klines.length; i++) {
-		const p = klines[i - 1], c = klines[i];
+		const p = klines[i - 1],
+			c = klines[i];
 		if (p.open == null || p.close == null || c.open == null || c.close == null) continue;
 
 		const pBody = Math.abs(p.close - p.open);
 		const cBody = Math.abs(c.close - c.open);
 		if (pBody < p.close * minBody || cBody > pBody * 0.6) continue;
-		const inside = c.open > Math.min(p.open, p.close) && c.open < Math.max(p.open, p.close)
-			&& c.close > Math.min(p.open, p.close) && c.close < Math.max(p.open, p.close);
+		const inside =
+			c.open > Math.min(p.open, p.close) &&
+			c.open < Math.max(p.open, p.close) &&
+			c.close > Math.min(p.open, p.close) &&
+			c.close < Math.max(p.open, p.close);
 		if (!inside) continue;
 
 		if (p.close < p.open) {
@@ -1164,7 +1492,7 @@ function haramiSignals(klines: KlineRow[], params: StrategyParams): Signal[] {
 // ─── Doji Reversal (十字星反转) ────────────────────────────────
 
 function dojiReversalSignals(klines: KlineRow[], params: StrategyParams): Signal[] {
-	const minBody = params.minBodyRatio ?? 0.02;
+	const _minBody = params.minBodyRatio ?? 0.02;
 	const signals: Signal[] = [];
 
 	for (let i = 1; i < klines.length; i++) {

@@ -85,7 +85,7 @@ export function formatTradeList(trades: Trade[]): string {
 	if (trades.length === 0) return "无交易记录。";
 	const lines = trades.map((t, i) => {
 		const sign = t.pnl >= 0 ? "+" : "";
-		return `${i + 1}. ${t.entryDate} 买入@${t.entryPrice.toFixed(2)} → ${t.exitDate} 卖出@${t.exitPrice.toFixed(2)} | ${sign}${t.pnl.toFixed(0)} (${sign}${t.pnlPct.toFixed(2)}%) | ${t.daysHeld}天`;
+		return `${i + 1}. ${t.entryDate} 买入@${t.entryPrice.toFixed(2)} → ${t.exitDate} 卖出@${t.exitPrice.toFixed(2)} | ${sign}${t.pnl.toFixed(0)} (${sign}${t.pnlPct.toFixed(2)}%) | ${t.daysHeld}天${t.memo ? ` | ${t.memo}` : ""}`;
 	});
 	return lines.join("\n");
 }
