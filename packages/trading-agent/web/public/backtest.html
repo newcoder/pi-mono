@@ -202,10 +202,12 @@ function renderRowParamsHTML(dir, idx, row){
   if (!meta || !meta.params) return '';
   const rowParams = state[dir+'Rows'][idx].params;
   return Object.entries(meta.params).map(([key, def]) => {
+    // Params are numeric by contract, but report JSON is user-editable on disk,
+    // so escape everything interpolated into HTML (attribute-injection safe).
     const v = rowParams[key] ?? def.default;
     const step = def.step ?? 1;
     const min = def.min ?? ''; const max = def.max ?? '';
-    return `<label>${def.label} <input class="cond-param" data-param="${key}" type="number" value="${v}" min="${min}" max="${max}" step="${step}"></label>`;
+    return `<label>${esc(def.label)} <input class="cond-param" data-param="${esc(key)}" type="number" value="${esc(v)}" min="${esc(min)}" max="${esc(max)}" step="${esc(step)}"></label>`;
   }).join('');
 }
 function addConditionRow(dir){
@@ -411,7 +413,7 @@ function renderReportList(){
   }).join('');
 }
 
-function esc(s) { return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
+function esc(s) { return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;').replace(/'/g,'&#39;'); }
 
 async function deleteReport(fileName) {
   if (!confirm('确定删除这条回测报告？')) return;
