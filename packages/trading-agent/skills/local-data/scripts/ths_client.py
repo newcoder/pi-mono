@@ -119,9 +119,15 @@ def fetch_board_index_klines(industry_code: str, start_date: str = "20200101", e
                 parts = line.split(",")
                 if len(parts) < 7:
                     continue
-                date_str = parts[0]
-                if date_str < start_date or date_str > end_date:
+                raw_date = parts[0]
+                # start/end arrive as YYYYMMDD; compare in that space first
+                if raw_date < start_date or raw_date > end_date:
                     continue
+                # THS board index dates come as YYYYMMDD; normalize to YYYY-MM-DD
+                # so they match the rest of the klines tables.
+                date_str = raw_date
+                if len(raw_date) == 8 and raw_date.isdigit():
+                    date_str = f"{raw_date[:4]}-{raw_date[4:6]}-{raw_date[6:8]}"
                 rows.append({
                     "date": date_str,
                     "open": _num(parts[1]),
