@@ -781,6 +781,31 @@ export class DataStore {
 
 	async saveKlines(klines: KlineRow[]): Promise<void> {
 		if (klines.length === 0 || !this.db) return;
+		const now = new Date();
+		const local = (d: Date) =>
+			`${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
+		const todayStr = local(now);
+		const preClose = now.getHours() < 15; // A-share close 15:00 local
+		klines = klines.filter((k) => {
+			// Drop degenerate realtime rows: TDX/Sina occasionally return a bar whose
+			// OHLC all collapse to one price with a sentinel volume (~2^-127 float
+			// garbage). Persisting those pollutes the daily/minute tables.
+			const v = k.volume;
+			if (v == null || v <= 0 || v >= 1e-10) return true;
+			const collapsed = k.open != null && k.high != null && k.low != null && k.close != null && k.open === k.high && k.high === k.low && k.low === k.close;
+			return !collapsed;
+		}).filter((k) => {
+			// Drop intraday partial bars: a daily bar dated today that is fetched
+			// before the close only covers the session so far. Persisting it is
+			// permanent damage — incremental syncs skip codes whose latest row
+			// already equals the target date, so the partial bar would never be
+			// overwritten. The evening sync (>= 15:00) writes the final bar.
+			if (preClose && k.period === "daily" && typeof k.date === "string" && k.date.startsWith(todayStr)) {
+				return false;
+			}
+			return true;
+		});
+		if (klines.length === 0) return;
 		const values = klines
 			.map((k) => {
 				const f = (v: number | null) => (v == null ? "NULL" : String(v));

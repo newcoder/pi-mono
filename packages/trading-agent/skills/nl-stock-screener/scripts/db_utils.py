@@ -220,6 +220,11 @@ def sync_kline_if_missing(code: str, market: int, period: str = "daily", adjust:
                 date_str = str(k.get("date", "")).split(" ")[0]
                 if not date_str:
                     continue
+                # Skip degenerate realtime rows (collapsed OHLC + sentinel volume)
+                vol = k.get("volume")
+                o, h, l, c = k.get("open"), k.get("high"), k.get("low"), k.get("close")
+                if vol is not None and 0 < vol < 1e-10 and None not in (o, h, l, c) and o == h == l == c:
+                    continue
                 conn.execute(
                     """INSERT OR REPLACE INTO klines
                        (code, market, period, adjust, date, open, high, low, close, volume, turnover, change_pct, change_amount, amplitude, pre_close)

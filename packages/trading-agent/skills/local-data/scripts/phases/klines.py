@@ -32,23 +32,33 @@ def sync_klines() -> dict:
     total = len(stocks)
     logger.info(f"Found {total} valid A-share stocks...")
 
-    # Determine target date from existing daily klines and skip stocks already up to date.
-    # If no data exists, fall back to fetching the last 90 days for all stocks.
-    end_date = datetime.now().strftime('%Y-%m-%d')
+    # Post-close (>=15:00) runs refresh every stock: a daily bar fetched during
+    # market hours only covers the session so far, and incremental syncs skip
+    # codes whose latest row already equals the target date — so without a full
+    # refresh an intraday partial bar would never be overwritten. Pre-close
+    # runs only chase laggards (max < today); any partial "today" bar mootdx
+    # returns in that case is dropped in the insert loop below.
+    now = datetime.now()
+    end_date = now.strftime('%Y-%m-%d')
+    post_close = now.hour >= 15
     latest_rows = conn.execute(
         "SELECT code, market, MAX(date) as max_date FROM klines WHERE period = 'daily' AND adjust = 'bfq' GROUP BY code, market"
     ).fetchall()
     latest_map = {(r["code"], r["market"]): r["max_date"] for r in latest_rows}
-    target_date = max((d for d in latest_map.values() if d), default=None)
+    has_data = any(v for v in latest_map.values())
 
-    if not target_date:
-        start_date = (datetime.now() - timedelta(days=90)).strftime('%Y-%m-%d')
+    if not has_data:
+        start_date = (now - timedelta(days=90)).strftime('%Y-%m-%d')
         stocks_to_sync = stocks
         logger.info(f"No existing klines, fetching last 90 days for all {len(stocks_to_sync)} stocks")
+    elif post_close:
+        start_date = (now - timedelta(days=90)).strftime('%Y-%m-%d')
+        stocks_to_sync = stocks
+        logger.info(f"Post-close refresh: refetching all {len(stocks_to_sync)} stocks from {start_date}")
     else:
-        start_date = (datetime.strptime(target_date, '%Y-%m-%d') - timedelta(days=90)).strftime('%Y-%m-%d')
-        stocks_to_sync = [s for s in stocks if latest_map.get((s["code"], s["market"])) != target_date]
-        logger.info(f"Target date {target_date}, {len(stocks_to_sync)} stocks need update, fetching from {start_date}")
+        start_date = (now - timedelta(days=90)).strftime('%Y-%m-%d')
+        stocks_to_sync = [s for s in stocks if latest_map.get((s["code"], s["market"]), "") < end_date]
+        logger.info(f"Pre-close sync: {len(stocks_to_sync)} stocks lag behind {end_date}, fetching from {start_date}")
 
     synced = 0
     failed = 0
@@ -79,6 +89,16 @@ def sync_klines() -> dict:
                     market = k["market"]
                     date_str = k["date"]
                     if not date_str:
+                        continue
+                    # Skip degenerate realtime rows: OHLC collapsed to one price
+                    # with a sentinel volume (~2^-127 float garbage from TDX).
+                    vol = k.get("volume")
+                    o, h, l, c = k.get("open"), k.get("high"), k.get("low"), k.get("close")
+                    if vol is not None and 0 < vol < 1e-10 and None not in (o, h, l, c) and o == h == l == c:
+                        continue
+                    # Skip today's bar before the close: it is partial (session
+                    # so far only). The next post-close run writes the final bar.
+                    if not post_close and date_str == end_date:
                         continue
 
                     conn.execute(

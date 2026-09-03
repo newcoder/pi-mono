@@ -501,7 +501,8 @@ describe("generateSignals", () => {
 	describe("obv_trend", () => {
 		it("should buy when OBV makes new high and price above MA", () => {
 			const data: Array<{ close: number; volume: number; high: number; low: number }> = [];
-			for (let i = 0; i < 25; i++) data.push({ close: 100 + i * 0.5, volume: 10000, high: 101 + i * 0.5, low: 99 + i * 0.5 });
+			for (let i = 0; i < 25; i++)
+				data.push({ close: 100 + i * 0.5, volume: 10000, high: 101 + i * 0.5, low: 99 + i * 0.5 });
 			const klines = makeKlinesWithVolume(data);
 			const signals = generateSignals(klines, "obv_trend", { period: 20 });
 			expect(signals.some((s) => s.type === "buy")).toBe(true);
