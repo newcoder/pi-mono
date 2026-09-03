@@ -40,31 +40,7 @@ _HEADERS = {
     "Referer": "http://q.10jqka.com.cn/thshy/",
 }
 
-_AKSHARE_AVAILABLE = False
-try:
-    from akshare.datasets import get_ths_js
-    import py_mini_racer
-    _AKSHARE_AVAILABLE = True
-except Exception as _e:
-    logger.warning(f"akshare/py_mini_racer not available: {_e}")
-
-
-def _get_hexin_v() -> str:
-    """Generate hexin-v cookie used by THS anti-bot."""
-    if not _AKSHARE_AVAILABLE:
-        raise RuntimeError("akshare/py_mini_racer required for THS cookie generation")
-    js_code = py_mini_racer.MiniRacer()
-    with open(get_ths_js("ths.js"), encoding="utf-8") as f:
-        js_content = f.read()
-    js_code.eval(js_content)
-    return js_code.call("v")
-
-
-def _get_ths_headers() -> dict:
-    v = _get_hexin_v()
-    headers = dict(_HEADERS)
-    headers["Cookie"] = f"v={v}"
-    return headers
+import ths_client
 
 
 def _market_from_code(code: str) -> int:
@@ -73,51 +49,15 @@ def _market_from_code(code: str) -> int:
 
 
 def fetch_ths_industry_list() -> list:
-    """Fetch THS industry list via akshare."""
-    import akshare as ak
-    df = ak.stock_board_industry_name_ths()
-    industries = []
-    for _, row in df.iterrows():
-        code = str(row.get("code", "")).strip()
-        name = str(row.get("name", "")).strip()
-        if code and name:
-            industries.append({"code": code, "name": name})
-    logger.info(f"Fetched {len(industries)} THS industries from akshare")
+    """Fetch THS industry list via direct requests (ths_client)."""
+    industries = ths_client.fetch_industry_list()
+    logger.info(f"Fetched {len(industries)} THS industries from direct THS API")
     return industries
 
 
 def fetch_ths_industry_stocks(industry_code: str, headers: dict) -> list:
     """Fetch all stocks in a THS industry block by paginating the detail page."""
-    stocks = []
-    for page in range(1, 100):
-        url = f"http://q.10jqka.com.cn/thshy/detail/code/{industry_code}/order/desc/page/{page}"
-        try:
-            r = requests.get(url, headers=headers, timeout=15)
-            if r.status_code != 200:
-                logger.warning(f"THS page {page} for {industry_code} status {r.status_code}")
-                break
-            text = r.content.decode("gb18030", errors="ignore")
-            soup = BeautifulSoup(text, "lxml")
-            table = soup.find("table", class_="m-table")
-            if not table:
-                break
-            rows = table.find_all("tr")[1:]  # skip header
-            if not rows:
-                break
-            for row in rows:
-                cells = row.find_all("td")
-                if len(cells) >= 3:
-                    stock_code = cells[1].text.strip()
-                    stock_name = cells[2].text.strip()
-                    if stock_code and stock_code.isdigit():
-                        stocks.append({"code": stock_code, "name": stock_name})
-            if len(rows) < 20:
-                break
-            time.sleep(0.2)
-        except Exception as e:
-            logger.warning(f"THS fetch failed for {industry_code} page {page}: {e}")
-            break
-    return stocks
+    return ths_client.fetch_board_stocks(industry_code)
 
 
 def sync_ths_industries() -> dict:
@@ -130,7 +70,7 @@ def sync_ths_industries() -> dict:
     if not industries:
         return {"standard": "ths", "error": "No industries found"}
 
-    headers = _get_ths_headers()
+    headers = ths_client.get_ths_headers()
     mapping_count = 0
     valid_stocks_count = 0
 

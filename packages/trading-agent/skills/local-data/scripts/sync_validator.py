@@ -192,6 +192,8 @@ def validate_klines() -> dict:
 
 def validate_fundamentals() -> dict:
     """Validate fundamentals table coverage and recency."""
+    from datetime import datetime
+
     conn = get_db()
     try:
         cur = conn.cursor()
@@ -213,6 +215,16 @@ def validate_fundamentals() -> dict:
         else:
             latest_count = 0
 
+        # Freshness: the latest report period must be the last completed quarter-end
+        # (Q1 03-31 / H1 06-30 / Q3 09-30 / FY 12-31), otherwise the sync silently
+        # failed to pull the newest statements (e.g. a data-source change).
+        now = datetime.now()
+        q_end_month = ((now.month - 1) // 3) * 3  # 0/3/6/9 -> month of last completed quarter-end
+        q_end_year = now.year if q_end_month != 0 else now.year - 1
+        expected_report_date = f"{q_end_year}-{q_end_month:02d}-30"
+        if q_end_month in (3, 9):
+            expected_report_date = f"{q_end_year}-{q_end_month:02d}-31"
+
         status = "PASS"
         message = f"{total} records for {stock_count} stocks, latest report {max_date}"
 
@@ -225,6 +237,12 @@ def validate_fundamentals() -> dict:
         elif latest_count < 3000 and max_date:
             status = "WARN"
             message = f"Latest report {max_date} only has {latest_count} records (expected 4000+)"
+        elif not max_date or max_date < expected_report_date:
+            status = "WARN"
+            message = (
+                f"Fundamentals stale: latest report {max_date} is older than expected period "
+                f"{expected_report_date} (sync may have silently failed)"
+            )
 
         return {
             "status": status,
@@ -232,6 +250,7 @@ def validate_fundamentals() -> dict:
             "stock_count": stock_count,
             "max_report_date": max_date,
             "latest_count": latest_count,
+            "expected_report_date": expected_report_date,
             "message": message,
         }
     finally:

@@ -71,15 +71,20 @@ def batch_get_kline(stock_codes, start_date, end_date, period="daily", adjust="b
             return []
         if mootdx_kline is None:
             return []
-        try:
-            return mootdx_kline(
-                item["code"], item.get("market", 0),
-                period=period, adjust=adjust,
-                start=start_date, end=end_date,
-            ) or []
-        except Exception as e:
-            logger.debug(f"mootdx kline fetch failed for {code}: {e}")
-            return []
+        # TDX TCP servers are flaky under concurrency: retry a few times before
+        # giving up so a transient empty/error response does not silently lose data.
+        for attempt in range(3):
+            try:
+                rows = mootdx_kline(
+                    item["code"], item.get("market", 0),
+                    period=period, adjust=adjust,
+                    start=start_date, end=end_date,
+                )
+                if rows:
+                    return rows
+            except Exception as e:
+                logger.debug(f"mootdx kline fetch failed for {code}: {e}")
+        return []
 
     # Concurrent fetch — mootdx TCP is lightweight, 8 workers is safe
     max_workers = min(8, max(1, len(stock_codes)))

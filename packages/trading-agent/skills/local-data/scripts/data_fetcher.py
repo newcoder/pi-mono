@@ -33,12 +33,18 @@ from concurrent.futures import ThreadPoolExecutor, as_completed
 logger = logging.getLogger(__name__)
 
 try:
-    import akshare as ak
     import pandas as pd
 except ImportError:
     print("错误: 请先安装依赖库")
-    print("pip install akshare pandas")
+    print("pip install pandas")
     sys.exit(1)
+
+# akshare was removed as a data source (TDX/EM direct instead). Every remaining
+# `ak.*` call site is dead code: it hits AttributeError on None and lands in the
+# caller's except branch, so remote fallbacks resolve to the local/EM result or
+# an explicit "all sources unavailable" error instead of silently using akshare.
+ak = None  # type: ignore[assignment]
+HAS_AKSHARE = False
 
 try:
     import requests

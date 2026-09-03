@@ -70,6 +70,10 @@ def sync_klines() -> dict:
                     failed += len(batch)
                     continue
 
+                # Count per-stock, not per-batch: a batch where only one stock
+                # returned data used to count the whole batch as synced, hiding
+                # real gaps from the next run's "need update" detection.
+                covered = set()
                 for k in klines:
                     code = k["code"]
                     market = k["market"]
@@ -88,9 +92,11 @@ def sync_klines() -> dict:
                          k.get("change_pct"), k.get("change_amount"), k.get("amplitude"),
                          k.get("pre_close"))
                     )
+                    covered.add((code, market))
                     total_rows += 1
 
-                synced += len(batch)
+                synced += len(covered)
+                failed += len(batch) - len(covered)
 
                 if (i // batch_size + 1) % 10 == 0:
                     conn.commit()

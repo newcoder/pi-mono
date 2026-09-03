@@ -26,14 +26,13 @@ def _is_valid_stock_name(name: str) -> bool:
 
 @_phase("stocks")
 def sync_stocks() -> dict:
-    """Sync full stock list. Priority: mootdx -> akshare fallback."""
+    """Sync full stock list from mootdx (TDX TCP)."""
     conn = get_db()
     try:
         cur = conn.cursor()
         now = datetime.now().isoformat()
         count = 0
 
-        # Primary: mootdx stock_all (TCP direct, fast)
         stocks = []
         try:
             from mootdx.quotes import Quotes
@@ -53,26 +52,8 @@ def sync_stocks() -> dict:
         except Exception as e:
             logger.warning(f"mootdx stock list failed: {e}")
 
-        # Fallback: akshare (slow but complete)
         if not stocks:
-            try:
-                import akshare as ak
-                df = ak.stock_zh_a_spot_em()
-                for _, row in df.iterrows():
-                    code = str(row.get("代码", "")).strip()
-                    name = str(row.get("名称", "")).strip()
-                    if not is_a_share(code):
-                        continue
-                    market = market_from_code(code) or 0
-                    if not _is_valid_stock_name(name):
-                        continue
-                    stocks.append({"code": code, "market": market, "name": name})
-                logger.info(f"Fetched {len(stocks)} stocks from akshare.")
-            except Exception as e:
-                logger.warning(f"akshare stock list failed: {e}")
-
-        if not stocks:
-            raise RuntimeError("Failed to fetch stock list from all sources")
+            raise RuntimeError("Failed to fetch stock list from mootdx")
 
         for stock in stocks:
             code = stock["code"]

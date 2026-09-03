@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """
 Sync Tonghuashun (THS) industry index klines and quotes to local SQLite DB.
-Uses akshare stock_board_industry_index_ths as data source.
+Fetches directly from d.10jqka.com.cn via ths_client (node-generated v cookie).
 """
 import os
 import sys
@@ -18,7 +18,7 @@ if _SCRIPT_DIR not in sys.path:
 if _SKILL_ROOT not in sys.path:
     sys.path.insert(0, _SKILL_ROOT)
 
-import akshare as ak
+import ths_client
 from local_data.db import get_db, get_db_path
 
 warnings.filterwarnings('ignore')
@@ -64,20 +64,10 @@ def sync_industry_klines_ths() -> dict:
         code = ind["industry_code"]
         name = ind["name"]
         try:
-            df = ak.stock_board_industry_index_ths(symbol=name, start_date=start_date, end_date=end_date)
-            if df is None or df.empty:
+            rows = ths_client.fetch_board_index_klines(code, start_date, end_date)
+            if not rows:
                 failed.append(code)
                 continue
-
-            # Column order from akshare: date, open, high, low, close, volume, amount
-            cols = list(df.columns)
-            date_col = cols[0]
-            open_col = cols[1]
-            high_col = cols[2]
-            low_col = cols[3]
-            close_col = cols[4]
-            vol_col = cols[5]
-            amt_col = cols[6]
 
             latest_date = None
             latest_close = None
@@ -87,14 +77,14 @@ def sync_industry_klines_ths() -> dict:
             latest_vol = None
             latest_amt = None
 
-            for _, row in df.iterrows():
-                date_str = str(row[date_col])[:10]
-                open_p = _safe_float(row[open_col])
-                high = _safe_float(row[high_col])
-                low = _safe_float(row[low_col])
-                close = _safe_float(row[close_col])
-                volume = _safe_float(row[vol_col])
-                amount = _safe_float(row[amt_col])
+            for k in rows:
+                date_str = k["date"]
+                open_p = k["open"]
+                high = k["high"]
+                low = k["low"]
+                close = k["close"]
+                volume = k["volume"]
+                amount = k["amount"]
 
                 cur.execute(
                     """INSERT OR REPLACE INTO industry_klines

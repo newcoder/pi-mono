@@ -1,15 +1,8 @@
 #!/usr/bin/env python3
-"""Get all A-share stock list.
-
-Priority:
-  1. mootdx stock_all (TCP direct, ~2 s, includes names)
-  2. akshare stock_zh_a_spot_em fallback (slow but complete)
-
-No JoinQuant dependency.
-"""
+"""Get all A-share stock list from mootdx (TDX TCP)."""
+import io
 import json
 import sys
-import io
 import warnings
 
 from local_data.market import is_a_share, market_from_code
@@ -54,48 +47,16 @@ def get_all_stocks_from_mootdx():
     return stocks
 
 
-def get_all_stocks_from_akshare():
-    """Fetch all A-share stocks from akshare (Eastmoney spot data)."""
-    import akshare as ak
-
-    df = ak.stock_zh_a_spot_em()
-    stocks = []
-    for _, row in df.iterrows():
-        code = str(row.get("代码", "")).strip()
-        name = str(row.get("名称", "")).strip()
-        if not is_a_share(code):
-            continue
-        stocks.append({
-            "code": code,
-            "market": _get_market_from_code(code),
-            "name": name,
-        })
-    return stocks
-
-
 def main():
-    # Primary: mootdx (fast)
     try:
         stocks = get_all_stocks_from_mootdx()
         if stocks and len(stocks) > 3000:
             print(json.dumps(stocks, ensure_ascii=False))
             sys.stdout.flush()
             return
+        print(json.dumps({"error": "mootdx returned too few stocks"}, ensure_ascii=False))
     except Exception as e:
-        print(json.dumps({"_mootdx_error": str(e)}, ensure_ascii=False), file=sys.stderr)
-
-    # Fallback: akshare
-    try:
-        stocks = get_all_stocks_from_akshare()
-        if stocks and len(stocks) > 3000:
-            print(json.dumps(stocks, ensure_ascii=False))
-            sys.stdout.flush()
-            return
-    except Exception as e:
-        print(json.dumps({"error": f"akshare failed: {e}"}, ensure_ascii=False))
-        sys.exit(1)
-
-    print(json.dumps({"error": "All data sources failed"}, ensure_ascii=False))
+        print(json.dumps({"_mootdx_error": str(e)}, ensure_ascii=False))
     sys.exit(1)
 
 

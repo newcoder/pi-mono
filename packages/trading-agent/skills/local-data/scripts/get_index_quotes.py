@@ -21,54 +21,6 @@ def _to_float(val):
         return None
 
 
-def get_index_quotes_spot():
-    """Fetch real-time index quotes from Sina via akshare."""
-    import akshare as ak
-
-    df = ak.stock_zh_index_spot_sina()
-    if df is None or df.empty:
-        raise RuntimeError("Sina index spot data empty")
-
-    # Column mapping
-    code_col = None
-    for col in df.columns:
-        if str(col) in ("代码", "code"):
-            code_col = col
-            break
-    if code_col is None:
-        code_col = df.columns[0]
-
-    def get_col(candidates):
-        for c in df.columns:
-            if str(c) in candidates:
-                return c
-        return None
-
-    name_col = get_col(["名称", "name"])
-    latest_col = get_col(["最新价", "price", "latest"])
-    change_pct_col = get_col(["涨跌幅", "change_pct"])
-
-    def to_float(val):
-        try:
-            return float(val)
-        except (ValueError, TypeError):
-            return None
-
-    results = []
-    for _, row in df.iterrows():
-        code = str(row[code_col]).strip() if code_col else ""
-        # Remove sh/sz prefix for normalized code
-        normalized = code[2:] if code.startswith(("sh", "sz")) else code
-        results.append({
-            "code": normalized,
-            "name": str(row[name_col]) if name_col else None,
-            "price": to_float(row[latest_col]) if latest_col else None,
-            "change_pct": to_float(row[change_pct_col]) if change_pct_col else None,
-            "_source": "sina_index_spot",
-        })
-
-    return results
-
 
 def get_index_quotes_http(codes=None):
     """Fetch real-time index quotes directly from Sina HTTP API.
@@ -111,9 +63,10 @@ def get_index_quotes_http(codes=None):
         fields = data.split(",")
         if len(fields) < 3:
             continue
-        # Sina index format: name, current, prev_close, open, high, low, ...
+        # Sina index format (verified against Tencent): name, open, prev_close, current, high, low
+        #   [0]=name [1]=open [2]=prev_close [3]=current [4]=high [5]=low
         name = fields[0]
-        price = _to_float(fields[1])
+        price = _to_float(fields[3])
         prev_close = _to_float(fields[2])
         change_pct = None
         if price is not None and prev_close:
@@ -136,15 +89,7 @@ def main():
     args = parser.parse_args()
 
     target_codes = args.codes.split(",") if args.codes else None
-
-    # Try akshare spot first (returns fresher data).
-    # Sina HTTP direct is faster but can return stale snapshots during market hours.
-    try:
-        quotes = get_index_quotes_spot()
-    except Exception as e:
-        print(f"akshare spot failed, falling back to Sina HTTP: {e}", file=sys.stderr)
-        quotes = get_index_quotes_http(target_codes)
-
+    quotes = get_index_quotes_http(target_codes)
     if target_codes:
         target_set = set(target_codes)
         quotes = [q for q in quotes if q["code"] in target_set]

@@ -197,7 +197,7 @@ def _sync_quotes_from_klines() -> dict:
 
 @_phase("quotes")
 def sync_quotes() -> dict:
-    """Sync daily quotes. Priority: Tencent API > akshare > klines fallback."""
+    """Sync daily quotes. Priority: Tencent API > klines fallback."""
 
     # Step 1: Try Tencent API first (fast, works outside trading hours, rich fields)
     logger.info("Fetching quotes from Tencent API (qt.gtimg.cn)...")
@@ -206,89 +206,6 @@ def sync_quotes() -> dict:
     except Exception as e:
         logger.warning(f"  Tencent API failed: {e}")
 
-    # Step 2: Fall back to akshare (trading hours only, has 52w high/low)
-    logger.info("Falling back to akshare...")
-    try:
-        import akshare as ak
-    except ImportError:
-        logger.warning("  akshare not installed. Falling back to klines.")
-        return _sync_quotes_from_klines()
-
-    # Clear proxy env to avoid connection issues
-    for key in list(os.environ.keys()):
-        if key.lower() in ('http_proxy', 'https_proxy', 'all_proxy'):
-            os.environ.pop(key, None)
-
-    df = None
-    for attempt in range(3):
-        try:
-            df = ak.stock_zh_a_spot_em()
-            if df is not None and not df.empty:
-                break
-        except Exception as e:
-            logger.warning(f"  akshare quote fetch attempt {attempt+1}/3 failed: {e}")
-            if attempt < 2:
-                time.sleep(5)
-
-    if df is None or df.empty:
-        logger.warning("akshare unavailable. Falling back to klines-derived quotes...")
-        return _sync_quotes_from_klines()
-
-    conn = get_db()
-    cur = conn.cursor()
-    today = datetime.now().strftime('%Y-%m-%d')
-    now = datetime.now().isoformat()
-    count = 0
-
-    def _market_from_code(code: str) -> int:
-        return market_from_code(code) or 0
-
-    def _safe_float(v):
-        if v is None or v == '' or v == '-':
-            return None
-        try:
-            return float(v)
-        except (ValueError, TypeError):
-            return None
-
-    for _, row in df.iterrows():
-        code = str(row.get("代码", "")).strip()
-        if not code or not code.isdigit():
-            continue
-        market = _market_from_code(code)
-        name = row.get("名称", "")
-
-        latest = _safe_float(row.get("最新价"))
-        if latest is None:
-            latest = _safe_float(row.get("收盘价"))
-
-        cur.execute(
-            """INSERT OR REPLACE INTO quotes
-               (code, market, snapshot_date, name, latest, open, high, low, prev_close,
-                volume, turnover, change_pct, pe, pb, total_cap, float_cap, high_52w, low_52w, updated_at)
-               VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)""",
-            (
-                code, market, today, name,
-                latest,
-                _safe_float(row.get("开盘价")),
-                _safe_float(row.get("最高价")),
-                _safe_float(row.get("最低价")),
-                _safe_float(row.get("昨收")),
-                _safe_float(row.get("成交量")),
-                _safe_float(row.get("成交额")),
-                _safe_float(row.get("涨跌幅")),
-                _safe_float(row.get("市盈率-动态") or row.get("动态市盈率")),
-                _safe_float(row.get("市净率")),
-                _safe_float(row.get("总市值")),
-                _safe_float(row.get("流通市值")),
-                _safe_float(row.get("52周最高")),
-                _safe_float(row.get("52周最低")),
-                now
-            )
-        )
-        count += 1
-
-    conn.commit()
-    conn.close()
-    logger.info(f"Synced {count} quotes for {today} from akshare.")
-    return {"count": count, "date": today, "source": "akshare"}
+    # Step 2: Derive quotes from latest daily klines (no external dependency)
+    logger.warning("Tencent API unavailable. Falling back to klines-derived quotes...")
+    return _sync_quotes_from_klines()

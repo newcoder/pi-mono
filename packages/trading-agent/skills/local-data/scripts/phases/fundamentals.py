@@ -1,6 +1,8 @@
 """Auto-extracted from daily_sync.py."""
 
 import logging
+import time
+
 from datetime import datetime
 
 from local_data.db import get_db
@@ -36,32 +38,40 @@ def sync_fundamentals() -> dict:
     }
 
     def _market_prefix(code: str) -> str:
-        return market_prefix(code, "lower") or "sz"
+        # market_prefix() returns the full prefixed symbol (e.g. "sh600519"),
+        # not a bare exchange label.
+        return market_prefix(code, "lower") or f"sz{code}"
 
     def _get_company_type(symbol_lower: str) -> Optional[str]:
-        try:
-            url = "https://emweb.securities.eastmoney.com/PC_HSF10/NewFinanceAnalysis/Index"
-            r = requests.get(url, params={"type": "web", "code": symbol_lower},
-                             headers=HEADERS, timeout=10)
-            r.encoding = "utf-8"
-            soup = BeautifulSoup(r.text, features="lxml")
-            ctype_input = soup.find(attrs={"id": "hidctype"})
-            if ctype_input and ctype_input.get("value"):
-                return ctype_input["value"]
-        except Exception:
-            logger.warning(f"Failed to get company type for {symbol_lower}", exc_info=True)
+        # Eastmoney rate-limits under concurrency and briefly serves an
+        # anti-bot page without the hidctype input; retry before giving up.
+        for attempt in range(3):
+            try:
+                url = "https://emweb.securities.eastmoney.com/PC_HSF10/NewFinanceAnalysis/Index"
+                r = requests.get(url, params={"type": "web", "code": symbol_lower},
+                                 headers=HEADERS, timeout=10)
+                r.encoding = "utf-8"
+                soup = BeautifulSoup(r.text, features="lxml")
+                ctype_input = soup.find(attrs={"id": "hidctype"})
+                if ctype_input and ctype_input.get("value"):
+                    return ctype_input["value"]
+            except Exception:
+                logger.debug(f"Failed to get company type for {symbol_lower} (attempt {attempt + 1})", exc_info=True)
+            time.sleep(0.3)
         return None
 
     def _get_report_dates(endpoint: str, company_type: str, code: str) -> list:
-        try:
-            url = f"https://emweb.securities.eastmoney.com/PC_HSF10/NewFinanceAnalysis/{endpoint}"
-            params = {"companyType": company_type, "reportDateType": "0", "code": code}
-            r = requests.get(url, params=params, headers=HEADERS, timeout=10)
-            data = r.json()
-            if "data" in data and data["data"]:
-                return [item["REPORT_DATE"] for item in data["data"] if "REPORT_DATE" in item]
-        except Exception:
-            logger.warning(f"Failed to get report dates for {code} via {endpoint}", exc_info=True)
+        for attempt in range(3):
+            try:
+                url = f"https://emweb.securities.eastmoney.com/PC_HSF10/NewFinanceAnalysis/{endpoint}"
+                params = {"companyType": company_type, "reportDateType": "0", "code": code}
+                r = requests.get(url, params=params, headers=HEADERS, timeout=10)
+                data = r.json()
+                if "data" in data and data["data"]:
+                    return [item["REPORT_DATE"] for item in data["data"] if "REPORT_DATE" in item]
+            except Exception:
+                logger.debug(f"Failed to get report dates for {code} via {endpoint} (attempt {attempt + 1})", exc_info=True)
+            time.sleep(0.3)
         return []
 
     def _fetch_statement(endpoint: str, company_type: str, code: str, report_dates: list) -> list:
@@ -163,8 +173,8 @@ def sync_fundamentals() -> dict:
 
     def _sync_one_stock(code: str, market: int) -> dict:
         prefix = _market_prefix(code)
-        symbol_lower = f"{prefix}{code}"
-        code_upper = f"{prefix.upper()}{code}"
+        symbol_lower = _market_prefix(code)  # already includes the code, e.g. "sh600519"
+        code_upper = symbol_lower.upper()
         now = datetime.now().isoformat()
 
         company_type = _get_company_type(symbol_lower)
@@ -230,7 +240,8 @@ def sync_fundamentals() -> dict:
                     )
                     inserted += 1
                 except Exception as e:
-                    logger.debug(f"  Insert failed for {code} {rd_short}: {e}")
+                    # Visible: a schema/type mismatch otherwise silently drops the row.
+                    logger.warning(f"  Insert failed for {code} {rd_short}: {e}")
 
         conn.commit()
         conn.close()
@@ -241,8 +252,9 @@ def sync_fundamentals() -> dict:
     skipped = 0
     total_inserted = 0
 
-    # Use ThreadPool for fundamentals (network I/O bound)
-    max_workers = 8
+    # Use ThreadPool for fundamentals (network I/O bound).
+    # Keep concurrency low: Eastmoney rate-limits the F10 endpoints under load.
+    max_workers = 4
     with ThreadPoolExecutor(max_workers=max_workers) as executor:
         futures = {executor.submit(_sync_one_stock, s["code"], s["market"]): s for s in stocks}
         for idx, future in enumerate(as_completed(futures)):

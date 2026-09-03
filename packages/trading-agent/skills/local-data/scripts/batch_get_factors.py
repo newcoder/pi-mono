@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Batch fetch adjustment factors via akshare/Tencent API (no JoinQuant dependency)."""
+"""Batch fetch adjustment factors via Tencent API (no JoinQuant dependency)."""
 import argparse
 import json
 import os
@@ -26,83 +26,6 @@ if _SKILL_ROOT not in sys.path:
 def _market_prefix(code: str) -> str:
     return market_prefix(code, "lower") or f"sz{code}"
 
-
-def _get_factors_single_akshare(code: str, market: int, start_date: str, end_date: str) -> list:
-    """Fetch adjustment factors for a single stock via akshare.
-
-    Uses stock_zh_a_hist with different adjust modes to compute factors.
-    """
-    import akshare as ak
-
-    # Normalize dates to akshare format (YYYYMMDD)
-    ak_start = start_date
-    ak_end = end_date
-    if len(ak_start) == 8:
-        ak_start = f"{ak_start[:4]}-{ak_start[4:6]}-{ak_start[6:8]}"
-    if len(ak_end) == 8:
-        ak_end = f"{ak_end[:4]}-{ak_end[4:6]}-{ak_end[6:8]}"
-
-    # Fetch bfq (unadjusted) data
-    df_bfq = ak.stock_zh_a_hist(symbol=code, period="daily", start_date=ak_start, end_date=ak_end, adjust="")
-    if df_bfq is None or df_bfq.empty:
-        return []
-
-    # Fetch qfq (pre-adjusted) data
-    df_qfq = ak.stock_zh_a_hist(symbol=code, period="daily", start_date=ak_start, end_date=ak_end, adjust="qfq")
-    if df_qfq is None or df_qfq.empty:
-        return []
-
-    # Fetch hfq (post-adjusted) data
-    df_hfq = ak.stock_zh_a_hist(symbol=code, period="daily", start_date=ak_start, end_date=ak_end, adjust="hfq")
-    if df_hfq is None or df_hfq.empty:
-        return []
-
-    # Build date -> close maps
-    bfq_map = {}
-    for _, row in df_bfq.iterrows():
-        dt = str(row.get("日期", ""))
-        close = row.get("收盘")
-        if pd.notna(close):
-            bfq_map[dt] = float(close)
-
-    qfq_map = {}
-    for _, row in df_qfq.iterrows():
-        dt = str(row.get("日期", ""))
-        close = row.get("收盘")
-        if pd.notna(close):
-            qfq_map[dt] = float(close)
-
-    hfq_map = {}
-    for _, row in df_hfq.iterrows():
-        dt = str(row.get("日期", ""))
-        close = row.get("收盘")
-        if pd.notna(close):
-            hfq_map[dt] = float(close)
-
-    factors = []
-    for dt in sorted(bfq_map.keys()):
-        bfq_close = bfq_map.get(dt)
-        qfq_close = qfq_map.get(dt)
-        hfq_close = hfq_map.get(dt)
-
-        qfq_factor = None
-        hfq_factor = None
-
-        if bfq_close and bfq_close != 0 and qfq_close:
-            qfq_factor = round(qfq_close / bfq_close, 6)
-        if bfq_close and bfq_close != 0 and hfq_close:
-            hfq_factor = round(hfq_close / bfq_close, 6)
-
-        if qfq_factor is not None or hfq_factor is not None:
-            factors.append({
-                "code": code,
-                "market": market,
-                "date": dt,
-                "qfq_factor": qfq_factor,
-                "hfq_factor": hfq_factor,
-            })
-
-    return factors
 
 
 def _get_factors_single_tencent(code: str, market: int, start_date: str, end_date: str) -> list:
@@ -198,8 +121,7 @@ def batch_get_factors(stock_codes, start_date, end_date, max_workers=4):
             factors = _get_factors_single_tencent(code, market, start_date, end_date)
             if factors:
                 return factors
-            # Fallback to akshare
-            return _get_factors_single_akshare(code, market, start_date, end_date)
+            raise RuntimeError(f"Tencent factor fetch returned no data for {code}")
         except Exception:
             logger.warning(f"Factor fetch failed for {code}", exc_info=True)
             return []

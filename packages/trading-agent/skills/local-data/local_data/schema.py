@@ -98,6 +98,7 @@ def ensure_tables() -> None:
             income_tax REAL,
             total_assets REAL,
             total_liabilities REAL,
+            total_liab_equity REAL,
             total_equity REAL,
             parent_equity REAL,
             total_current_assets REAL,
@@ -128,6 +129,7 @@ def ensure_tables() -> None:
     # Idempotent migration: add missing fundamentals columns to existing DBs
     _fundamentals_new_cols = {
         "report_type": "TEXT",
+        "total_liab_equity": "REAL",
         "total_shares": "REAL",
         "credit_impairment": "REAL",
         "asset_impairment": "REAL",

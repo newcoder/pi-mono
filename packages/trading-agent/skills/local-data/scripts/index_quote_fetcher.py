@@ -1,12 +1,16 @@
 #!/usr/bin/env python3
-"""Fetch real-time quotes for major A-share indices."""
+"""Fetch real-time quotes for major A-share indices.
 
-import argparse
-import json
-import sys
+Direct Sina HTTP API (hq.sinajs.cn); akshare was removed as a data source.
+"""
 import io
+import json
+import re
+import sys
 
 sys.stdout = io.TextIOWrapper(sys.stdout.buffer, encoding="utf-8")
+
+import requests
 
 # Major indices we care about
 INDEX_CODES = {
@@ -16,76 +20,64 @@ INDEX_CODES = {
 }
 
 
+def _to_float(val):
+    try:
+        return float(val)
+    except (ValueError, TypeError):
+        return None
+
+
 def fetch_index_quotes() -> list[dict]:
-    """Fetch index quotes using akshare Sina source."""
-    import akshare as ak
+    """Fetch index quotes directly from Sina HTTP API.
 
-    df = ak.stock_zh_index_spot_sina()
-    if df is None or df.empty:
-        return []
-
-    # Map column names (akshare returns Chinese column names)
-    # Typical columns: 代码, 名称, 最新价, 涨跌额, 涨跌幅, 昨收, 今开, 最高, 最低, 成交量, 成交额
-    code_col = None
-    name_col = None
-    price_col = None
-    change_pct_col = None
-
-    for col in df.columns:
-        col_str = str(col)
-        if col_str in ("代码", "code"):
-            code_col = col
-        elif col_str in ("名称", "name"):
-            name_col = col
-        elif col_str in ("最新价", "price", "latest"):
-            price_col = col
-        elif col_str in ("涨跌幅", "change_pct"):
-            change_pct_col = col
-
-    # Fallback: use positional columns if name matching fails
-    if code_col is None:
-        code_col = df.columns[0]
-    if name_col is None:
-        name_col = df.columns[1]
-    if price_col is None:
-        price_col = df.columns[2]
-    if change_pct_col is None:
-        # Try to find a column that looks like change percentage
-        for col in df.columns:
-            sample = str(df[col].iloc[0]) if len(df) > 0 else ""
-            if "%" in sample or (sample.replace(".", "").replace("-", "").isdigit() and -20 < float(sample) < 20):
-                change_pct_col = col
-                break
-        if change_pct_col is None:
-            change_pct_col = df.columns[4] if len(df.columns) > 4 else df.columns[-1]
+    Response format per index (verified against Tencent):
+      var hq_str_sh000001="上证指数,今开,昨收,当前,最高,最低,..."
+      fields[0]=name fields[1]=open fields[2]=prev_close fields[3]=current ...
+    """
+    url = "https://hq.sinajs.cn/list=" + ",".join(INDEX_CODES.keys())
+    headers = {
+        "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36",
+        "Referer": "https://finance.sina.com.cn",
+    }
+    r = requests.get(url, headers=headers, timeout=15)
+    r.raise_for_status()
+    r.encoding = "gbk"
+    text = r.text
 
     results = []
-    for _, row in df.iterrows():
-        code = str(row[code_col]).strip().lower()
-        if code in INDEX_CODES:
-            name = INDEX_CODES.get(code, str(row[name_col]))
-            try:
-                price = float(row[price_col])
-            except (ValueError, TypeError):
-                price = 0.0
-            try:
-                change = float(row[change_pct_col])
-            except (ValueError, TypeError):
-                change = 0.0
+    for line in text.split(";"):
+        line = line.strip()
+        if not line.startswith("var hq_str_"):
+            continue
+        m = re.match(r'var hq_str_(sh|sz)(\d{6})="(.*?)";?', line)
+        if not m:
+            continue
+        prefix, code, data = m.groups()
+        symbol = prefix + code
+        fields = data.split(",")
+        if len(fields) < 4:
+            continue
+        name = INDEX_CODES.get(symbol) or fields[0]
+        price = _to_float(fields[3])
+        prev_close = _to_float(fields[2])
+        change_pct = None
+        if price is not None and prev_close:
+            change_pct = (price - prev_close) / prev_close * 100
 
-            results.append({
-                "code": code.replace("sh", "").replace("sz", ""),
-                "name": name,
-                "price": round(price, 2),
-                "change_pct": round(change, 2),
-            })
-
+        results.append({
+            "code": code,
+            "name": name,
+            "price": round(price, 2) if price is not None else None,
+            "change_pct": round(change_pct, 2) if change_pct is not None else None,
+        })
     return results
 
 
 def main():
+    import argparse
+
     parser = argparse.ArgumentParser(description="Fetch major A-share index quotes")
-    args = parser.parse_args()
+    parser.parse_args()
 
     quotes = fetch_index_quotes()
     print(json.dumps(quotes, ensure_ascii=False, indent=2))

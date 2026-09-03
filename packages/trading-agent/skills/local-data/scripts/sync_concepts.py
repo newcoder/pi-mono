@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """
 同步概念股数据到本地SQLite数据库
-优先: 东方财富HTTP API -> akshare fallback (不再依赖JoinQuant)
+优先: 东方财富HTTP API (不再依赖JoinQuant)
 用法: python sync_concepts.py [--concept <概念名称>] [--all]
 """
 
@@ -146,54 +146,19 @@ def _fetch_eastmoney_concept_stocks(concept_code):
     return all_stocks
 
 
-# ─── akshare fallback helpers ───────────────────────────────────────────────
-
-def _fetch_akshare_concept_list():
-    """Fetch all concept blocks from akshare."""
-    import akshare as ak
-    df = ak.stock_board_concept_name_em()
-    concepts = []
-    for _, row in df.iterrows():
-        code = str(row.get("板块代码", "")).strip()
-        name = str(row.get("板块名称", "")).strip()
-        if code and name:
-            concepts.append({"code": code, "name": name})
-    return concepts
-
-
-def _fetch_akshare_concept_stocks(concept_code):
-    """Fetch all stocks in a concept block from akshare."""
-    import akshare as ak
-    df = ak.stock_board_concept_cons_em(symbol=concept_code)
-    stocks = []
-    for _, row in df.iterrows():
-        code = str(row.get("代码", "")).strip()
-        name = str(row.get("名称", "")).strip()
-        # akshare returns code with market suffix like "688017.SH"
-        code = code.split('.')[0]
-        if code:
-            stocks.append({"code": code, "name": name})
-    return stocks
-
-
 # ─── Public API ─────────────────────────────────────────────────────────────
 
 def sync_single_concept(concept_name):
     """Sync a single concept by name."""
-    # Step 1: Search for concept by name (akshare primary, Eastmoney fallback)
+    # Step 1: Search for concept by name (Eastmoney direct; akshare removed)
     concepts = None
     try:
-        concepts = _fetch_akshare_concept_list()
-        _log(f"akshare concept list: {len(concepts)} concepts")
+        concepts = _fetch_eastmoney_concept_list()
+        _log(f"Eastmoney concept list: {len(concepts)} concepts")
     except Exception as e:
-        _log(f"akshare concept list failed: {e}")
-        try:
-            concepts = _fetch_eastmoney_concept_list()
-            _log(f"Fallback to Eastmoney concept list: {len(concepts)} concepts")
-        except Exception as e2:
-            _log(f"Eastmoney fallback also failed: {e2}")
-            print(json.dumps({"error": f"All sources failed: {e2}"}, ensure_ascii=False))
-            return 0
+        _log(f"Eastmoney concept list failed: {e}")
+        print(json.dumps({"error": f"Concept list fetch failed: {e}"}, ensure_ascii=False))
+        return 0
 
     matched = [c for c in concepts if c["name"] == concept_name]
     if not matched:
@@ -207,16 +172,12 @@ def sync_single_concept(concept_name):
     actual_name = concept["name"]
     concept_code = concept["code"]
 
-    # Step 2: Fetch stocks (akshare primary, Eastmoney fallback)
+    # Step 2: Fetch stocks (Eastmoney direct)
     stocks = []
     try:
-        stocks = _fetch_akshare_concept_stocks(concept_code)
+        stocks = _fetch_eastmoney_concept_stocks(concept_code)
     except Exception as e:
-        _log(f"akshare concept stocks failed: {e}")
-        try:
-            stocks = _fetch_eastmoney_concept_stocks(concept_code)
-        except Exception as e2:
-            _log(f"Eastmoney fallback also failed: {e2}")
+        _log(f"Eastmoney concept stocks failed: {e}")
 
     count = _save_concept_stocks(actual_name, stocks)
     print(json.dumps({"concept": actual_name, "count": count}, ensure_ascii=False))
@@ -227,17 +188,12 @@ def sync_all_concepts():
     """Sync all concepts."""
     concepts = None
     try:
-        concepts = _fetch_akshare_concept_list()
-        _log(f"[sync_concepts] akshare concept list: {len(concepts)} concepts")
+        concepts = _fetch_eastmoney_concept_list()
+        _log(f"[sync_concepts] Eastmoney concept list: {len(concepts)} concepts")
     except Exception as e:
-        _log(f"[sync_concepts] akshare concept list failed: {e}")
-        try:
-            concepts = _fetch_eastmoney_concept_list()
-            _log(f"[sync_concepts] Fallback to Eastmoney: {len(concepts)} concepts")
-        except Exception as e2:
-            _log(f"[sync_concepts] Eastmoney fallback also failed: {e2}")
-            print(json.dumps({"error": str(e2)}, ensure_ascii=False))
-            return {"error": str(e2)}
+        _log(f"[sync_concepts] Eastmoney concept list failed: {e}")
+        print(json.dumps({"error": str(e)}, ensure_ascii=False))
+        return {"error": str(e)}
 
     if not concepts:
         print(json.dumps({"error": "No concepts found"}, ensure_ascii=False))
@@ -259,13 +215,9 @@ def sync_all_concepts():
 
         stocks = []
         try:
-            stocks = _fetch_akshare_concept_stocks(code)
+            stocks = _fetch_eastmoney_concept_stocks(code)
         except Exception as e:
-            _log(f"[sync_concepts] akshare failed for {name}: {e}")
-            try:
-                stocks = _fetch_eastmoney_concept_stocks(code)
-            except Exception as e2:
-                _log(f"[sync_concepts] Eastmoney fallback failed for {name}: {e2}")
+            _log(f"[sync_concepts] Eastmoney failed for {name}: {e}")
 
         for stock in stocks:
             cur.execute(
@@ -290,7 +242,7 @@ def sync_all_concepts():
 
 
 def main():
-    parser = argparse.ArgumentParser(description="Sync concept stocks (akshare primary / Eastmoney fallback, no JoinQuant)")
+    parser = argparse.ArgumentParser(description="Sync concept stocks (Eastmoney HTTP direct)")
     parser.add_argument("--concept", type=str, help="Sync single concept by name")
     parser.add_argument("--all", action="store_true", help="Sync all concepts")
     args = parser.parse_args()

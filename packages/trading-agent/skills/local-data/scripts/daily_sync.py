@@ -73,6 +73,23 @@ def run_all_phases(phases: Optional[List[str]] = None):
             continue
         func()
 
+    # Flag phases with a high skip ratio — a pattern of silent skips (e.g. all
+    # stocks skipping company-type lookup) usually means a data-source or code
+    # regression, not normal per-stock failures.
+    for name, res in _sync_results["phases"].items():
+        detail = res.get("detail") if isinstance(res.get("detail"), dict) else {}
+        synced = detail.get("synced") or 0
+        skipped = detail.get("skipped") or 0
+        failed = detail.get("failed") or 0
+        total = synced + skipped + failed
+        if total > 0 and skipped / total > 0.2:
+            msg = (
+                f"Phase '{name}': {skipped}/{total} items skipped "
+                f"({skipped / total * 100:.0f}%) — check data source or sync logic"
+            )
+            _sync_results["warnings"].append({"phase": name, "message": msg})
+            logger.warning(msg)
+
     # Final summary
     _sync_results["end_time"] = datetime.now().isoformat()
     total_elapsed = (

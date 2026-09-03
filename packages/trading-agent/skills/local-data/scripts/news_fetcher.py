@@ -90,42 +90,14 @@ def fetch_astockdata_eastmoney_news(code: str, limit: int = 10) -> List[Dict]:
 # ── Eastmoney (akshare fallback) ─────────────────────────────────────────────
 
 def fetch_eastmoney_news(code: str, limit: int = 20) -> List[Dict]:
-    """Fetch news for a single stock from Eastmoney (a-stock-data first, akshare fallback)."""
+    """Fetch news for a single stock from Eastmoney (a-stock-data search-api-web direct)."""
     try:
         items = fetch_astockdata_eastmoney_news(code, limit=limit)
         if items:
             return items
     except Exception:
         logger.warning(f"Eastmoney a-stock-data fetch error for {code}", exc_info=True)
-
-    try:
-        import akshare as ak
-        df = ak.stock_news_em(symbol=code)
-        if df is None or df.empty:
-            return []
-
-        results = []
-        # Column order: 关键词, 股票代码, 新闻标题, 发布时间, 新闻来源, 新闻链接
-        cols = df.columns.tolist()
-        for _, row in df.head(limit).iterrows():
-            try:
-                pub_time = str(row.iloc[3]) if len(cols) > 3 else ""
-                results.append({
-                    "code": code,
-                    "title": str(row.iloc[2]) if len(cols) > 2 else "",
-                    "content": "",  # akshare 只返回标题
-                    "source": str(row.iloc[4]) if len(cols) > 4 else "eastmoney",
-                    "source_type": "eastmoney_akshare",
-                    "pub_time": pub_time,
-                    "url": str(row.iloc[5]) if len(cols) > 5 else "",
-                })
-            except Exception:
-                logger.warning(f"Skipping malformed akshare news row for {code}", exc_info=True)
-                continue
-        return results
-    except Exception:
-        logger.warning(f"Eastmoney fetch error for {code}", exc_info=True)
-        return []
+    return []
 
 
 # ── Securities Times (证券时报) ─────────────────────────────────────────────

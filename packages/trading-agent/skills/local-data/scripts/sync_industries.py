@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """
 同步行业分类数据到本地SQLite数据库
-优先: 东方财富HTTP API -> akshare fallback -> 同花顺 fallback (不再依赖JoinQuant)
+优先: 东方财富HTTP API -> 同花顺 fallback
 支持标准: em (Eastmoney行业分类), ths (同花顺行业分类)
 用法: python sync_industries.py [--standard em] [--all]
 """
@@ -129,35 +129,6 @@ def _fetch_eastmoney_industry_stocks(industry_code):
     return all_stocks
 
 
-# ─── akshare fallback helpers ───────────────────────────────────────────────
-
-def _fetch_akshare_industry_list():
-    """Fetch all industry blocks from akshare."""
-    import akshare as ak
-    df = ak.stock_board_industry_name_em()
-    industries = []
-    for _, row in df.iterrows():
-        code = str(row.get("板块代码", "")).strip()
-        name = str(row.get("板块名称", "")).strip()
-        if code and name:
-            industries.append({"code": code, "name": name})
-    return industries
-
-
-def _fetch_akshare_industry_stocks(industry_code):
-    """Fetch all stocks in an industry block from akshare."""
-    import akshare as ak
-    df = ak.stock_board_industry_cons_em(symbol=industry_code)
-    stocks = []
-    for _, row in df.iterrows():
-        code = str(row.get("代码", "")).strip()
-        name = str(row.get("名称", "")).strip()
-        code = code.split('.')[0]
-        if code:
-            stocks.append({"code": code, "name": name})
-    return stocks
-
-
 # ─── Public API ─────────────────────────────────────────────────────────────
 
 def sync_standard(standard, now):
@@ -174,12 +145,8 @@ def sync_standard(standard, now):
         _log(f"[sync_industries] Eastmoney industry list: {len(industries)} industries")
     except Exception as e:
         _log(f"[sync_industries] Eastmoney industry list failed: {e}")
-        try:
-            industries = _fetch_akshare_industry_list()
-            _log(f"[sync_industries] Fallback to akshare: {len(industries)} industries")
-        except Exception as e2:
-            _log(f"[sync_industries] akshare fallback also failed: {e2}")
-            return {"standard": standard, "error": str(e2)}
+        # akshare removed as a data source; sync_all_standards falls back to THS
+        return {"standard": standard, "error": f"Eastmoney industry list failed: {e}"}
 
     if not industries:
         return {"standard": standard, "error": "No industries found"}
@@ -211,10 +178,6 @@ def sync_standard(standard, now):
             stocks = _fetch_eastmoney_industry_stocks(code)
         except Exception as e:
             _log(f"[sync_industries] Eastmoney failed for {name}: {e}")
-            try:
-                stocks = _fetch_akshare_industry_stocks(code)
-            except Exception as e2:
-                _log(f"[sync_industries] akshare fallback failed for {name}: {e2}")
 
         for stock in stocks:
             stock_code = stock.get("code", "")
@@ -298,7 +261,7 @@ def sync_all_standards():
 
 
 def main():
-    parser = argparse.ArgumentParser(description="Sync industry classifications (Eastmoney/akshare, no JoinQuant)")
+    parser = argparse.ArgumentParser(description="Sync industry classifications (Eastmoney HTTP / THS direct)")
     parser.add_argument("--standard", type=str, help="Sync single standard: em")
     parser.add_argument("--all", action="store_true", help="Sync all standards")
     args = parser.parse_args()
