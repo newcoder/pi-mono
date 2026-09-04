@@ -1,0 +1,49 @@
+- generic [ref=e3]:
+  - generic [ref=e4]:
+    - generic [ref=e47]: 上证指数 4177.92 ▼-1.52%
+    - generic [ref=e48]: "|"
+    - generic [ref=e49]: 沪深300 4914.60 ▼-1.68%
+    - generic [ref=e50]: "|"
+    - generic [ref=e51]: 科创50 1725.09 ▼-2.54%
+    - generic [ref=e52]: "|"
+    - generic [ref=e53]: 中证500 8670.16 ▼-2.78%
+    - generic [ref=e54]: "|"
+    - generic [ref=e55]: 深证成指 15745.74 ▼-2.14%
+    - generic [ref=e56]: "|"
+    - generic [ref=e57]: 创业板指 3951.14 ▼-2.16%
+  - generic [ref=e7]: "市场情绪: 加载中..."
+  - generic [ref=e8]:
+    - generic [ref=e9]: research
+    - generic [ref=e10]: 已连接
+  - generic [ref=e11]:
+    - generic [ref=e13]:
+      - generic [ref=e14]: 股票池
+      - generic [ref=e15]:
+        - generic [ref=e16] [cursor=pointer]:
+          - generic [ref=e17]:
+            - generic [ref=e18]: 日线多头排列市值TOP10
+            - button "×" [ref=e19]
+          - generic [ref=e20]: 10 只
+        - generic [ref=e21] [cursor=pointer]:
+          - generic [ref=e22]:
+            - generic [ref=e23]: 日线MACD金叉_本周周线金叉预备队
+            - button "×" [ref=e24]
+          - generic [ref=e25]: 100 只
+        - generic [ref=e26] [cursor=pointer]:
+          - generic [ref=e27]:
+            - generic [ref=e28]: 周线RSI低位_即将金叉预备队
+            - button "×" [ref=e29]
+          - generic [ref=e30]: 51 只
+        - generic [ref=e31] [cursor=pointer]:
+          - generic [ref=e32]:
+            - generic [ref=e33]: 2025年报营收利润双增长Top10
+            - button "×" [ref=e34]
+          - generic [ref=e35]: 10 只
+        - generic [ref=e36] [cursor=pointer]:
+          - generic [ref=e37]:
+            - generic [ref=e38]: PE小于20且市值大于100亿
+            - button "×" [ref=e39]
+          - generic [ref=e40]: 50 只
+    - generic [ref=e44]:
+      - textbox "输入消息..." [active] [ref=e45]: 最新的一季报
+      - button "发送" [ref=e46]

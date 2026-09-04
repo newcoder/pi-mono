@@ -1,0 +1,329 @@
+- generic [ref=e3]:
+  - generic [ref=e4]:
+    - generic [ref=e5]:
+      - generic [ref=e6]: π
+      - generic [ref=e7]: Trading Agent
+    - generic [ref=e8]:
+      - generic [ref=e64] [cursor=pointer]:
+        - generic [ref=e65]: 上证指数
+        - generic [ref=e66]: "4145.37"
+        - generic [ref=e67]: ▼
+        - generic [ref=e68]: "-0.17%"
+      - generic [ref=e69] [cursor=pointer]:
+        - generic [ref=e70]: 沪深300
+        - generic [ref=e71]: "4947.85"
+        - generic [ref=e72]: ▲
+        - generic [ref=e73]: 0.53%
+      - generic [ref=e74] [cursor=pointer]:
+        - generic [ref=e75]: 科创50
+        - generic [ref=e76]: "1867.71"
+        - generic [ref=e77]: ▼
+        - generic [ref=e78]: "-1.49%"
+      - generic [ref=e79] [cursor=pointer]:
+        - generic [ref=e80]: 中证500
+        - generic [ref=e81]: "8658.62"
+        - generic [ref=e82]: ▼
+        - generic [ref=e83]: "-0.52%"
+      - generic [ref=e84] [cursor=pointer]:
+        - generic [ref=e85]: 深证成指
+        - generic [ref=e86]: "15876.16"
+        - generic [ref=e87]: ▲
+        - generic [ref=e88]: 0.12%
+      - generic [ref=e89] [cursor=pointer]:
+        - generic [ref=e90]: 创业板指
+        - generic [ref=e91]: "4043.07"
+        - generic [ref=e92]: ▲
+        - generic [ref=e93]: 0.55%
+  - generic [ref=e10]:
+    - generic [ref=e11]: RESEARCH
+    - textbox "搜索股票 (代码/名称/拼音)" [ref=e13]
+  - generic [ref=e14]:
+    - generic [ref=e15]:
+      - generic [ref=e17]: 股票池
+      - generic [ref=e18]:
+        - generic [ref=e19]:
+          - generic [ref=e94] [cursor=pointer]:
+            - generic [ref=e95]:
+              - generic [ref=e96]: 周线多头日线缩量调整市值TOP20
+              - button "×" [ref=e97]
+            - generic [ref=e98]: 20 只
+          - generic [ref=e99] [cursor=pointer]:
+            - generic [ref=e100]:
+              - generic [ref=e101]: 同花顺强势股_2026-05-26
+              - button "×" [ref=e102]
+            - generic [ref=e103]: 64 只
+          - generic [ref=e104] [cursor=pointer]:
+            - generic [ref=e105]:
+              - generic [ref=e106]: 同花顺强势股_20260526
+              - button "×" [ref=e107]
+            - generic [ref=e108]: 50 只
+          - generic [ref=e109] [cursor=pointer]:
+            - generic [ref=e110]:
+              - generic [ref=e111]: DoubleEnsemble_Top30_Prob
+              - button "×" [ref=e112]
+            - generic [ref=e113]: 30 只
+          - generic [ref=e114] [cursor=pointer]:
+            - generic [ref=e115]:
+              - generic [ref=e116]: lgbm_40_60
+              - button "×" [ref=e117]
+            - generic [ref=e118]: 21 只
+          - generic [ref=e119] [cursor=pointer]:
+            - generic [ref=e120]:
+              - generic [ref=e121]: LGBM Rank 40-60
+              - button "×" [ref=e122]
+            - generic [ref=e123]: 21 只
+          - generic [ref=e124] [cursor=pointer]:
+            - generic [ref=e125]:
+              - generic [ref=e126]: 周线多头日线缩量回调_202605
+              - button "×" [ref=e127]
+            - generic [ref=e128]: 30 只
+          - generic [ref=e129] [cursor=pointer]:
+            - generic [ref=e130]:
+              - generic [ref=e131]: 最近访问
+              - button "×" [ref=e132]
+            - generic [ref=e133]: 135 只
+          - generic [ref=e134] [cursor=pointer]:
+            - generic [ref=e135]:
+              - generic [ref=e136]: 未来关注股池
+              - button "×" [ref=e137]
+            - generic [ref=e138]: 50 只
+          - generic [ref=e139] [cursor=pointer]:
+            - generic [ref=e140]:
+              - generic [ref=e141]: 周线多头日线回调缩量
+              - button "×" [ref=e142]
+            - generic [ref=e143]: 50 只
+          - generic [ref=e144] [cursor=pointer]:
+            - generic [ref=e145]:
+              - generic [ref=e146]: 前期强势缩量调整
+              - button "×" [ref=e147]
+            - generic [ref=e148]: 50 只
+          - generic [ref=e149] [cursor=pointer]:
+            - generic [ref=e150]:
+              - generic [ref=e151]: 营收连续两年增长超50%
+              - button "×" [ref=e152]
+            - generic [ref=e153]: 45 只
+          - generic [ref=e154] [cursor=pointer]:
+            - generic [ref=e155]:
+              - generic [ref=e156]: 日线多头排列市值TOP10
+              - button "×" [ref=e157]
+            - generic [ref=e158]: 10 只
+        - generic [ref=e159]:
+          - generic [ref=e160]: 📂
+          - generic [ref=e161]: 选择股票池查看个股
+    - generic [ref=e22]:
+      - generic [ref=e26]:
+        - generic [ref=e27]: 工具调用
+        - button "收起" [ref=e28] [cursor=pointer]:
+          - img [ref=e29]
+      - generic [ref=e33]:
+        - button "附件" [active] [ref=e34] [cursor=pointer]:
+          - img [ref=e35]
+        - button "Choose File"
+        - textbox "输入消息..." [ref=e37]
+        - button "发送" [ref=e38] [cursor=pointer]:
+          - img [ref=e39]
+    - generic [ref=e42]:
+      - generic [ref=e43]:
+        - generic [ref=e44] [cursor=pointer]:
+          - generic [ref=e45]: 📅 投资日历
+          - generic [ref=e46]:
+            - button "刷新日历数据" [ref=e47]:
+              - img [ref=e48]
+            - img [ref=e51]
+        - generic [ref=e54]:
+          - generic [ref=e162]:
+            - button "<" [ref=e163] [cursor=pointer]
+            - generic [ref=e164]: 2026年5月
+            - button ">" [ref=e165] [cursor=pointer]
+          - generic [ref=e166]:
+            - generic [ref=e167]: 日
+            - generic [ref=e168]: 一
+            - generic [ref=e169]: 二
+            - generic [ref=e170]: 三
+            - generic [ref=e171]: 四
+            - generic [ref=e172]: 五
+            - generic [ref=e173]: 六
+          - generic [ref=e174]:
+            - generic [ref=e181] [cursor=pointer]: "1"
+            - generic [ref=e183] [cursor=pointer]: "2"
+            - generic [ref=e185] [cursor=pointer]: "3"
+            - generic [ref=e187] [cursor=pointer]: "4"
+            - generic [ref=e189] [cursor=pointer]: "5"
+            - generic [ref=e191] [cursor=pointer]: "6"
+            - generic [ref=e193] [cursor=pointer]: "7"
+            - generic [ref=e195] [cursor=pointer]: "8"
+            - generic [ref=e197] [cursor=pointer]: "9"
+            - generic [ref=e199] [cursor=pointer]: "10"
+            - generic [ref=e201] [cursor=pointer]: "11"
+            - generic [ref=e203] [cursor=pointer]: "12"
+            - generic [ref=e205] [cursor=pointer]: "13"
+            - generic [ref=e207] [cursor=pointer]: "14"
+            - generic [ref=e209] [cursor=pointer]: "15"
+            - generic [ref=e211] [cursor=pointer]: "16"
+            - generic [ref=e213] [cursor=pointer]: "17"
+            - generic [ref=e215] [cursor=pointer]: "18"
+            - generic [ref=e219] [cursor=pointer]: "19"
+            - generic [ref=e221] [cursor=pointer]: "20"
+            - generic [ref=e223] [cursor=pointer]: "21"
+            - generic [ref=e227] [cursor=pointer]: "22"
+            - generic [ref=e229] [cursor=pointer]: "23"
+            - generic [ref=e231] [cursor=pointer]: "24"
+            - generic [ref=e233] [cursor=pointer]: "25"
+            - generic [ref=e237] [cursor=pointer]: "26"
+            - generic [ref=e239] [cursor=pointer]: "27"
+            - generic [ref=e241] [cursor=pointer]: "28"
+            - generic [ref=e243] [cursor=pointer]: "29"
+            - generic [ref=e245] [cursor=pointer]: "30"
+            - generic [ref=e247] [cursor=pointer]: "31"
+          - generic [ref=e248]:
+            - generic [ref=e249]: 本月重点关注
+            - generic [ref=e250] [cursor=pointer]:
+              - generic [ref=e251]:
+                - generic [ref=e253]: 05-18
+                - generic [ref=e254]: 新天力 业绩预告
+              - generic [ref=e255]: "公告日期: 20260518; 报告期[20260331]: 2026年一季报"
+            - generic [ref=e256] [cursor=pointer]:
+              - generic [ref=e257]:
+                - generic [ref=e259]: 05-21
+                - generic [ref=e260]: 高特电子 业绩预告
+              - generic [ref=e261]: "公告日期: 20260521; 报告期[20260331]: 2026年一季报"
+            - generic [ref=e262] [cursor=pointer]:
+              - generic [ref=e263]:
+                - generic [ref=e265]: 05-21
+                - generic [ref=e266]: 惠康科技 业绩预告
+              - generic [ref=e267]: "最新价: 89.18; 最新涨跌幅: 0.314961; 公告日期: 20260521; 报告期[20260331]: 2026年一季报; 净利润增长率上限[20260331]: 9.8"
+            - generic [ref=e268] [cursor=pointer]:
+              - generic [ref=e269]:
+                - generic [ref=e271]: 05-21
+                - generic [ref=e272]: 新睿电子 业绩预告
+              - generic [ref=e273]: "公告日期: 20260521; 报告期[20260331]: 2026年一季报"
+            - generic [ref=e274] [cursor=pointer]:
+              - generic [ref=e275]:
+                - generic [ref=e277]: 05-25
+                - generic [ref=e278]: 彩客科技 业绩预告
+              - generic [ref=e279]: "公告日期: 20260525; 报告期[20260331]: 2026年一季报"
+      - generic [ref=e55]:
+        - generic [ref=e56] [cursor=pointer]:
+          - generic [ref=e57]: 📰 财经新闻
+          - img [ref=e58]
+        - generic [ref=e61]:
+          - generic "【风口研报·公司】切入光刻材料+光刻机设备赛道，这家公司“化工+半导体”双轨发展，把握国内精密光学行业发展机遇；这家全球AI视觉领军者AI战略提速，核心算法持续优化，产品逐步向生产力平台升级" [ref=e280] [cursor=pointer]:
+            - generic [ref=e281]:
+              - generic [ref=e282]: 财联社
+              - generic [ref=e283]: 05-26 20:20
+            - generic [ref=e284]: 【风口研报·公司】切入光刻材料+光刻机设备赛道，这家公司“化工+半导体”双轨发展，把握国内精密光学行业发展机遇；这家全球AI视觉领军者AI战略提速，核心算法持续优化，产品逐步向生产力平台升级
+            - generic [ref=e285]: ①切入光刻材料+光刻机设备赛道，这家公司“化工+半导体”双轨发展，把握国内精密光学行业发展机遇；②这家全球AI视觉领军者AI战略提速，核心算法持续优化，产品逐步向生产力平台升级，积极拓展下游新应用领域。
+          - generic "全球最大铝土矿生产国拟管控出口 铝土矿价格近乎腰斩" [ref=e286] [cursor=pointer]:
+            - generic [ref=e287]:
+              - generic [ref=e288]: 财联社
+              - generic [ref=e289]: 05-26 20:19
+            - generic [ref=e290]: 全球最大铝土矿生产国拟管控出口 铝土矿价格近乎腰斩
+            - generic [ref=e291]: 【全球最大铝土矿生产国拟管控出口 铝土矿价格近乎腰斩】财联社5月26日电，铝土矿是生产金属铝的主要原料，近期价格一度走低。据彭博社25日报道，全球最大铝土矿生产国几内亚计划于下月出台改革措施，管控铝土矿出口，以提振这一矿产的价格。彭博社的报...
+          - generic "财联社5月26日电，白宫经济顾问哈塞特谈AI表示，私营部门正与政府就相关问题展开合作。" [ref=e292] [cursor=pointer]:
+            - generic [ref=e293]:
+              - generic [ref=e294]: 财联社
+              - generic [ref=e295]: 05-26 20:19
+            - generic [ref=e296]: 财联社5月26日电，白宫经济顾问哈塞特谈AI表示，私营部门正与政府就相关问题展开合作。
+            - generic [ref=e297]: 财联社5月26日电，白宫经济顾问哈塞特谈AI表示，私营部门正与政府就相关问题展开合作，政府对新的AI模型保持关注。
+          - generic "南方电网电力负荷提前一个月创新高 形成“三峰并行”新特征" [ref=e298] [cursor=pointer]:
+            - generic [ref=e299]:
+              - generic [ref=e300]: 财联社
+              - generic [ref=e301]: 05-26 20:16
+            - generic [ref=e302]: 南方电网电力负荷提前一个月创新高 形成“三峰并行”新特征
+            - generic [ref=e303]: 【南方电网电力负荷提前一个月创新高 形成“三峰并行”新特征】财联社5月26日电，南方电网最新统计数据显示，5月25日20时21分，南方电网电力负荷刷新历史最高纪录，较历史峰值增加183万千瓦。本次负荷新高较往年提前近一个月，打破2020年至...
+          - generic "OKLO股价盘前上涨11.4%" [ref=e304]:
+            - generic [ref=e305]:
+              - generic [ref=e306]: 东财7x24
+              - generic [ref=e307]: 05-26 20:16
+            - generic [ref=e308]: OKLO股价盘前上涨11.4%
+            - generic [ref=e309]: OKLO股价盘前上涨11.4%。
+          - generic "华峰测控：股东拟询价转让1%公司股份" [ref=e310]:
+            - generic [ref=e311]:
+              - generic [ref=e312]: 东财7x24
+              - generic [ref=e313]: 05-26 20:15
+            - generic [ref=e314]: 华峰测控：股东拟询价转让1%公司股份
+            - generic [ref=e315]: 【华峰测控：股东拟询价转让1%公司股份】华峰测控(688200.SH)公告称，股东中国时代远望科技有限公司拟通过询价转让方式转让135.56万股，占公司总股本的1.00%，转让原因为自身资金需求。本次询价转让不通过集中竞价或大宗交易方式，受...
+          - generic "华峰测控：股东拟询价转让1%公司股份" [ref=e316] [cursor=pointer]:
+            - generic [ref=e317]:
+              - generic [ref=e318]: 财联社
+              - generic [ref=e319]: 05-26 20:15
+            - generic [ref=e320]: 华峰测控：股东拟询价转让1%公司股份
+            - generic [ref=e321]: 【华峰测控：股东拟询价转让1%公司股份】《科创板日报》26日讯，华峰测控(688200.SH)公告称，股东中国时代远望科技有限公司拟通过询价转让方式转让135.56万股，占公司总股本的1.00%，转让原因为自身资金需求。本次询价转让不通过集...
+          - generic "晶科能源与开喜国际签署缅甸100MW飞虎3分销协议" [ref=e322]:
+            - generic [ref=e323]:
+              - generic [ref=e324]: 东财7x24
+              - generic [ref=e325]: 05-26 20:14
+            - generic [ref=e326]: 晶科能源与开喜国际签署缅甸100MW飞虎3分销协议
+            - generic [ref=e327]: 【晶科能源与开喜国际签署缅甸100MW飞虎3分销协议】晶科能源与缅甸EPC总包企业开喜国际新能源（缅甸）实业有限公司正式签署100MW飞虎3（TigerNeo3.0）组件分销协议，专项服务于缅甸的工商业分布式光伏项目。
+          - generic "泰国警方提醒外国公民赴泰工作谨防诈骗陷阱" [ref=e328]:
+            - generic [ref=e329]:
+              - generic [ref=e330]: 东财7x24
+              - generic [ref=e331]: 05-26 20:12
+            - generic [ref=e332]: 泰国警方提醒外国公民赴泰工作谨防诈骗陷阱
+            - generic [ref=e333]: 【泰国警方提醒外国公民赴泰工作谨防诈骗陷阱】泰国警方26日在新闻发布会上提醒外国公民，如有人以旅游签证或免签方式邀请赴泰工作，并承担全部费用，应警惕是否为诈骗陷阱。如赴泰工作必须依法申请工作签证，并核实招聘机构是否真实可靠。
+          - generic "伊朗强烈谴责美国违反停火" [ref=e334]:
+            - generic [ref=e335]:
+              - generic [ref=e336]: 东财7x24
+              - generic [ref=e337]: 05-26 20:11
+            - generic [ref=e338]: 伊朗强烈谴责美国违反停火
+            - generic [ref=e339]: 【伊朗强烈谴责美国违反停火】伊朗外交部26日发表声明，强烈谴责美国在与伊朗停火后继续采取“非法和挑衅性行动”，美方相关行为已明显违反停火。
+          - generic "教育部：不断满足随迁子女上好学的需求" [ref=e340]:
+            - generic [ref=e341]:
+              - generic [ref=e342]: 东财7x24
+              - generic [ref=e343]: 05-26 20:10
+            - generic [ref=e344]: 教育部：不断满足随迁子女上好学的需求
+            - generic [ref=e345]: 【教育部：不断满足随迁子女上好学的需求】国务院新闻办26日举行政策例行吹风会，介绍《关于推行常住地提供基本公共服务的实施意见》有关情况，教育部相关负责人表示，将针对随迁子女的教育问题，实施具体保障措施，不断满足随迁子女上好学的需求。
+          - generic "匈牙利央行维持基准利率不变" [ref=e346]:
+            - generic [ref=e347]:
+              - generic [ref=e348]: 东财7x24
+              - generic [ref=e349]: 05-26 20:10
+            - generic [ref=e350]: 匈牙利央行维持基准利率不变
+            - generic [ref=e351]: 【匈牙利央行维持基准利率不变】匈牙利央行将基准利率维持在6.25%不变。
+          - generic "伊朗强烈谴责美国违反停火" [ref=e352] [cursor=pointer]:
+            - generic [ref=e353]:
+              - generic [ref=e354]: 财联社
+              - generic [ref=e355]: 05-26 20:10
+            - generic [ref=e356]: 伊朗强烈谴责美国违反停火
+            - generic [ref=e357]: 【伊朗强烈谴责美国违反停火】财联社5月26日电，伊朗外交部26日发表声明，强烈谴责美国在与伊朗停火后继续采取“非法和挑衅性行动”，美方相关行为已明显违反停火。声明说，自伊美4月8日宣布停火以来，尤其是在本声明发出前48小时内，美方多次对伊朗...
+          - generic "仕佳光子：终止购买福可喜玛通讯公司事项" [ref=e358] [cursor=pointer]:
+            - generic [ref=e359]:
+              - generic [ref=e360]: 财联社
+              - generic [ref=e361]: 05-26 20:09
+            - generic [ref=e362]: 仕佳光子：终止购买福可喜玛通讯公司事项
+            - generic [ref=e363]: 【仕佳光子：终止购买福可喜玛通讯公司事项】《科创板日报》26日讯，仕佳光子(688313.SH)公告称，公司决定终止发行股份及支付现金购买东莞福可喜玛通讯科技有限公司股权并募集配套资金事项。因交易各方未能就交易方案、交易价格、业绩承诺等关键...
+          - generic "仕佳光子：终止购买福可喜玛通讯公司事项" [ref=e364]:
+            - generic [ref=e365]:
+              - generic [ref=e366]: 东财7x24
+              - generic [ref=e367]: 05-26 20:09
+            - generic [ref=e368]: 仕佳光子：终止购买福可喜玛通讯公司事项
+            - generic [ref=e369]: 【仕佳光子：终止购买福可喜玛通讯公司事项】仕佳光子(688313.SH)公告称，公司决定终止发行股份及支付现金购买东莞福可喜玛通讯科技有限公司股权并募集配套资金事项。因交易各方未能就交易方案、交易价格、业绩承诺等关键事项达成一致，为维护公司...
+          - generic "哈伊高铁电力“大动脉”全线贯通" [ref=e370] [cursor=pointer]:
+            - generic [ref=e371]:
+              - generic [ref=e372]: 财联社
+              - generic [ref=e373]: 05-26 20:08
+            - generic [ref=e374]: 哈伊高铁电力“大动脉”全线贯通
+            - generic [ref=e375]: 【哈伊高铁电力“大动脉”全线贯通】财联社5月26日电，26日17时36分，随着国网黑龙江省电力有限公司电力调度控制中心下达调度指令，220千伏绥化东富牵引站外部供电工程顺利投运。至此，哈伊高铁全线7座220千伏牵引站全部带电运行，标志着哈伊...
+          - generic "5月26日周二《新闻联播》要闻22条" [ref=e376] [cursor=pointer]:
+            - generic [ref=e377]:
+              - generic [ref=e378]: 财联社
+              - generic [ref=e379]: 05-26 20:07
+            - generic [ref=e380]: 5月26日周二《新闻联播》要闻22条
+            - generic [ref=e381]: 【5月26日周二《新闻联播》要闻22条】财联社5月26日电，今天《新闻联播》主要内容有： 1、习近平为塞尔维亚总统举行“友谊勋章”颁授仪式； 2、第21届联合国卫塞节在中国无锡开幕 王沪宁致信祝贺； 3、韩正同巴基斯坦总理共同出席庆祝中巴建...
+          - generic "伊朗：绝不会对任何侵略置之不理" [ref=e382]:
+            - generic [ref=e383]:
+              - generic [ref=e384]: 东财7x24
+              - generic [ref=e385]: 05-26 20:06
+            - generic [ref=e386]: 伊朗：绝不会对任何侵略置之不理
+            - generic [ref=e387]: 【伊朗：绝不会对任何侵略置之不理】伊朗外交部26日发表声明说，伊朗“绝不会对任何侵略置之不理”，并在保卫人民方面“不会有丝毫迟疑”。
+          - generic "佰维存储：拟与关联方继续共同向北京行云集成电路有限公司增资" [ref=e388]:
+            - generic [ref=e389]:
+              - generic [ref=e390]: 东财7x24
+              - generic [ref=e391]: 05-26 20:06
+            - generic [ref=e392]: 佰维存储：拟与关联方继续共同向北京行云集成电路有限公司增资
+            - generic [ref=e393]: 【佰维存储：拟与关联方继续共同向北京行云集成电路有限公司增资】5月26日，佰维存储公告，在综合考虑行云的发展潜力后，公司的全资子公司海南南佰算、徐林仙、何瀚拟继续向北京行云集成电路有限公司分别增资1000万元、595万元、405万元。
+          - generic "财联社5月26日电，波罗的海干散货指数上涨3.14%，至3085点。" [ref=e394] [cursor=pointer]:
+            - generic [ref=e395]:
+              - generic [ref=e396]: 财联社
+              - generic [ref=e397]: 05-26 20:03
+            - generic [ref=e398]: 财联社5月26日电，波罗的海干散货指数上涨3.14%，至3085点。
+            - generic [ref=e399]: 财联社5月26日电，波罗的海干散货指数上涨3.14%，至3085点。

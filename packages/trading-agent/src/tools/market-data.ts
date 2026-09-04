@@ -2,7 +2,7 @@ import type { AgentTool } from "@mariozechner/pi-agent-core";
 import { Type } from "@sinclair/typebox";
 import { getDataStore, getDataSync } from "../data/index.js";
 import type { AdjustFactorRow, KlineRow } from "../data/types.js";
-import { formatNumber, runJsonScript } from "./_utils.js";
+import { formatNumber, runLocalDataJsonScript } from "./_utils.js";
 
 // ─── Parameter Schemas ──────────────────────────────────────────
 
@@ -121,7 +121,7 @@ function toISODate(ymd: string): string {
 	return `${ymd.slice(0, 4)}-${ymd.slice(4, 6)}-${ymd.slice(6, 8)}`;
 }
 
-function applyAdjustment(klines: KlineRow[], factors: AdjustFactorRow[], adjust: string): KlineRow[] {
+export function applyAdjustment(klines: KlineRow[], factors: AdjustFactorRow[], adjust: string): KlineRow[] {
 	if (adjust === "bfq") return klines;
 
 	// Build date -> factor lookup with forward-fill
@@ -151,7 +151,7 @@ function applyAdjustment(klines: KlineRow[], factors: AdjustFactorRow[], adjust:
 	});
 }
 
-function round(v: number, digits = 4): number {
+export function round(v: number, digits = 4): number {
 	const mult = 10 ** digits;
 	return Math.round(v * mult) / mult;
 }
@@ -184,12 +184,14 @@ function formatKline(data: any): string {
 	if (!k || k.length === 0) return "暂无K线数据";
 	const head = k[0];
 	const tail = k[k.length - 1];
+	const fullFirst = data.firstDate ?? head.date;
+	const fullLast = data.lastDate ?? tail.date;
 	return [
-		`【${data.code} ${data.market} ${data.period} K线】共${data.count}条`,
-		`区间: ${head.date} ~ ${tail.date}`,
+		`【${data.code} ${data.market} ${data.period} K线】共${data.count}条（显示最近${k.length}条）`,
+		`完整区间: ${fullFirst} ~ ${fullLast}`,
 		`首条: 开${head.open} 收${head.close} 高${head.high} 低${head.low}`,
 		`末条: 开${tail.open} 收${tail.close} 高${tail.high} 低${tail.low}`,
-		`累计涨跌: ${(((tail.close - head.close) / head.close) * 100).toFixed(2)}%`,
+		`显示区间涨跌: ${(((tail.close - head.close) / head.close) * 100).toFixed(2)}%`,
 	].join("\n");
 }
 
@@ -479,7 +481,7 @@ export const getFundamentalsTool: AgentTool<typeof getFundamentalsParams, Fundam
 		if (history) {
 			args.push("--history", "--limit", "12");
 		}
-		const data = await runJsonScript("get_fundamentals.py", args, history ? 120_000 : undefined);
+		const data = await runLocalDataJsonScript("get_fundamentals.py", args, history ? 120_000 : undefined);
 		return {
 			content: [
 				{
@@ -618,7 +620,7 @@ export const getKlineTool: AgentTool<typeof getKlineParams, KlineDetails> = {
 				const args = [params.code, "--market", String(market), "--period", period, "--adjust", adjust];
 				args.push("--start", defaultStart);
 				args.push("--end", defaultEnd);
-				const data = await runJsonScript("get_kline.py", args);
+				const data = await runLocalDataJsonScript("get_kline.py", args);
 				klines = data.klines || [];
 			}
 		}
@@ -631,6 +633,8 @@ export const getKlineTool: AgentTool<typeof getKlineParams, KlineDetails> = {
 			period,
 			count: klines.length,
 			klines: displayKlines,
+			firstDate: klines.length > 0 ? klines[0].date : undefined,
+			lastDate: klines.length > 0 ? klines[klines.length - 1].date : undefined,
 		};
 
 		return {

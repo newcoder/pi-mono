@@ -1,0 +1,334 @@
+- generic [ref=e3]:
+  - generic [ref=e4]:
+    - generic [ref=e5]:
+      - generic [ref=e6]: π
+      - generic [ref=e7]: Trading Agent
+    - generic [ref=e8]:
+      - generic [ref=e399] [cursor=pointer]:
+        - generic [ref=e400]: 上证指数
+        - generic [ref=e401]: "4083.62"
+        - generic [ref=e402]: ▼
+        - generic [ref=e403]: "-0.37%"
+      - generic [ref=e404] [cursor=pointer]:
+        - generic [ref=e405]: 沪深300
+        - generic [ref=e406]: "4917.02"
+        - generic [ref=e407]: ▲
+        - generic [ref=e408]: 0.06%
+      - generic [ref=e409] [cursor=pointer]:
+        - generic [ref=e410]: 科创50
+        - generic [ref=e411]: "1777.24"
+        - generic [ref=e412]: ▼
+        - generic [ref=e413]: "-3.63%"
+      - generic [ref=e414] [cursor=pointer]:
+        - generic [ref=e415]: 中证500
+        - generic [ref=e416]: "8425.69"
+        - generic [ref=e417]: ▼
+        - generic [ref=e418]: "-1.61%"
+      - generic [ref=e419] [cursor=pointer]:
+        - generic [ref=e420]: 深证成指
+        - generic [ref=e421]: "15704.05"
+        - generic [ref=e422]: ▼
+        - generic [ref=e423]: "-0.99%"
+      - generic [ref=e424] [cursor=pointer]:
+        - generic [ref=e425]: 创业板指
+        - generic [ref=e426]: "4077.94"
+        - generic [ref=e427]: ▼
+        - generic [ref=e428]: "-1.14%"
+  - generic [ref=e10]:
+    - generic [ref=e11]: RESEARCH
+    - textbox "搜索股票 (代码/名称/拼音)" [ref=e13]
+  - generic [ref=e14]:
+    - generic [ref=e15]:
+      - generic [ref=e17]: 股票池
+      - generic [ref=e18]:
+        - generic [ref=e19]:
+          - generic [ref=e98] [cursor=pointer]:
+            - generic [ref=e99]:
+              - generic [ref=e100]: LGB预测Top10_2026-05-28
+              - button "×" [ref=e101]
+            - generic [ref=e102]: 10 只
+          - generic [ref=e103] [cursor=pointer]:
+            - generic [ref=e104]:
+              - generic [ref=e105]: 雷达风险股_2026-05-28
+              - button "×" [ref=e106]
+            - generic [ref=e107]: 23 只
+          - generic [ref=e108] [cursor=pointer]:
+            - generic [ref=e109]:
+              - generic [ref=e110]: 雷达机会股_2026-05-28
+              - button "×" [ref=e111]
+            - generic [ref=e112]: 29 只
+          - generic [ref=e113] [cursor=pointer]:
+            - generic [ref=e114]:
+              - generic [ref=e115]: DE模型预测股池TOP50_2026-05-27
+              - button "×" [ref=e116]
+            - generic [ref=e117]: 50 只
+          - generic [ref=e118] [cursor=pointer]:
+            - generic [ref=e119]:
+              - generic [ref=e120]: DE模型预测股池_2026-05-27
+              - button "×" [ref=e121]
+            - generic [ref=e122]: 7 只
+          - generic [ref=e123] [cursor=pointer]:
+            - generic [ref=e124]:
+              - generic [ref=e125]: 最近访问
+              - button "×" [ref=e126]
+            - generic [ref=e127]: 23 只
+          - generic [ref=e128] [cursor=pointer]:
+            - generic [ref=e129]:
+              - generic [ref=e130]: 周线多头日线缩量调整市值TOP20
+              - button "×" [ref=e131]
+            - generic [ref=e132]: 20 只
+          - generic [ref=e133] [cursor=pointer]:
+            - generic [ref=e134]:
+              - generic [ref=e135]: 同花顺强势股_2026-05-26
+              - button "×" [ref=e136]
+            - generic [ref=e137]: 64 只
+          - generic [ref=e138] [cursor=pointer]:
+            - generic [ref=e139]:
+              - generic [ref=e140]: 同花顺强势股_20260526
+              - button "×" [ref=e141]
+            - generic [ref=e142]: 50 只
+          - generic [ref=e143] [cursor=pointer]:
+            - generic [ref=e144]:
+              - generic [ref=e145]: DoubleEnsemble_Top30_Prob
+              - button "×" [ref=e146]
+            - generic [ref=e147]: 30 只
+          - generic [ref=e148] [cursor=pointer]:
+            - generic [ref=e149]:
+              - generic [ref=e150]: lgbm_40_60
+              - button "×" [ref=e151]
+            - generic [ref=e152]: 21 只
+          - generic [ref=e153] [cursor=pointer]:
+            - generic [ref=e154]:
+              - generic [ref=e155]: LGBM Rank 40-60
+              - button "×" [ref=e156]
+            - generic [ref=e157]: 21 只
+          - generic [ref=e158] [cursor=pointer]:
+            - generic [ref=e159]:
+              - generic [ref=e160]: 周线多头日线缩量回调_202605
+              - button "×" [ref=e161]
+            - generic [ref=e162]: 30 只
+          - generic [ref=e163] [cursor=pointer]:
+            - generic [ref=e164]:
+              - generic [ref=e165]: 未来关注股池
+              - button "×" [ref=e166]
+            - generic [ref=e167]: 50 只
+          - generic [ref=e168] [cursor=pointer]:
+            - generic [ref=e169]:
+              - generic [ref=e170]: 周线多头日线回调缩量
+              - button "×" [ref=e171]
+            - generic [ref=e172]: 50 只
+          - generic [ref=e173] [cursor=pointer]:
+            - generic [ref=e174]:
+              - generic [ref=e175]: 前期强势缩量调整
+              - button "×" [ref=e176]
+            - generic [ref=e177]: 50 只
+          - generic [ref=e178] [cursor=pointer]:
+            - generic [ref=e179]:
+              - generic [ref=e180]: 营收连续两年增长超50%
+              - button "×" [ref=e181]
+            - generic [ref=e182]: 45 只
+          - generic [ref=e183] [cursor=pointer]:
+            - generic [ref=e184]:
+              - generic [ref=e185]: 日线多头排列市值TOP10
+              - button "×" [ref=e186]
+            - generic [ref=e187]: 10 只
+        - generic [ref=e188]:
+          - generic [ref=e189]: 📂
+          - generic [ref=e190]: 选择股票池查看个股
+    - generic [ref=e22]:
+      - generic [ref=e23]:
+        - generic [ref=e24]:
+          - generic [ref=e429]:
+            - generic [ref=e430]: 你
+            - generic [ref=e431]: 用LGB模型预测全市场Top-5股票
+          - generic [ref=e432]:
+            - generic [ref=e433]: AI
+            - generic [ref=e434]: ▌
+        - generic [ref=e26]:
+          - generic [ref=e27]: 工具调用
+          - button "收起" [ref=e28] [cursor=pointer]:
+            - img [ref=e29]
+      - generic [ref=e33]:
+        - button "设置" [ref=e34] [cursor=pointer]:
+          - img [ref=e35]
+        - button "附件" [ref=e38] [cursor=pointer]:
+          - img [ref=e39]
+        - button "Choose File"
+        - textbox "输入消息..." [active] [ref=e41]
+        - button "发送" [ref=e42] [cursor=pointer]:
+          - img [ref=e43]
+    - generic [ref=e46]:
+      - generic [ref=e47]:
+        - generic [ref=e48] [cursor=pointer]:
+          - generic [ref=e49]: 📅 投资日历
+          - generic [ref=e50]:
+            - button "刷新日历数据" [ref=e51]:
+              - img [ref=e52]
+            - img [ref=e55]
+        - generic [ref=e58]:
+          - generic [ref=e191]:
+            - button "<" [ref=e192] [cursor=pointer]
+            - generic [ref=e193]: 2026年5月
+            - button ">" [ref=e194] [cursor=pointer]
+          - generic [ref=e195]:
+            - generic [ref=e196]: 日
+            - generic [ref=e197]: 一
+            - generic [ref=e198]: 二
+            - generic [ref=e199]: 三
+            - generic [ref=e200]: 四
+            - generic [ref=e201]: 五
+            - generic [ref=e202]: 六
+          - generic [ref=e203]:
+            - generic [ref=e210] [cursor=pointer]: "1"
+            - generic [ref=e212] [cursor=pointer]: "2"
+            - generic [ref=e214] [cursor=pointer]: "3"
+            - generic [ref=e216] [cursor=pointer]: "4"
+            - generic [ref=e218] [cursor=pointer]: "5"
+            - generic [ref=e220] [cursor=pointer]: "6"
+            - generic [ref=e222] [cursor=pointer]: "7"
+            - generic [ref=e224] [cursor=pointer]: "8"
+            - generic [ref=e226] [cursor=pointer]: "9"
+            - generic [ref=e228] [cursor=pointer]: "10"
+            - generic [ref=e230] [cursor=pointer]: "11"
+            - generic [ref=e232] [cursor=pointer]: "12"
+            - generic [ref=e234] [cursor=pointer]: "13"
+            - generic [ref=e236] [cursor=pointer]: "14"
+            - generic [ref=e238] [cursor=pointer]: "15"
+            - generic [ref=e240] [cursor=pointer]: "16"
+            - generic [ref=e242] [cursor=pointer]: "17"
+            - generic [ref=e244] [cursor=pointer]: "18"
+            - generic [ref=e248] [cursor=pointer]: "19"
+            - generic [ref=e250] [cursor=pointer]: "20"
+            - generic [ref=e252] [cursor=pointer]: "21"
+            - generic [ref=e256] [cursor=pointer]: "22"
+            - generic [ref=e258] [cursor=pointer]: "23"
+            - generic [ref=e260] [cursor=pointer]: "24"
+            - generic [ref=e262] [cursor=pointer]: "25"
+            - generic [ref=e266] [cursor=pointer]: "26"
+            - generic [ref=e268] [cursor=pointer]: "27"
+            - generic [ref=e270] [cursor=pointer]: "28"
+            - generic [ref=e272] [cursor=pointer]: "29"
+            - generic [ref=e274] [cursor=pointer]: "30"
+            - generic [ref=e276] [cursor=pointer]: "31"
+          - generic [ref=e277]:
+            - generic [ref=e278]: 本月重点关注
+            - generic [ref=e279] [cursor=pointer]:
+              - generic [ref=e280]:
+                - generic [ref=e282]: 05-18
+                - generic [ref=e283]: 新天力 业绩预告
+              - generic [ref=e284]: "公告日期: 20260518; 报告期[20260331]: 2026年一季报"
+            - generic [ref=e285] [cursor=pointer]:
+              - generic [ref=e286]:
+                - generic [ref=e288]: 05-21
+                - generic [ref=e289]: 高特电子 业绩预告
+              - generic [ref=e290]: "公告日期: 20260521; 报告期[20260331]: 2026年一季报"
+            - generic [ref=e291] [cursor=pointer]:
+              - generic [ref=e292]:
+                - generic [ref=e294]: 05-21
+                - generic [ref=e295]: 惠康科技 业绩预告
+              - generic [ref=e296]: "最新价: 89.18; 最新涨跌幅: 0.314961; 公告日期: 20260521; 报告期[20260331]: 2026年一季报; 净利润增长率上限[20260331]: 9.8"
+            - generic [ref=e297] [cursor=pointer]:
+              - generic [ref=e298]:
+                - generic [ref=e300]: 05-21
+                - generic [ref=e301]: 新睿电子 业绩预告
+              - generic [ref=e302]: "公告日期: 20260521; 报告期[20260331]: 2026年一季报"
+            - generic [ref=e303] [cursor=pointer]:
+              - generic [ref=e304]:
+                - generic [ref=e306]: 05-25
+                - generic [ref=e307]: 彩客科技 业绩预告
+              - generic [ref=e308]: "公告日期: 20260525; 报告期[20260331]: 2026年一季报"
+      - generic [ref=e59]:
+        - generic [ref=e60] [cursor=pointer]:
+          - generic [ref=e61]: 📰 财经新闻
+          - img [ref=e62]
+        - generic [ref=e65]:
+          - generic "港交所行政总裁陈翊庭：中国资产有两大亮点格外吸引外资机构" [ref=e309]:
+            - generic [ref=e310]:
+              - generic [ref=e311]: 东财7x24
+              - generic [ref=e312]: 05-29 11:57
+            - generic [ref=e313]: 港交所行政总裁陈翊庭：中国资产有两大亮点格外吸引外资机构
+            - generic [ref=e314]: 【港交所行政总裁陈翊庭：中国资产有两大亮点格外吸引外资机构】在29日的深交所2026全球投资者大会上，香港交易所集团行政总裁陈翊庭表示，在与国际机构投资者交流时发现，中国资产对国际投资者有两大吸引力：一是与美国资产相关性低，有利于投资组合分...
+          - generic "日本自卫队派人赴北约从俄乌冲突中“学习经验”" [ref=e315]:
+            - generic [ref=e316]:
+              - generic [ref=e317]: 东财7x24
+              - generic [ref=e318]: 05-29 11:57
+            - generic [ref=e319]: 日本自卫队派人赴北约从俄乌冲突中“学习经验”
+            - generic [ref=e320]: 【日本自卫队派人赴北约从俄乌冲突中“学习经验”】据央视新闻，日本防卫省当地时间5月29日宣布，将向北约设在德国、负责为乌克兰军队提供训练和装备支援的司令部派遣4名日本自卫队成员，并从下个月起负责计划制定与协调等工作。
+          - generic "丰田将中止部分纯电动汽车的开发" [ref=e321]:
+            - generic [ref=e322]:
+              - generic [ref=e323]: 东财7x24
+              - generic [ref=e324]: 05-29 11:56
+            - generic [ref=e325]: 丰田将中止部分纯电动汽车的开发
+            - generic [ref=e326]: 【丰田将中止部分纯电动汽车的开发】丰田将中止新一代纯电动汽车（EV）的开发。当初计划从2026年底开始生产，之后曾决定推迟至2027年中期。考虑到EV在全球范围内的低迷等原因，将把资源集中于SUV等的开发。丰田将中止开发的是高档车品牌“雷克...
+          - generic "南向资金净买入额达70亿港元" [ref=e327]:
+            - generic [ref=e328]:
+              - generic [ref=e329]: 东财7x24
+              - generic [ref=e330]: 05-29 11:56
+            - generic [ref=e331]: 南向资金净买入额达70亿港元
+            - generic [ref=e332]: 【南向资金净买入额达70亿港元】截至目前，南向资金净买入额达70亿港元。
+          - generic "日本航空一航班因轮胎故障请求紧急返航" [ref=e333]:
+            - generic [ref=e334]:
+              - generic [ref=e335]: 东财7x24
+              - generic [ref=e336]: 05-29 11:56
+            - generic [ref=e337]: 日本航空一航班因轮胎故障请求紧急返航
+            - generic [ref=e338]: 【日本航空一航班因轮胎故障请求紧急返航】据日本国土交通省东京机场事务所消息，当地时间5月29日上午11时许，日本航空从羽田飞往鹿儿岛的JAL645航班请求紧急返回羽田机场着陆，原因是轮胎出现故障。（央视新闻）
+          - generic "易启未来完成A轮数千万融资" [ref=e339]:
+            - generic [ref=e340]:
+              - generic [ref=e341]: 东财7x24
+              - generic [ref=e342]: 05-29 11:56
+            - generic [ref=e343]: 易启未来完成A轮数千万融资
+            - generic [ref=e344]: 【易启未来完成A轮数千万融资】5月29日，杭州易启未来智能科技有限公司宣布完成A轮数千万融资。本轮融资由同创伟业、优山资本、杭州资本旗下“润苗基金”等联合投资，天使股东网易继续提供资源支持。本轮资金将重点投入于核心技术的深度攻坚与下一代创新...
+          - generic "生态环境部：部署五大攻坚行动 解决水体保护治理难问题" [ref=e345]:
+            - generic [ref=e346]:
+              - generic [ref=e347]: 东财7x24
+              - generic [ref=e348]: 05-29 11:54
+            - generic [ref=e349]: 生态环境部：部署五大攻坚行动 解决水体保护治理难问题
+            - generic [ref=e350]: 【生态环境部：部署五大攻坚行动 解决水体保护治理难问题】生态环境部今天（29日）举行例行新闻发布会。据介绍，生态环境部将加快出台《群众身边水体保护治理行动方案》和《农村小微水体治理行动计划》。将联合相关部门部署实施五大攻坚行动，推动工业园区...
+          - generic "匠心家居：公司目前生产经营正常 “订单大幅下滑”等传闻均与实际情况不符" [ref=e351]:
+            - generic [ref=e352]:
+              - generic [ref=e353]: 东财7x24
+              - generic [ref=e354]: 05-29 11:53
+            - generic [ref=e355]: 匠心家居：公司目前生产经营正常 “订单大幅下滑”等传闻均与实际情况不符
+            - generic [ref=e356]: 【匠心家居：公司目前生产经营正常 “订单大幅下滑”等传闻均与实际情况不符】有投资者在互动平台向匠心家居提问：“听说公司订单大幅下滑，越南工厂已经减产了，请问是否为真？还有消息传出公司海外工厂现在也迟迟没有动工，是和当地政府没有谈妥？”匠心家...
+          - generic "港交所行政总裁陈翊庭：截至今年4月底深股通累计成交额已达118万亿元" [ref=e357]:
+            - generic [ref=e358]:
+              - generic [ref=e359]: 东财7x24
+              - generic [ref=e360]: 05-29 11:53
+            - generic [ref=e361]: 港交所行政总裁陈翊庭：截至今年4月底深股通累计成交额已达118万亿元
+            - generic [ref=e362]: 【港交所行政总裁陈翊庭：截至今年4月底深股通累计成交额已达118万亿元】据证券时报，5月29日，在深交所2026全球投资者大会上，香港交易所集团行政总裁陈翊庭表示，今年将迎来深港通十周年重大里程碑。北向深股通的日均成交额近年来屡创新高，截至...
+          - generic "玉渊谭天：欧盟若执意推动“产能过剩工具” 中方必将反制" [ref=e363]:
+            - generic [ref=e364]:
+              - generic [ref=e365]: 东财7x24
+              - generic [ref=e366]: 05-29 11:51
+            - generic [ref=e367]: 玉渊谭天：欧盟若执意推动“产能过剩工具” 中方必将反制
+            - generic [ref=e368]: 【玉渊谭天：欧盟若执意推动“产能过剩工具” 中方必将反制】玉渊谭天29日发文称，29日，欧委会即将召开会议，探讨对华经贸政策调整。就在会议开始前几天，几个欧盟成员国提交了一份提案，试图推动“韧性工具”，也就是所谓的“产能过剩工具”。虽然欧盟...
+          - generic "美蓝色起源公司重型运载火箭测试时爆炸" [ref=e369]:
+            - generic [ref=e370]:
+              - generic [ref=e371]: 东财7x24
+              - generic [ref=e372]: 05-29 11:45
+            - generic [ref=e373]: 美蓝色起源公司重型运载火箭测试时爆炸
+            - generic [ref=e374]: 【美蓝色起源公司重型运载火箭测试时爆炸】据新华社，美国媒体28日报道，美国蓝色起源公司“新格伦”重型运载火箭当天在佛罗里达州进行发动机点火测试时发生爆炸，未造成人员伤亡。蓝色起源公司随后证实，当天火箭测试期间出现“异常状况”。
+          - generic "半日主力资金丨加仓公用事业股 抛售电子股" [ref=e375]:
+            - generic [ref=e376]:
+              - generic [ref=e377]: 东财7x24
+              - generic [ref=e378]: 05-29 11:45
+            - generic [ref=e379]: 半日主力资金丨加仓公用事业股 抛售电子股
+            - generic [ref=e380]: 【半日主力资金丨加仓公用事业股 抛售电子股】主力资金早间净流入公用事业、食品饮料、商贸零售、非银金融等板块，净流出电子、计算机、机械设备、有色金属等板块。
+          - generic "国际足联发售新一批世界杯门票" [ref=e381]:
+            - generic [ref=e382]:
+              - generic [ref=e383]: 东财7x24
+              - generic [ref=e384]: 05-29 11:45
+            - generic [ref=e385]: 国际足联发售新一批世界杯门票
+            - generic [ref=e386]: 【国际足联发售新一批世界杯门票】据新华社，国际足联28日宣布，当天开始发售新一批美加墨世界杯门票。国际足联在其官方社交平台账号“国际足联世界杯”上发帖称：“距离世界杯开幕还有14天！更多门票现已开售。门票数量有限，先到先得，售完即止。”该批...
+          - generic "风华高科：将根据自身规划并结合市场需求合理规划MLCC产能" [ref=e387]:
+            - generic [ref=e388]:
+              - generic [ref=e389]: 东财7x24
+              - generic [ref=e390]: 05-29 11:43
+            - generic [ref=e391]: 风华高科：将根据自身规划并结合市场需求合理规划MLCC产能
+            - generic [ref=e392]: 【风华高科：将根据自身规划并结合市场需求合理规划MLCC产能】风华高科在互动平台表示，公司MLCC产品扩产项目“祥和工业园高端电容基地项目”已于2025年底全面建设完成，并于2026年4月完成结项，公司后续将根据自身规划并结合市场需求合理规...
+          - generic "财政部在香港成功发行60亿元人民币绿色主权债券" [ref=e393]:
+            - generic [ref=e394]:
+              - generic [ref=e395]: 东财7x24
+              - generic [ref=e396]: 05-29 11:39
+            - generic [ref=e397]: 财政部在香港成功发行60亿元人民币绿色主权债券
+            - generic [ref=e398]: 【财政部在香港成功发行60亿元人民币绿色主权债券】据财政部新闻办公室消息，5月28日，中华人民共和国财政部代表中央政府在香港特别行政区成功发行了60亿元人民币绿色主权债券。其中，3年期30亿元人民币，发行利率为1.42%；5年期30亿元人民...

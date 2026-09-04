@@ -1,6 +1,7 @@
 import type { Component } from "@mariozechner/pi-tui";
+import { truncateToWidth } from "@mariozechner/pi-tui";
 import chalk from "chalk";
-import { resolveAShareScript, runJsonScript } from "../tools/_utils.js";
+import { runLocalDataJsonScript } from "../tools/_utils.js";
 
 export interface IndexQuote {
 	code: string;
@@ -21,8 +22,7 @@ export class IndexQuotesBar implements Component {
 		if (this.fetching) return;
 		this.fetching = true;
 		try {
-			const scriptPath = resolveAShareScript("index_quote_fetcher.py");
-			const data: IndexQuote[] = await runJsonScript(scriptPath, [], 30000);
+			const data: IndexQuote[] = await runLocalDataJsonScript("index_quote_fetcher.py", [], 30000);
 			if (Array.isArray(data) && data.length > 0) {
 				this.quotes = data;
 			}
@@ -35,7 +35,7 @@ export class IndexQuotesBar implements Component {
 
 	render(width: number): string[] {
 		if (this.quotes.length === 0) {
-			return [chalk.gray("  指数行情: 加载中...".slice(0, width))];
+			return [truncateToWidth(chalk.gray("  指数行情: 加载中..."), width)];
 		}
 
 		const segments: string[] = [];
@@ -47,7 +47,7 @@ export class IndexQuotesBar implements Component {
 		}
 
 		const line = `  ${segments.join("  ")}`;
-		return [line.slice(0, width)];
+		return [truncateToWidth(line, width)];
 	}
 
 	handleInput?(_data: string): void {

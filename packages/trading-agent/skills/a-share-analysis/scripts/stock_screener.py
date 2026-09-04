@@ -8,6 +8,8 @@ A股股票筛选器
 
 import argparse
 import json
+import os
+import sqlite3
 import sys
 import time
 from datetime import datetime
@@ -22,6 +24,13 @@ except ImportError:
     print("错误: 请先安装依赖库")
     print("pip install akshare pandas numpy")
     sys.exit(1)
+
+_SCRIPT_DIR = os.path.dirname(os.path.abspath(__file__))
+_LOCAL_DATA_ROOT = os.path.normpath(os.path.join(_SCRIPT_DIR, "..", "..", "local-data"))
+if _LOCAL_DATA_ROOT not in sys.path:
+    sys.path.insert(0, _LOCAL_DATA_ROOT)
+
+from local_data.db import get_db, get_db_path, db_exists
 
 
 def retry_on_failure(max_retries: int = 3, delay: float = 1.0):
@@ -52,6 +61,67 @@ INDEX_CODE_MAP = {
 }
 
 
+def _get_index_constituent_codes(index_code: str) -> List[str]:
+    """Fetch index constituent codes via akshare."""
+    try:
+        df = ak.index_stock_cons(symbol=index_code)
+        return df["品种代码"].astype(str).tolist()
+    except Exception as e:
+        print(f"  获取指数成分股失败: {e}")
+        return []
+
+
+def _load_from_local_db(scope: str = "all", custom_codes: List[str] = None) -> pd.DataFrame:
+    """Load latest quote data from local SQLite as a fallback when akshare is slow/down."""
+    if not db_exists():
+        return pd.DataFrame()
+
+    try:
+        conn = get_db()
+        # Latest quote per (code, market), enriched with name from stocks table
+        sql = """
+            SELECT q.code, q.market, COALESCE(NULLIF(q.name, ''), s.name) AS name,
+                   q.latest, q.change_pct, q.pe, q.pb, q.total_cap
+            FROM quotes q
+            JOIN (
+                SELECT code, market, MAX(snapshot_date) AS max_date
+                FROM quotes
+                GROUP BY code, market
+            ) m ON q.code = m.code AND q.market = m.market AND q.snapshot_date = m.max_date
+            LEFT JOIN stocks s ON q.code = s.code AND q.market = s.market
+        """
+        df = pd.read_sql_query(sql, conn)
+        conn.close()
+
+        if df.empty:
+            return pd.DataFrame()
+
+        # Apply scope filter
+        if scope in INDEX_CODE_MAP:
+            codes = _get_index_constituent_codes(INDEX_CODE_MAP[scope])
+            if codes:
+                df = df[df["code"].isin(codes)]
+        elif scope.startswith("custom:") or custom_codes:
+            codes = custom_codes or scope.replace("custom:", "").split(",")
+            codes = [c.strip() for c in codes if c.strip()]
+            df = df[df["code"].isin(codes)]
+
+        # Rename columns to match akshare spot format
+        df = df.rename(columns={
+            "code": "代码",
+            "name": "名称",
+            "latest": "最新价",
+            "change_pct": "涨跌幅",
+            "pe": "市盈率-动态",
+            "pb": "市净率",
+            "total_cap": "总市值",
+        })
+        return df
+    except Exception as e:
+        print(f"  本地数据库读取失败: {e}")
+        return pd.DataFrame()
+
+
 class StockScreener:
     """股票筛选器"""
 
@@ -59,9 +129,10 @@ class StockScreener:
         self.all_stocks_data = None
 
     def load_stock_data(self, scope: str = "hs300", custom_codes: List[str] = None) -> pd.DataFrame:
-        """加载股票数据"""
+        """加载股票数据。优先实时 akshare，失败时回退到本地 SQLite quotes 表。"""
         print(f"正在加载股票数据 (范围: {scope})...")
 
+        df = pd.DataFrame()
         try:
             if scope == "all":
                 df = ak.stock_zh_a_spot_em()
@@ -73,13 +144,23 @@ class StockScreener:
             else:
                 df = ak.stock_zh_a_spot_em()
 
+            if not df.empty:
+                self.all_stocks_data = df
+                print(f"已加载 {len(df)} 只股票数据 (akshare)")
+                return df
+        except Exception as e:
+            print(f"akshare 加载失败: {e}")
+
+        # Fallback: local SQLite quotes
+        print("回退到本地 SQLite quotes 表...")
+        df = _load_from_local_db(scope, custom_codes)
+        if not df.empty:
             self.all_stocks_data = df
-            print(f"已加载 {len(df)} 只股票数据")
+            print(f"已加载 {len(df)} 只股票数据 (local DB)")
             return df
 
-        except Exception as e:
-            print(f"加载数据失败: {e}")
-            return pd.DataFrame()
+        print("加载数据失败: 无可用数据源")
+        return pd.DataFrame()
 
     @retry_on_failure(max_retries=3, delay=2.0)
     def _get_all_stocks_realtime(self) -> pd.DataFrame:
@@ -93,15 +174,20 @@ class StockScreener:
         return df['品种代码'].tolist()
 
     def _get_index_stocks_data(self, index_code: str) -> pd.DataFrame:
-        """获取指数成分股数据"""
+        """获取指数成分股数据。优先本地 quotes，不足时 fallback 到 akshare spot。"""
         try:
-            # 获取成分股列表
             print(f"  获取指数 {index_code} 成分股...")
             codes = self._get_index_constituents(index_code)
             print(f"  成分股数量: {len(codes)}")
 
-            # 获取实时数据
-            print("  获取实时行情...")
+            # 1. Try local SQLite first (fast, avoids akshare spot timeout)
+            df = _load_from_local_db(custom_codes=codes)
+            if not df.empty and len(df) >= len(codes) * 0.5:
+                print(f"  使用本地行情数据: {len(df)} 只")
+                return df
+
+            # 2. Fallback to akshare spot
+            print("  本地数据不足，获取实时行情...")
             all_stocks = self._get_all_stocks_realtime()
             df = all_stocks[all_stocks['代码'].isin(codes)]
             return df
@@ -110,8 +196,12 @@ class StockScreener:
             return pd.DataFrame()
 
     def _get_custom_stocks_data(self, codes: List[str]) -> pd.DataFrame:
-        """获取自定义股票列表数据"""
+        """获取自定义股票列表数据。优先本地 quotes，不足时 fallback 到 akshare spot。"""
         try:
+            df = _load_from_local_db(custom_codes=codes)
+            if not df.empty:
+                return df
+
             all_stocks = self._get_all_stocks_realtime()
             df = all_stocks[all_stocks['代码'].isin(codes)]
             return df
@@ -280,6 +370,9 @@ class StockScreener:
         if top_n:
             df = df.head(top_n)
 
+        # Clean NaN values for JSON serialization
+        df = df.replace({np.nan: None})
+
         # 转换为结果列表
         results = []
         for _, row in df.iterrows():
@@ -306,9 +399,9 @@ def main():
     parser.add_argument("--pe-min", type=float, help="最小PE")
     parser.add_argument("--pb-max", type=float, help="最大PB")
     parser.add_argument("--pb-min", type=float, help="最小PB")
-    parser.add_argument("--roe-min", type=float, help="最小ROE (%)")
-    parser.add_argument("--debt-ratio-max", type=float, help="最大资产负债率 (%)")
-    parser.add_argument("--dividend-min", type=float, help="最小股息率 (%)")
+    parser.add_argument("--roe-min", type=float, help="最小ROE (%%)")
+    parser.add_argument("--debt-ratio-max", type=float, help="最大资产负债率 (%%)")
+    parser.add_argument("--dividend-min", type=float, help="最小股息率 (%%)")
     parser.add_argument("--market-cap-min", type=float, help="最小市值 (亿)")
     parser.add_argument("--market-cap-max", type=float, help="最大市值 (亿)")
     parser.add_argument("--sort-by", type=str, default="score",

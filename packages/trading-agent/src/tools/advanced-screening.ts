@@ -113,7 +113,7 @@ export const advancedScreenTool: AgentTool<typeof advancedScreenParams, Advanced
 动态计算指标: roe (净资产收益率% = 归母净利润/归母权益), gross_margin (毛利率% = (营业收入-营业成本)/营业收入)
 
 操作符: >, <, >=, <=, ==, between
-周期: daily, weekly, monthly
+周期: daily, week, month
 范围: all, hs300, zz500, zz1000, cyb, kcb, custom:code1,code2, industry:行业名(如"食品饮料I"), concept:概念名(如"石墨烯")
 
 结果数量控制:

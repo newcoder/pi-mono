@@ -1,0 +1,300 @@
+- generic [ref=e3]:
+  - generic [ref=e4]:
+    - button "股票池" [ref=e5] [cursor=pointer]:
+      - img [ref=e6]
+    - generic [ref=e8]: π
+    - button "投资日历" [ref=e9] [cursor=pointer]:
+      - img [ref=e10]
+  - generic [ref=e12]:
+    - generic [ref=e13]: RESEARCH
+    - textbox "搜索股票 (代码/名称/拼音)" [ref=e15]
+  - generic [ref=e16]:
+    - generic [ref=e17]:
+      - generic [ref=e18]:
+        - generic [ref=e19]: 股票池
+        - button "关闭" [ref=e20] [cursor=pointer]:
+          - img [ref=e21]
+      - generic [ref=e24]:
+        - generic [ref=e25]:
+          - generic [ref=e71] [cursor=pointer]:
+            - generic [ref=e72]:
+              - generic [ref=e73]: 雷达风险股_2026-05-28
+              - button "×" [ref=e74]
+            - generic [ref=e75]: 23 只
+          - generic [ref=e76] [cursor=pointer]:
+            - generic [ref=e77]:
+              - generic [ref=e78]: 雷达机会股_2026-05-28
+              - button "×" [ref=e79]
+            - generic [ref=e80]: 29 只
+          - generic [ref=e81] [cursor=pointer]:
+            - generic [ref=e82]:
+              - generic [ref=e83]: DE模型预测股池TOP50_2026-05-27
+              - button "×" [ref=e84]
+            - generic [ref=e85]: 50 只
+          - generic [ref=e86] [cursor=pointer]:
+            - generic [ref=e87]:
+              - generic [ref=e88]: DE模型预测股池_2026-05-27
+              - button "×" [ref=e89]
+            - generic [ref=e90]: 7 只
+          - generic [ref=e91] [cursor=pointer]:
+            - generic [ref=e92]:
+              - generic [ref=e93]: 最近访问
+              - button "×" [ref=e94]
+            - generic [ref=e95]: 23 只
+          - generic [ref=e96] [cursor=pointer]:
+            - generic [ref=e97]:
+              - generic [ref=e98]: 周线多头日线缩量调整市值TOP20
+              - button "×" [ref=e99]
+            - generic [ref=e100]: 20 只
+          - generic [ref=e101] [cursor=pointer]:
+            - generic [ref=e102]:
+              - generic [ref=e103]: 同花顺强势股_2026-05-26
+              - button "×" [ref=e104]
+            - generic [ref=e105]: 64 只
+          - generic [ref=e106] [cursor=pointer]:
+            - generic [ref=e107]:
+              - generic [ref=e108]: 同花顺强势股_20260526
+              - button "×" [ref=e109]
+            - generic [ref=e110]: 50 只
+          - generic [ref=e111] [cursor=pointer]:
+            - generic [ref=e112]:
+              - generic [ref=e113]: DoubleEnsemble_Top30_Prob
+              - button "×" [ref=e114]
+            - generic [ref=e115]: 30 只
+          - generic [ref=e116] [cursor=pointer]:
+            - generic [ref=e117]:
+              - generic [ref=e118]: lgbm_40_60
+              - button "×" [ref=e119]
+            - generic [ref=e120]: 21 只
+          - generic [ref=e121] [cursor=pointer]:
+            - generic [ref=e122]:
+              - generic [ref=e123]: LGBM Rank 40-60
+              - button "×" [ref=e124]
+            - generic [ref=e125]: 21 只
+          - generic [ref=e126] [cursor=pointer]:
+            - generic [ref=e127]:
+              - generic [ref=e128]: 周线多头日线缩量回调_202605
+              - button "×" [ref=e129]
+            - generic [ref=e130]: 30 只
+          - generic [ref=e131] [cursor=pointer]:
+            - generic [ref=e132]:
+              - generic [ref=e133]: 未来关注股池
+              - button "×" [ref=e134]
+            - generic [ref=e135]: 50 只
+          - generic [ref=e136] [cursor=pointer]:
+            - generic [ref=e137]:
+              - generic [ref=e138]: 周线多头日线回调缩量
+              - button "×" [ref=e139]
+            - generic [ref=e140]: 50 只
+          - generic [ref=e141] [cursor=pointer]:
+            - generic [ref=e142]:
+              - generic [ref=e143]: 前期强势缩量调整
+              - button "×" [ref=e144]
+            - generic [ref=e145]: 50 只
+          - generic [ref=e146] [cursor=pointer]:
+            - generic [ref=e147]:
+              - generic [ref=e148]: 营收连续两年增长超50%
+              - button "×" [ref=e149]
+            - generic [ref=e150]: 45 只
+          - generic [ref=e151] [cursor=pointer]:
+            - generic [ref=e152]:
+              - generic [ref=e153]: 日线多头排列市值TOP10
+              - button "×" [ref=e154]
+            - generic [ref=e155]: 10 只
+        - generic [ref=e156]:
+          - generic [ref=e157]: 📂
+          - generic [ref=e158]: 选择股票池查看个股
+    - generic [ref=e28]:
+      - generic [ref=e30]:
+        - generic [ref=e367]:
+          - generic [ref=e368]: 你
+          - generic [ref=e369]: 用LGB模型预测全市场Top-10股票
+        - generic [ref=e370]:
+          - generic [ref=e371]: AI
+          - generic [ref=e372]: 我先用LGB模型对全市场进行预测，获取Top-10股票。
+      - generic [ref=e32]:
+        - button "设置" [ref=e33] [cursor=pointer]:
+          - img [ref=e34]
+        - button "附件" [ref=e37] [cursor=pointer]:
+          - img [ref=e38]
+        - button "Choose File"
+        - textbox "输入消息..." [active] [ref=e40]
+        - button "发送" [ref=e41] [cursor=pointer]:
+          - img [ref=e42]
+    - generic [ref=e45]:
+      - generic [ref=e46]:
+        - generic [ref=e47] [cursor=pointer]:
+          - generic [ref=e48]: 📅 投资日历
+          - generic [ref=e49]:
+            - button "刷新日历数据" [ref=e50]:
+              - img [ref=e51]
+            - img [ref=e54]
+        - generic [ref=e57]:
+          - generic [ref=e159]:
+            - button "<" [ref=e160] [cursor=pointer]
+            - generic [ref=e161]: 2026年5月
+            - button ">" [ref=e162] [cursor=pointer]
+          - generic [ref=e163]:
+            - generic [ref=e164]: 日
+            - generic [ref=e165]: 一
+            - generic [ref=e166]: 二
+            - generic [ref=e167]: 三
+            - generic [ref=e168]: 四
+            - generic [ref=e169]: 五
+            - generic [ref=e170]: 六
+          - generic [ref=e171]:
+            - generic [ref=e178] [cursor=pointer]: "1"
+            - generic [ref=e180] [cursor=pointer]: "2"
+            - generic [ref=e182] [cursor=pointer]: "3"
+            - generic [ref=e184] [cursor=pointer]: "4"
+            - generic [ref=e186] [cursor=pointer]: "5"
+            - generic [ref=e188] [cursor=pointer]: "6"
+            - generic [ref=e190] [cursor=pointer]: "7"
+            - generic [ref=e192] [cursor=pointer]: "8"
+            - generic [ref=e194] [cursor=pointer]: "9"
+            - generic [ref=e196] [cursor=pointer]: "10"
+            - generic [ref=e198] [cursor=pointer]: "11"
+            - generic [ref=e200] [cursor=pointer]: "12"
+            - generic [ref=e202] [cursor=pointer]: "13"
+            - generic [ref=e204] [cursor=pointer]: "14"
+            - generic [ref=e206] [cursor=pointer]: "15"
+            - generic [ref=e208] [cursor=pointer]: "16"
+            - generic [ref=e210] [cursor=pointer]: "17"
+            - generic [ref=e212] [cursor=pointer]: "18"
+            - generic [ref=e216] [cursor=pointer]: "19"
+            - generic [ref=e218] [cursor=pointer]: "20"
+            - generic [ref=e220] [cursor=pointer]: "21"
+            - generic [ref=e224] [cursor=pointer]: "22"
+            - generic [ref=e226] [cursor=pointer]: "23"
+            - generic [ref=e228] [cursor=pointer]: "24"
+            - generic [ref=e230] [cursor=pointer]: "25"
+            - generic [ref=e234] [cursor=pointer]: "26"
+            - generic [ref=e236] [cursor=pointer]: "27"
+            - generic [ref=e238] [cursor=pointer]: "28"
+            - generic [ref=e240] [cursor=pointer]: "29"
+            - generic [ref=e242] [cursor=pointer]: "30"
+            - generic [ref=e244] [cursor=pointer]: "31"
+          - generic [ref=e245]:
+            - generic [ref=e246]: 本月重点关注
+            - generic [ref=e247] [cursor=pointer]:
+              - generic [ref=e248]:
+                - generic [ref=e250]: 05-18
+                - generic [ref=e251]: 新天力 业绩预告
+              - generic [ref=e252]: "公告日期: 20260518; 报告期[20260331]: 2026年一季报"
+            - generic [ref=e253] [cursor=pointer]:
+              - generic [ref=e254]:
+                - generic [ref=e256]: 05-21
+                - generic [ref=e257]: 高特电子 业绩预告
+              - generic [ref=e258]: "公告日期: 20260521; 报告期[20260331]: 2026年一季报"
+            - generic [ref=e259] [cursor=pointer]:
+              - generic [ref=e260]:
+                - generic [ref=e262]: 05-21
+                - generic [ref=e263]: 惠康科技 业绩预告
+              - generic [ref=e264]: "最新价: 89.18; 最新涨跌幅: 0.314961; 公告日期: 20260521; 报告期[20260331]: 2026年一季报; 净利润增长率上限[20260331]: 9.8"
+            - generic [ref=e265] [cursor=pointer]:
+              - generic [ref=e266]:
+                - generic [ref=e268]: 05-21
+                - generic [ref=e269]: 新睿电子 业绩预告
+              - generic [ref=e270]: "公告日期: 20260521; 报告期[20260331]: 2026年一季报"
+            - generic [ref=e271] [cursor=pointer]:
+              - generic [ref=e272]:
+                - generic [ref=e274]: 05-25
+                - generic [ref=e275]: 彩客科技 业绩预告
+              - generic [ref=e276]: "公告日期: 20260525; 报告期[20260331]: 2026年一季报"
+      - generic [ref=e58]:
+        - generic [ref=e59] [cursor=pointer]:
+          - generic [ref=e60]: 📰 财经新闻
+          - img [ref=e61]
+        - generic [ref=e64]:
+          - generic "美蓝色起源公司重型运载火箭测试时爆炸" [ref=e277]:
+            - generic [ref=e278]:
+              - generic [ref=e279]: 东财7x24
+              - generic [ref=e280]: 05-29 11:45
+            - generic [ref=e281]: 美蓝色起源公司重型运载火箭测试时爆炸
+            - generic [ref=e282]: 【美蓝色起源公司重型运载火箭测试时爆炸】据新华社，美国媒体28日报道，美国蓝色起源公司“新格伦”重型运载火箭当天在佛罗里达州进行发动机点火测试时发生爆炸，未造成人员伤亡。蓝色起源公司随后证实，当天火箭测试期间出现“异常状况”。
+          - generic "半日主力资金丨加仓公用事业股 抛售电子股" [ref=e283]:
+            - generic [ref=e284]:
+              - generic [ref=e285]: 东财7x24
+              - generic [ref=e286]: 05-29 11:45
+            - generic [ref=e287]: 半日主力资金丨加仓公用事业股 抛售电子股
+            - generic [ref=e288]: 【半日主力资金丨加仓公用事业股 抛售电子股】主力资金早间净流入公用事业、食品饮料、商贸零售、非银金融等板块，净流出电子、计算机、机械设备、有色金属等板块。
+          - generic "国际足联发售新一批世界杯门票" [ref=e289]:
+            - generic [ref=e290]:
+              - generic [ref=e291]: 东财7x24
+              - generic [ref=e292]: 05-29 11:45
+            - generic [ref=e293]: 国际足联发售新一批世界杯门票
+            - generic [ref=e294]: 【国际足联发售新一批世界杯门票】据新华社，国际足联28日宣布，当天开始发售新一批美加墨世界杯门票。国际足联在其官方社交平台账号“国际足联世界杯”上发帖称：“距离世界杯开幕还有14天！更多门票现已开售。门票数量有限，先到先得，售完即止。”该批...
+          - generic "风华高科：将根据自身规划并结合市场需求合理规划MLCC产能" [ref=e295]:
+            - generic [ref=e296]:
+              - generic [ref=e297]: 东财7x24
+              - generic [ref=e298]: 05-29 11:43
+            - generic [ref=e299]: 风华高科：将根据自身规划并结合市场需求合理规划MLCC产能
+            - generic [ref=e300]: 【风华高科：将根据自身规划并结合市场需求合理规划MLCC产能】风华高科在互动平台表示，公司MLCC产品扩产项目“祥和工业园高端电容基地项目”已于2025年底全面建设完成，并于2026年4月完成结项，公司后续将根据自身规划并结合市场需求合理规...
+          - generic "财政部在香港成功发行60亿元人民币绿色主权债券" [ref=e301]:
+            - generic [ref=e302]:
+              - generic [ref=e303]: 东财7x24
+              - generic [ref=e304]: 05-29 11:39
+            - generic [ref=e305]: 财政部在香港成功发行60亿元人民币绿色主权债券
+            - generic [ref=e306]: 【财政部在香港成功发行60亿元人民币绿色主权债券】据财政部新闻办公室消息，5月28日，中华人民共和国财政部代表中央政府在香港特别行政区成功发行了60亿元人民币绿色主权债券。其中，3年期30亿元人民币，发行利率为1.42%；5年期30亿元人民...
+          - generic "午间涨跌停股分析：73只涨停股、9只跌停股，商业零售概念走强" [ref=e307]:
+            - generic [ref=e308]:
+              - generic [ref=e309]: 东财7x24
+              - generic [ref=e310]: 05-29 11:38
+            - generic [ref=e311]: 午间涨跌停股分析：73只涨停股、9只跌停股，商业零售概念走强
+            - generic [ref=e312]: 【午间涨跌停股分析：73只涨停股、9只跌停股，商业零售概念走强】5月29日午间，A股半日下来共有73只涨停股、9只跌停股。免税概念活跃，中国中免、东百集团涨停；商业零售概念走强，步步高4天3板，茂业商业、三江购物等涨停。
+          - generic "天海电子：车载光通信相关产品研发工作正稳步推进 部分产品已开展客户认证与试样工作" [ref=e313]:
+            - generic [ref=e314]:
+              - generic [ref=e315]: 东财7x24
+              - generic [ref=e316]: 05-29 11:37
+            - generic [ref=e317]: 天海电子：车载光通信相关产品研发工作正稳步推进 部分产品已开展客户认证与试样工作
+            - generic [ref=e318]: 【天海电子：车载光通信相关产品研发工作正稳步推进 部分产品已开展客户认证与试样工作】天海电子在互动平台表示，车载光通信相关产品研发工作正稳步推进，部分产品已开展客户认证与试样工作，目前业务尚处于发展初期。公司依托多年车载连接技术积淀形成自身...
+          - generic "法拉利首款电动车被其前主席嫌弃称“连中国车都不会抄” 岚图高管回怼：中国车不屑抄你们" [ref=e319]:
+            - generic [ref=e320]:
+              - generic [ref=e321]: 东财7x24
+              - generic [ref=e322]: 05-29 11:36
+            - generic [ref=e323]: 法拉利首款电动车被其前主席嫌弃称“连中国车都不会抄” 岚图高管回怼：中国车不屑抄你们
+            - generic [ref=e324]: 【法拉利首款电动车被其前主席嫌弃称“连中国车都不会抄” 岚图高管回怼：中国车不屑抄你们】李博晓发文称：“法拉利发了第一款纯电产品，结果被前法拉利主席批评，还捎带了中国车，说这是‘中国车都不会抄的设计’。说得对！中国车根本不屑抄你们！——设计...
+          - generic "OpenAI：正在调查影响用户登录和使用ChatGPT的故障" [ref=e325]:
+            - generic [ref=e326]:
+              - generic [ref=e327]: 东财7x24
+              - generic [ref=e328]: 05-29 11:34
+            - generic [ref=e329]: OpenAI：正在调查影响用户登录和使用ChatGPT的故障
+            - generic [ref=e330]: 【OpenAI：正在调查影响用户登录和使用ChatGPT的故障】OpenAI在网站上表示，公司正在调查可能导致用户无法与ChatGPT对话、登录或创建帐户的问题。根据网络状况监控网站Downdetector的数据，截至美东时间晚上11:04...
+          - generic "A股午评：创业板指半日跌超1%，液态金属、光刻胶、OLED等概念走弱" [ref=e331]:
+            - generic [ref=e332]:
+              - generic [ref=e333]: 东财7x24
+              - generic [ref=e334]: 05-29 11:34
+            - generic [ref=e335]: A股午评：创业板指半日跌超1%，液态金属、光刻胶、OLED等概念走弱
+            - generic [ref=e336]: 【A股午评：创业板指半日跌超1%，液态金属、光刻胶、OLED等概念走弱】5月29日，A股三大指数集体下跌，截至午间收盘，上证指数跌0.37%，深证成指跌1%，创业板指跌1.14%；北证50跌2.46%。沪深两市成交额约21170.86亿元，...
+          - generic "中证转债指数午盘跌0.55%" [ref=e337]:
+            - generic [ref=e338]:
+              - generic [ref=e339]: 东财7x24
+              - generic [ref=e340]: 05-29 11:33
+            - generic [ref=e341]: 中证转债指数午盘跌0.55%
+            - generic [ref=e342]: 【中证转债指数午盘跌0.55%】5月29日，中证转债指数午盘下跌0.55%，报505.78点。其中，福新转债、瑞科转债、甬矽转债、鼎龙转债、利柏转债跌幅居前，分别跌9.35%、8.49%、8.47%、8.33%、8.32%。珂玛转债、天创转...
+          - generic "阿维塔王辉：靠价格战换来的规模是虚假的繁荣" [ref=e343]:
+            - generic [ref=e344]:
+              - generic [ref=e345]: 东财7x24
+              - generic [ref=e346]: 05-29 11:31
+            - generic [ref=e347]: 阿维塔王辉：靠价格战换来的规模是虚假的繁荣
+            - generic [ref=e348]: 【阿维塔王辉：靠价格战换来的规模是虚假的繁荣】5月29日，在2026未来汽车先行者大会上，阿维塔科技董事长王辉表示，今年以来汽车行业健康度面临挑战。他认为，没有利润的销量是伪销量，靠价格战换来的规模是虚假的繁荣。他还表示，很多优秀的产品实际...
+          - generic "午评：创业板指半日跌超1% 消费、电力板块逆势走强" [ref=e349]:
+            - generic [ref=e350]:
+              - generic [ref=e351]: 东财7x24
+              - generic [ref=e352]: 05-29 11:31
+            - generic [ref=e353]: 午评：创业板指半日跌超1% 消费、电力板块逆势走强
+            - generic [ref=e354]: 【午评：创业板指半日跌超1% 消费、电力板块逆势走强】市场早盘震荡调整，三大指数高开低走，科创50指数跌超3%。沪深两市半日成交额2.12万亿，较上个交易日放量3329亿。盘面上热点快速轮动，全市场超3400只个股下跌。从板块来看，电力板块...
+          - generic "沪指下跌0.37% 白酒、零售板块领涨 科技股回调" [ref=e355]:
+            - generic [ref=e356]:
+              - generic [ref=e357]: 东财7x24
+              - generic [ref=e358]: 05-29 11:30
+            - generic [ref=e359]: 沪指下跌0.37% 白酒、零售板块领涨 科技股回调
+            - generic [ref=e360]: 【午盘播报】沪指下跌0.37%，报4083.62点；深成指下跌1.00%，报15704.04点；创业板指下跌1.14%，报4077.94点，两市半日合计成交21171亿。盘面上，白酒、一般零售、免税概念、医疗美容、电力、食品饮料、航空机场涨...
+          - generic "怡亚通：子公司卓优云智中标中国科学院算力基础项目" [ref=e361]:
+            - generic [ref=e362]:
+              - generic [ref=e363]: 东财7x24
+              - generic [ref=e364]: 05-29 11:28
+            - generic [ref=e365]: 怡亚通：子公司卓优云智中标中国科学院算力基础项目
+            - generic [ref=e366]: 【怡亚通：子公司卓优云智中标中国科学院算力基础项目】据怡亚通消息，5月25日，怡亚通（002183.SZ）控股子公司北京卓优云智科技有限公司成功中标中国科学院计算机网络信息中心人机物融合信息基础设施创新与试验平台存储备份云服务系统软硬件采购...
+      - button "关闭" [ref=e67] [cursor=pointer]:
+        - img [ref=e68]

@@ -1,0 +1,305 @@
+{
+  "ssbk": [
+    {
+      "SECUCODE": "688017.SH",
+      "SECURITY_CODE": "688017",
+      "SECURITY_NAME_ABBR": "绿的谐波",
+      "BOARD_CODE": "1205",
+      "BOARD_NAME": "机械设备",
+      "IS_PRECISE": null,
+      "BOARD_RANK": 1
+    },
+    {
+      "SECUCODE": "688017.SH",
+      "SECURITY_CODE": "688017",
+      "SECURITY_NAME_ABBR": "绿的谐波",
+      "BOARD_CODE": "1237",
+      "BOARD_NAME": "自动化设备",
+      "IS_PRECISE": null,
+      "BOARD_RANK": 2
+    },
+    {
+      "SECUCODE": "688017.SH",
+      "SECURITY_CODE": "688017",
+      "SECURITY_NAME_ABBR": "绿的谐波",
+      "BOARD_CODE": "1408",
+      "BOARD_NAME": "机器人",
+      "IS_PRECISE": null,
+      "BOARD_RANK": 3
+    },
+    {
+      "SECUCODE": "688017.SH",
+      "SECURITY_CODE": "688017",
+      "SECURITY_NAME_ABBR": "绿的谐波",
+      "BOARD_CODE": "159",
+      "BOARD_NAME": "江苏板块",
+      "IS_PRECISE": "0",
+      "BOARD_RANK": 4
+    },
+    {
+      "SECUCODE": "688017.SH",
+      "SECURITY_CODE": "688017",
+      "SECURITY_NAME_ABBR": "绿的谐波",
+      "BOARD_CODE": "1677",
+      "BOARD_NAME": "2025年报预增",
+      "IS_PRECISE": null,
+      "BOARD_RANK": 5
+    },
+    {
+      "SECUCODE": "688017.SH",
+      "SECURITY_CODE": "688017",
+      "SECURITY_NAME_ABBR": "绿的谐波",
+      "BOARD_CODE": "1669",
+      "BOARD_NAME": "中盘成长",
+      "IS_PRECISE": null,
+      "BOARD_RANK": 6
+    },
+    {
+      "SECUCODE": "688017.SH",
+      "SECURITY_CODE": "688017",
+      "SECURITY_NAME_ABBR": "绿的谐波",
+      "BOARD_CODE": "1664",
+      "BOARD_NAME": "中盘股",
+      "IS_PRECISE": null,
+      "BOARD_RANK": 7
+    },
+    {
+      "SECUCODE": "688017.SH",
+      "SECURITY_CODE": "688017",
+      "SECURITY_NAME_ABBR": "绿的谐波",
+      "BOARD_CODE": "1059",
+      "BOARD_NAME": "百元股",
+      "IS_PRECISE": "0",
+      "BOARD_RANK": 8
+    },
+    {
+      "SECUCODE": "688017.SH",
+      "SECURITY_CODE": "688017",
+      "SECURITY_NAME_ABBR": "绿的谐波",
+      "BOARD_CODE": "1005",
+      "BOARD_NAME": "专精特新",
+      "IS_PRECISE": null,
+      "BOARD_RANK": 9
+    },
+    {
+      "SECUCODE": "688017.SH",
+      "SECURITY_CODE": "688017",
+      "SECURITY_NAME_ABBR": "绿的谐波",
+      "BOARD_CODE": "707",
+      "BOARD_NAME": "沪股通",
+      "IS_PRECISE": "0",
+      "BOARD_RANK": 10
+    },
+    {
+      "SECUCODE": "688017.SH",
+      "SECURITY_CODE": "688017",
+      "SECURITY_NAME_ABBR": "绿的谐波",
+      "BOARD_CODE": "705",
+      "BOARD_NAME": "上证380",
+      "IS_PRECISE": "0",
+      "BOARD_RANK": 11
+    },
+    {
+      "SECUCODE": "688017.SH",
+      "SECURITY_CODE": "688017",
+      "SECURITY_NAME_ABBR": "绿的谐波",
+      "BOARD_CODE": "701",
+      "BOARD_NAME": "中证500",
+      "IS_PRECISE": "0",
+      "BOARD_RANK": 12
+    },
+    {
+      "SECUCODE": "688017.SH",
+      "SECURITY_CODE": "688017",
+      "SECURITY_NAME_ABBR": "绿的谐波",
+      "BOARD_CODE": "596",
+      "BOARD_NAME": "融资融券",
+      "IS_PRECISE": "0",
+      "BOARD_RANK": 13
+    },
+    {
+      "SECUCODE": "688017.SH",
+      "SECURITY_CODE": "688017",
+      "SECURITY_NAME_ABBR": "绿的谐波",
+      "BOARD_CODE": "536",
+      "BOARD_NAME": "基金重仓",
+      "IS_PRECISE": "0",
+      "BOARD_RANK": 14
+    },
+    {
+      "SECUCODE": "688017.SH",
+      "SECURITY_CODE": "688017",
+      "SECURITY_NAME_ABBR": "绿的谐波",
+      "BOARD_CODE": "1184",
+      "BOARD_NAME": "人形机器人",
+      "IS_PRECISE": "1",
+      "BOARD_RANK": 15
+    },
+    {
+      "SECUCODE": "688017.SH",
+      "SECURITY_CODE": "688017",
+      "SECURITY_NAME_ABBR": "绿的谐波",
+      "BOARD_CODE": "1145",
+      "BOARD_NAME": "机器人执行器",
+      "IS_PRECISE": "1",
+      "BOARD_RANK": 16
+    },
+    {
+      "SECUCODE": "688017.SH",
+      "SECURITY_CODE": "688017",
+      "SECURITY_NAME_ABBR": "绿的谐波",
+      "BOARD_CODE": "1100",
+      "BOARD_NAME": "减速器",
+      "IS_PRECISE": "1",
+      "BOARD_RANK": 17
+    },
+    {
+      "SECUCODE": "688017.SH",
+      "SECURITY_CODE": "688017",
+      "SECURITY_NAME_ABBR": "绿的谐波",
+      "BOARD_CODE": "1090",
+      "BOARD_NAME": "机器人概念",
+      "IS_PRECISE": "1",
+      "BOARD_RANK": 18
+    },
+    {
+      "SECUCODE": "688017.SH",
+      "SECURITY_CODE": "688017",
+      "SECURITY_NAME_ABBR": "绿的谐波",
+      "BOARD_CODE": "917",
+      "BOARD_NAME": "半导体概念",
+      "IS_PRECISE": "1",
+      "BOARD_RANK": 19
+    },
+    {
+      "SECUCODE": "688017.SH",
+      "SECURITY_CODE": "688017",
+      "SECURITY_NAME_ABBR": "绿的谐波",
+      "BOARD_CODE": "668",
+      "BOARD_NAME": "医疗器械概念",
+      "IS_PRECISE": "1",
+      "BOARD_RANK": 20
+    },
+    {
+      "SECUCODE": "688017.SH",
+      "SECURITY_CODE": "688017",
+      "SECURITY_NAME_ABBR": "绿的谐波",
+      "BOARD_CODE": "493",
+      "BOARD_NAME": "新能源",
+      "IS_PRECISE": "1",
+      "BOARD_RANK": 21
+    }
+  ],
+  "hxtc": [
+    {
+      "SECUCODE": "688017.SH",
+      "SECURITY_CODE": "688017",
+      "SECURITY_NAME_ABBR": "绿的谐波",
+      "KEYWORD": "经营范围",
+      "MAINPOINT": 2,
+      "MAINPOINT_CONTENT": "谐波传动设备的研发、设计及技术开发;研发、生产、加工及销售:精密谐波减速机、精密仪器、机械设备、传感器、机械配件、流体控制阀、汽车配件(接头)、自动化设备及配件、石油钻探设备配件;自营和代理各类商品及技术进出口业务。(依法须经批准的项目,经相关部门批准后方可开展经营活动)",
+      "KEY_CLASSIF": "经营范围",
+      "KEY_CLASSIF_CODE": "002",
+      "IS_POINT": "0"
+    },
+    {
+      "SECUCODE": "688017.SH",
+      "SECURITY_CODE": "688017",
+      "SECURITY_NAME_ABBR": "绿的谐波",
+      "KEYWORD": "主营业务",
+      "MAINPOINT": 3,
+      "MAINPOINT_CONTENT": "公司是一家专业从事精密传动装置研发、设计、生产和销售的高新技术企业，产品包括谐波减速器、行星滚柱丝杠及精密零部件、机电一体化产品、精密微型液压执行器、智能自动化装备等。公司产品广泛应用于智能机器人、数控机床、汽车、医疗器械、半导体生产设备、新能源装备等高端制造领域。",
+      "KEY_CLASSIF": "主营业务",
+      "KEY_CLASSIF_CODE": "003",
+      "IS_POINT": "0"
+    },
+    {
+      "SECUCODE": "688017.SH",
+      "SECURITY_CODE": "688017",
+      "SECURITY_NAME_ABBR": "绿的谐波",
+      "KEYWORD": "行业背景",
+      "MAINPOINT": 4,
+      "MAINPOINT_CONTENT": "（一）精密谐波减速器行业\n近年来，国内谐波减速器产业也在国家政策支持下不断发展。谐波减速器行业受益于政策和主要下游行业的驱动，迎来快速发展时期，国内从事谐波减速器的研发和生产的厂商有所增加，技术水平有所提高，产品系列逐渐丰富，并已成功突破了国际品牌在国内市场的垄断。国产自主品牌通过与国内机器人生产商达成合作，其在国内市场已经占据了一定的市场份额。\n综合来看，我国谐波减速器行业处于成长期阶段，市场成长迅速，虽然我国已成为全球最大的工业机器人市场，但以精密谐波减速器产品为代表的核心零部件总体供给量存在较大缺口，下游装备制造厂商需求尚未得到满足。随着行业内企业规模化生产的实现与下游工业机器人等产业的快速发展，未来行业规模将持续扩大。\n（二）行星滚柱丝杠行业\n根据行业研究数据，2023年全球行星滚柱丝杠市场规模较小，但随着液压电动化及具身智能机器人行业的发展，将会带动行业的爆发。目前，全球行星滚柱丝杠高端市场仍由欧美企业主导，其占据了高端市场较大份额；中端市场则有日本企业占据重要地位，而中国厂商加速技术攻关，逐步实现国产替代。行星滚柱丝杠属于技术密集型和资金密集型产业，进入门槛极高，另外生产加工核心设备高精度螺纹磨床高度依赖外国进口，受出口管制。进口设备单价高，且交货周期长，对企业固定资产投入压力大，严重影响产线建设进度和产品交货、研发周期。\n（三）精密液压传动行业\n我国是液压制造的大国，但产业大而不强。目前大多数液压产品处于价值链的中低端，高端产品主要依赖进口。液压行业的发展远不能适应主机装备配套，已经成为制约我国装备制造业做强的瓶颈之一。未来，随着智能制造和绿色制造的发展，国内液压行业正朝着智能化、节能化方向加速追赶，在数字液压、智能液压等新兴领域逐步形成自主创新能力。",
+      "KEY_CLASSIF": "行业背景",
+      "KEY_CLASSIF_CODE": "004",
+      "IS_POINT": "1"
+    },
+    {
+      "SECUCODE": "688017.SH",
+      "SECURITY_CODE": "688017",
+      "SECURITY_NAME_ABBR": "绿的谐波",
+      "KEYWORD": "核心竞争力",
+      "MAINPOINT": 5,
+      "MAINPOINT_CONTENT": "（一）技术研发及创新优势\n公司多年以来深耕精密传动领域，在精密传动装置研发、设计方面取得了诸多成果。公司突破了以传统Willis定理为基础的渐开线齿轮设计理论，以自主开发的“P型齿”数学模型、误差修正方法、动态补偿方法等为基础，建立全新齿形设计理论体系，并通过发展振动噪声抑制、啮合刚度等技术，研发的谐波减速器产品在关键性能指标上均达到或超越国际领先水平。\n（二）品牌及产品优势\n公司凭借着出色的研发水平、先进的制造工艺和优异而稳定的产品质量，近年来先后荣获“2024年机械工业科学技术奖二等奖”、“2021年教育部科学技术发明奖一等奖”、“2021年苏锡常首台（套）重大装备”、“2019年度上海市科技进步一等奖”、“第二十二届中国国际工业博览会CIIF机器人奖”、“第二十一届中国国际工业博览会大奖（首届大奖）”等奖励。随着下游行业的发展，机器人及机器人关节为高度机电耦合系统，机电一体化模组将减速器及其他部分零部件进行模块化集成，能够提升减速器产品的功能属性和适用场景，降低厂商部件采购种类，减少安装环节、提高集成效率，并降低工业机器人的开发和应用门槛，让下游制造商更加专注于其机器人应用场景的开发，促进下游行业使用效率的提高和生产成本的降低，迎合了下游行业客户的市场需求。\n（三）精密制造工艺与质量控制优势\n公司核心团队从事精密传动领域超20年，在产品的质量管控、制造工艺等方面积累了丰富的经验。\n（四）产业链覆盖优势\n公司是全球唯一一家实现精密谐波减速器全零部件自主供应的制造商，与国内外先进制造企业的长期合作，使公司在精密加工领域积累了丰富的经验，精密加工能力较强。从基础原材料的研究和选择、零部件粗加工、精密加工到谐波减速器整机的装配，公司均可自主完成。\n（五）贴近客户定制化服务\n随着机器人产业进入高质量发展新阶段，行业竞争格局正从产品导向转向服务能力导向。这一演变对上游精密减速器企业提出了更系统的要求。一方面要求减速器企业具备从理论计算到实际应用的全链条技术支持能力；另一方面必须建立快速的需求响应机制和柔性化生产体系。",
+      "KEY_CLASSIF": "核心竞争力",
+      "KEY_CLASSIF_CODE": "005",
+      "IS_POINT": "1"
+    },
+    {
+      "SECUCODE": "688017.SH",
+      "SECURITY_CODE": "688017",
+      "SECURITY_NAME_ABBR": "绿的谐波",
+      "KEYWORD": "5%以上股东减持计划时间届满",
+      "MAINPOINT": 11,
+      "MAINPOINT_CONTENT": "2022年11月1日公司对外公告,本次减持计划实施前,公司股东孙雪珍女士持有公司股份10,177,651股,占公司总股本比例为6.04%。公司股东上海谱润创业投资合伙企业(有限合伙)持有公司股份8,892,768股,占公司总股本比例为5.27%。公司股东先进制造产业投资基金(有限合伙)(以下简称“先进制造基金”)持有公司股份12,908,000股,占公司总股本7.66%。上述股份均为公司首次公开发行前取得股份,并于2021年8月30日上市流通。2022年7月9日,公司披露了《5%以上股东减持股份计划公告》(公告编号:2022-019),孙雪珍女士拟通过集中竞价交易或大宗交易的方式,减持其所持有的公司股份数量合计不超过5,057,501股。谱润创业拟通过集中竞价交易或大宗交易的方式,减持其所持有的公司股份数量合计不超过3,371,667股。先进制造基金拟通过集中竞价交易或大宗交易的方式,减持其所持有的公司股份数量合计不超过5,057,500股。2022年10月31日,公司收到孙雪珍女士、谱润创业、先进制造基金出具的《关于股份减持进展的告知函》。孙雪珍女士通过集中竞价及大宗交易的方式累计减持公司股份1,753,400股,减持股份数量占公司总股本的1.04%。谱润创业通过集中竞价及大宗交易的方式的方式累计减持公司股份3,152,768股,减持股份数占公司总股本的1.87%。先进制造基金通过集中竞价交易及大宗交易方式累计减持公司股份4,544,081股,减持股份数量占公司总股本的2.70%。",
+      "KEY_CLASSIF": "股份变动",
+      "KEY_CLASSIF_CODE": "007",
+      "IS_POINT": "1"
+    },
+    {
+      "SECUCODE": "688017.SH",
+      "SECURITY_CODE": "688017",
+      "SECURITY_NAME_ABBR": "绿的谐波",
+      "KEYWORD": "自愿锁定股份",
+      "MAINPOINT": 8,
+      "MAINPOINT_CONTENT": "自公司股票上市之日起三十六个月内,不转让或者委托他人管理本次发行前本人直接及间接持有的公司股份,也不由公司回购本人直接及间接持有的该部分股份。",
+      "KEY_CLASSIF": "自愿锁定",
+      "KEY_CLASSIF_CODE": "008005",
+      "IS_POINT": "1"
+    },
+    {
+      "SECUCODE": "688017.SH",
+      "SECURITY_CODE": "688017",
+      "SECURITY_NAME_ABBR": "绿的谐波",
+      "KEYWORD": "年产 50 万台精密谐波减速器项目",
+      "MAINPOINT": 6,
+      "MAINPOINT_CONTENT": "本项目总投资63,105.07万元,其中建设投资总额为58,111.39万元,铺底流动资金4,993.68万元。项目建设期为4年。项目达产后,可实现新增谐波减速器年产50万台。",
+      "KEY_CLASSIF": "募资投向",
+      "KEY_CLASSIF_CODE": "009",
+      "IS_POINT": "1"
+    },
+    {
+      "SECUCODE": "688017.SH",
+      "SECURITY_CODE": "688017",
+      "SECURITY_NAME_ABBR": "绿的谐波",
+      "KEYWORD": "研发中心升级建设项目",
+      "MAINPOINT": 7,
+      "MAINPOINT_CONTENT": "本项目总投资8,277.29万元。项目将致力于创新谐波传动技术,改进生产工艺,提高生产效率,研制出适应不同领域的谐波减速器,实现精密谐波减速器品质与性能的提升,建设内容包括研发中心、实验中心以及检测中心,进行场地建设,新购研发、批量测试及检测设备。其中研发中心根据不同的行业、不同的使用条件来进行更细的区分,用于研发新一代精密谐波减速器产品;实验中心用于对已经完成打样的减速器进行无负载、正常负载以及超负载跑合实验,检查谐波减速器齿的磨损程度,来判断减速器的精度寿命;检测中心分别对谐波减速器刚度、齿形以及重复定位精度等方面进行检测,来判断谐波减速器是否符合工业机器人的使用标准。",
+      "KEY_CLASSIF": "募资投向",
+      "KEY_CLASSIF_CODE": "009",
+      "IS_POINT": "1"
+    },
+    {
+      "SECUCODE": "688017.SH",
+      "SECURITY_CODE": "688017",
+      "SECURITY_NAME_ABBR": "绿的谐波",
+      "KEYWORD": "股利分配",
+      "MAINPOINT": 9,
+      "MAINPOINT_CONTENT": "在满足现金分红条件的基础上,结合公司持续经营和长期发展,公司每年以现金方式分配的利润不少于当年实现的可分配利润的10%,且最近3年以现金方式累计分配的利润不少于最近3年实现的年均可分配利润的30%。",
+      "KEY_CLASSIF": "其他项目",
+      "KEY_CLASSIF_CODE": "010",
+      "IS_POINT": "1"
+    },
+    {
+      "SECUCODE": "688017.SH",
+      "SECURITY_CODE": "688017",
+      "SECURITY_NAME_ABBR": "绿的谐波",
+      "KEYWORD": "稳定股价措施",
+      "MAINPOINT": 10,
+      "MAINPOINT_CONTENT": "公司首次公开发行股票并上市后三年内,如公司股票收盘价格连续20个交易日低于最近一期经审计的每股净资产,公司将通过控股股东增持股份、公司全体董事(独立董事除外)和高级管理人员增持公司股票以及公司回购股份等措施来稳定股价。",
+      "KEY_CLASSIF": "其他项目",
+      "KEY_CLASSIF_CODE": "010",
+      "IS_POINT": "1"
+    }
+  ]
+}

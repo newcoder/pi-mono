@@ -21,16 +21,20 @@ except ImportError:
     print("pip install pandas numpy")
     sys.exit(1)
 
-_LOCAL_DB_PATH = os.path.expanduser("~/.trading-agent/data/market.db")
+_SCRIPT_DIR = os.path.dirname(os.path.abspath(__file__))
+_LOCAL_DATA_ROOT = os.path.normpath(os.path.join(_SCRIPT_DIR, "..", "..", "local-data"))
+if _LOCAL_DATA_ROOT not in sys.path:
+    sys.path.insert(0, _LOCAL_DATA_ROOT)
+
+from local_data.db import get_db, get_db_path, db_exists
 
 
 def _query_local_db(sql: str, params: tuple = ()) -> list:
     """Execute a read-only query against the local market.db."""
-    if not os.path.exists(_LOCAL_DB_PATH):
+    if not db_exists():
         return []
     try:
-        conn = sqlite3.connect(_LOCAL_DB_PATH)
-        conn.row_factory = sqlite3.Row
+        conn = get_db()
         cur = conn.cursor()
         cur.execute(sql, params)
         rows = [dict(r) for r in cur.fetchall()]

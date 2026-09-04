@@ -1,0 +1,421 @@
+- generic [ref=e3]:
+  - generic [ref=e4]:
+    - button "股票池" [ref=e5] [cursor=pointer]:
+      - img [ref=e6]
+    - generic [ref=e8]: π
+    - button "投资日历" [ref=e9] [cursor=pointer]:
+      - img [ref=e10]
+  - generic [ref=e12]:
+    - generic [ref=e13]: RESEARCH
+    - textbox "搜索股票 (代码/名称/拼音)" [ref=e15]
+  - generic [ref=e16]:
+    - generic [ref=e17]:
+      - generic [ref=e18]:
+        - generic [ref=e19]: 股票池
+        - button "关闭" [ref=e20] [cursor=pointer]:
+          - img [ref=e21]
+      - generic [ref=e24]:
+        - generic [ref=e25]:
+          - generic [ref=e194] [cursor=pointer]:
+            - generic [ref=e195]:
+              - generic [ref=e196]: "[42] LGB预测_雷达机会股_2026-05-29"
+              - button "×" [ref=e197]
+            - generic [ref=e198]: 28 只
+          - generic [ref=e199] [cursor=pointer]:
+            - generic [ref=e200]:
+              - generic [ref=e201]: "[41] DE预测_同花顺强势股_2026-05-29"
+              - button "×" [ref=e202]
+            - generic [ref=e203]: 20 只
+          - generic [ref=e204] [cursor=pointer]:
+            - generic [ref=e205]:
+              - generic [ref=e206]: "[40] 同花顺强势股_2026-05-29"
+              - button "×" [ref=e207]
+            - generic [ref=e208]: 50 只
+          - generic [ref=e209] [cursor=pointer]:
+            - generic [ref=e210]:
+              - generic [ref=e211]: "[39] DE预测_LGB股池_2026-05-29"
+              - button "×" [ref=e212]
+            - generic [ref=e213]: 10 只
+          - generic [ref=e214] [cursor=pointer]:
+            - generic [ref=e215]:
+              - generic [ref=e216]: "[38] DE预测_最近访问_2026-05-29"
+              - button "×" [ref=e217]
+            - generic [ref=e218]: 28 只
+          - generic [ref=e219] [cursor=pointer]:
+            - generic [ref=e220]:
+              - generic [ref=e221]: "[37] LGB预测Top5_2026-05-29"
+              - button "×" [ref=e222]
+            - generic [ref=e223]: 5 只
+          - generic [ref=e224] [cursor=pointer]:
+            - generic [ref=e225]:
+              - generic [ref=e226]: "[36] LGB预测Top10_2026-05-28"
+              - button "×" [ref=e227]
+            - generic [ref=e228]: 10 只
+          - generic [ref=e229] [cursor=pointer]:
+            - generic [ref=e230]:
+              - generic [ref=e231]: "[35] 雷达风险股_2026-05-28"
+              - button "×" [ref=e232]
+            - generic [ref=e233]: 23 只
+          - generic [ref=e234] [cursor=pointer]:
+            - generic [ref=e235]:
+              - generic [ref=e236]: "[34] 雷达机会股_2026-05-28"
+              - button "×" [ref=e237]
+            - generic [ref=e238]: 29 只
+          - generic [ref=e239] [cursor=pointer]:
+            - generic [ref=e240]:
+              - generic [ref=e241]: "[33] DE模型预测股池TOP50_2026-05-27"
+              - button "×" [ref=e242]
+            - generic [ref=e243]: 50 只
+          - generic [ref=e244] [cursor=pointer]:
+            - generic [ref=e245]:
+              - generic [ref=e246]: "[32] DE模型预测股池_2026-05-27"
+              - button "×" [ref=e247]
+            - generic [ref=e248]: 7 只
+          - generic [ref=e249] [cursor=pointer]:
+            - generic [ref=e250]:
+              - generic [ref=e251]: "[31] 最近访问"
+              - button "×" [ref=e252]
+            - generic [ref=e253]: 57 只
+          - generic [ref=e254] [cursor=pointer]:
+            - generic [ref=e255]:
+              - generic [ref=e256]: "[30] 周线多头日线缩量调整市值TOP20"
+              - button "×" [ref=e257]
+            - generic [ref=e258]: 20 只
+          - generic [ref=e259] [cursor=pointer]:
+            - generic [ref=e260]:
+              - generic [ref=e261]: "[29] 同花顺强势股_2026-05-26"
+              - button "×" [ref=e262]
+            - generic [ref=e263]: 64 只
+          - generic [ref=e264] [cursor=pointer]:
+            - generic [ref=e265]:
+              - generic [ref=e266]: "[28] 同花顺强势股_20260526"
+              - button "×" [ref=e267]
+            - generic [ref=e268]: 50 只
+          - generic [ref=e269] [cursor=pointer]:
+            - generic [ref=e270]:
+              - generic [ref=e271]: "[27] DoubleEnsemble_Top30_Prob"
+              - button "×" [ref=e272]
+            - generic [ref=e273]: 30 只
+          - generic [ref=e274] [cursor=pointer]:
+            - generic [ref=e275]:
+              - generic [ref=e276]: "[24] lgbm_40_60"
+              - button "×" [ref=e277]
+            - generic [ref=e278]: 21 只
+          - generic [ref=e279] [cursor=pointer]:
+            - generic [ref=e280]:
+              - generic [ref=e281]: "[25] LGBM Rank 40-60"
+              - button "×" [ref=e282]
+            - generic [ref=e283]: 21 只
+          - generic [ref=e284] [cursor=pointer]:
+            - generic [ref=e285]:
+              - generic [ref=e286]: "[23] 周线多头日线缩量回调_202605"
+              - button "×" [ref=e287]
+            - generic [ref=e288]: 30 只
+          - generic [ref=e289] [cursor=pointer]:
+            - generic [ref=e290]:
+              - generic [ref=e291]: "[21] 未来关注股池"
+              - button "×" [ref=e292]
+            - generic [ref=e293]: 50 只
+          - generic [ref=e294] [cursor=pointer]:
+            - generic [ref=e295]:
+              - generic [ref=e296]: "[19] 周线多头日线回调缩量"
+              - button "×" [ref=e297]
+            - generic [ref=e298]: 50 只
+          - generic [ref=e299] [cursor=pointer]:
+            - generic [ref=e300]:
+              - generic [ref=e301]: "[18] 前期强势缩量调整"
+              - button "×" [ref=e302]
+            - generic [ref=e303]: 50 只
+          - generic [ref=e304] [cursor=pointer]:
+            - generic [ref=e305]:
+              - generic [ref=e306]: "[17] 营收连续两年增长超50%"
+              - button "×" [ref=e307]
+            - generic [ref=e308]: 45 只
+          - generic [ref=e309] [cursor=pointer]:
+            - generic [ref=e310]:
+              - generic [ref=e311]: "[7] 日线多头排列市值TOP10"
+              - button "×" [ref=e312]
+            - generic [ref=e313]: 10 只
+        - generic [ref=e146]:
+          - generic [ref=e314]: LGB预测_雷达机会股_2026-05-29
+          - generic [ref=e315] [cursor=pointer]:
+            - generic [ref=e316]: "601398"
+            - generic [ref=e317]: 工商银行
+          - generic [ref=e318] [cursor=pointer]:
+            - generic [ref=e319]: "601668"
+            - generic [ref=e320]: 中国建筑
+          - generic [ref=e321] [cursor=pointer]:
+            - generic [ref=e322]: "000785"
+            - generic [ref=e323]: 居然智家
+          - generic [ref=e324] [cursor=pointer]:
+            - generic [ref=e325]: "600519"
+            - generic [ref=e326]: 贵州茅台
+          - generic [ref=e327] [cursor=pointer]:
+            - generic [ref=e328]: "002839"
+            - generic [ref=e329]: 张家港行
+          - generic [ref=e330] [cursor=pointer]:
+            - generic [ref=e331]: "000429"
+            - generic [ref=e332]: 粤高速A
+          - generic [ref=e333] [cursor=pointer]:
+            - generic [ref=e334]: "002594"
+            - generic [ref=e335]: 比亚迪
+          - generic [ref=e336] [cursor=pointer]:
+            - generic [ref=e337]: "688778"
+            - generic [ref=e338]: 厦钨新能
+          - generic [ref=e339] [cursor=pointer]:
+            - generic [ref=e340]: "000858"
+            - generic [ref=e341]: 五粮液
+          - generic [ref=e342] [cursor=pointer]:
+            - generic [ref=e343]: "000725"
+            - generic [ref=e344]: 京东方A
+          - generic [ref=e345] [cursor=pointer]:
+            - generic [ref=e346]: "688766"
+            - generic [ref=e347]: 普冉股份
+          - generic [ref=e348] [cursor=pointer]:
+            - generic [ref=e349]: "000963"
+            - generic [ref=e350]: 华东医药
+          - generic [ref=e351] [cursor=pointer]:
+            - generic [ref=e352]: "301571"
+            - generic [ref=e353]: 国科天成
+          - generic [ref=e354] [cursor=pointer]:
+            - generic [ref=e355]: "603109"
+            - generic [ref=e356]: 神驰机电
+          - generic [ref=e357] [cursor=pointer]:
+            - generic [ref=e358]: "002840"
+            - generic [ref=e359]: 华统股份
+          - generic [ref=e360] [cursor=pointer]:
+            - generic [ref=e361]: "603351"
+            - generic [ref=e362]: 威尔药业
+          - generic [ref=e363] [cursor=pointer]:
+            - generic [ref=e364]: "688981"
+            - generic [ref=e365]: 中芯国际
+          - generic [ref=e366] [cursor=pointer]:
+            - generic [ref=e367]: "600085"
+            - generic [ref=e368]: 同仁堂
+          - generic [ref=e369] [cursor=pointer]:
+            - generic [ref=e370]: "301101"
+            - generic [ref=e371]: 明月镜片
+          - generic [ref=e372] [cursor=pointer]:
+            - generic [ref=e373]: "603019"
+            - generic [ref=e374]: 中科曙光
+          - generic [ref=e375] [cursor=pointer]:
+            - generic [ref=e376]: "603110"
+            - generic [ref=e377]: 东方材料
+          - generic [ref=e378] [cursor=pointer]:
+            - generic [ref=e379]: "603477"
+            - generic [ref=e380]: 巨星农牧
+          - generic [ref=e381] [cursor=pointer]:
+            - generic [ref=e382]: "688717"
+            - generic [ref=e383]: 艾罗能源
+          - generic [ref=e384] [cursor=pointer]:
+            - generic [ref=e385]: "300486"
+            - generic [ref=e386]: 东杰智能
+          - generic [ref=e387] [cursor=pointer]:
+            - generic [ref=e388]: "300131"
+            - generic [ref=e389]: 英唐智控
+          - generic [ref=e390] [cursor=pointer]:
+            - generic [ref=e391]: "600199"
+            - generic [ref=e392]: 金种子酒
+          - generic [ref=e393] [cursor=pointer]:
+            - generic [ref=e394]: "688729"
+            - generic [ref=e395]: 屹唐股份
+          - generic [ref=e396] [cursor=pointer]:
+            - generic [ref=e397]: "688603"
+            - generic [ref=e398]: 天承科技
+    - generic [ref=e151]:
+      - generic [ref=e153]:
+        - generic [ref=e399]:
+          - generic [ref=e400]: 你
+          - generic [ref=e401]: 对37号股池的股票进行深度分析
+        - generic [ref=e402]:
+          - generic [ref=e403]: AI
+          - generic [ref=e404]: 好的，让我先查看37号股池「LGB预测Top5_2026-05-29」的内容，然后逐只进行深度分析。
+        - generic [ref=e405]:
+          - generic [ref=e406]: AI
+          - generic [ref=e407]: 现在对这5只股票进行基本面、技术面和新闻资讯的全面深度分析。▌
+      - generic [ref=e155]:
+        - button "设置" [ref=e156] [cursor=pointer]:
+          - img [ref=e157]
+        - button "附件" [ref=e160] [cursor=pointer]:
+          - img [ref=e161]
+        - button "Choose File"
+        - textbox "输入消息..." [active] [ref=e163]
+        - button "发送" [ref=e164] [cursor=pointer]:
+          - img [ref=e165]
+    - generic [ref=e168]:
+      - generic [ref=e169]:
+        - generic [ref=e170] [cursor=pointer]:
+          - generic [ref=e171]: 📅 投资日历
+          - generic [ref=e172]:
+            - button "刷新日历数据" [ref=e173]:
+              - img [ref=e174]
+            - img [ref=e177]
+        - generic [ref=e180]:
+          - generic [ref=e408]:
+            - button "<" [ref=e409] [cursor=pointer]
+            - generic [ref=e410]: 2026年5月
+            - button ">" [ref=e411] [cursor=pointer]
+          - generic [ref=e412]:
+            - generic [ref=e413]: 日
+            - generic [ref=e414]: 一
+            - generic [ref=e415]: 二
+            - generic [ref=e416]: 三
+            - generic [ref=e417]: 四
+            - generic [ref=e418]: 五
+            - generic [ref=e419]: 六
+          - generic [ref=e420]:
+            - generic [ref=e427] [cursor=pointer]: "1"
+            - generic [ref=e429] [cursor=pointer]: "2"
+            - generic [ref=e431] [cursor=pointer]: "3"
+            - generic [ref=e433] [cursor=pointer]: "4"
+            - generic [ref=e435] [cursor=pointer]: "5"
+            - generic [ref=e437] [cursor=pointer]: "6"
+            - generic [ref=e439] [cursor=pointer]: "7"
+            - generic [ref=e441] [cursor=pointer]: "8"
+            - generic [ref=e443] [cursor=pointer]: "9"
+            - generic [ref=e445] [cursor=pointer]: "10"
+            - generic [ref=e447] [cursor=pointer]: "11"
+            - generic [ref=e449] [cursor=pointer]: "12"
+            - generic [ref=e451] [cursor=pointer]: "13"
+            - generic [ref=e453] [cursor=pointer]: "14"
+            - generic [ref=e455] [cursor=pointer]: "15"
+            - generic [ref=e457] [cursor=pointer]: "16"
+            - generic [ref=e459] [cursor=pointer]: "17"
+            - generic [ref=e461] [cursor=pointer]: "18"
+            - generic [ref=e465] [cursor=pointer]: "19"
+            - generic [ref=e467] [cursor=pointer]: "20"
+            - generic [ref=e469] [cursor=pointer]: "21"
+            - generic [ref=e473] [cursor=pointer]: "22"
+            - generic [ref=e475] [cursor=pointer]: "23"
+            - generic [ref=e477] [cursor=pointer]: "24"
+            - generic [ref=e479] [cursor=pointer]: "25"
+            - generic [ref=e483] [cursor=pointer]: "26"
+            - generic [ref=e485] [cursor=pointer]: "27"
+            - generic [ref=e487] [cursor=pointer]: "28"
+            - generic [ref=e489] [cursor=pointer]: "29"
+            - generic [ref=e491] [cursor=pointer]: "30"
+            - generic [ref=e493] [cursor=pointer]: "31"
+          - generic [ref=e494]:
+            - generic [ref=e495]: 本月重点关注
+            - generic [ref=e496] [cursor=pointer]:
+              - generic [ref=e497]:
+                - generic [ref=e499]: 05-18
+                - generic [ref=e500]: 新天力 业绩预告
+              - generic [ref=e501]: "公告日期: 20260518; 报告期[20260331]: 2026年一季报"
+            - generic [ref=e502] [cursor=pointer]:
+              - generic [ref=e503]:
+                - generic [ref=e505]: 05-21
+                - generic [ref=e506]: 高特电子 业绩预告
+              - generic [ref=e507]: "公告日期: 20260521; 报告期[20260331]: 2026年一季报"
+            - generic [ref=e508] [cursor=pointer]:
+              - generic [ref=e509]:
+                - generic [ref=e511]: 05-21
+                - generic [ref=e512]: 惠康科技 业绩预告
+              - generic [ref=e513]: "最新价: 89.18; 最新涨跌幅: 0.314961; 公告日期: 20260521; 报告期[20260331]: 2026年一季报; 净利润增长率上限[20260331]: 9.8"
+            - generic [ref=e514] [cursor=pointer]:
+              - generic [ref=e515]:
+                - generic [ref=e517]: 05-21
+                - generic [ref=e518]: 新睿电子 业绩预告
+              - generic [ref=e519]: "公告日期: 20260521; 报告期[20260331]: 2026年一季报"
+            - generic [ref=e520] [cursor=pointer]:
+              - generic [ref=e521]:
+                - generic [ref=e523]: 05-25
+                - generic [ref=e524]: 彩客科技 业绩预告
+              - generic [ref=e525]: "公告日期: 20260525; 报告期[20260331]: 2026年一季报"
+      - generic [ref=e181]:
+        - generic [ref=e182] [cursor=pointer]:
+          - generic [ref=e183]: 📰 财经新闻
+          - img [ref=e184]
+        - generic [ref=e187]:
+          - generic "长春高新：甲磺酸亮丙瑞林注射液（6M）上市申请获得受理" [ref=e526]:
+            - generic [ref=e527]:
+              - generic [ref=e528]: 东财7x24
+              - generic [ref=e529]: 05-29 17:03
+            - generic [ref=e530]: 长春高新：甲磺酸亮丙瑞林注射液（6M）上市申请获得受理
+            - generic [ref=e531]: 【长春高新：甲磺酸亮丙瑞林注射液（6M）上市申请获得受理】长春高新(000661.SZ)公告称，公司控股子公司金赛药业收到国家药监局核准签发的《受理通知书》，甲磺酸亮丙瑞林注射液(6M)用于乳腺癌治疗的上市申请获得受理。该产品为长效皮下注射...
+          - generic "万科下半年到期公开债规模101.2亿元 已完成6只债券展期" [ref=e532]:
+            - generic [ref=e533]:
+              - generic [ref=e534]: 东财7x24
+              - generic [ref=e535]: 05-29 17:02
+            - generic [ref=e536]: 万科下半年到期公开债规模101.2亿元 已完成6只债券展期
+            - generic [ref=e537]: 【万科下半年到期公开债规模101.2亿元 已完成6只债券展期】5月29日下午，万科在深圳大梅沙举行2025年度股东会。会上，万科管理层表示，目前已在部分兑付安排下完成6只公开债券的展期。接下来，在2026年下半年（6-12月），公司到期公开...
+          - generic "意大利5月CPI同比增长3.2% 预期3.2%" [ref=e538]:
+            - generic [ref=e539]:
+              - generic [ref=e540]: 东财7x24
+              - generic [ref=e541]: 05-29 17:01
+            - generic [ref=e542]: 意大利5月CPI同比增长3.2% 预期3.2%
+            - generic [ref=e543]: 意大利5月CPI同比增长3.2%，预期3.2%，前值2.7%。
+          - generic "东方盛虹：控股股东及其一致行动人4月17日至5月28日合计增持6361.57万股" [ref=e544]:
+            - generic [ref=e545]:
+              - generic [ref=e546]: 东财7x24
+              - generic [ref=e547]: 05-29 17:00
+            - generic [ref=e548]: 东方盛虹：控股股东及其一致行动人4月17日至5月28日合计增持6361.57万股
+            - generic [ref=e549]: 【东方盛虹：控股股东及其一致行动人4月17日至5月28日合计增持6361.57万股】东方盛虹(000301.SZ)公告称，公司控股股东盛虹科技及其一致行动人盛虹苏州于2026年4月17日至5月28日通过集中竞价交易合计增持公司股份6361....
+          - generic "韩元兑美元日内跌超1%" [ref=e550]:
+            - generic [ref=e551]:
+              - generic [ref=e552]: 东财7x24
+              - generic [ref=e553]: 05-29 17:00
+            - generic [ref=e554]: 韩元兑美元日内跌超1%
+            - generic [ref=e555]: 韩元兑美元日内跌超1%。
+          - generic "中国欧盟商会与欧洲议会对华关系代表团一行举行会见" [ref=e556]:
+            - generic [ref=e557]:
+              - generic [ref=e558]: 东财7x24
+              - generic [ref=e559]: 05-29 17:00
+            - generic [ref=e560]: 中国欧盟商会与欧洲议会对华关系代表团一行举行会见
+            - generic [ref=e561]: 【中国欧盟商会与欧洲议会对华关系代表团一行举行会见】5月28日，中国欧盟商会主席彦辞与顾问委员会代表，在北京会见了欧洲议会对华关系代表团团长恩金·埃罗格鲁一行。此次会见由欧盟驻华大使庹尧诲主办，埃罗格鲁主持。
+          - generic "特斯拉Optimus专属机器人工厂动工 规划年产能最高可达1000万台" [ref=e562]:
+            - generic [ref=e563]:
+              - generic [ref=e564]: 东财7x24
+              - generic [ref=e565]: 05-29 17:00
+            - generic [ref=e566]: 特斯拉Optimus专属机器人工厂动工 规划年产能最高可达1000万台
+            - generic [ref=e567]: 【特斯拉Optimus专属机器人工厂动工 规划年产能最高可达1000万台】据报道，特斯拉位于得克萨斯州的超级工厂内，专属Optimus人形机器人工厂正式动工建设，规划年产能最高可达1000万台。该工厂将搭建第二代生产线，计划2027年夏季实...
+          - generic "众鑫股份：加拿大对华热成型模制纤维餐具“双反”终裁出炉 公司及子公司反倾销税率分别为111%和120.5%" [ref=e568]:
+            - generic [ref=e569]:
+              - generic [ref=e570]: 东财7x24
+              - generic [ref=e571]: 05-29 16:58
+            - generic [ref=e572]: 众鑫股份：加拿大对华热成型模制纤维餐具“双反”终裁出炉 公司及子公司反倾销税率分别为111%和120.5%
+            - generic [ref=e573]: 【众鑫股份：加拿大对华热成型模制纤维餐具“双反”终裁出炉 公司及子公司反倾销税率分别为111%和120.5%】众鑫股份(603091.SH)公告称，加拿大调查机关对原产自中国的热成型模制纤维餐具作出反倾销和反补贴终裁，公司及全资子公司广西华...
+          - generic "证监会同意江苏展芯创业板IPO注册" [ref=e574]:
+            - generic [ref=e575]:
+              - generic [ref=e576]: 东财7x24
+              - generic [ref=e577]: 05-29 16:56
+            - generic [ref=e578]: 证监会同意江苏展芯创业板IPO注册
+            - generic [ref=e579]: 【证监会同意江苏展芯创业板IPO注册】5月29日消息，证监会日前下发关于同意江苏展芯半导体技术股份有限公司首次公开发行股票注册的批复，同意该公司首次公开发行股票并在创业板上市的注册申请。
+          - generic "招商证券：快手-W第一季业绩胜预期 可灵商业化加速兑现" [ref=e580]:
+            - generic [ref=e581]:
+              - generic [ref=e582]: 东财7x24
+              - generic [ref=e583]: 05-29 16:55
+            - generic [ref=e584]: 招商证券：快手-W第一季业绩胜预期 可灵商业化加速兑现
+            - generic [ref=e585]: 【招商证券：快手-W第一季业绩胜预期 可灵商业化加速兑现】招商证券发布研报称，维持快手-W“增持”评级及目标价64港元，对应2026/2027财年15倍/13倍经调整市盈率。
+          - generic "中证指数公司更新中证行业分类结果" [ref=e586]:
+            - generic [ref=e587]:
+              - generic [ref=e588]: 东财7x24
+              - generic [ref=e589]: 05-29 16:55
+            - generic [ref=e590]: 中证指数公司更新中证行业分类结果
+            - generic [ref=e591]: 【中证指数公司更新中证行业分类结果】根据上市公司2025年年报以及最新公司经营情况，中证指数有限公司将调整部分上市公司中证行业分类结果。本次行业分类调整自2026年6月12日收市后生效。
+          - generic "外资机构：中国市场凭韧性与活力吸引全球资本" [ref=e592]:
+            - generic [ref=e593]:
+              - generic [ref=e594]: 东财7x24
+              - generic [ref=e595]: 05-29 16:54
+            - generic [ref=e596]: 外资机构：中国市场凭韧性与活力吸引全球资本
+            - generic [ref=e597]: 【外资机构：中国市场凭韧性与活力吸引全球资本】参会外资机构普遍认为，凭借稳定的宏观政策、超大规模市场优势与强劲创新动能，中国的发展活力与产业韧性持续释放。同时，伴随一系列改革举措落地见效，中国资本市场生态持续优化，为全球资金布局提供机遇。瑞...
+          - generic "Omdia：2026年第一季度美国智能手机市场同比下滑3%" [ref=e598]:
+            - generic [ref=e599]:
+              - generic [ref=e600]: 东财7x24
+              - generic [ref=e601]: 05-29 16:54
+            - generic [ref=e602]: Omdia：2026年第一季度美国智能手机市场同比下滑3%
+            - generic [ref=e603]: 【Omdia：2026年第一季度美国智能手机市场同比下滑3%】Omdia发布最新研究，2026年第一季度，美国智能手机市场同比下滑3%，出货量降至3340万部。
+          - generic "金融监管总局同意解散沃尔沃汽车金融（中国）有限公司" [ref=e604]:
+            - generic [ref=e605]:
+              - generic [ref=e606]: 东财7x24
+              - generic [ref=e607]: 05-29 16:50
+            - generic [ref=e608]: 金融监管总局同意解散沃尔沃汽车金融（中国）有限公司
+            - generic [ref=e609]: 金融监管总局同意解散沃尔沃汽车金融（中国）有限公司。
+          - generic "贵州筹划建设全省天然气资源交易中心" [ref=e610]:
+            - generic [ref=e611]:
+              - generic [ref=e612]: 东财7x24
+              - generic [ref=e613]: 05-29 16:47
+            - generic [ref=e614]: 贵州筹划建设全省天然气资源交易中心
+            - generic [ref=e615]: 【贵州筹划建设全省天然气资源交易中心】记者近日调研了解到，贵州正在筹划建设全省天然气资源交易中心。有知情人士表示，“这个事还在初步阶段，各方在沟通协商中。”
+      - button "关闭" [ref=e190] [cursor=pointer]:
+        - img [ref=e191]

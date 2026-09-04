@@ -1,0 +1,24 @@
+Original: 'ʳƷ��--�\u05feƢ�--�\u05feƢ�(21)'
+
+
+--- Byte analysis ---
+ʳ: U+02B3 -> >255
+Ʒ: U+01B7 -> >255
+�: U+FFFD -> >255
+�: U+FFFD -> >255
+-: U+002D -> latin1 byte: 2d
+-: U+002D -> latin1 byte: 2d
+�: U+FFFD -> >255
+׾: U+05FE -> >255
+Ƣ: U+01A2 -> >255
+�: U+FFFD -> >255
+-: U+002D -> latin1 byte: 2d
+-: U+002D -> latin1 byte: 2d
+�: U+FFFD -> >255
+׾: U+05FE -> >255
+Ƣ: U+01A2 -> >255
+�: U+FFFD -> >255
+(: U+0028 -> latin1 byte: 28
+2: U+0032 -> latin1 byte: 32
+1: U+0031 -> latin1 byte: 31
+): U+0029 -> latin1 byte: 29

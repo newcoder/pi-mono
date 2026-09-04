@@ -5,17 +5,32 @@ import type {
 	AdjustFactorRow,
 	BusinessCompositionRow,
 	CalendarEventRow,
+	ConceptFilterResultRow,
+	ConceptIndicatorRow,
 	ConceptStockRow,
+	ConceptSyntheticKlineRow,
+	DynamicPoolItemRow,
+	FactorIcRow,
 	FundamentalIndicatorsRow,
 	FundamentalsRow,
+	HotStockRow,
+	IndustryIndexRow,
+	IndustryIndicatorRow,
+	IndustryKlineRow,
+	IndustryQuoteRow,
 	IndustryRow,
+	IndustrySyntheticKlineRow,
 	KlineFilter,
 	KlineRow,
 	MacroRow,
+	PortfolioRow,
+	PortfolioTradeRow,
 	QuoteRow,
 	SectorRow,
+	StockIndicatorRow,
 	StockIndustryRow,
 	StockRow,
+	TrackedThemeRow,
 } from "./types.js";
 
 function promisifyQuery(db: sqlite3.Database, sql: string, params?: unknown[]): Promise<any[]> {
@@ -46,6 +61,122 @@ function promisifyExec(db: sqlite3.Database, sql: string): Promise<void> {
 function s(v: string | null | undefined): string {
 	if (v == null) return "NULL";
 	return `'${v.replace(/'/g, "''")}'`;
+}
+
+/**
+ * Aggregate daily klines into weekly or monthly OHLC bars.
+ * - Weekly: groups by Monday of each ISO week
+ * - Monthly: groups by YYYY-MM
+ * Returns bars sorted by date, limited to `maxBars` if specified.
+ */
+function aggregateDailyKlines(daily: KlineRow[], period: "week" | "month", maxBars?: number): KlineRow[] {
+	if (daily.length === 0) return [];
+
+	const groups = new Map<string, KlineRow[]>();
+
+	for (const k of daily) {
+		const d = new Date(`${k.date}T00:00:00`);
+		let key: string;
+		if (period === "week") {
+			// Monday of the ISO week
+			const dayOfWeek = d.getDay() || 7; // Sun=0→7, Mon=1
+			const monday = new Date(d);
+			monday.setDate(d.getDate() - (dayOfWeek - 1));
+			key = monday.toISOString().slice(0, 10);
+		} else {
+			// YYYY-MM-01 (first of the month)
+			key = `${k.date.slice(0, 7)}-01`;
+		}
+		if (!groups.has(key)) groups.set(key, []);
+		groups.get(key)!.push(k);
+	}
+
+	const result: KlineRow[] = [];
+	for (const [key, bars] of groups) {
+		bars.sort((a, b) => a.date.localeCompare(b.date));
+		const first = bars[0];
+		const last = bars[bars.length - 1];
+		result.push({
+			code: first.code,
+			market: first.market,
+			period,
+			adjust: first.adjust,
+			date: key, // Monday date for week, YYYY-MM-01 for month
+			open: first.open,
+			high: Math.max(...bars.map((b) => b.high ?? -Infinity)),
+			low: Math.min(...bars.map((b) => b.low ?? Infinity)),
+			close: last.close,
+			volume: bars.reduce((sum, b) => sum + (b.volume ?? 0), 0),
+			turnover: bars.reduce((sum, b) => sum + (b.turnover ?? 0), 0),
+			change_pct: null,
+			change_amount: null,
+			amplitude: null,
+			pre_close: null,
+		});
+	}
+
+	result.sort((a, b) => a.date.localeCompare(b.date));
+	if (maxBars != null && result.length > maxBars) {
+		return result.slice(result.length - maxBars);
+	}
+	return result;
+}
+
+/**
+ * Aggregate daily industry klines into weekly or monthly OHLC bars.
+ * Uses the same grouping logic as aggregateDailyKlines.
+ */
+function aggregateDailyIndustryKlines(
+	daily: IndustryKlineRow[],
+	period: "week" | "month",
+	maxBars?: number,
+): IndustryKlineRow[] {
+	if (daily.length === 0) return [];
+
+	const groups = new Map<string, IndustryKlineRow[]>();
+
+	for (const k of daily) {
+		const d = new Date(`${k.date}T00:00:00`);
+		let key: string;
+		if (period === "week") {
+			const dayOfWeek = d.getDay() || 7;
+			const monday = new Date(d);
+			monday.setDate(d.getDate() - (dayOfWeek - 1));
+			key = monday.toISOString().slice(0, 10);
+		} else {
+			key = `${k.date.slice(0, 7)}-01`;
+		}
+		if (!groups.has(key)) groups.set(key, []);
+		groups.get(key)!.push(k);
+	}
+
+	const result: IndustryKlineRow[] = [];
+	for (const [key, bars] of groups) {
+		bars.sort((a, b) => a.date.localeCompare(b.date));
+		const first = bars[0];
+		const last = bars[bars.length - 1];
+		result.push({
+			code: first.code,
+			period,
+			date: key,
+			open: first.open,
+			high: Math.max(...bars.map((b) => b.high ?? -Infinity)),
+			low: Math.min(...bars.map((b) => b.low ?? Infinity)),
+			close: last.close,
+			volume: bars.reduce((sum, b) => sum + (b.volume ?? 0), 0),
+			turnover: bars.reduce((sum, b) => sum + (b.turnover ?? 0), 0),
+			change_pct: null,
+			change_amount: null,
+			amplitude: null,
+			turnover_rate: null,
+		});
+	}
+
+	result.sort((a, b) => a.date.localeCompare(b.date));
+	if (maxBars != null && result.length > maxBars) {
+		return result.slice(result.length - maxBars);
+	}
+	return result;
 }
 
 const SCHEMA_SQL = `
@@ -100,6 +231,25 @@ CREATE TABLE IF NOT EXISTS quotes (
     updated_at TEXT,
     PRIMARY KEY (code, market, snapshot_date)
 );
+
+CREATE TABLE IF NOT EXISTS hot_stocks (
+    date TEXT NOT NULL,
+    code TEXT NOT NULL,
+    market INTEGER NOT NULL,
+    name TEXT,
+    reason TEXT,
+    price REAL,
+    change_pct REAL,
+    turnover_pct REAL,
+    amount REAL,
+    pe_ttm REAL,
+    pb REAL,
+    mcap_yi REAL,
+    updated_at TEXT,
+    PRIMARY KEY (date, code, market)
+);
+
+CREATE INDEX IF NOT EXISTS idx_hot_stocks_date ON hot_stocks(date);
 
 CREATE TABLE IF NOT EXISTS fundamentals (
     code TEXT NOT NULL,
@@ -162,11 +312,64 @@ CREATE TABLE IF NOT EXISTS sectors (
 );
 
 CREATE TABLE IF NOT EXISTS concept_stocks (
-    concept TEXT NOT NULL,
+    theme TEXT NOT NULL,
     code TEXT NOT NULL,
     name TEXT,
     updated_at TEXT,
-    PRIMARY KEY (concept, code)
+    PRIMARY KEY (theme, code)
+);
+
+CREATE TABLE IF NOT EXISTS concept_synthetic_klines (
+    theme TEXT NOT NULL,
+    date TEXT NOT NULL,
+    close REAL,
+    constituent_count INTEGER,
+    updated_at TEXT,
+    PRIMARY KEY (theme, date)
+);
+
+CREATE TABLE IF NOT EXISTS concept_filter_results (
+    concept TEXT PRIMARY KEY,
+    constituent_count INTEGER,
+    dispersion REAL,
+    max_benchmark_correlation REAL,
+    size_pass INTEGER,
+    dispersion_pass INTEGER,
+    independence_pass INTEGER,
+    rank_score REAL,
+    rank INTEGER,
+    updated_at TEXT
+);
+
+CREATE TABLE IF NOT EXISTS concept_indicators (
+    theme TEXT NOT NULL,
+    date TEXT NOT NULL,
+    period_days INTEGER NOT NULL,
+    momentum_return REAL,
+    momentum_rank INTEGER,
+    has_momentum INTEGER,
+    updated_at TEXT,
+    PRIMARY KEY (theme, date, period_days)
+);
+
+CREATE TABLE IF NOT EXISTS tracked_themes (
+    concept TEXT NOT NULL,
+    master_theme TEXT NOT NULL,
+    status TEXT NOT NULL DEFAULT 'tracked',
+    notes TEXT,
+    updated_at TEXT,
+    PRIMARY KEY (concept)
+);
+
+CREATE TABLE IF NOT EXISTS theme_classification (
+	theme TEXT NOT NULL,
+	parent_theme TEXT,
+	level TEXT NOT NULL,
+	mentions INTEGER,
+	sub_concepts TEXT,
+	snapshot_date TEXT NOT NULL,
+	updated_at TEXT,
+	PRIMARY KEY (theme, snapshot_date)
 );
 
 CREATE TABLE IF NOT EXISTS business_composition (
@@ -228,6 +431,115 @@ CREATE INDEX IF NOT EXISTS idx_stocks_industry ON stocks(industry);
 CREATE INDEX IF NOT EXISTS idx_concept_stocks_concept ON concept_stocks(concept);
 CREATE INDEX IF NOT EXISTS idx_stock_industries_code ON stock_industries(code, market);
 CREATE INDEX IF NOT EXISTS idx_stock_industries_industry ON stock_industries(industry_code, standard);
+
+CREATE TABLE IF NOT EXISTS industry_indices (
+    code TEXT PRIMARY KEY,
+    name TEXT NOT NULL,
+    updated_at TEXT
+);
+
+CREATE TABLE IF NOT EXISTS industry_klines (
+    code TEXT NOT NULL,
+    period TEXT NOT NULL,
+    date TEXT NOT NULL,
+    open REAL,
+    high REAL,
+    low REAL,
+    close REAL,
+    volume REAL,
+    turnover REAL,
+    change_pct REAL,
+    change_amount REAL,
+    amplitude REAL,
+    turnover_rate REAL,
+    PRIMARY KEY (code, period, date)
+);
+
+CREATE INDEX IF NOT EXISTS idx_industry_klines_code_period ON industry_klines(code, period, date);
+
+CREATE TABLE IF NOT EXISTS industry_quotes (
+    code TEXT NOT NULL,
+    snapshot_date TEXT NOT NULL,
+    name TEXT,
+    latest REAL,
+    open REAL,
+    high REAL,
+    low REAL,
+    prev_close REAL,
+    volume REAL,
+    turnover REAL,
+    change_pct REAL,
+    change_amount REAL,
+    amplitude REAL,
+    turnover_rate REAL,
+    up_count INTEGER,
+    down_count INTEGER,
+    flat_count INTEGER,
+    leading_stock TEXT,
+    leading_stock_code TEXT,
+    leading_change_pct REAL,
+    lagging_stock TEXT,
+    lagging_stock_code TEXT,
+    lagging_change_pct REAL,
+    updated_at TEXT,
+    PRIMARY KEY (code, snapshot_date)
+);
+
+CREATE INDEX IF NOT EXISTS idx_industry_quotes_date ON industry_quotes(snapshot_date);
+
+CREATE TABLE IF NOT EXISTS industry_indicators (
+    code TEXT NOT NULL,
+    date TEXT NOT NULL,
+    period_days INTEGER NOT NULL,
+    momentum_return REAL,
+    momentum_rank INTEGER,
+    has_momentum INTEGER,
+    updated_at TEXT,
+    PRIMARY KEY (code, date, period_days)
+);
+
+CREATE INDEX IF NOT EXISTS idx_industry_indicators_date ON industry_indicators(date, period_days);
+
+CREATE TABLE IF NOT EXISTS stock_indicators (
+    code TEXT NOT NULL,
+    market INTEGER NOT NULL,
+    date TEXT NOT NULL,
+    indicator_name TEXT NOT NULL,
+    indicator_value REAL,
+    indicator_rank INTEGER,
+    has_signal INTEGER,
+    updated_at TEXT,
+    PRIMARY KEY (code, market, date, indicator_name)
+);
+
+CREATE INDEX IF NOT EXISTS idx_stock_indicators_lookup
+    ON stock_indicators(code, market, date, indicator_name);
+CREATE INDEX IF NOT EXISTS idx_stock_indicators_name_date
+    ON stock_indicators(indicator_name, date);
+
+CREATE TABLE IF NOT EXISTS factor_ic (
+    date TEXT NOT NULL,
+    factor_name TEXT NOT NULL,
+    ic_value REAL,
+    sample_count INTEGER,
+    updated_at TEXT,
+    PRIMARY KEY (date, factor_name)
+);
+
+CREATE INDEX IF NOT EXISTS idx_factor_ic_lookup ON factor_ic(factor_name, date);
+
+CREATE TABLE IF NOT EXISTS industry_synthetic_klines (
+    code TEXT NOT NULL,
+    standard TEXT NOT NULL,
+    date TEXT NOT NULL,
+    close REAL,
+    constituent_count INTEGER,
+    updated_at TEXT,
+    PRIMARY KEY (code, standard, date)
+);
+
+CREATE INDEX IF NOT EXISTS idx_industry_synthetic_klines_lookup
+    ON industry_synthetic_klines(code, standard, date);
 
 CREATE TABLE IF NOT EXISTS stock_pools (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -318,6 +630,52 @@ CREATE TABLE IF NOT EXISTS calendar_events (
 CREATE INDEX IF NOT EXISTS idx_calendar_date ON calendar_events(event_date);
 CREATE INDEX IF NOT EXISTS idx_calendar_code ON calendar_events(code);
 CREATE INDEX IF NOT EXISTS idx_calendar_category ON calendar_events(category);
+
+CREATE TABLE IF NOT EXISTS portfolios (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    name TEXT NOT NULL UNIQUE,
+    description TEXT,
+    initial_cash REAL NOT NULL,
+    created_at TEXT DEFAULT CURRENT_TIMESTAMP,
+    updated_at TEXT DEFAULT CURRENT_TIMESTAMP
+);
+
+CREATE TABLE IF NOT EXISTS portfolio_trades (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    portfolio_id INTEGER NOT NULL,
+    trade_date TEXT NOT NULL,
+    code TEXT NOT NULL,
+    market INTEGER NOT NULL,
+    direction TEXT NOT NULL CHECK(direction IN ('buy','sell')),
+    quantity INTEGER NOT NULL CHECK(quantity > 0),
+    price REAL NOT NULL,
+    adjust TEXT NOT NULL DEFAULT 'bfq',
+    commission REAL DEFAULT 0,
+    tax REAL DEFAULT 0,
+    memo TEXT,
+    created_at TEXT DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY (portfolio_id) REFERENCES portfolios(id) ON DELETE CASCADE
+);
+
+CREATE INDEX IF NOT EXISTS idx_pt_portfolio ON portfolio_trades(portfolio_id, trade_date);
+CREATE INDEX IF NOT EXISTS idx_pt_code ON portfolio_trades(code, market);
+`;
+
+const DYNAMIC_POOL_SCHEMA = `
+CREATE TABLE IF NOT EXISTS dynamic_pool_items (
+    pool_id INTEGER NOT NULL,
+    date TEXT NOT NULL,
+    code TEXT NOT NULL,
+    market INTEGER NOT NULL,
+    name TEXT,
+    weight REAL,
+    created_at TEXT DEFAULT CURRENT_TIMESTAMP,
+    PRIMARY KEY (pool_id, date, code, market),
+    FOREIGN KEY (pool_id) REFERENCES stock_pools(id) ON DELETE CASCADE
+);
+
+CREATE INDEX IF NOT EXISTS idx_dynamic_pool_items_lookup
+    ON dynamic_pool_items(pool_id, date);
 `;
 
 export class DataStore {
@@ -335,8 +693,30 @@ export class DataStore {
 		mkdirSync(dirname(this.dbPath), { recursive: true });
 		this.db = new sqlite3.Database(this.dbPath);
 
+		await promisifyExec(this.db, "PRAGMA foreign_keys = ON;");
 		await promisifyExec(this.db, SCHEMA_SQL);
+		await this.runMigrations();
 		this.initialized = true;
+	}
+
+	private async runMigrations(): Promise<void> {
+		if (!this.db) return;
+
+		// Add is_dynamic column to existing stock_pools tables
+		const cols = (await promisifyQuery(this.db, "PRAGMA table_info(stock_pools)")) as Array<{ name: string }>;
+		if (!cols.some((c) => c.name === "is_dynamic")) {
+			await promisifyExec(this.db, "ALTER TABLE stock_pools ADD COLUMN is_dynamic INTEGER DEFAULT 0");
+		}
+
+		await promisifyExec(this.db, DYNAMIC_POOL_SCHEMA);
+
+		// 统一 K 线周期命名：weekly/monthly -> week/month，并删除残留旧命名数据
+		await promisifyExec(this.db, "UPDATE OR IGNORE klines SET period = 'week' WHERE period = 'weekly'");
+		await promisifyExec(this.db, "UPDATE OR IGNORE klines SET period = 'month' WHERE period = 'monthly'");
+		await promisifyExec(this.db, "DELETE FROM klines WHERE period = 'weekly' OR period = 'monthly'");
+		await promisifyExec(this.db, "UPDATE OR IGNORE industry_klines SET period = 'week' WHERE period = 'weekly'");
+		await promisifyExec(this.db, "UPDATE OR IGNORE industry_klines SET period = 'month' WHERE period = 'monthly'");
+		await promisifyExec(this.db, "DELETE FROM industry_klines WHERE period = 'weekly' OR period = 'monthly'");
 	}
 
 	// ─── Stocks ─────────────────────────────────────────────────────
@@ -401,6 +781,31 @@ export class DataStore {
 
 	async saveKlines(klines: KlineRow[]): Promise<void> {
 		if (klines.length === 0 || !this.db) return;
+		const now = new Date();
+		const local = (d: Date) =>
+			`${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
+		const todayStr = local(now);
+		const preClose = now.getHours() < 15; // A-share close 15:00 local
+		klines = klines.filter((k) => {
+			// Drop degenerate realtime rows: TDX/Sina occasionally return a bar whose
+			// OHLC all collapse to one price with a sentinel volume (~2^-127 float
+			// garbage). Persisting those pollutes the daily/minute tables.
+			const v = k.volume;
+			if (v == null || v <= 0 || v >= 1e-10) return true;
+			const collapsed = k.open != null && k.high != null && k.low != null && k.close != null && k.open === k.high && k.high === k.low && k.low === k.close;
+			return !collapsed;
+		}).filter((k) => {
+			// Drop intraday partial bars: a daily bar dated today that is fetched
+			// before the close only covers the session so far. Persisting it is
+			// permanent damage — incremental syncs skip codes whose latest row
+			// already equals the target date, so the partial bar would never be
+			// overwritten. The evening sync (>= 15:00) writes the final bar.
+			if (preClose && k.period === "daily" && typeof k.date === "string" && k.date.startsWith(todayStr)) {
+				return false;
+			}
+			return true;
+		});
+		if (klines.length === 0) return;
 		const values = klines
 			.map((k) => {
 				const f = (v: number | null) => (v == null ? "NULL" : String(v));
@@ -418,15 +823,66 @@ export class DataStore {
 
 	async getKlines(filter: KlineFilter): Promise<KlineRow[]> {
 		if (!this.db) return [];
-		let sql = `SELECT * FROM klines WHERE code = ${s(filter.code)}`;
-		if (filter.market != null) sql += ` AND market = ${filter.market}`;
-		if (filter.period) sql += ` AND period = ${s(filter.period)}`;
-		if (filter.adjust) sql += ` AND adjust = ${s(filter.adjust)}`;
-		if (filter.start) sql += ` AND date >= ${s(filter.start)}`;
-		if (filter.end) sql += ` AND date <= ${s(filter.end)}`;
-		sql += ` ORDER BY date`;
-		if (filter.limit) sql += ` LIMIT ${filter.limit}`;
+
+		// Week/month: prefer stored data (synced via syncAllKlines --period week/month),
+		// fall back to on-the-fly aggregation from daily if no stored rows exist.
+		if (filter.period === "week" || filter.period === "month") {
+			const stored = await this.queryKlines(filter);
+			if (stored.length > 0) return stored;
+
+			const dailyKlines = await this.queryKlines({
+				...filter,
+				period: "daily",
+				limit: filter.limit ? filter.limit * (filter.period === "week" ? 7 : 22) : undefined,
+			});
+			return aggregateDailyKlines(dailyKlines, filter.period, filter.limit);
+		}
+
+		return this.queryKlines(filter);
+	}
+
+	private async queryKlines(filter: KlineFilter): Promise<KlineRow[]> {
+		if (!this.db) return [];
+		let inner = `SELECT * FROM klines WHERE code = ${s(filter.code)} AND open IS NOT NULL`;
+		if (filter.market != null) inner += ` AND market = ${filter.market}`;
+		if (filter.period) inner += ` AND period = ${s(filter.period)}`;
+		if (filter.adjust) inner += ` AND adjust = ${s(filter.adjust)}`;
+		if (filter.start) inner += ` AND date >= ${s(filter.start)}`;
+		if (filter.end) inner += ` AND date <= ${s(filter.end)}`;
+		inner += ` ORDER BY date DESC`;
+		if (filter.limit) inner += ` LIMIT ${filter.limit}`;
+		// Re-order ascending so consumers can compute pre_close/changes chronologically
+		const sql = `SELECT * FROM (${inner}) ORDER BY date ASC`;
 		return promisifyQuery(this.db, sql);
+	}
+
+	async getKlinesForCodes(
+		codes: Array<{ code: string; market: number }>,
+		period: string,
+		adjust: string,
+		start: string,
+		end: string,
+	): Promise<Map<string, KlineRow[]>> {
+		const result = new Map<string, KlineRow[]>();
+		if (!this.db || codes.length === 0) return result;
+
+		const tuples = codes.map((c) => `(${s(c.code)}, ${c.market})`).join(",");
+		const sql = `
+			SELECT * FROM klines
+			WHERE (code, market) IN (VALUES ${tuples})
+			  AND period = ${s(period)}
+			  AND adjust = ${s(adjust)}
+			  AND date >= ${s(start)}
+			  AND date <= ${s(end)}
+			ORDER BY code, market, date
+		`;
+		const rows = (await promisifyQuery(this.db, sql)) as KlineRow[];
+		for (const row of rows) {
+			const key = `${row.code}_${row.market}`;
+			if (!result.has(key)) result.set(key, []);
+			result.get(key)!.push(row);
+		}
+		return result;
 	}
 
 	async getLatestKlineDate(code: string, market: number, period: string, adjust: string): Promise<string | null> {
@@ -463,6 +919,31 @@ export class DataStore {
 		return promisifyQuery(this.db, sql);
 	}
 
+	async getAdjustFactorsForCodes(
+		codes: Array<{ code: string; market: number }>,
+		start: string,
+		end: string,
+	): Promise<Map<string, AdjustFactorRow[]>> {
+		const result = new Map<string, AdjustFactorRow[]>();
+		if (!this.db || codes.length === 0) return result;
+
+		const tuples = codes.map((c) => `(${s(c.code)}, ${c.market})`).join(",");
+		const sql = `
+			SELECT code, market, date, qfq_factor, hfq_factor FROM adjust_factors
+			WHERE (code, market) IN (VALUES ${tuples})
+			  AND date >= ${s(start)}
+			  AND date <= ${s(end)}
+			ORDER BY code, market, date
+		`;
+		const rows = (await promisifyQuery(this.db, sql)) as AdjustFactorRow[];
+		for (const row of rows) {
+			const key = `${row.code}_${row.market}`;
+			if (!result.has(key)) result.set(key, []);
+			result.get(key)!.push(row);
+		}
+		return result;
+	}
+
 	async getLatestFactorDate(code: string, market: number): Promise<string | null> {
 		if (!this.db) return null;
 		const rows = await promisifyQuery(
@@ -476,7 +957,12 @@ export class DataStore {
 
 	async saveQuote(quote: QuoteRow): Promise<void> {
 		if (!this.db) return;
-		const f = (v: number | null | undefined) => (v == null || Number.isNaN(v) ? "NULL" : String(v));
+		const f = (v: number | string | null | undefined) => {
+			if (v == null || Number.isNaN(v) || v === "" || v === "-" || v === "—") return "NULL";
+			if (typeof v === "number") return String(v);
+			const n = Number(v);
+			return Number.isFinite(n) ? String(n) : "NULL";
+		};
 		const sql = `
 			INSERT OR REPLACE INTO quotes
 			(code, market, snapshot_date, name, latest, open, high, low, prev_close, volume, turnover, change_pct, pe, pb, total_cap, float_cap, high_52w, low_52w, updated_at)
@@ -494,7 +980,7 @@ export class DataStore {
 			this.db,
 			`SELECT * FROM quotes WHERE code = ${s(code)} AND market = ${market} AND snapshot_date = ${s(date)} LIMIT 1`,
 		);
-		return rows[0] ?? null;
+		return rows[0] ? { ...rows[0], is_dynamic: !!rows[0].is_dynamic } : null;
 	}
 
 	async getLatestQuotes(codes?: string[], markets?: number[]): Promise<QuoteRow[]> {
@@ -553,13 +1039,24 @@ export class DataStore {
 		);
 	}
 
+	/** Bulk-fetch total_shares + report_date for a list of codes. Used by backtest engine
+	 *  to compute historical market cap from klines.close × total_shares. */
+	async getAllFundamentalsForCodes(codes: string[]): Promise<Array<{ code: string; report_date: string; total_shares: number }>> {
+		if (!this.db || codes.length === 0) return [];
+		const codeList = codes.map((c) => s(c)).join(", ");
+		return promisifyQuery(
+			this.db,
+			`SELECT code, report_date, total_shares FROM fundamentals WHERE code IN (${codeList}) AND total_shares > 0 ORDER BY code, report_date`,
+		);
+	}
+
 	async getLatestFundamentals(code: string, market: number): Promise<FundamentalsRow | null> {
 		if (!this.db) return null;
 		const rows = await promisifyQuery(
 			this.db,
 			`SELECT * FROM fundamentals WHERE code = ${s(code)} AND market = ${market} ORDER BY report_date DESC LIMIT 1`,
 		);
-		return rows[0] ?? null;
+		return rows[0] ? { ...rows[0], is_dynamic: !!rows[0].is_dynamic } : null;
 	}
 
 	// ─── Fundamental Indicators ─────────────────────────────────────
@@ -601,7 +1098,7 @@ export class DataStore {
 			this.db,
 			`SELECT * FROM fundamental_indicators WHERE code = ${s(code)} AND market = ${market} ORDER BY report_date DESC LIMIT 1`,
 		);
-		return rows[0] ?? null;
+		return rows[0] ? { ...rows[0], is_dynamic: !!rows[0].is_dynamic } : null;
 	}
 
 	// ─── Sectors ────────────────────────────────────────────────────
@@ -622,6 +1119,30 @@ export class DataStore {
 	async getSectors(): Promise<SectorRow[]> {
 		if (!this.db) return [];
 		return promisifyQuery(this.db, `SELECT * FROM sectors ORDER BY change_pct DESC`);
+	}
+
+	// ─── Hot Stocks ─────────────────────────────────────────────────
+
+	async saveHotStocks(rows: HotStockRow[]): Promise<void> {
+		if (rows.length === 0 || !this.db) return;
+		const now = new Date().toISOString();
+		const f = (v: number | null | undefined) => (v == null || Number.isNaN(v) ? "NULL" : String(v));
+		for (const row of rows) {
+			const sql = `
+				INSERT OR REPLACE INTO hot_stocks
+				(date, code, market, name, reason, price, change_pct, turnover_pct, amount, pe_ttm, pb, mcap_yi, updated_at)
+				VALUES (${s(row.date)}, ${s(row.code)}, ${row.market}, ${s(row.name)}, ${s(row.reason)},
+					${f(row.price)}, ${f(row.change_pct)}, ${f(row.turnover_pct)}, ${f(row.amount)},
+					${f(row.pe_ttm)}, ${f(row.pb)}, ${f(row.mcap_yi)}, ${s(row.updated_at ?? now)})
+			`;
+			await promisifyExec(this.db, sql);
+		}
+	}
+
+	async getHotStocks(date?: string): Promise<HotStockRow[]> {
+		if (!this.db) return [];
+		const targetDate = date ?? new Date().toISOString().slice(0, 10);
+		return promisifyQuery(this.db, `SELECT * FROM hot_stocks WHERE date = ${s(targetDate)} ORDER BY change_pct DESC`);
 	}
 
 	// ─── Concept Stocks ─────────────────────────────────────────────
@@ -648,6 +1169,163 @@ export class DataStore {
 			concept: string;
 		}[];
 		return rows.map((r) => r.concept);
+	}
+
+	// ─── Concept Synthetic Klines ────────────────────────────────────
+
+	async saveConceptSyntheticKlines(klines: ConceptSyntheticKlineRow[]): Promise<void> {
+		if (klines.length === 0 || !this.db) return;
+		const now = new Date().toISOString();
+		const values = klines
+			.map((k) => {
+				const f = (v: number | null) => (v == null ? "NULL" : String(v));
+				return `(${s(k.concept)}, ${s(k.date)}, ${f(k.close)}, ${f(k.constituent_count)}, ${s(now)})`;
+			})
+			.join(",\n");
+		await promisifyExec(
+			this.db,
+			`INSERT OR REPLACE INTO concept_synthetic_klines (concept, date, close, constituent_count, updated_at) VALUES ${values}`,
+		);
+	}
+
+	async getConceptSyntheticKlines(concept: string, start?: string, end?: string): Promise<ConceptSyntheticKlineRow[]> {
+		if (!this.db) return [];
+		let sql = `SELECT * FROM concept_synthetic_klines WHERE concept = ${s(concept)}`;
+		if (start) sql += ` AND date >= ${s(start)}`;
+		if (end) sql += ` AND date <= ${s(end)}`;
+		sql += ` ORDER BY date`;
+		return promisifyQuery(this.db, sql);
+	}
+
+	// ─── Concept Filter Results ──────────────────────────────────────
+
+	async saveConceptFilterResults(results: ConceptFilterResultRow[]): Promise<void> {
+		if (results.length === 0 || !this.db) return;
+		const now = new Date().toISOString();
+		const f = (v: number | null | undefined) => (v == null || Number.isNaN(v) ? "NULL" : String(v));
+		const values = results
+			.map(
+				(r) =>
+					`(${s(r.concept)}, ${f(r.constituent_count)}, ${f(r.dispersion)}, ${f(r.max_benchmark_correlation)}, ${f(r.size_pass)}, ${f(r.dispersion_pass)}, ${f(r.independence_pass)}, ${f(r.rank_score)}, ${f(r.rank)}, ${s(now)})`,
+			)
+			.join(",\n");
+		await promisifyExec(
+			this.db,
+			`INSERT OR REPLACE INTO concept_filter_results (concept, constituent_count, dispersion, max_benchmark_correlation, size_pass, dispersion_pass, independence_pass, rank_score, rank, updated_at) VALUES ${values}`,
+		);
+	}
+
+	async getConceptFilterResults(): Promise<ConceptFilterResultRow[]> {
+		if (!this.db) return [];
+		return promisifyQuery(this.db, `SELECT * FROM concept_filter_results ORDER BY rank`);
+	}
+
+	// ─── Concept Indicators ──────────────────────────────────────────
+
+	async saveConceptIndicators(indicators: ConceptIndicatorRow[]): Promise<void> {
+		if (indicators.length === 0 || !this.db) return;
+		const now = new Date().toISOString();
+		const f = (v: number | null | undefined) => (v == null || Number.isNaN(v) ? "NULL" : String(v));
+		const values = indicators
+			.map(
+				(r) =>
+					`(${s(r.concept)}, ${s(r.date)}, ${r.period_days}, ${f(r.momentum_return)}, ${f(r.momentum_rank)}, ${f(r.has_momentum)}, ${s(now)})`,
+			)
+			.join(",\n");
+		await promisifyExec(
+			this.db,
+			`INSERT OR REPLACE INTO concept_indicators (concept, date, period_days, momentum_return, momentum_rank, has_momentum, updated_at) VALUES ${values}`,
+		);
+	}
+
+	async getConceptIndicators(
+		concept: string,
+		periodDays: number,
+		start?: string,
+		end?: string,
+	): Promise<ConceptIndicatorRow[]> {
+		if (!this.db) return [];
+		let sql = `SELECT * FROM concept_indicators WHERE concept = ${s(concept)} AND period_days = ${periodDays}`;
+		if (start) sql += ` AND date >= ${s(start)}`;
+		if (end) sql += ` AND date <= ${s(end)}`;
+		sql += ` ORDER BY date`;
+		return promisifyQuery(this.db, sql);
+	}
+
+	// ─── Tracked Themes ─────────────────────────────────────────────
+
+	async saveTrackedTheme(theme: TrackedThemeRow): Promise<void> {
+		if (!this.db) return;
+		const now = new Date().toISOString();
+		await promisifyExec(
+			this.db,
+			`INSERT OR REPLACE INTO tracked_themes (concept, master_theme, status, notes, updated_at) VALUES (${s(theme.concept)}, ${s(theme.master_theme)}, ${s(theme.status)}, ${s(theme.notes)}, ${s(now)})`,
+		);
+	}
+
+	async getTrackedThemes(status?: string): Promise<TrackedThemeRow[]> {
+		if (!this.db) return [];
+		let sql = `SELECT * FROM tracked_themes`;
+		if (status) sql += ` WHERE status = ${s(status)}`;
+		sql += ` ORDER BY master_theme, concept`;
+		return promisifyQuery(this.db, sql);
+	}
+
+	async getTrackedConcepts(): Promise<string[]> {
+		const rows = await this.getTrackedThemes("tracked");
+		return rows.map((r) => r.concept);
+	}
+
+	// ─── Theme Classification ───────────────────────────────────────
+
+	async getThemeHistory(level?: string): Promise<
+		Array<{
+			snapshot_date: string;
+			theme: string;
+			level: string;
+			mentions: number;
+			sub_concepts: string | null;
+		}>
+	> {
+		if (!this.db) return [];
+		let sql = `SELECT snapshot_date, theme, level, mentions, sub_concepts FROM theme_classification`;
+		const params: string[] = [];
+		if (level) {
+			sql += ` WHERE level = ?`;
+			params.push(level);
+		}
+		sql += ` ORDER BY snapshot_date, mentions DESC`;
+		return promisifyQuery(this.db, sql, params);
+	}
+
+	async getThemePoolItemsInRange(
+		theme: string,
+		start: string,
+		end: string,
+	): Promise<Map<string, Array<{ code: string; market: number; name?: string; weight?: number }>>> {
+		const map = new Map<string, Array<{ code: string; market: number; name?: string; weight?: number }>>();
+		if (!this.db) return map;
+
+		const rows = (await promisifyQuery(
+			this.db,
+			`SELECT snapshot_date, code, market, name, final_weight
+			 FROM theme_constituents
+			 WHERE theme = ? AND snapshot_date >= ? AND snapshot_date <= ?
+			 ORDER BY snapshot_date, code`,
+			[theme, start, end],
+		)) as Array<{ snapshot_date: string; code: string; market: number; name: string | null; final_weight: number }>;
+
+		for (const row of rows) {
+			const items = map.get(row.snapshot_date) ?? [];
+			items.push({
+				code: row.code,
+				market: row.market,
+				name: row.name ?? undefined,
+				weight: row.final_weight,
+			});
+			if (!map.has(row.snapshot_date)) map.set(row.snapshot_date, items);
+		}
+		return map;
 	}
 
 	// ─── Business Composition ───────────────────────────────────────
@@ -750,8 +1428,277 @@ export class DataStore {
 
 	async findIndustryByName(name: string, standard?: string): Promise<IndustryRow[]> {
 		if (!this.db) return [];
-		let sql = `SELECT * FROM industries WHERE name LIKE '%' || ${s(name).slice(1, -1)} || '%'`;
+		let sql = `SELECT * FROM industries WHERE name LIKE '%' || ${s(name)} || '%'`;
 		if (standard) sql += ` AND standard = ${s(standard)}`;
+		const rows: IndustryRow[] = await promisifyQuery(this.db, sql);
+		// Prefer exact matches, then prefix matches, then substring matches
+		return rows.sort((a, b) => {
+			const aExact = a.name === name ? 0 : a.name.startsWith(name) ? 1 : 2;
+			const bExact = b.name === name ? 0 : b.name.startsWith(name) ? 1 : 2;
+			return aExact - bExact;
+		});
+	}
+
+	// ─── Industry Indices ───────────────────────────────────────────
+
+	async saveIndustryList(items: IndustryIndexRow[]): Promise<void> {
+		if (items.length === 0 || !this.db) return;
+		const now = new Date().toISOString();
+		for (const item of items) {
+			const sql = `
+				INSERT OR REPLACE INTO industry_indices (code, name, updated_at)
+				VALUES (${s(item.code)}, ${s(item.name)}, ${s(item.updated_at ?? now)})
+			`;
+			await promisifyExec(this.db, sql);
+		}
+	}
+
+	async getIndustryList(): Promise<IndustryIndexRow[]> {
+		if (!this.db) return [];
+		return promisifyQuery(this.db, `SELECT code, name, updated_at FROM industry_indices ORDER BY code`);
+	}
+
+	async saveIndustryKlines(klines: IndustryKlineRow[]): Promise<void> {
+		if (klines.length === 0 || !this.db) return;
+		const f = (v: number | null) => (v == null || Number.isNaN(v) ? "NULL" : String(v));
+		const values = klines
+			.map(
+				(k) =>
+					`(${s(k.code)}, ${s(k.period)}, ${s(k.date)}, ${f(k.open)}, ${f(k.high)}, ${f(k.low)}, ${f(k.close)}, ${f(k.volume)}, ${f(k.turnover)}, ${f(k.change_pct)}, ${f(k.change_amount)}, ${f(k.amplitude)}, ${f(k.turnover_rate)})`,
+			)
+			.join(",\n");
+		const sql = `
+			INSERT OR REPLACE INTO industry_klines
+			(code, period, date, open, high, low, close, volume, turnover, change_pct, change_amount, amplitude, turnover_rate)
+			VALUES ${values}
+		`;
+		await promisifyExec(this.db, sql);
+	}
+
+	async getIndustryKlines(
+		code: string,
+		period: string,
+		start?: string,
+		end?: string,
+		limit?: number,
+	): Promise<IndustryKlineRow[]> {
+		if (!this.db) return [];
+
+		// Aggregate week/month from daily industry klines on the fly
+		if (period === "week" || period === "month") {
+			const dailyKlines = await this.queryIndustryKlines(
+				code,
+				"daily",
+				start,
+				end,
+				limit ? limit * (period === "week" ? 7 : 22) : undefined,
+			);
+			return aggregateDailyIndustryKlines(dailyKlines, period, limit);
+		}
+
+		return this.queryIndustryKlines(code, period, start, end, limit);
+	}
+
+	private async queryIndustryKlines(
+		code: string,
+		period: string,
+		start?: string,
+		end?: string,
+		limit?: number,
+	): Promise<IndustryKlineRow[]> {
+		if (!this.db) return [];
+		let sql = `SELECT * FROM industry_klines WHERE code = ${s(code)} AND period = ${s(period)} AND open IS NOT NULL`;
+		if (start) sql += ` AND date >= ${s(start)}`;
+		if (end) sql += ` AND date <= ${s(end)}`;
+		sql += ` ORDER BY date`;
+		if (limit) sql += ` LIMIT ${limit}`;
+		return promisifyQuery(this.db, sql);
+	}
+
+	async getLatestIndustryKlineDate(code: string, period: string): Promise<string | null> {
+		if (!this.db) return null;
+		const rows = await promisifyQuery(
+			this.db,
+			`SELECT MAX(date) as max_date FROM industry_klines WHERE code = ${s(code)} AND period = ${s(period)}`,
+		);
+		return rows[0]?.max_date ?? null;
+	}
+
+	async saveIndustryQuote(quote: IndustryQuoteRow): Promise<void> {
+		if (!this.db) return;
+		const f = (v: number | null | undefined) => (v == null || Number.isNaN(v) ? "NULL" : String(v));
+		const sql = `
+			INSERT OR REPLACE INTO industry_quotes
+			(code, snapshot_date, name, latest, open, high, low, prev_close, volume, turnover, change_pct, change_amount, amplitude, turnover_rate,
+			 up_count, down_count, flat_count, leading_stock, leading_stock_code, leading_change_pct, lagging_stock, lagging_stock_code, lagging_change_pct, updated_at)
+			VALUES (${s(quote.code)}, ${s(quote.snapshot_date)}, ${s(quote.name)},
+				${f(quote.latest)}, ${f(quote.open)}, ${f(quote.high)}, ${f(quote.low)}, ${f(quote.prev_close)},
+				${f(quote.volume)}, ${f(quote.turnover)}, ${f(quote.change_pct)}, ${f(quote.change_amount)}, ${f(quote.amplitude)}, ${f(quote.turnover_rate)},
+				${f(quote.up_count)}, ${f(quote.down_count)}, ${f(quote.flat_count)},
+				${s(quote.leading_stock)}, ${s(quote.leading_stock_code)}, ${f(quote.leading_change_pct)},
+				${s(quote.lagging_stock)}, ${s(quote.lagging_stock_code)}, ${f(quote.lagging_change_pct)},
+				${s(quote.updated_at ?? new Date().toISOString())})
+		`;
+		await promisifyExec(this.db, sql);
+	}
+
+	async getIndustryQuote(code: string, date: string): Promise<IndustryQuoteRow | null> {
+		if (!this.db) return null;
+		const rows = await promisifyQuery(
+			this.db,
+			`SELECT * FROM industry_quotes WHERE code = ${s(code)} AND snapshot_date = ${s(date)} LIMIT 1`,
+		);
+		return rows[0] ? { ...rows[0], is_dynamic: !!rows[0].is_dynamic } : null;
+	}
+
+	async getLatestIndustryQuotes(codes?: string[]): Promise<IndustryQuoteRow[]> {
+		if (!this.db) return [];
+		if (codes && codes.length > 0) {
+			const codeList = codes.map((c) => s(c)).join(", ");
+			return promisifyQuery(
+				this.db,
+				`SELECT * FROM industry_quotes WHERE code IN (${codeList}) AND snapshot_date = (SELECT MAX(snapshot_date) FROM industry_quotes)`,
+			);
+		}
+		return promisifyQuery(
+			this.db,
+			`SELECT * FROM industry_quotes WHERE snapshot_date = (SELECT MAX(snapshot_date) FROM industry_quotes)`,
+		);
+	}
+
+	// ─── Industry Indicators ────────────────────────────────────────
+
+	async saveIndustryIndicators(indicators: IndustryIndicatorRow[]): Promise<void> {
+		if (indicators.length === 0 || !this.db) return;
+		const f = (v: number | null | undefined) => (v == null || Number.isNaN(v) ? "NULL" : String(v));
+		const now = new Date().toISOString();
+		const values = indicators
+			.map(
+				(r) =>
+					`(${s(r.code)}, ${s(r.date)}, ${r.period_days}, ${f(r.momentum_return)}, ${f(r.momentum_rank)}, ${f(r.has_momentum)}, ${s(now)})`,
+			)
+			.join(", ");
+		const sql = `
+			INSERT OR REPLACE INTO industry_indicators
+			(code, date, period_days, momentum_return, momentum_rank, has_momentum, updated_at)
+			VALUES ${values}
+		`;
+		await promisifyExec(this.db, sql);
+	}
+
+	async getIndustryIndicators(
+		code: string,
+		periodDays: number,
+		start?: string,
+		end?: string,
+	): Promise<IndustryIndicatorRow[]> {
+		if (!this.db) return [];
+		let sql = `SELECT * FROM industry_indicators WHERE code = ${s(code)} AND period_days = ${periodDays}`;
+		if (start) sql += ` AND date >= ${s(start)}`;
+		if (end) sql += ` AND date <= ${s(end)}`;
+		sql += ` ORDER BY date`;
+		return promisifyQuery(this.db, sql);
+	}
+
+	async getLatestIndustryIndicatorDate(code: string, periodDays: number): Promise<string | null> {
+		if (!this.db) return null;
+		const rows = await promisifyQuery(
+			this.db,
+			`SELECT MAX(date) as max_date FROM industry_indicators WHERE code = ${s(code)} AND period_days = ${periodDays}`,
+		);
+		return rows[0]?.max_date ?? null;
+	}
+
+	// ─── Stock Indicators ───────────────────────────────────────────
+
+	async saveStockIndicators(rows: StockIndicatorRow[]): Promise<void> {
+		if (rows.length === 0 || !this.db) return;
+		const f = (v: number | null | undefined) => (v == null || Number.isNaN(v) ? "NULL" : String(v));
+		const now = new Date().toISOString();
+		const values = rows
+			.map(
+				(r) =>
+					`(${s(r.code)}, ${r.market}, ${s(r.date)}, ${s(r.indicator_name)}, ${f(r.indicator_value)}, ${f(r.indicator_rank)}, ${f(r.has_signal)}, ${s(now)})`,
+			)
+			.join(", ");
+		const sql = `
+			INSERT OR REPLACE INTO stock_indicators
+			(code, market, date, indicator_name, indicator_value, indicator_rank, has_signal, updated_at)
+			VALUES ${values}
+		`;
+		await promisifyExec(this.db, sql);
+	}
+
+	async getStockIndicators(
+		code: string,
+		market: number,
+		indicatorName: string,
+		start?: string,
+		end?: string,
+	): Promise<StockIndicatorRow[]> {
+		if (!this.db) return [];
+		let sql = `SELECT * FROM stock_indicators WHERE code = ${s(code)} AND market = ${market} AND indicator_name = ${s(indicatorName)}`;
+		if (start) sql += ` AND date >= ${s(start)}`;
+		if (end) sql += ` AND date <= ${s(end)}`;
+		sql += ` ORDER BY date`;
+		return promisifyQuery(this.db, sql);
+	}
+
+	async saveFactorIc(rows: FactorIcRow[]): Promise<void> {
+		if (rows.length === 0 || !this.db) return;
+		const f = (v: number | null | undefined) => (v == null || Number.isNaN(v) ? "NULL" : String(v));
+		const now = new Date().toISOString();
+		const values = rows
+			.map((r) => `(${s(r.date)}, ${s(r.factor_name)}, ${f(r.ic_value)}, ${f(r.sample_count)}, ${s(now)})`)
+			.join(", ");
+		const sql = `
+			INSERT OR REPLACE INTO factor_ic
+			(date, factor_name, ic_value, sample_count, updated_at)
+			VALUES ${values}
+		`;
+		await promisifyExec(this.db, sql);
+	}
+
+	async getFactorIc(factorName: string, start?: string, end?: string): Promise<FactorIcRow[]> {
+		if (!this.db) return [];
+		let sql = `SELECT * FROM factor_ic WHERE factor_name LIKE ${s(factorName)}`;
+		if (start) sql += ` AND date >= ${s(start)}`;
+		if (end) sql += ` AND date <= ${s(end)}`;
+		sql += ` ORDER BY date`;
+		return promisifyQuery(this.db, sql);
+	}
+
+	// ─── Synthetic Industry Klines ──────────────────────────────────
+
+	async saveIndustrySyntheticKlines(klines: IndustrySyntheticKlineRow[]): Promise<void> {
+		if (klines.length === 0 || !this.db) return;
+		const f = (v: number | null | undefined) => (v == null || Number.isNaN(v) ? "NULL" : String(v));
+		const now = new Date().toISOString();
+		const values = klines
+			.map(
+				(r) =>
+					`(${s(r.code)}, ${s(r.standard)}, ${s(r.date)}, ${f(r.close)}, ${f(r.constituent_count)}, ${s(now)})`,
+			)
+			.join(", ");
+		const sql = `
+			INSERT OR REPLACE INTO industry_synthetic_klines
+			(code, standard, date, close, constituent_count, updated_at)
+			VALUES ${values}
+		`;
+		await promisifyExec(this.db, sql);
+	}
+
+	async getIndustrySyntheticKlines(
+		code: string,
+		standard: string,
+		start?: string,
+		end?: string,
+	): Promise<IndustrySyntheticKlineRow[]> {
+		if (!this.db) return [];
+		let sql = `SELECT * FROM industry_synthetic_klines WHERE code = ${s(code)} AND standard = ${s(standard)}`;
+		if (start) sql += ` AND date >= ${s(start)}`;
+		if (end) sql += ` AND date <= ${s(end)}`;
+		sql += ` ORDER BY date`;
 		return promisifyQuery(this.db, sql);
 	}
 
@@ -774,7 +1721,7 @@ export class DataStore {
 	async getLatestMacro(): Promise<MacroRow | null> {
 		if (!this.db) return null;
 		const rows = await promisifyQuery(this.db, `SELECT * FROM macro ORDER BY snapshot_date DESC LIMIT 1`);
-		return rows[0] ?? null;
+		return rows[0] ? { ...rows[0], is_dynamic: !!rows[0].is_dynamic } : null;
 	}
 
 	// ─── Utility ────────────────────────────────────────────────────
@@ -798,12 +1745,21 @@ export class DataStore {
 			"fundamentals",
 			"fundamental_indicators",
 			"sectors",
+			"hot_stocks",
 			"concept_stocks",
 			"business_composition",
 			"macro",
 			"stock_pools",
 			"stock_pool_items",
 			"calendar_events",
+			"portfolios",
+			"portfolio_trades",
+			"industry_indices",
+			"industry_klines",
+			"industry_quotes",
+			"industry_indicators",
+			"factor_ic",
+			"industry_synthetic_klines",
 		];
 		const result: Record<string, number> = {};
 		for (const t of tables) {
@@ -889,10 +1845,10 @@ export class DataStore {
 
 	// ─── Stock Pools ────────────────────────────────────────────────
 
-	async createStockPool(name: string, description?: string): Promise<number> {
+	async createStockPool(name: string, description?: string, isDynamic = false): Promise<number> {
 		if (!this.db) throw new Error("DataStore not initialized");
 		const now = new Date().toISOString();
-		const sql = `INSERT INTO stock_pools (name, description, created_at, updated_at) VALUES (${s(name)}, ${s(description) ?? "NULL"}, ${s(now)}, ${s(now)})`;
+		const sql = `INSERT INTO stock_pools (name, description, is_dynamic, created_at, updated_at) VALUES (${s(name)}, ${s(description) ?? "NULL"}, ${isDynamic ? 1 : 0}, ${s(now)}, ${s(now)})`;
 		await promisifyExec(this.db, sql);
 		const rows = await promisifyQuery(this.db, `SELECT id FROM stock_pools WHERE name = ${s(name)}`);
 		return rows[0]?.id;
@@ -926,26 +1882,34 @@ export class DataStore {
 		return promisifyQuery(this.db, sql);
 	}
 
-	async getStockPoolByName(
-		name: string,
-	): Promise<{ id: number; name: string; description: string | null; created_at: string } | null> {
+	async getStockPoolByName(name: string): Promise<{
+		id: number;
+		name: string;
+		description: string | null;
+		is_dynamic?: number;
+		created_at: string;
+	} | null> {
 		if (!this.db) return null;
 		const rows = await promisifyQuery(
 			this.db,
-			`SELECT id, name, description, created_at FROM stock_pools WHERE name = ${s(name)}`,
+			`SELECT id, name, description, is_dynamic, created_at FROM stock_pools WHERE name = ${s(name)}`,
 		);
-		return rows[0] ?? null;
+		return rows[0] ? { ...rows[0], is_dynamic: !!rows[0].is_dynamic } : null;
 	}
 
-	async getStockPoolById(
-		id: number,
-	): Promise<{ id: number; name: string; description: string | null; created_at: string } | null> {
+	async getStockPoolById(id: number): Promise<{
+		id: number;
+		name: string;
+		description: string | null;
+		is_dynamic?: number;
+		created_at: string;
+	} | null> {
 		if (!this.db) return null;
 		const rows = await promisifyQuery(
 			this.db,
-			`SELECT id, name, description, created_at FROM stock_pools WHERE id = ${id}`,
+			`SELECT id, name, description, is_dynamic, created_at FROM stock_pools WHERE id = ${id}`,
 		);
-		return rows[0] ?? null;
+		return rows[0] ? { ...rows[0], is_dynamic: !!rows[0].is_dynamic } : null;
 	}
 
 	async addToStockPool(poolId: number, items: Array<{ code: string; market: number; name?: string }>): Promise<void> {
@@ -979,6 +1943,146 @@ export class DataStore {
 	async clearStockPool(poolId: number): Promise<void> {
 		if (!this.db) return;
 		await promisifyExec(this.db, `DELETE FROM stock_pool_items WHERE pool_id = ${poolId}`);
+	}
+
+	async markStockPoolDynamic(poolId: number, dynamic: boolean): Promise<void> {
+		if (!this.db) return;
+		await promisifyExec(this.db, `UPDATE stock_pools SET is_dynamic = ${dynamic ? 1 : 0} WHERE id = ${poolId}`);
+	}
+
+	async setDynamicPoolItems(
+		poolId: number,
+		date: string,
+		items: Array<{ code: string; market: number; name?: string; weight?: number }>,
+	): Promise<void> {
+		if (!this.db || items.length === 0) return;
+		const now = new Date().toISOString();
+		const f = (v: number | null | undefined) => (v == null || Number.isNaN(v) ? "NULL" : String(v));
+		const values = items
+			.map(
+				(item) =>
+					`(${poolId}, ${s(date)}, ${s(item.code)}, ${item.market}, ${s(item.name) ?? "NULL"}, ${f(item.weight)}, ${s(now)})`,
+			)
+			.join(",");
+		await promisifyExec(
+			this.db,
+			`INSERT OR REPLACE INTO dynamic_pool_items (pool_id, date, code, market, name, weight, created_at) VALUES ${values}`,
+		);
+	}
+
+	async getDynamicPoolItems(
+		poolId: number,
+		date: string,
+	): Promise<Array<{ code: string; market: number; name: string | null; weight: number | null }>> {
+		if (!this.db) return [];
+		return promisifyQuery(
+			this.db,
+			`SELECT code, market, name, weight FROM dynamic_pool_items WHERE pool_id = ${poolId} AND date = ${s(date)} ORDER BY code`,
+		);
+	}
+
+	async getDynamicPoolDates(poolId: number): Promise<string[]> {
+		if (!this.db) return [];
+		const rows = await promisifyQuery(
+			this.db,
+			`SELECT DISTINCT date FROM dynamic_pool_items WHERE pool_id = ${poolId} ORDER BY date`,
+		);
+		return rows.map((r) => r.date as string);
+	}
+
+	async getDynamicPoolItemsInRange(
+		poolId: number,
+		startDate: string,
+		endDate: string,
+	): Promise<Map<string, Array<{ code: string; market: number; name?: string; weight?: number }>>> {
+		if (!this.db) return new Map();
+		const rows = (await promisifyQuery(
+			this.db,
+			`SELECT date, code, market, name, weight FROM dynamic_pool_items WHERE pool_id = ${poolId} AND date >= ${s(startDate)} AND date <= ${s(endDate)} ORDER BY date, code`,
+		)) as DynamicPoolItemRow[];
+		const map = new Map<string, Array<{ code: string; market: number; name?: string; weight?: number }>>();
+		for (const r of rows) {
+			const list = map.get(r.date) ?? [];
+			list.push({ code: r.code, market: r.market, name: r.name ?? undefined, weight: r.weight ?? undefined });
+			map.set(r.date, list);
+		}
+		return map;
+	}
+
+	async clearDynamicPoolDate(poolId: number, date: string): Promise<void> {
+		if (!this.db) return;
+		await promisifyExec(this.db, `DELETE FROM dynamic_pool_items WHERE pool_id = ${poolId} AND date = ${s(date)}`);
+	}
+
+	// ─── Portfolios ─────────────────────────────────────────────────
+
+	async createPortfolio(name: string, initialCash: number, description?: string): Promise<number> {
+		if (!this.db) throw new Error("DataStore not initialized");
+		const now = new Date().toISOString();
+		const sql = `INSERT INTO portfolios (name, description, initial_cash, created_at, updated_at) VALUES (${s(name)}, ${s(description) ?? "NULL"}, ${initialCash}, ${s(now)}, ${s(now)})`;
+		await promisifyExec(this.db, sql);
+		const rows = await promisifyQuery(this.db, `SELECT last_insert_rowid() as id`);
+		return rows[0]?.id;
+	}
+
+	async deletePortfolio(id: number): Promise<void> {
+		if (!this.db) return;
+		await promisifyExec(this.db, `DELETE FROM portfolios WHERE id = ${id}`);
+	}
+
+	async getPortfolios(): Promise<PortfolioRow[]> {
+		if (!this.db) return [];
+		return promisifyQuery(
+			this.db,
+			`SELECT id, name, description, initial_cash, created_at, updated_at FROM portfolios ORDER BY updated_at DESC`,
+		);
+	}
+
+	async getPortfolioById(id: number): Promise<PortfolioRow | null> {
+		if (!this.db) return null;
+		const rows = await promisifyQuery(
+			this.db,
+			`SELECT id, name, description, initial_cash, created_at, updated_at FROM portfolios WHERE id = ${id}`,
+		);
+		return rows[0] ? { ...rows[0], is_dynamic: !!rows[0].is_dynamic } : null;
+	}
+
+	async getPortfolioByName(name: string): Promise<PortfolioRow | null> {
+		if (!this.db) return null;
+		const rows = await promisifyQuery(
+			this.db,
+			`SELECT id, name, description, initial_cash, created_at, updated_at FROM portfolios WHERE name = ${s(name)}`,
+		);
+		return rows[0] ? { ...rows[0], is_dynamic: !!rows[0].is_dynamic } : null;
+	}
+
+	async addPortfolioTrade(trade: Omit<PortfolioTradeRow, "id" | "created_at">): Promise<number> {
+		if (!this.db) throw new Error("DataStore not initialized");
+		const now = new Date().toISOString();
+		const f = (v: number | null | undefined) => (v == null || Number.isNaN(v) ? "NULL" : String(v));
+		const sql = `INSERT INTO portfolio_trades
+			(portfolio_id, trade_date, code, market, direction, quantity, price, adjust, commission, tax, memo, created_at)
+			VALUES (${trade.portfolio_id}, ${s(trade.trade_date)}, ${s(trade.code)}, ${trade.market}, ${s(trade.direction)}, ${trade.quantity}, ${trade.price}, ${s(trade.adjust ?? "bfq")}, ${f(trade.commission)}, ${f(trade.tax)}, ${s(trade.memo) ?? "NULL"}, ${s(now)})`;
+		await promisifyExec(this.db, sql);
+		const rows = await promisifyQuery(
+			this.db,
+			`SELECT id FROM portfolio_trades WHERE portfolio_id = ${trade.portfolio_id} AND trade_date = ${s(trade.trade_date)} AND code = ${s(trade.code)} ORDER BY id DESC LIMIT 1`,
+		);
+		return rows[0]?.id;
+	}
+
+	async getPortfolioTrades(portfolioId: number, startDate?: string, endDate?: string): Promise<PortfolioTradeRow[]> {
+		if (!this.db) return [];
+		let sql = `SELECT id, portfolio_id, trade_date, code, market, direction, quantity, price, adjust, commission, tax, memo, created_at FROM portfolio_trades WHERE portfolio_id = ${portfolioId}`;
+		if (startDate) sql += ` AND trade_date >= ${s(startDate)}`;
+		if (endDate) sql += ` AND trade_date <= ${s(endDate)}`;
+		sql += ` ORDER BY trade_date, id`;
+		return promisifyQuery(this.db, sql);
+	}
+
+	async deletePortfolioTrade(tradeId: number): Promise<void> {
+		if (!this.db) return;
+		await promisifyExec(this.db, `DELETE FROM portfolio_trades WHERE id = ${tradeId}`);
 	}
 
 	close(): void {

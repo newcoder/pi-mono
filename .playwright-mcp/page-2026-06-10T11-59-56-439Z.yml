@@ -1,0 +1,335 @@
+- generic [ref=e3]:
+  - generic [ref=e4]:
+    - generic [ref=e5]:
+      - generic [ref=e6]: π
+      - generic [ref=e7]: Trading Agent
+    - generic [ref=e8]:
+      - generic [ref=e9] [cursor=pointer]:
+        - generic [ref=e10]: 上证指数
+        - generic [ref=e11]: "3993.23"
+        - generic [ref=e12]: ▼
+        - generic [ref=e13]: "-0.42%"
+      - generic [ref=e14] [cursor=pointer]:
+        - generic [ref=e15]: 沪深300
+        - generic [ref=e16]: "4748.59"
+        - generic [ref=e17]: ▼
+        - generic [ref=e18]: "-1.11%"
+      - generic [ref=e19] [cursor=pointer]:
+        - generic [ref=e20]: 科创50
+        - generic [ref=e21]: "1652.22"
+        - generic [ref=e22]: ▼
+        - generic [ref=e23]: "-0.65%"
+      - generic [ref=e24] [cursor=pointer]:
+        - generic [ref=e25]: 中证500
+        - generic [ref=e26]: "8063.86"
+        - generic [ref=e27]: ▼
+        - generic [ref=e28]: "-1.37%"
+      - generic [ref=e29] [cursor=pointer]:
+        - generic [ref=e30]: 深证成指
+        - generic [ref=e31]: "14954.10"
+        - generic [ref=e32]: ▼
+        - generic [ref=e33]: "-2.06%"
+      - generic [ref=e34] [cursor=pointer]:
+        - generic [ref=e35]: 创业板指
+        - generic [ref=e36]: "3854.79"
+        - generic [ref=e37]: ▼
+        - generic [ref=e38]: "-2.70%"
+  - generic [ref=e39]:
+    - generic [ref=e40]: RESEARCH
+    - textbox "搜索股票 (代码/名称/拼音)" [ref=e42]
+  - generic [ref=e43]:
+    - generic [ref=e44]:
+      - generic [ref=e46]: 股票池
+      - generic [ref=e47]:
+        - generic [ref=e48]:
+          - generic [ref=e49] [cursor=pointer]:
+            - generic [ref=e50]:
+              - generic [ref=e51]: "[62] 最近访问"
+              - button "×" [ref=e52]
+            - generic [ref=e53]: 2 只
+          - generic [ref=e54] [cursor=pointer]:
+            - generic [ref=e55]:
+              - generic [ref=e56]: "[61] 53号股池_Alpha5D_Top20"
+              - button "×" [ref=e57]
+            - generic [ref=e58]: 20 只
+          - generic [ref=e59] [cursor=pointer]:
+            - generic [ref=e60]:
+              - generic [ref=e61]: "[60] 物理AI核心股池"
+              - button "×" [ref=e62]
+            - generic [ref=e63]: 18 只
+          - generic [ref=e64] [cursor=pointer]:
+            - generic [ref=e65]:
+              - generic [ref=e66]: "[58] 周线多头排列+日线金叉"
+              - button "×" [ref=e67]
+            - generic [ref=e68]: 25 只
+          - generic [ref=e69] [cursor=pointer]:
+            - generic [ref=e70]:
+              - generic [ref=e71]: "[57] 东方财富人气飙升榜TOP30"
+              - button "×" [ref=e72]
+            - generic [ref=e73]: 26 只
+          - generic [ref=e74] [cursor=pointer]:
+            - generic [ref=e75]:
+              - generic [ref=e76]: "[56] 东方财富人气榜TOP30"
+              - button "×" [ref=e77]
+            - generic [ref=e78]: 30 只
+          - generic [ref=e79] [cursor=pointer]:
+            - generic [ref=e80]:
+              - generic [ref=e81]: "[55] 雷达机会榜_20260609"
+              - button "×" [ref=e82]
+            - generic [ref=e83]: 20 只
+          - generic [ref=e84] [cursor=pointer]:
+            - generic [ref=e85]:
+              - generic [ref=e86]: "[54] ML_自选股"
+              - button "×" [ref=e87]
+            - generic [ref=e88]: 50 只
+          - generic [ref=e89] [cursor=pointer]:
+            - generic [ref=e90]:
+              - generic [ref=e91]: "[53] 自选股"
+              - button "×" [ref=e92]
+            - generic [ref=e93]: 276 只
+          - generic [ref=e94] [cursor=pointer]:
+            - generic [ref=e95]:
+              - generic [ref=e96]: "[51] 周线金叉股_市值TOP20"
+              - button "×" [ref=e97]
+            - generic [ref=e98]: 20 只
+          - generic [ref=e99] [cursor=pointer]:
+            - generic [ref=e100]:
+              - generic [ref=e101]: "[50] 周线多头排列_调整缩量_市值TOP9"
+              - button "×" [ref=e102]
+            - generic [ref=e103]: 9 只
+          - generic [ref=e104] [cursor=pointer]:
+            - generic [ref=e105]:
+              - generic [ref=e106]: "[49] ML_算力概念股核心池_预测排序"
+              - button "×" [ref=e107]
+            - generic [ref=e108]: 13 只
+          - generic [ref=e109] [cursor=pointer]:
+            - generic [ref=e110]:
+              - generic [ref=e111]: "[48] 算力概念股核心池"
+              - button "×" [ref=e112]
+            - generic [ref=e113]: 13 只
+          - generic [ref=e114] [cursor=pointer]:
+            - generic [ref=e115]:
+              - generic [ref=e116]: "[23] 周线多头日线缩量回调_202605"
+              - button "×" [ref=e117]
+            - generic [ref=e118]: 30 只
+        - generic [ref=e120]:
+          - generic [ref=e121]: 📂
+          - generic [ref=e122]: 选择股票池查看个股
+    - generic [ref=e124]:
+      - generic [ref=e128]:
+        - generic [ref=e129]: 工具调用
+        - button "收起" [ref=e130] [cursor=pointer]:
+          - img [ref=e131]
+      - generic [ref=e135]:
+        - button "设置" [ref=e136] [cursor=pointer]:
+          - img [ref=e137]
+        - button "附件" [ref=e140] [cursor=pointer]:
+          - img [ref=e141]
+        - button "Choose File"
+        - textbox "输入消息..." [ref=e143]
+        - button "发送" [ref=e144] [cursor=pointer]:
+          - img [ref=e145]
+    - generic [ref=e148]:
+      - generic [ref=e149]:
+        - generic [ref=e150] [cursor=pointer]:
+          - generic [ref=e151]: 📅 投资日历
+          - generic [ref=e152]:
+            - button "刷新日历数据" [ref=e153]:
+              - img [ref=e154]
+            - img [ref=e157]
+        - generic [ref=e160]:
+          - generic [ref=e161]:
+            - button "<" [ref=e162] [cursor=pointer]
+            - generic [ref=e163]: 2026年6月
+            - button ">" [ref=e164] [cursor=pointer]
+          - generic [ref=e165]:
+            - generic [ref=e166]: 日
+            - generic [ref=e167]: 一
+            - generic [ref=e168]: 二
+            - generic [ref=e169]: 三
+            - generic [ref=e170]: 四
+            - generic [ref=e171]: 五
+            - generic [ref=e172]: 六
+          - generic [ref=e173]:
+            - generic [ref=e176] [cursor=pointer]: "1"
+            - generic [ref=e182] [cursor=pointer]: "2"
+            - generic [ref=e186] [cursor=pointer]: "3"
+            - generic [ref=e188] [cursor=pointer]: "4"
+            - generic [ref=e192] [cursor=pointer]: "5"
+            - generic [ref=e194] [cursor=pointer]: "6"
+            - generic [ref=e196] [cursor=pointer]: "7"
+            - generic [ref=e198] [cursor=pointer]: "8"
+            - generic [ref=e200] [cursor=pointer]: "9"
+            - generic [ref=e204] [cursor=pointer]: "10"
+            - generic [ref=e208] [cursor=pointer]: "11"
+            - generic [ref=e210] [cursor=pointer]: "12"
+            - generic [ref=e212] [cursor=pointer]: "13"
+            - generic [ref=e214] [cursor=pointer]: "14"
+            - generic [ref=e216] [cursor=pointer]: "15"
+            - generic [ref=e220] [cursor=pointer]: "16"
+            - generic [ref=e222] [cursor=pointer]: "17"
+            - generic [ref=e224] [cursor=pointer]: "18"
+            - generic [ref=e226] [cursor=pointer]: "19"
+            - generic [ref=e228] [cursor=pointer]: "20"
+            - generic [ref=e230] [cursor=pointer]: "21"
+            - generic [ref=e232] [cursor=pointer]: "22"
+            - generic [ref=e234] [cursor=pointer]: "23"
+            - generic [ref=e236] [cursor=pointer]: "24"
+            - generic [ref=e238] [cursor=pointer]: "25"
+            - generic [ref=e240] [cursor=pointer]: "26"
+            - generic [ref=e242] [cursor=pointer]: "27"
+            - generic [ref=e244] [cursor=pointer]: "28"
+            - generic [ref=e246] [cursor=pointer]: "29"
+            - generic [ref=e248] [cursor=pointer]: "30"
+          - generic [ref=e249]:
+            - generic [ref=e250]: 本月重点关注
+            - generic [ref=e251] [cursor=pointer]:
+              - generic [ref=e252]:
+                - generic [ref=e254]: 预计
+                - generic [ref=e255]: OPEC+产量会议
+              - generic [ref=e256]: 决定下半年原油产量政策 (2026年6月1-5日)
+            - generic [ref=e257] [cursor=pointer]:
+              - generic [ref=e258]:
+                - generic [ref=e260]: 06-01
+                - generic [ref=e261]: 永大股份 业绩预告
+              - generic [ref=e262]: "公告日期: 20260601; 报告期[20260331]: 2026年一季报"
+            - generic [ref=e263] [cursor=pointer]:
+              - generic [ref=e264]:
+                - generic [ref=e266]: 预计
+                - generic [ref=e267]: 618购物节
+              - generic [ref=e268]: 年中电商大促 (2026年6月1-18日)
+            - generic [ref=e269] [cursor=pointer]:
+              - generic [ref=e270]:
+                - generic [ref=e272]: 预计
+                - generic [ref=e273]: 苹果WWDC
+              - generic [ref=e274]: 苹果年度开发者大会，iOS/macOS新系统发布 (2026年6月2-13日)
+            - generic [ref=e275] [cursor=pointer]:
+              - generic [ref=e276]:
+                - generic [ref=e278]: 预计
+                - generic [ref=e279]: Computex台北电脑展
+              - generic [ref=e280]: 全球第二大电脑展，AI PC新品发布 (2026年6月2-5日)
+            - generic [ref=e281] [cursor=pointer]:
+              - generic [ref=e282]:
+                - generic [ref=e284]: 06-04
+                - generic [ref=e285]: 臻宝科技 业绩预告
+              - generic [ref=e286]: "公告日期: 20260604; 报告期[20260331]: 2026年一季报"
+            - generic [ref=e287] [cursor=pointer]:
+              - generic [ref=e288]:
+                - generic [ref=e290]: 06-04
+                - generic [ref=e291]: 惠科股份 业绩预告
+              - generic [ref=e292]: "公告日期: 20260604; 报告期[20260331]: 2026年一季报"
+            - generic [ref=e293] [cursor=pointer]:
+              - generic [ref=e294]:
+                - generic [ref=e296]: 06-04
+                - generic [ref=e297]: 科莱瑞迪 业绩预告
+              - generic [ref=e298]: "公告日期: 20260604; 报告期[20260331]: 2026年一季报"
+            - generic [ref=e299] [cursor=pointer]:
+              - generic [ref=e300]:
+                - generic [ref=e302]: 06-09
+                - generic [ref=e303]: 环旭电子 业绩预告
+              - generic [ref=e304]: "最新价: 40.74; 最新涨跌幅: 5.054152; 公告日期: 20260609; 报告期[20260331]: 2026年一季报; 变动类型[20260331]: 不确定"
+            - generic [ref=e305] [cursor=pointer]:
+              - generic [ref=e306]:
+                - generic [ref=e308]: 预计
+                - generic [ref=e309]: SNEC光伏展
+              - generic [ref=e310]: 全球最大光伏展 (2026年6月10-12日)
+            - generic [ref=e311] [cursor=pointer]:
+              - generic [ref=e312]:
+                - generic [ref=e314]: 预计
+                - generic [ref=e315]: 迎峰度夏
+              - generic [ref=e316]: 夏季用电高峰，电力保供政策密集 (2026年6月15-30日)
+      - generic [ref=e317]:
+        - generic [ref=e318] [cursor=pointer]:
+          - generic [ref=e319]: 📰 财经新闻
+          - img [ref=e320]
+        - generic [ref=e323]:
+          - generic "智界汽车赵长江晒出智界RX公告图" [ref=e324]:
+            - generic [ref=e325]:
+              - generic [ref=e326]: 东财7x24
+              - generic [ref=e327]: 06-10 19:56
+            - generic [ref=e328]: 智界汽车赵长江晒出智界RX公告图
+            - generic [ref=e329]: 【智界汽车赵长江晒出智界RX公告图】6月10日，智界汽车执行董事及执行副总裁赵长江在社交媒体平台晒出智界RX公告图。图片信息显示，新车定位轿跑SUV。余承东此前透露，这是鸿蒙智行首款跳出数字序列命名的新车，将于秋天正式发布。
+          - generic "中公教育：多名董事及高管拟增持4500万至9000万元" [ref=e330]:
+            - generic [ref=e331]:
+              - generic [ref=e332]: 东财7x24
+              - generic [ref=e333]: 06-10 19:56
+            - generic [ref=e334]: 中公教育：多名董事及高管拟增持4500万至9000万元
+            - generic [ref=e335]: 【中公教育：多名董事及高管拟增持4500万至9000万元】中公教育6月10日公告，公司董事兼副总经理何有立、董事金桦、职工董事孙维、副总经理桂红植、财务总监王玥、董事会秘书龚亚芳及核心骨干员工张红军、刘彦、刘伟伟、李雨、李文计划增持公司股份...
+          - generic "六九一二：拟收购成都菁蓉联创科技不低于51%股权" [ref=e336]:
+            - generic [ref=e337]:
+              - generic [ref=e338]: 东财7x24
+              - generic [ref=e339]: 06-10 19:54
+            - generic [ref=e340]: 六九一二：拟收购成都菁蓉联创科技不低于51%股权
+            - generic [ref=e341]: 【六九一二：拟收购成都菁蓉联创科技不低于51%股权】六九一二(301592.SZ)公告称，公司拟以现金方式收购成都菁蓉联创科技有限公司不低于51%的股权，以实现对其控股。本次交易不构成关联交易及重大资产重组，尚处于筹划阶段，具体交易方案、价...
+          - generic "中央网信办在京召开全国网络生态治理工作会议" [ref=e342]:
+            - generic [ref=e343]:
+              - generic [ref=e344]: 东财7x24
+              - generic [ref=e345]: 06-10 19:53
+            - generic [ref=e346]: 中央网信办在京召开全国网络生态治理工作会议
+            - generic [ref=e347]: 【中央网信办在京召开全国网络生态治理工作会议】6月10日，中央网信办在京召开全国网络生态治理工作会议。会议强调，要明确目标任务、聚焦工作重点，持续提升网络生态治理能力水平。在强化标本兼治上下功夫，提升专项行动质效，完善长效治理机制，抓好制度...
+          - generic "公募基金投资先进制造和科创股票超过6万亿" [ref=e348]:
+            - generic [ref=e349]:
+              - generic [ref=e350]: 东财7x24
+              - generic [ref=e351]: 06-10 19:51
+            - generic [ref=e352]: 公募基金投资先进制造和科创股票超过6万亿
+            - generic [ref=e353]: 【公募基金投资先进制造和科创股票超过6万亿】目前，公募基金投资于先进制造和科创领域股票超过6万亿元。ETF产品正成为连接科技创新与资本市场投融资两端的桥梁。今年以来上交所共推动6只科创板宽基ETF和9只科创板行业主题ETF上市，标的涵盖科创...
+          - generic "天娱数科：没有物理AI业务 与2026年世界杯不存在业务合作关系" [ref=e354]:
+            - generic [ref=e355]:
+              - generic [ref=e356]: 东财7x24
+              - generic [ref=e357]: 06-10 19:50
+            - generic [ref=e358]: 天娱数科：没有物理AI业务 与2026年世界杯不存在业务合作关系
+            - generic [ref=e359]: 【天娱数科：没有物理AI业务 与2026年世界杯不存在业务合作关系】天娱数科(002354)发布股票交易异常波动的公告，公司关注到近期有部分媒体对公司业务相关讨论涉及“物理AI”“世界杯”概念。截至目前，公司没有物理AI业务，未形成相关业务...
+          - generic "日本核污染水排海因异常警报停止" [ref=e360]:
+            - generic [ref=e361]:
+              - generic [ref=e362]: 东财7x24
+              - generic [ref=e363]: 06-10 19:48
+            - generic [ref=e364]: 日本核污染水排海因异常警报停止
+            - generic [ref=e365]: 【日本核污染水排海因异常警报停止】据日本共同社报道，10日16时（北京时间15时）许，东京电力公司福岛第一核电站在进行核污染水输送作业时，系统异常警报被触发，导致核污染水排海作业自动停止。
+          - generic "伊拉克重申国际联盟将于9月前撤军" [ref=e366]:
+            - generic [ref=e367]:
+              - generic [ref=e368]: 东财7x24
+              - generic [ref=e369]: 06-10 19:47
+            - generic [ref=e370]: 伊拉克重申国际联盟将于9月前撤军
+            - generic [ref=e371]: 【伊拉克重申国际联盟将于9月前撤军】伊拉克政府发言人海德尔·阿布迪当地时间10日在新闻发布会上重申，美国主导的国际联盟在伊拉克境内的军事存在将于今年9月结束。阿布迪还强调，伊拉克绝不接受任何国家干涉其内政，拒绝成为任何国家攻击其邻国的跳板。
+          - generic "超图软件：拟4000万元-6000万元回购股份" [ref=e372]:
+            - generic [ref=e373]:
+              - generic [ref=e374]: 东财7x24
+              - generic [ref=e375]: 06-10 19:44
+            - generic [ref=e376]: 超图软件：拟4000万元-6000万元回购股份
+            - generic [ref=e377]: 【超图软件：拟4000万元-6000万元回购股份】超图软件(300036.SZ)公告称，公司拟使用自有资金以集中竞价方式回购股份，回购总金额不低于4000万元且不超过6000万元，回购价格不超过16元/股。回购股份将用于实施员工持股计划及/...
+          - generic "康德莱：控股股东上海康德莱控股拟增持1%-2%公司股份" [ref=e378]:
+            - generic [ref=e379]:
+              - generic [ref=e380]: 东财7x24
+              - generic [ref=e381]: 06-10 19:44
+            - generic [ref=e382]: 康德莱：控股股东上海康德莱控股拟增持1%-2%公司股份
+            - generic [ref=e383]: 【康德莱：控股股东上海康德莱控股拟增持1%-2%公司股份】康德莱6月10日公告，公司控股股东上海康德莱控股集团有限公司计划增持公司股份，拟累计增持数量不低于436.79万股，即不低于公司已发行总股本的1％，且不超过873.58万股，即不超过...
+          - generic "长盈通：器件保偏光纤相关业务营收占比不足1%" [ref=e384]:
+            - generic [ref=e385]:
+              - generic [ref=e386]: 东财7x24
+              - generic [ref=e387]: 06-10 19:44
+            - generic [ref=e388]: 长盈通：器件保偏光纤相关业务营收占比不足1%
+            - generic [ref=e389]: 【长盈通：器件保偏光纤相关业务营收占比不足1%】长盈通(688143)公告称，公司股票连续三十个交易日内(2026年5月6日至6月10日)收盘价格涨幅偏离值累计超过200%，属于严重异常波动。截至目前，公司器件保偏光纤相关业务营收占比不足1...
+          - generic "阿曼附近海域一油轮起火2人失踪" [ref=e390]:
+            - generic [ref=e391]:
+              - generic [ref=e392]: 东财7x24
+              - generic [ref=e393]: 06-10 19:42
+            - generic [ref=e394]: 阿曼附近海域一油轮起火2人失踪
+            - generic [ref=e395]: 【阿曼附近海域一油轮起火2人失踪】英国海上贸易行动办公室10日发布通报说，在阿曼苏哈尔东北约20海里处一艘油轮机舱起火，造成2名船员失踪。
+          - generic "硅基流动：与贵州移动深化战略合作 加速“Token工厂”建设" [ref=e396]:
+            - generic [ref=e397]:
+              - generic [ref=e398]: 东财7x24
+              - generic [ref=e399]: 06-10 19:42
+            - generic [ref=e400]: 硅基流动：与贵州移动深化战略合作 加速“Token工厂”建设
+            - generic [ref=e401]: 【硅基流动：与贵州移动深化战略合作 加速“Token工厂”建设】据硅基流动消息，6月9日，硅基流动与中国移动通信集团贵州有限公司（下称“贵州移动”）就进一步深化战略合作正式签署协议。
+          - generic "俄外交部：俄愿为通过谈判解决伊朗问题提供便利" [ref=e402]:
+            - generic [ref=e403]:
+              - generic [ref=e404]: 东财7x24
+              - generic [ref=e405]: 06-10 19:40
+            - generic [ref=e406]: 俄外交部：俄愿为通过谈判解决伊朗问题提供便利
+            - generic [ref=e407]: 【俄外交部：俄愿为通过谈判解决伊朗问题提供便利】俄罗斯外交部发言人扎哈罗娃10日表示，俄罗斯仍愿为寻求各方都能接受的、通过谈判解决伊朗问题的方案提供便利。
+          - generic "苏交科：股东拟合计减持公司不超1.9%股份" [ref=e408]:
+            - generic [ref=e409]:
+              - generic [ref=e410]: 东财7x24
+              - generic [ref=e411]: 06-10 19:39
+            - generic [ref=e412]: 苏交科：股东拟合计减持公司不超1.9%股份
+            - generic [ref=e413]: 【苏交科：股东拟合计减持公司不超1.9%股份】苏交科(300284.SZ)公告称，股东符冠华及其一致行动人迎水16号基金计划减持不超过1200万股公司股份（占公司总股本的0.9502%）；股东王军华及其一致行动人迎水6号基金、迎水10号基金...

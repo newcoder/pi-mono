@@ -1,0 +1,55 @@
+- generic [ref=e3]:
+  - generic [ref=e4]:
+    - generic [ref=e97]: 上证指数 4110.03 ▲0.06%
+    - generic [ref=e98]: "|"
+    - generic [ref=e99]: 沪深300 4807.80 ▼-0.05%
+    - generic [ref=e100]: "|"
+    - generic [ref=e101]: 科创50 1564.72 ▲4.77%
+    - generic [ref=e102]: "|"
+    - generic [ref=e103]: 中证500 8340.85 ▼-0.02%
+    - generic [ref=e104]: "|"
+    - generic [ref=e105]: 深证成指 15113.21 ▼-0.05%
+    - generic [ref=e106]: "|"
+    - generic [ref=e107]: 创业板指 3685.51 ▼-0.04%
+  - generic [ref=e6]:
+    - generic [ref=e73]: 情绪 54/100 [███████████░░░░░░░░░] 中性
+    - generic [ref=e74]: 涨2578
+    - generic [ref=e75]: 跌2754
+    - generic [ref=e76]: 涨停66 跌停7
+    - generic [ref=e77]: 北向 +130亿
+  - generic [ref=e8]:
+    - generic [ref=e9]: research
+    - generic [ref=e10]: 已连接
+  - generic [ref=e11]:
+    - generic [ref=e13]:
+      - generic [ref=e14]: 股票池
+      - generic [ref=e15]:
+        - generic [ref=e16] [cursor=pointer]:
+          - generic [ref=e17]: 日线MACD金叉_本周周线金叉预备队
+          - generic [ref=e18]: 100 只
+        - generic [ref=e19] [cursor=pointer]:
+          - generic [ref=e20]: 周线RSI低位_即将金叉预备队
+          - generic [ref=e21]: 51 只
+        - generic [ref=e22] [cursor=pointer]:
+          - generic [ref=e23]: 2025年报营收利润双增长Top10
+          - generic [ref=e24]: 10 只
+        - generic [ref=e25] [cursor=pointer]:
+          - generic [ref=e26]: PE小于20且市值大于100亿
+          - generic [ref=e27]: 50 只
+    - generic [ref=e28]:
+      - generic [ref=e29]:
+        - generic [ref=e109]: 选出日线多头排列的股票，按市值从大到小排列，取前10只
+        - generic [ref=e111]: 我来帮你筛选日线多头排列的股票。先用技术指标选股，然后按市值排序取前10。
+        - generic [ref=e112]: "[Tool] [advanced_screen]"
+        - generic [ref=e113]: "[Tool] 【智能筛选结果】检查 5499 只，匹配 50 只 筛选时间: 2026-04-30T13:42:09.640279 000001 平安银行 | daily_ma_trend:MA trend (bull): True 000006 深振..."
+        - generic [ref=e115]: 已经筛选出50只日线多头排列的股票。接下来我需要获取它们的市值数据来排序。让我分批查询这些股票的市值信息。
+        - generic [ref=e116]: "[Tool] [compare_stocks]"
+        - generic [ref=e117]: "[Tool] [compare_stocks]"
+        - generic [ref=e118]: "[Tool] [compare_stocks]"
+        - generic [ref=e119]: "[Tool] 【股票对比】 代码 名称 最新价 涨跌幅% PE PB 市值(亿) 换手% ---------------------------------------------------------..."
+        - generic [ref=e120]: "[Tool] 【股票对比】 代码 名称 最新价 涨跌幅% PE PB 市值(亿) 换手% ---------------------------------------------------------..."
+        - generic [ref=e121]: "[Tool] 【股票对比】 代码 名称 最新价 涨跌幅% PE PB 市值(亿) 换手% ---------------------------------------------------------..."
+        - generic [ref=e123]: ▌
+      - generic [ref=e31]:
+        - textbox "输入消息..." [ref=e32]
+        - button "发送" [active] [ref=e33]

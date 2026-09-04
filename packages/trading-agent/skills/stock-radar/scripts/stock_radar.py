@@ -23,6 +23,7 @@ from typing import List, Dict, Any, Optional, Tuple
 from datetime import datetime, timedelta
 from collections import defaultdict
 from pathlib import Path
+from concurrent.futures import ThreadPoolExecutor, as_completed
 
 logging.basicConfig(
     level=logging.INFO,
@@ -1022,8 +1023,13 @@ def main():
             all_articles.extend(cached_articles)
             logger.info(f"增量模式: 已加载历史 {len(cached_articles)} 条新闻，本次只获取当天...")
 
-        all_articles.extend(fetch_cls_telegraph(page_size=100))
-        all_articles.extend(fetch_eastmoney_global_news(page_size=100))
+        with ThreadPoolExecutor(max_workers=2) as executor:
+            future_cls = executor.submit(fetch_cls_telegraph, page_size=100)
+            future_em = executor.submit(fetch_eastmoney_global_news, page_size=100)
+            cls_articles = future_cls.result()
+            em_articles = future_em.result()
+        all_articles.extend(cls_articles)
+        all_articles.extend(em_articles)
         all_articles = _dedup_articles(all_articles)
         logger.info(f"免费新闻总计: {len(all_articles)} 条")
 
@@ -1040,16 +1046,28 @@ def main():
             logger.info(f"增量模式: 已加载历史 {len(cached_events)} 条事件")
 
         if API_KEY:
-            all_events.extend(fetch_executive_changes())
-            all_events.extend(fetch_earnings_forecast())
-            all_events.extend(fetch_unlocks())
-            all_events.extend(fetch_private_placement())
-            all_events.extend(fetch_major_contracts())
-            all_events.extend(fetch_buybacks())
-            all_events.extend(fetch_equity_incentive())
-            all_events.extend(fetch_institutional_research())
-            all_events.extend(fetch_shareholder_changes())
-            all_events.extend(fetch_reduction_plans())
+            event_fetchers = [
+                fetch_executive_changes,
+                fetch_earnings_forecast,
+                fetch_unlocks,
+                fetch_private_placement,
+                fetch_major_contracts,
+                fetch_buybacks,
+                fetch_equity_incentive,
+                fetch_institutional_research,
+                fetch_shareholder_changes,
+                fetch_reduction_plans,
+            ]
+            with ThreadPoolExecutor(max_workers=min(len(event_fetchers), 5)) as executor:
+                future_to_name = {executor.submit(fn): fn.__name__ for fn in event_fetchers}
+                for future in as_completed(future_to_name):
+                    name = future_to_name[future]
+                    try:
+                        events = future.result()
+                        all_events.extend(events)
+                        logger.info(f"  -> {name}: {len(events)} 条")
+                    except Exception as e:
+                        logger.warning(f"{name} 获取失败: {e}")
             all_events = _dedup_events(all_events)
             logger.info(f"事件总数(含缓存): {len(all_events)}")
         else:

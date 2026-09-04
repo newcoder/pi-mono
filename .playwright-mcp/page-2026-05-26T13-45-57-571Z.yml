@@ -1,0 +1,331 @@
+- generic [ref=e3]:
+  - generic [ref=e4]:
+    - generic [ref=e5]:
+      - generic [ref=e6]: π
+      - generic [ref=e7]: Trading Agent
+    - generic [ref=e8]:
+      - generic [ref=e9] [cursor=pointer]:
+        - generic [ref=e10]: 上证指数
+        - generic [ref=e11]: "4145.37"
+        - generic [ref=e12]: ▼
+        - generic [ref=e13]: "-0.17%"
+      - generic [ref=e14] [cursor=pointer]:
+        - generic [ref=e15]: 沪深300
+        - generic [ref=e16]: "4947.85"
+        - generic [ref=e17]: ▲
+        - generic [ref=e18]: 0.53%
+      - generic [ref=e19] [cursor=pointer]:
+        - generic [ref=e20]: 科创50
+        - generic [ref=e21]: "1867.71"
+        - generic [ref=e22]: ▼
+        - generic [ref=e23]: "-1.49%"
+      - generic [ref=e24] [cursor=pointer]:
+        - generic [ref=e25]: 中证500
+        - generic [ref=e26]: "8658.62"
+        - generic [ref=e27]: ▼
+        - generic [ref=e28]: "-0.52%"
+      - generic [ref=e29] [cursor=pointer]:
+        - generic [ref=e30]: 深证成指
+        - generic [ref=e31]: "15876.16"
+        - generic [ref=e32]: ▲
+        - generic [ref=e33]: 0.12%
+      - generic [ref=e34] [cursor=pointer]:
+        - generic [ref=e35]: 创业板指
+        - generic [ref=e36]: "4043.07"
+        - generic [ref=e37]: ▲
+        - generic [ref=e38]: 0.55%
+  - generic [ref=e39]:
+    - generic [ref=e40]: RESEARCH
+    - textbox "搜索股票 (代码/名称/拼音)" [ref=e42]
+  - generic [ref=e43]:
+    - generic [ref=e44]:
+      - generic [ref=e46]: 股票池
+      - generic [ref=e47]:
+        - generic [ref=e48]:
+          - generic [ref=e49] [cursor=pointer]:
+            - generic [ref=e50]:
+              - generic [ref=e51]: 周线多头日线缩量调整市值TOP20
+              - button "×" [ref=e52]
+            - generic [ref=e53]: 20 只
+          - generic [ref=e54] [cursor=pointer]:
+            - generic [ref=e55]:
+              - generic [ref=e56]: 同花顺强势股_2026-05-26
+              - button "×" [ref=e57]
+            - generic [ref=e58]: 64 只
+          - generic [ref=e59] [cursor=pointer]:
+            - generic [ref=e60]:
+              - generic [ref=e61]: 同花顺强势股_20260526
+              - button "×" [ref=e62]
+            - generic [ref=e63]: 50 只
+          - generic [ref=e64] [cursor=pointer]:
+            - generic [ref=e65]:
+              - generic [ref=e66]: DoubleEnsemble_Top30_Prob
+              - button "×" [ref=e67]
+            - generic [ref=e68]: 30 只
+          - generic [ref=e69] [cursor=pointer]:
+            - generic [ref=e70]:
+              - generic [ref=e71]: lgbm_40_60
+              - button "×" [ref=e72]
+            - generic [ref=e73]: 21 只
+          - generic [ref=e74] [cursor=pointer]:
+            - generic [ref=e75]:
+              - generic [ref=e76]: LGBM Rank 40-60
+              - button "×" [ref=e77]
+            - generic [ref=e78]: 21 只
+          - generic [ref=e79] [cursor=pointer]:
+            - generic [ref=e80]:
+              - generic [ref=e81]: 周线多头日线缩量回调_202605
+              - button "×" [ref=e82]
+            - generic [ref=e83]: 30 只
+          - generic [ref=e84] [cursor=pointer]:
+            - generic [ref=e85]:
+              - generic [ref=e86]: 最近访问
+              - button "×" [ref=e87]
+            - generic [ref=e88]: 135 只
+          - generic [ref=e89] [cursor=pointer]:
+            - generic [ref=e90]:
+              - generic [ref=e91]: 未来关注股池
+              - button "×" [ref=e92]
+            - generic [ref=e93]: 50 只
+          - generic [ref=e94] [cursor=pointer]:
+            - generic [ref=e95]:
+              - generic [ref=e96]: 周线多头日线回调缩量
+              - button "×" [ref=e97]
+            - generic [ref=e98]: 50 只
+          - generic [ref=e99] [cursor=pointer]:
+            - generic [ref=e100]:
+              - generic [ref=e101]: 前期强势缩量调整
+              - button "×" [ref=e102]
+            - generic [ref=e103]: 50 只
+          - generic [ref=e104] [cursor=pointer]:
+            - generic [ref=e105]:
+              - generic [ref=e106]: 营收连续两年增长超50%
+              - button "×" [ref=e107]
+            - generic [ref=e108]: 45 只
+          - generic [ref=e109] [cursor=pointer]:
+            - generic [ref=e110]:
+              - generic [ref=e111]: 日线多头排列市值TOP10
+              - button "×" [ref=e112]
+            - generic [ref=e113]: 10 只
+        - generic [ref=e115]:
+          - generic [ref=e116]: 📂
+          - generic [ref=e117]: 选择股票池查看个股
+    - generic [ref=e119]:
+      - generic [ref=e123]:
+        - generic [ref=e124]: 工具调用
+        - button "收起" [ref=e125] [cursor=pointer]:
+          - img [ref=e126]
+      - generic [ref=e130]:
+        - button "设置" [ref=e131] [cursor=pointer]:
+          - img [ref=e132]
+        - button "附件" [ref=e135] [cursor=pointer]:
+          - img [ref=e136]
+        - button "Choose File"
+        - textbox "输入消息..." [ref=e138]
+        - button "发送" [ref=e139] [cursor=pointer]:
+          - img [ref=e140]
+    - generic [ref=e143]:
+      - generic [ref=e144]:
+        - generic [ref=e145] [cursor=pointer]:
+          - generic [ref=e146]: 📅 投资日历
+          - generic [ref=e147]:
+            - button "刷新日历数据" [ref=e148]:
+              - img [ref=e149]
+            - img [ref=e152]
+        - generic [ref=e155]:
+          - generic [ref=e156]:
+            - button "<" [ref=e157] [cursor=pointer]
+            - generic [ref=e158]: 2026年5月
+            - button ">" [ref=e159] [cursor=pointer]
+          - generic [ref=e160]:
+            - generic [ref=e161]: 日
+            - generic [ref=e162]: 一
+            - generic [ref=e163]: 二
+            - generic [ref=e164]: 三
+            - generic [ref=e165]: 四
+            - generic [ref=e166]: 五
+            - generic [ref=e167]: 六
+          - generic [ref=e168]:
+            - generic [ref=e175] [cursor=pointer]: "1"
+            - generic [ref=e177] [cursor=pointer]: "2"
+            - generic [ref=e179] [cursor=pointer]: "3"
+            - generic [ref=e181] [cursor=pointer]: "4"
+            - generic [ref=e183] [cursor=pointer]: "5"
+            - generic [ref=e185] [cursor=pointer]: "6"
+            - generic [ref=e187] [cursor=pointer]: "7"
+            - generic [ref=e189] [cursor=pointer]: "8"
+            - generic [ref=e191] [cursor=pointer]: "9"
+            - generic [ref=e193] [cursor=pointer]: "10"
+            - generic [ref=e195] [cursor=pointer]: "11"
+            - generic [ref=e197] [cursor=pointer]: "12"
+            - generic [ref=e199] [cursor=pointer]: "13"
+            - generic [ref=e201] [cursor=pointer]: "14"
+            - generic [ref=e203] [cursor=pointer]: "15"
+            - generic [ref=e205] [cursor=pointer]: "16"
+            - generic [ref=e207] [cursor=pointer]: "17"
+            - generic [ref=e209] [cursor=pointer]: "18"
+            - generic [ref=e213] [cursor=pointer]: "19"
+            - generic [ref=e215] [cursor=pointer]: "20"
+            - generic [ref=e217] [cursor=pointer]: "21"
+            - generic [ref=e221] [cursor=pointer]: "22"
+            - generic [ref=e223] [cursor=pointer]: "23"
+            - generic [ref=e225] [cursor=pointer]: "24"
+            - generic [ref=e227] [cursor=pointer]: "25"
+            - generic [ref=e231] [cursor=pointer]: "26"
+            - generic [ref=e233] [cursor=pointer]: "27"
+            - generic [ref=e235] [cursor=pointer]: "28"
+            - generic [ref=e237] [cursor=pointer]: "29"
+            - generic [ref=e239] [cursor=pointer]: "30"
+            - generic [ref=e241] [cursor=pointer]: "31"
+          - generic [ref=e242]:
+            - generic [ref=e243]: 本月重点关注
+            - generic [ref=e244] [cursor=pointer]:
+              - generic [ref=e245]:
+                - generic [ref=e247]: 05-18
+                - generic [ref=e248]: 新天力 业绩预告
+              - generic [ref=e249]: "公告日期: 20260518; 报告期[20260331]: 2026年一季报"
+            - generic [ref=e250] [cursor=pointer]:
+              - generic [ref=e251]:
+                - generic [ref=e253]: 05-21
+                - generic [ref=e254]: 高特电子 业绩预告
+              - generic [ref=e255]: "公告日期: 20260521; 报告期[20260331]: 2026年一季报"
+            - generic [ref=e256] [cursor=pointer]:
+              - generic [ref=e257]:
+                - generic [ref=e259]: 05-21
+                - generic [ref=e260]: 惠康科技 业绩预告
+              - generic [ref=e261]: "最新价: 89.18; 最新涨跌幅: 0.314961; 公告日期: 20260521; 报告期[20260331]: 2026年一季报; 净利润增长率上限[20260331]: 9.8"
+            - generic [ref=e262] [cursor=pointer]:
+              - generic [ref=e263]:
+                - generic [ref=e265]: 05-21
+                - generic [ref=e266]: 新睿电子 业绩预告
+              - generic [ref=e267]: "公告日期: 20260521; 报告期[20260331]: 2026年一季报"
+            - generic [ref=e268] [cursor=pointer]:
+              - generic [ref=e269]:
+                - generic [ref=e271]: 05-25
+                - generic [ref=e272]: 彩客科技 业绩预告
+              - generic [ref=e273]: "公告日期: 20260525; 报告期[20260331]: 2026年一季报"
+      - generic [ref=e274]:
+        - generic [ref=e275] [cursor=pointer]:
+          - generic [ref=e276]: 📰 财经新闻
+          - img [ref=e277]
+        - generic [ref=e280]:
+          - generic "财联社5月26日晚间新闻精选" [ref=e281] [cursor=pointer]:
+            - generic [ref=e282]:
+              - generic [ref=e283]: 财联社
+              - generic [ref=e284]: 05-26 21:43
+            - generic [ref=e285]: 财联社5月26日晚间新闻精选
+            - generic [ref=e286]: 【财联社5月26日晚间新闻精选】 1、华为新概念韬（τ）定律成为资本市场最新关注对象；多家券商认为是为中国半导体产业开辟了“换道超车”的可能性。 2、据央视财经报道，今年AI短剧出海订单激增，有企业订单预计暴增5000%；不少企业正加码布局...
+          - generic "俄外长与美国务卿通话 要求美方撤离驻基辅大使馆人员" [ref=e287] [cursor=pointer]:
+            - generic [ref=e288]:
+              - generic [ref=e289]: 财联社
+              - generic [ref=e290]: 05-26 21:42
+            - generic [ref=e291]: 俄外长与美国务卿通话 要求美方撤离驻基辅大使馆人员
+            - generic [ref=e292]: 【俄外长与美国务卿通话 要求美方撤离驻基辅大使馆人员】财联社5月26日电，据俄罗斯方面当地时间5月26日消息，俄副外长里亚布科夫表示，俄外长拉夫罗夫5月25日与美国国务卿鲁比奥通话时，要求美方撤离驻乌克兰基辅大使馆人员，并解释了俄军将对基辅...
+          - generic "财联社5月26日电，费城半导体指数涨幅扩大至3.8%，刷新历史新高。" [ref=e293] [cursor=pointer]:
+            - generic [ref=e294]:
+              - generic [ref=e295]: 财联社
+              - generic [ref=e296]: 05-26 21:42
+            - generic [ref=e297]: 财联社5月26日电，费城半导体指数涨幅扩大至3.8%，刷新历史新高。
+            - generic [ref=e298]: 财联社5月26日电，费城半导体指数涨幅扩大至3.8%，刷新历史新高。
+          - generic "费城半导体指数涨幅扩大至3.8%" [ref=e299]:
+            - generic [ref=e300]:
+              - generic [ref=e301]: 东财7x24
+              - generic [ref=e302]: 05-26 21:42
+            - generic [ref=e303]: 费城半导体指数涨幅扩大至3.8%
+            - generic [ref=e304]: 费城半导体指数涨幅扩大至3.8%，刷新历史新高。
+          - generic "美股加密矿企全线冲高" [ref=e305] [cursor=pointer]:
+            - generic [ref=e306]:
+              - generic [ref=e307]: 财联社
+              - generic [ref=e308]: 05-26 21:39
+            - generic [ref=e309]: 美股加密矿企全线冲高
+            - generic [ref=e310]: 【美股加密矿企全线冲高】财联社5月26日电，美股加密矿企全线冲高，TeraWulf涨近11%，Cipher Digital涨近9%，CleanSpark、MARA Holdings、IREN、Hut 8涨超6%，比特币矿商ETF WGMI涨...
+          - generic "美股加密矿企全线冲高" [ref=e311]:
+            - generic [ref=e312]:
+              - generic [ref=e313]: 东财7x24
+              - generic [ref=e314]: 05-26 21:39
+            - generic [ref=e315]: 美股加密矿企全线冲高
+            - generic [ref=e316]: 【美股加密矿企全线冲高】美股加密矿企全线冲高，TeraWulf涨近11%，CipherDigital涨近9%，CleanSpark、MARAHoldings、IREN、Hut8涨超6%，比特币矿商ETFWGMI涨近6%。
+          - generic "罗素2000指数触及日内高点" [ref=e317]:
+            - generic [ref=e318]:
+              - generic [ref=e319]: 东财7x24
+              - generic [ref=e320]: 05-26 21:38
+            - generic [ref=e321]: 罗素2000指数触及日内高点
+            - generic [ref=e322]: 罗素2000指数触及日内高点，最新上涨0.9%。
+          - generic "巴基斯坦国防部长：不会加入“亚伯拉罕协议”" [ref=e323] [cursor=pointer]:
+            - generic [ref=e324]:
+              - generic [ref=e325]: 财联社
+              - generic [ref=e326]: 05-26 21:38
+            - generic [ref=e327]: 巴基斯坦国防部长：不会加入“亚伯拉罕协议”
+            - generic [ref=e328]: 【巴基斯坦国防部长：不会加入“亚伯拉罕协议”】财联社5月26日电，巴基斯坦国防部长赫瓦贾·阿西夫26日接受当地媒体采访时表示，巴基斯坦不会加入旨在推进以色列与阿拉伯国家关系正常化的“亚伯拉罕协议”，因为该协议与巴方理念相冲突。巴基斯坦未与以...
+          - generic "巴基斯坦国防部长：不会加入“亚伯拉罕协议”" [ref=e329]:
+            - generic [ref=e330]:
+              - generic [ref=e331]: 东财7x24
+              - generic [ref=e332]: 05-26 21:37
+            - generic [ref=e333]: 巴基斯坦国防部长：不会加入“亚伯拉罕协议”
+            - generic [ref=e334]: 【巴基斯坦国防部长：不会加入“亚伯拉罕协议”】巴基斯坦国防部长赫瓦贾·阿西夫26日接受当地媒体采访时表示，巴基斯坦不会加入旨在推进以色列与阿拉伯国家关系正常化的“亚伯拉罕协议”，因为该协议与巴方理念相冲突。
+          - generic "财联社5月26日电，罗素2000指数触及日内高点，最新上涨0.9%。" [ref=e335] [cursor=pointer]:
+            - generic [ref=e336]:
+              - generic [ref=e337]: 财联社
+              - generic [ref=e338]: 05-26 21:37
+            - generic [ref=e339]: 财联社5月26日电，罗素2000指数触及日内高点，最新上涨0.9%。
+            - generic [ref=e340]: 财联社5月26日电，罗素2000指数触及日内高点，最新上涨0.9%。
+          - generic "财联社5月26日电，博通公司宣布推出BCM68850，这是业界首款集成NPU和Wi-Fi 8的50G ITU-PON家庭网关SoC。" [ref=e341] [cursor=pointer]:
+            - generic [ref=e342]:
+              - generic [ref=e343]: 财联社
+              - generic [ref=e344]: 05-26 21:37
+            - generic [ref=e345]: 财联社5月26日电，博通公司宣布推出BCM68850，这是业界首款集成NPU和Wi-Fi 8的50G ITU-PON家庭网关SoC。
+            - generic [ref=e346]: 财联社5月26日电，博通公司宣布推出BCM68850，这是业界首款集成NPU和Wi-Fi 8的50G ITU-PON家庭网关SoC。
+          - generic "粮农组织：霍尔木兹海峡航运问题或引发全球粮食安全危机" [ref=e347]:
+            - generic [ref=e348]:
+              - generic [ref=e349]: 东财7x24
+              - generic [ref=e350]: 05-26 21:36
+            - generic [ref=e351]: 粮农组织：霍尔木兹海峡航运问题或引发全球粮食安全危机
+            - generic [ref=e352]: 【粮农组织：霍尔木兹海峡航运问题或引发全球粮食安全危机】当地时间5月26日，联合国粮农组织总干事屈冬玉在罗马出席活动时警告称，霍尔木兹海峡航运问题正对全球农业粮食体系造成系统性冲击，若不及时采取行动，未来数年世界或面临严重粮食安全危机。
+          - generic "粮农组织：霍尔木兹海峡航运问题或引发全球粮食安全危机" [ref=e353] [cursor=pointer]:
+            - generic [ref=e354]:
+              - generic [ref=e355]: 财联社
+              - generic [ref=e356]: 05-26 21:34
+            - generic [ref=e357]: 粮农组织：霍尔木兹海峡航运问题或引发全球粮食安全危机
+            - generic [ref=e358]: 【粮农组织：霍尔木兹海峡航运问题或引发全球粮食安全危机】财联社5月26日电，联合国粮农组织总干事屈冬玉当地时间5月26日在罗马出席活动时警告称，霍尔木兹海峡航运问题正对全球农业粮食体系造成系统性冲击，若不及时采取行动，未来数年世界或面临严重...
+          - generic "财联社5月26日电，费城半导体指数盘初涨超3%，美光大涨逾11%，迈威尔科技涨超9%，AMD涨超4%，ARM涨超3%，皆创下历史新高。" [ref=e359] [cursor=pointer]:
+            - generic [ref=e360]:
+              - generic [ref=e361]: 财联社
+              - generic [ref=e362]: 05-26 21:34
+            - generic [ref=e363]: 财联社5月26日电，费城半导体指数盘初涨超3%，美光大涨逾11%，迈威尔科技涨超9%，AMD涨超4%，ARM涨超3%，皆创下历史新高。
+            - generic [ref=e364]: 财联社5月26日电，费城半导体指数盘初涨超3%，美光大涨逾11%，迈威尔科技涨超9%，AMD涨超4%，ARM涨超3%，皆创下历史新高。
+          - generic "费城半导体指数盘初涨超3% 美光大涨逾11%" [ref=e365]:
+            - generic [ref=e366]:
+              - generic [ref=e367]: 东财7x24
+              - generic [ref=e368]: 05-26 21:34
+            - generic [ref=e369]: 费城半导体指数盘初涨超3% 美光大涨逾11%
+            - generic [ref=e370]: 【费城半导体指数盘初涨超3% 美光大涨逾11%】费城半导体指数盘初涨超3%，美光大涨逾11%，迈威尔科技涨超9%，AMD涨超4%，ARM涨超3%，皆创下历史新高。
+          - generic "美光科技大涨12% 总市值达9500亿美元" [ref=e371] [cursor=pointer]:
+            - generic [ref=e372]:
+              - generic [ref=e373]: 财联社
+              - generic [ref=e374]: 05-26 21:33
+            - generic [ref=e375]: 美光科技大涨12% 总市值达9500亿美元
+            - generic [ref=e376]: 【美光科技大涨12% 总市值达9500亿美元】财联社5月26日电，美光科技股价上涨12.09%，创5月8日以来盘中最大涨幅，报841.760美元/股，总市值报9500亿美元，刷新历史新高。
+          - generic "美光科技涨超12% 刷新历史新高" [ref=e377]:
+            - generic [ref=e378]:
+              - generic [ref=e379]: 东财7x24
+              - generic [ref=e380]: 05-26 21:33
+            - generic [ref=e381]: 美光科技涨超12% 刷新历史新高
+            - generic [ref=e382]: 【美光科技涨超12% 刷新历史新高】美光科技股价上涨12.09%，报841.760美元/股，总市值报9500亿美元，刷新历史新高。
+          - generic "财联社5月26日电，利弗莫尔中概股龙头指数盘初涨2.13%。" [ref=e383] [cursor=pointer]:
+            - generic [ref=e384]:
+              - generic [ref=e385]: 财联社
+              - generic [ref=e386]: 05-26 21:31
+            - generic [ref=e387]: 财联社5月26日电，利弗莫尔中概股龙头指数盘初涨2.13%。
+            - generic [ref=e388]: 财联社5月26日电，利弗莫尔中概股龙头指数盘初涨2.13%。成分股中，富途涨14.82%，联电涨14.82%，小马智行涨12.01%，欢聚涨11.71%，信也科技涨10.24%。
+          - generic "美股三大指数集体高开 太空股大涨" [ref=e389] [cursor=pointer]:
+            - generic [ref=e390]:
+              - generic [ref=e391]: 财联社
+              - generic [ref=e392]: 05-26 21:30
+            - generic [ref=e393]: 美股三大指数集体高开 太空股大涨
+            - generic [ref=e394]: 【美股三大指数集体高开 太空股大涨】财联社5月26日电，美股三大指数集体高开，道指涨0.28%，纳指涨0.95%，标普500指数涨0.59%。太空股大涨，Momentus涨超75%，Redwire涨超11%，MDA Space涨超7%；半导...
+          - generic "美股三大指数集体高开 太空股大涨" [ref=e395]:
+            - generic [ref=e396]:
+              - generic [ref=e397]: 东财7x24
+              - generic [ref=e398]: 05-26 21:30
+            - generic [ref=e399]: 美股三大指数集体高开 太空股大涨
+            - generic [ref=e400]: 【美股三大指数集体高开 太空股大涨】美股三大指数集体高开，道指涨0.28%，纳指涨0.95%，标普500指数涨0.59%。太空股大涨，Momentus涨超75%，Redwire涨超11%，MDASpace涨超7%；半导体股上涨，美光科技涨超...

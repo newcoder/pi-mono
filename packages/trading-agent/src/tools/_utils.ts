@@ -11,6 +11,9 @@ const HOME = process.env.HOME || process.env.USERPROFILE || ".";
 const BUNDLED_A_SHARE_SCRIPTS = join(__dirname, "../../skills/a-share-analysis/scripts");
 const EXTERNAL_A_SHARE_SCRIPTS = join(HOME, ".agents/skills/a-share-analysis/scripts");
 
+const BUNDLED_LOCAL_DATA_SCRIPTS = join(__dirname, "../../skills/local-data/scripts");
+const EXTERNAL_LOCAL_DATA_SCRIPTS = join(HOME, ".agents/skills/local-data/scripts");
+
 const BUNDLED_NL_SCREENER_SCRIPTS = join(__dirname, "../../skills/nl-stock-screener/scripts");
 const EXTERNAL_NL_SCREENER_SCRIPTS = join(HOME, ".agents/skills/nl-stock-screener/scripts");
 
@@ -33,6 +36,11 @@ export function resolveScriptPath(scriptName: string, bundledDir: string, extern
 /** Resolve a-share script path (bundled优先). */
 export function resolveAShareScript(scriptName: string): string {
 	return resolveScriptPath(scriptName, BUNDLED_A_SHARE_SCRIPTS, EXTERNAL_A_SHARE_SCRIPTS);
+}
+
+/** Resolve local-data script path (bundled优先). */
+export function resolveLocalDataScript(scriptName: string): string {
+	return resolveScriptPath(scriptName, BUNDLED_LOCAL_DATA_SCRIPTS, EXTERNAL_LOCAL_DATA_SCRIPTS);
 }
 
 /** Resolve nl-screener script path (bundled优先). */
@@ -60,6 +68,44 @@ export const SCRIPTS_DIR = EXTERNAL_A_SHARE_SCRIPTS;
 
 const DEFAULT_TIMEOUT_MS = 30000;
 
+/**
+ * Single-slot sequential queue: at most one Python subprocess runs at a time.
+ * Each call to runPython enqueues itself; the queue drains sequentially so
+ * background sync, frontend polling, and user-initiated calls never overlap.
+ */
+const MAX_CONCURRENT = 3;
+let pythonActive = 0;
+const pythonWaiters: Array<() => void> = [];
+
+function enqueuePython<T>(fn: () => Promise<T>): Promise<T> {
+	return new Promise<T>((resolve, reject) => {
+		const run = async () => {
+			pythonActive++;
+			try {
+				const result = await fn();
+				resolve(result);
+			} catch (err) {
+				reject(err);
+			} finally {
+				pythonActive--;
+				const next = pythonWaiters.shift();
+				if (next) next();
+			}
+		};
+
+		if (pythonActive < MAX_CONCURRENT) {
+			run();
+		} else {
+			pythonWaiters.push(run);
+		}
+	});
+}
+
+/** In-flight Python script executions keyed by script+args. Prevents duplicate
+ *  concurrent subprocesses for identical calls (e.g. frontend polling the same
+ *  stock quote simultaneously). */
+const inFlight = new Map<string, Promise<string>>();
+
 function runPythonCommand(cmd: string, script: string, args: string[], timeoutMs: number): Promise<string> {
 	return new Promise((resolve, reject) => {
 		// Resolve script path if not absolute (bundled takes priority)
@@ -68,7 +114,7 @@ function runPythonCommand(cmd: string, script: string, args: string[], timeoutMs
 		const proc = spawn(cmd, [scriptPath, ...args], {
 			cwd,
 			stdio: ["ignore", "pipe", "pipe"],
-			env: { ...process.env, PYTHONIOENCODING: "utf-8" },
+			env: { ...process.env, PYTHONIOENCODING: "utf-8", PYTHONUTF8: "1" },
 		});
 		let stdout = "";
 		let stderr = "";
@@ -106,27 +152,43 @@ function runPythonCommand(cmd: string, script: string, args: string[], timeoutMs
 }
 
 export async function runPython(script: string, args: string[], timeoutMs = DEFAULT_TIMEOUT_MS): Promise<string> {
-	const commands = ["python3", "python", "py"];
-	let lastError: Error | undefined;
-
-	for (const cmd of commands) {
-		try {
-			return await runPythonCommand(cmd, script, args, timeoutMs);
-		} catch (err) {
-			const message = err instanceof Error ? err.message : String(err);
-			if (
-				message.includes("ENOENT") ||
-				message.includes("not found") ||
-				message.includes("not recognized") ||
-				message.includes("No such file")
-			) {
-				continue;
-			}
-			lastError = err instanceof Error ? err : new Error(message);
-		}
+	const key = `${script}\0${args.join("\0")}`;
+	const existing = inFlight.get(key);
+	if (existing) {
+		return existing;
 	}
 
-	throw lastError ?? new Error(`No Python interpreter found. Tried: ${commands.join(", ")}`);
+	const promise = enqueuePython(async (): Promise<string> => {
+		const commands = ["python3", "python", "py"];
+		let lastError: Error | undefined;
+
+		for (const cmd of commands) {
+			try {
+				return await runPythonCommand(cmd, script, args, timeoutMs);
+			} catch (err) {
+				const message = err instanceof Error ? err.message : String(err);
+				if (
+					message.includes("ENOENT") ||
+					message.includes("not found") ||
+					message.includes("not recognized") ||
+					message.includes("No such file")
+				) {
+					continue;
+				}
+				lastError = err instanceof Error ? err : new Error(message);
+			}
+		}
+
+		throw lastError ?? new Error(`No Python interpreter found. Tried: ${commands.join(", ")}`);
+	});
+
+	inFlight.set(key, promise);
+	promise.then(
+		() => inFlight.delete(key),
+		() => inFlight.delete(key),
+	);
+
+	return promise;
 }
 
 /** Run a Python script with a specific interpreter and working directory.
@@ -140,10 +202,12 @@ export async function runPythonCustom(
 	timeoutMs = DEFAULT_TIMEOUT_MS,
 ): Promise<string> {
 	return new Promise((resolve, reject) => {
+		const fullCmd = `${pythonPath} ${scriptPath} ${args.join(" ")}`;
+		console.log(`[runPythonCustom] Spawn: ${fullCmd}\n  cwd=${cwd}`);
 		const proc = spawn(pythonPath, [scriptPath, ...args], {
 			cwd,
 			stdio: ["ignore", "pipe", "pipe"],
-			env: { ...process.env, PYTHONIOENCODING: "utf-8" },
+			env: { ...process.env, PYTHONIOENCODING: "utf-8", PYTHONUTF8: "1" },
 		});
 		let stdout = "";
 		let stderr = "";
@@ -166,11 +230,13 @@ export async function runPythonCustom(
 		});
 		proc.on("error", (err) => {
 			clearTimeout(timer);
+			console.error(`[runPythonCustom] Process error: ${err.message}`);
 			reject(err);
 		});
 		proc.on("close", (code) => {
 			clearTimeout(timer);
 			if (timedOut) return;
+			console.log(`[runPythonCustom] Exit code: ${code}, stderr: ${stderr.trim() || "(empty)"}`);
 			if (code !== 0) {
 				reject(new Error(stderr.trim() || `Python script exited with code ${code}`));
 			} else {
@@ -182,6 +248,17 @@ export async function runPythonCustom(
 
 export async function runJsonScript(script: string, args: string[], timeoutMs?: number): Promise<any> {
 	const stdout = await runPython(script, args, timeoutMs);
+	const start = stdout.search(/[[{]/);
+	if (start === -1) {
+		throw new Error(`No JSON found in script output: ${stdout.slice(0, 200)}`);
+	}
+	return JSON.parse(stdout.slice(start));
+}
+
+/** Run a Python script from the local-data skill directory and parse JSON output. */
+export async function runLocalDataJsonScript(script: string, args: string[], timeoutMs?: number): Promise<any> {
+	const scriptPath = resolveLocalDataScript(script);
+	const stdout = await runPython(scriptPath, args, timeoutMs);
 	const start = stdout.search(/[[{]/);
 	if (start === -1) {
 		throw new Error(`No JSON found in script output: ${stdout.slice(0, 200)}`);

@@ -1,0 +1,35 @@
+- generic [ref=e3]:
+  - generic [ref=e28]: 加载中...
+  - generic [ref=e7]: "市场情绪: 加载中..."
+  - generic [ref=e8]:
+    - generic [ref=e9]: research
+    - generic [ref=e10]: 已连接
+  - generic [ref=e11]:
+    - generic [ref=e12]:
+      - generic [ref=e13]:
+        - generic [ref=e49]: 股票池
+        - generic [ref=e50]:
+          - generic [ref=e51] [cursor=pointer]:
+            - generic [ref=e52]: 2025年报营收利润双增长Top10
+            - generic [ref=e53]: 10 只
+          - generic [ref=e54] [cursor=pointer]:
+            - generic [ref=e55]: PE小于20且市值大于100亿
+            - generic [ref=e56]: 50 只
+        - generic [ref=e57]: 2025年报营收利润双增长Top10
+        - generic [ref=e58]:
+          - generic [ref=e59] [cursor=pointer]: 688256 寒武纪
+          - generic [ref=e60] [cursor=pointer]: 300502 新易盛
+          - generic [ref=e61] [cursor=pointer]: 300308 中际旭创
+          - generic [ref=e62] [cursor=pointer]: 688041 海光信息
+          - generic [ref=e63] [cursor=pointer]: 601138 工业富联
+          - generic [ref=e64] [cursor=pointer]: 300059 东方财富
+          - generic [ref=e65] [cursor=pointer]: 300236 上海新阳
+          - generic [ref=e66] [cursor=pointer]: 002475 立讯精密
+          - generic [ref=e67] [cursor=pointer]: 300124 汇川技术
+          - generic [ref=e68] [cursor=pointer]: 300750 宁德时代
+      - generic [ref=e70]:
+        - generic [ref=e71]: "300750"
+        - generic [ref=e72]: 暂无行情数据
+    - generic [ref=e25]:
+      - textbox "输入消息..." [ref=e26]
+      - button "发送" [ref=e27]

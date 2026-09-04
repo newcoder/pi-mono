@@ -1,6 +1,6 @@
 ---
 name: a-share-analysis
-description: A股价值投资分析工具，提供股票筛选、个股三档分析（基本面/技术面/深度）、行业对比和估值计算功能。优先使用 trading-agent 本地 SQLite 数据库（已同步的行情/财务/K线数据），缺失时 fallback 到东方财富 API 补全。适合低频交易的普通投资者。
+description: A股价值投资分析工具，提供股票筛选、个股三档分析（基本面/技术面/深度）、行业对比和估值计算功能。底层数据由 local-data skill 的本地 SQLite 数据库提供，缺失时 fallback 到东方财富 API 补全。适合低频交易的普通投资者。
 tools:
   - get_quote
   - get_fundamentals
@@ -9,6 +9,8 @@ tools:
   - iwencai_screen
   - compare_stocks
   - backtest_strategy
+  - discover_trading_ideas
+  - analyze_market_theme
   - get_stock_news
   - screen_by_news
   - get_market_news
@@ -21,7 +23,7 @@ tools:
 
 ## 数据源架构（本地优先 + 网络 fallback）
 
-本 skill 的 `data_fetcher.py` 优先从 trading-agent 本地 SQLite 数据库读取，本地缺失时自动 fallback 到东方财富 API：
+本 skill 专注分析，不直接维护数据库。所有本地数据由 **`local-data`** skill 提供，通过其 `data_fetcher.py` 读取；`data_fetcher.py` 优先从 trading-agent 本地 SQLite 数据库读取，本地缺失时自动 fallback 到东方财富 API：
 
 | 数据类型 | 优先来源 | Fallback | 说明 |
 |---------|---------|---------|------|
@@ -36,7 +38,7 @@ tools:
 
 ### 预计算财务指标表（fundamental_indicators）
 
-`fundamentals` 表中的原始财务数据已通过 `calc_fundamental_indicators.py` 自动计算衍生指标，存入 `fundamental_indicators` 表。当基本面数据更新时，这些指标会自动重新计算。
+`fundamentals` 表中的原始财务数据已由 `local-data` skill 的 `calc_fundamental_indicators.py` 自动计算衍生指标，存入 `fundamental_indicators` 表。当基本面数据更新时，这些指标会自动重新计算。
 
 **包含的指标维度（30+ 项）：**
 - **成长性**：营收/净利润 YoY、QoQ、3年/5年 CAGR、经营现金流 YoY、FCF、FCF YoY、研发费用增速及占比、CAPEX 增速及占比
@@ -62,6 +64,13 @@ tools:
 - 检测财务异常风险
 
 ## Prerequisites
+
+### 依赖技能
+
+本 skill 依赖 **`local-data`** skill 提供本地数据。分析前请确保：
+
+1. `local-data` skill 已安装/存在。
+2. 已通过 `local-data/scripts/daily_sync.py` 同步过至少一次数据。
 
 ### Python环境要求
 ```bash
@@ -245,7 +254,7 @@ iWencai 返回的结果包含股票代码、名称、最新价、涨跌幅、主
 ### Step 2: Fetch Stock Data
 
 ```bash
-python scripts/data_fetcher.py \
+python ~/.agents/skills/local-data/scripts/data_fetcher.py \
     --code "600519" \
     --data-type all \
     --years 5 \
@@ -289,7 +298,7 @@ python scripts/data_fetcher.py \
 - **利空事件**：减持、定增、业绩预亏、业绩亏损、业绩下滑、解禁、监管处罚、质押风险、诉讼仲裁
 - **利多事件**：增持、业绩预增、业绩增长、回购、分红、重大合同、产品突破
 
-> **注意**：数据来自本地数据库，需先通过 `news_sync.py` 同步。若返回空，提示用户新闻数据尚未同步。
+> **注意**：数据来自本地数据库，需先通过 `local-data` skill 的 `news_sync.py` 同步。若返回空，提示用户新闻数据尚未同步。
 
 ### Step 4: Run Financial Analysis
 
@@ -382,7 +391,7 @@ python scripts/deep_analyzer.py \
 ### Step 2: Fetch Industry Data
 
 ```bash
-python scripts/data_fetcher.py \
+python ~/.agents/skills/local-data/scripts/data_fetcher.py \
     --codes "600519,000858,002304" \
     --data-type comparison \
     --output industry_data.json
@@ -390,7 +399,7 @@ python scripts/data_fetcher.py \
 
 或按行业获取：
 ```bash
-python scripts/data_fetcher.py \
+python ~/.agents/skills/local-data/scripts/data_fetcher.py \
     --industry "白酒" \
     --top 10 \
     --output industry_data.json
@@ -521,7 +530,7 @@ python scripts/valuation_calculator.py \
 - **query 模式**：按新闻类型分组展示，标注受益/承压板块
 - **stats 模式**：展示类型分布柱状图 + 板块排行
 
-> **注意**：市场新闻数据来自本地 `market_news` 表，需先通过 `market_news_sync.py` 同步。数据来源为财联社等财经媒体。
+> **注意**：市场新闻数据来自本地 `market_news` 表，需先通过 `local-data` skill 的 `market_news_sync.py` 同步。数据来源为财联社等财经媒体。
 
 ---
 
@@ -679,6 +688,176 @@ python scripts/valuation_calculator.py \
 - "6月份有什么行业展会？"
 - "刷新投资日历"
 - "查看贵州茅台近期有哪些事件"
+
+---
+
+## Workflow 8: Trading Idea Discovery (交易策略发现)
+
+自动生成可量化、可验证的交易策略想法，作为自动化策略创建流程的第1阶段。
+
+### When to Use
+
+当用户请求以下操作时使用 `discover_trading_ideas`：
+- "发现交易想法"
+- "生成交易策略"
+- "当前市场风格下有什么可做的策略"
+- "策略自动化创建"
+
+### Input Parameters
+
+```json
+{
+  "lookback_days": 20,
+  "max_ideas": 5,
+  "categories": ["market_style", "technical", "fundamental", "event", "classic", "multifactor"],
+  "min_confidence": 50
+}
+```
+
+- `lookback_days`: 回看天数，用于计算因子IC和行业动量的近期趋势。
+- `max_ideas`: 返回的候选想法数量上限。
+- `categories`: 想法来源类别，可多选。
+  - `market_style`: 市场风格 / 行业动量 / 市值因子
+  - `technical`: 技术形态信号
+  - `fundamental`: 基本面 / 估值
+  - `event`: 事件 / 情绪驱动
+  - `classic`: 经典技术指标策略（MA/MACD/RSI/Bollinger/Supertrend）
+- `multifactor`: 多因子综合选股（价值/动量/质量/低波动，Z-score 等权合成）
+- `min_confidence`: 最低置信度过滤（0-100）。
+
+### Output
+
+返回结构化想法列表，每个想法包含：
+- `hypothesis`: 一句话交易假设
+- `rationale`: 逻辑依据
+- `entryCriteria` / `exitCriteria`: 可量化的入场/出场条件
+- `universeFilter`: 选股范围描述
+- `suggestedStrategy`: 可直接用于 `backtest_strategy` 的策略类型和参数
+- `confidence`: 置信度评分
+- `feasibility`: 轻量可行性检查结果
+- `risks` / `invalidationConditions`: 风险与失效条件
+
+### Cross-Skill Idea Enrichment（可选增强）
+
+`discover_trading_ideas` 返回的是基于本地 `market.db` 的量化候选。若要叠加市场结构、热点题材、因子有效性等视角，可按以下步骤增强：
+
+1. **运行 `discover_trading_ideas` 获取数据基线**：
+   - 关注 `regime`、`topIndustries`、`factorIcSnapshot`、`sentimentIndex` 等字段。
+
+2. **调用 `a-share-primary-theme-identification` 获取市场结构视角**：
+   - 输入当前市场概况、板块表现、`discover_trading_ideas` 提取的前 5 动量行业。
+   - 获取：今日主线、次级热点、核心龙头/中军、情绪周期、主线持续性、明日观察重点。
+   - 若其主线与本 skill 的 `topIndustries` 一致，可增强相关想法的置信度；若不一致，需标记为分歧并降低权重。
+
+3. **调用 `longbridge-quant` 或 `quantitative-research` 做因子验证**：
+   - 对核心因子（如 `industry_momentum_20d_forward5d`、`size_forward5d`）做 IC/IR 复核。
+   - 参考 `longbridge-quant` 的 factor-research 流程：Spearman IC、信息比率 IR、分位组合回测、IC 衰减分析。
+   - 参考 `quantitative-research` 的 alpha signal research：要求 IC > 0.02、t-stat > 2、IR > 0.5；多因子组合可做 Z-score 等权或 IC 加权。
+
+4. **调用 `geek-skills-a-share-analyst` 做个股/板块深度检查**（针对筛选后的重点标的）：
+   - 技术面评分、基本面评分、板块热点定位。
+   - 用于细化 `universeFilter` 或排除高风险标的。
+
+5. **综合输出**：
+   - 保留 `discover_trading_ideas` 的结构化字段。
+   - 在 `rationale` / `risks` 中补充外部 skill 的关键洞察（如情绪周期位置、IC 衰减方向、主线持续性评估）。
+   - 如果外部 skill 认为某方向处于退潮期或 IC 连续衰减，即使本地数据置信度高，也应加入风险提示或列为 invalidation condition。
+
+### Phase 1 → Phase 2 Handoff
+
+`discover_trading_ideas` 只返回想法，不保存到数据库。下一步验证流程：
+
+1. 用户或 agent 从返回的想法中选择 1-3 个。
+2. 根据 `universeFilter` 使用 `screen_stocks` / `advanced_screen` / `iwencai_screen` 构建股票池。
+3. 使用 `manage_stock_pool` 保存股票池。
+4. 使用 `backtest_strategy` 对股票池进行长期历史回测（phase 2）。
+   - 回测设计应吸收 `quantitative-research` 的严谨性： walk-forward 验证、样本外测试、显式交易成本、避免前视偏差和过拟合。
+5. 回测表现优秀的策略进入 `manage_portfolio` 进行模拟跟踪（phase 3）。
+
+### Example
+
+```json
+{
+  "lookback_days": 20,
+  "max_ideas": 3,
+  "categories": ["market_style", "classic"]
+}
+```
+
+---
+
+## Related Skills for Market State & Quantitative Research
+
+本 skill 的 `discover_trading_ideas` 已经可以从本地 `market.db` 提取市场风格、行业动量、size IC、情绪等数据并生成可量化的交易想法。以下外部 skill 可与本 skill 互补使用，或将其分析框架吸收进交易想法发现流程：
+
+| Skill | 作用 | 使用时机 |
+|---|---|---|
+| `a-share-primary-theme-identification` | A 股主线识别：市场结构 / 题材周期 / 资金行为 / 情绪周期 | 需要理解当前真正的交易主线、龙头/中军/补涨、明日观察重点时 |
+| `geek-skills-a-share-analyst` | A 股分析师：技术面 / 基本面 / 板块热点 / 量化因子 | 需要对单只个股或板块做更深入的技术/基本面分析时 |
+| `longbridge-quant` | 量化框架：IC/IR 分析、多因子模型、波动率制度、配对交易、季节性等 | 需要验证因子有效性、构建多因子组合、评估 IC 衰减时 |
+| `quantitative-research` | 系统化量化研究：alpha 生成、回测陷阱、walk-forward、成本控制 | 需要将想法推进到严格的历史回测和策略优化时 |
+
+### 使用方式
+
+1. **调用外部 skill 获取市场结构/因子视角**：在运行 `discover_trading_ideas` 之前或之后，调用上述 skill 获取对当前市场状态、热点、有效因子的定性/定量分析。
+2. **与本 skill 的本地数据做交叉验证**：外部 skill 的结论必须与本地 `factor_ic`、`industry_indicators`、`industry_quotes`、`quotes` 中的最新 IC、动量、情绪数据做交叉验证。若出现冲突，优先以本地数据库为准，并在最终报告中标注分歧。
+3. **吸收框架，不照搬结论**：例如 `longbridge-quant` 的 IC/IR 分析流程（Spearman IC、信息比率、分位组合回测、IC 衰减）和 multi-factor 框架（价值/动量/质量/低波动 Z-score 等权合成），已分别吸收进 `discover_trading_ideas` 的因子快照与 `multifactor` 类别；`quantitative-research` 的 walk-forward / 成本控制原则，可直接吸收进 Phase 2 的回测验证；`a-share-primary-theme-identification` 的“市场环境→主线→龙头→情绪周期→持续性”五步框架，可用于 enriched idea 的叙事和风险识别。
+
+> 注意：部分外部 skill 依赖网络数据（如 Wind、AKShare、Longbridge）或 PromptScript 组件。当网络不可用或全局安装受限时，仍以本 skill 的本地工具和数据库为 fallback。
+
+---
+
+## Workflow: A-Share Primary Theme Identification (A股主线识别)
+
+当用户需要判断当前 A 股市场主线、情绪周期、龙头/中军/补涨、主线持续性和明日观察重点时，使用本 skill 的 `a-share-primary-theme-identification` 框架。trading-agent 已内置 `analyze_market_theme` 工具，可直接基于本地 `market.db` 最近 N 日数据生成结构化结论。
+
+### 输入参数
+
+```json
+{
+  "lookback_days": 5,
+  "end_date": "2026-06-24"
+}
+```
+
+- `lookback_days`: 回看交易日数，默认 5。用于计算连板梯队、板块轮动、情绪周期。
+- `end_date`: 分析截止日期，格式 `YYYY-MM-DD`；默认使用 `quotes` 表最新日期。
+
+### 输出结构
+
+严格遵循 `a-share-primary-theme-identification` 技能的 8 节模板：
+
+1. **市场环境**：涨跌家数、涨停/跌停数、成交额、情绪周期定位、操作建议。
+2. **当前主线**：窗口期累计涨幅最大的板块/主题、连板梯队、消息催化。
+3. **次级热点**：窗口期内累计涨幅第 2-4 名的板块/主题。
+4. **核心龙头与中军**：情绪龙头、趋势中军、补涨标的的分类列表。
+5. **情绪周期**：冰点/修复/主升/高位震荡/退潮判断及依据（连板高度、涨停趋势、跌停潮、高位股反馈、炸板率）。
+6. **主线持续性评估**：产业逻辑、事件催化、资金合力三维评分（弱/一般/较强/强）及失效条件。
+7. **明日观察重点**：具体观察清单（龙头承接、板块扩散、事件落地、风险信号）。
+8. **一句话交易结论**：可执行的交易建议。
+
+### 数据来源
+
+| 数据 | 来源表 | 用途 |
+|---|---|---|
+| 个股涨跌幅/市值 | `quotes` | 涨跌家数、涨停跌停、连板梯队、龙头分层 |
+| 个股 K 线 high/close/pre_close | `klines` | 炸板率 proxy |
+| 行业/板块行情 | `industry_quotes` / `industry_indicators` | 板块轮动、主线识别 |
+| 市场新闻 | `market_news` | 事件催化、主题聚合 |
+
+### 使用方式
+
+直接调用 `analyze_market_theme`，无需额外安装。例如：
+
+```json
+{ "lookback_days": 5 }
+```
+
+### 与 `discover_trading_ideas` 的关系
+
+- `analyze_market_theme` 输出**定性+定量**的市场结构结论，服务于短线/波段交易决策。
+- `discover_trading_ideas` 输出**可回测的交易策略想法**，服务于自动化策略创建。
+- 典型 workflow：先用 `analyze_market_theme` 识别主线和情绪周期，再调用 `discover_trading_ideas` 生成围绕主线的量化策略候选。
 
 ---
 

@@ -1,0 +1,324 @@
+- generic [ref=e3]:
+  - generic [ref=e4]:
+    - generic [ref=e5]:
+      - generic [ref=e6]: π
+      - generic [ref=e7]: Trading Agent
+    - generic [ref=e8]:
+      - generic [ref=e395] [cursor=pointer]:
+        - generic [ref=e396]: 上证指数
+        - generic [ref=e397]: "4145.37"
+        - generic [ref=e398]: ▼
+        - generic [ref=e399]: "-0.17%"
+      - generic [ref=e400] [cursor=pointer]:
+        - generic [ref=e401]: 沪深300
+        - generic [ref=e402]: "4947.85"
+        - generic [ref=e403]: ▲
+        - generic [ref=e404]: 0.53%
+      - generic [ref=e405] [cursor=pointer]:
+        - generic [ref=e406]: 科创50
+        - generic [ref=e407]: "1867.71"
+        - generic [ref=e408]: ▼
+        - generic [ref=e409]: "-1.49%"
+      - generic [ref=e410] [cursor=pointer]:
+        - generic [ref=e411]: 中证500
+        - generic [ref=e412]: "8658.62"
+        - generic [ref=e413]: ▼
+        - generic [ref=e414]: "-0.52%"
+      - generic [ref=e415] [cursor=pointer]:
+        - generic [ref=e416]: 深证成指
+        - generic [ref=e417]: "15876.16"
+        - generic [ref=e418]: ▲
+        - generic [ref=e419]: 0.12%
+      - generic [ref=e420] [cursor=pointer]:
+        - generic [ref=e421]: 创业板指
+        - generic [ref=e422]: "4043.07"
+        - generic [ref=e423]: ▲
+        - generic [ref=e424]: 0.55%
+  - generic [ref=e10]:
+    - generic [ref=e11]: RESEARCH
+    - textbox "搜索股票 (代码/名称/拼音)" [ref=e13]
+  - generic [ref=e14]:
+    - generic [ref=e15]:
+      - generic [ref=e17]: 股票池
+      - generic [ref=e18]:
+        - generic [ref=e19]:
+          - generic [ref=e94] [cursor=pointer]:
+            - generic [ref=e95]:
+              - generic [ref=e96]: 同花顺强势股_2026-05-26
+              - button "×" [ref=e97]
+            - generic [ref=e98]: 64 只
+          - generic [ref=e99] [cursor=pointer]:
+            - generic [ref=e100]:
+              - generic [ref=e101]: 同花顺强势股_20260526
+              - button "×" [ref=e102]
+            - generic [ref=e103]: 50 只
+          - generic [ref=e104] [cursor=pointer]:
+            - generic [ref=e105]:
+              - generic [ref=e106]: DoubleEnsemble_Top30_Prob
+              - button "×" [ref=e107]
+            - generic [ref=e108]: 30 只
+          - generic [ref=e109] [cursor=pointer]:
+            - generic [ref=e110]:
+              - generic [ref=e111]: lgbm_40_60
+              - button "×" [ref=e112]
+            - generic [ref=e113]: 21 只
+          - generic [ref=e114] [cursor=pointer]:
+            - generic [ref=e115]:
+              - generic [ref=e116]: LGBM Rank 40-60
+              - button "×" [ref=e117]
+            - generic [ref=e118]: 21 只
+          - generic [ref=e119] [cursor=pointer]:
+            - generic [ref=e120]:
+              - generic [ref=e121]: 周线多头日线缩量回调_202605
+              - button "×" [ref=e122]
+            - generic [ref=e123]: 30 只
+          - generic [ref=e124] [cursor=pointer]:
+            - generic [ref=e125]:
+              - generic [ref=e126]: 最近访问
+              - button "×" [ref=e127]
+            - generic [ref=e128]: 121 只
+          - generic [ref=e129] [cursor=pointer]:
+            - generic [ref=e130]:
+              - generic [ref=e131]: 未来关注股池
+              - button "×" [ref=e132]
+            - generic [ref=e133]: 50 只
+          - generic [ref=e134] [cursor=pointer]:
+            - generic [ref=e135]:
+              - generic [ref=e136]: 周线多头日线回调缩量
+              - button "×" [ref=e137]
+            - generic [ref=e138]: 50 只
+          - generic [ref=e139] [cursor=pointer]:
+            - generic [ref=e140]:
+              - generic [ref=e141]: 前期强势缩量调整
+              - button "×" [ref=e142]
+            - generic [ref=e143]: 50 只
+          - generic [ref=e144] [cursor=pointer]:
+            - generic [ref=e145]:
+              - generic [ref=e146]: 营收连续两年增长超50%
+              - button "×" [ref=e147]
+            - generic [ref=e148]: 45 只
+          - generic [ref=e149] [cursor=pointer]:
+            - generic [ref=e150]:
+              - generic [ref=e151]: 日线多头排列市值TOP10
+              - button "×" [ref=e152]
+            - generic [ref=e153]: 10 只
+        - generic [ref=e154]:
+          - generic [ref=e155]: 📂
+          - generic [ref=e156]: 选择股票池查看个股
+    - generic [ref=e22]:
+      - generic [ref=e26]:
+        - generic [ref=e27]: 工具调用
+        - button "收起" [active] [ref=e426] [cursor=pointer]:
+          - img [ref=e29]
+      - generic [ref=e33]:
+        - button "附件" [ref=e34] [cursor=pointer]:
+          - img [ref=e35]
+        - button "Choose File"
+        - textbox "输入消息..." [ref=e37]
+        - button "发送" [ref=e38] [cursor=pointer]:
+          - img [ref=e39]
+    - generic [ref=e42]:
+      - generic [ref=e43]:
+        - generic [ref=e44] [cursor=pointer]:
+          - generic [ref=e45]: 📅 投资日历
+          - generic [ref=e46]:
+            - button "刷新日历数据" [ref=e47]:
+              - img [ref=e48]
+            - img [ref=e51]
+        - generic [ref=e54]:
+          - generic [ref=e157]:
+            - button "<" [ref=e158] [cursor=pointer]
+            - generic [ref=e159]: 2026年5月
+            - button ">" [ref=e160] [cursor=pointer]
+          - generic [ref=e161]:
+            - generic [ref=e162]: 日
+            - generic [ref=e163]: 一
+            - generic [ref=e164]: 二
+            - generic [ref=e165]: 三
+            - generic [ref=e166]: 四
+            - generic [ref=e167]: 五
+            - generic [ref=e168]: 六
+          - generic [ref=e169]:
+            - generic [ref=e176] [cursor=pointer]: "1"
+            - generic [ref=e178] [cursor=pointer]: "2"
+            - generic [ref=e180] [cursor=pointer]: "3"
+            - generic [ref=e182] [cursor=pointer]: "4"
+            - generic [ref=e184] [cursor=pointer]: "5"
+            - generic [ref=e186] [cursor=pointer]: "6"
+            - generic [ref=e188] [cursor=pointer]: "7"
+            - generic [ref=e190] [cursor=pointer]: "8"
+            - generic [ref=e192] [cursor=pointer]: "9"
+            - generic [ref=e194] [cursor=pointer]: "10"
+            - generic [ref=e196] [cursor=pointer]: "11"
+            - generic [ref=e198] [cursor=pointer]: "12"
+            - generic [ref=e200] [cursor=pointer]: "13"
+            - generic [ref=e202] [cursor=pointer]: "14"
+            - generic [ref=e204] [cursor=pointer]: "15"
+            - generic [ref=e206] [cursor=pointer]: "16"
+            - generic [ref=e208] [cursor=pointer]: "17"
+            - generic [ref=e210] [cursor=pointer]: "18"
+            - generic [ref=e214] [cursor=pointer]: "19"
+            - generic [ref=e216] [cursor=pointer]: "20"
+            - generic [ref=e218] [cursor=pointer]: "21"
+            - generic [ref=e222] [cursor=pointer]: "22"
+            - generic [ref=e224] [cursor=pointer]: "23"
+            - generic [ref=e226] [cursor=pointer]: "24"
+            - generic [ref=e228] [cursor=pointer]: "25"
+            - generic [ref=e232] [cursor=pointer]: "26"
+            - generic [ref=e234] [cursor=pointer]: "27"
+            - generic [ref=e236] [cursor=pointer]: "28"
+            - generic [ref=e238] [cursor=pointer]: "29"
+            - generic [ref=e240] [cursor=pointer]: "30"
+            - generic [ref=e242] [cursor=pointer]: "31"
+          - generic [ref=e243]:
+            - generic [ref=e244]: 本月重点关注
+            - generic [ref=e245] [cursor=pointer]:
+              - generic [ref=e246]:
+                - generic [ref=e248]: 05-18
+                - generic [ref=e249]: 新天力 业绩预告
+              - generic [ref=e250]: "公告日期: 20260518; 报告期[20260331]: 2026年一季报"
+            - generic [ref=e251] [cursor=pointer]:
+              - generic [ref=e252]:
+                - generic [ref=e254]: 05-21
+                - generic [ref=e255]: 高特电子 业绩预告
+              - generic [ref=e256]: "公告日期: 20260521; 报告期[20260331]: 2026年一季报"
+            - generic [ref=e257] [cursor=pointer]:
+              - generic [ref=e258]:
+                - generic [ref=e260]: 05-21
+                - generic [ref=e261]: 惠康科技 业绩预告
+              - generic [ref=e262]: "最新价: 89.18; 最新涨跌幅: 0.314961; 公告日期: 20260521; 报告期[20260331]: 2026年一季报; 净利润增长率上限[20260331]: 9.8"
+            - generic [ref=e263] [cursor=pointer]:
+              - generic [ref=e264]:
+                - generic [ref=e266]: 05-21
+                - generic [ref=e267]: 新睿电子 业绩预告
+              - generic [ref=e268]: "公告日期: 20260521; 报告期[20260331]: 2026年一季报"
+            - generic [ref=e269] [cursor=pointer]:
+              - generic [ref=e270]:
+                - generic [ref=e272]: 05-25
+                - generic [ref=e273]: 彩客科技 业绩预告
+              - generic [ref=e274]: "公告日期: 20260525; 报告期[20260331]: 2026年一季报"
+      - generic [ref=e55]:
+        - generic [ref=e56] [cursor=pointer]:
+          - generic [ref=e57]: 📰 财经新闻
+          - img [ref=e58]
+        - generic [ref=e61]:
+          - generic "财联社5月26日电，美股半导体股盘前普涨，美光科技涨近7%，AMD涨近3%，高通涨近3%，ARM、台积电涨近2%。" [ref=e275] [cursor=pointer]:
+            - generic [ref=e276]:
+              - generic [ref=e277]: 财联社
+              - generic [ref=e278]: 05-26 19:52
+            - generic [ref=e279]: 财联社5月26日电，美股半导体股盘前普涨，美光科技涨近7%，AMD涨近3%，高通涨近3%，ARM、台积电涨近2%。
+            - generic [ref=e280]: 财联社5月26日电，美股半导体股盘前普涨，美光科技涨近7%，AMD涨近3%，高通涨近3%，ARM、台积电涨近2%。
+          - generic "力量钻石：金刚石散热材料应用场景尚未达到大规模市场化应用阶段" [ref=e281] [cursor=pointer]:
+            - generic [ref=e282]:
+              - generic [ref=e283]: 财联社
+              - generic [ref=e284]: 05-26 19:49
+            - generic [ref=e285]: 力量钻石：金刚石散热材料应用场景尚未达到大规模市场化应用阶段
+            - generic [ref=e286]: 【力量钻石：金刚石散热材料应用场景尚未达到大规模市场化应用阶段】财联社5月26日电，力量钻石(301071)发布股票交易异常波动公告，近期“金刚石散热材料”关注度较高，截止目前，该应用场景尚未达到大规模市场化应用阶段，市场化进度尚存在重大不...
+          - generic "力量钻石：金刚石散热材料应用场景尚未达到大规模市场化应用阶段" [ref=e287]:
+            - generic [ref=e288]:
+              - generic [ref=e289]: 东财7x24
+              - generic [ref=e290]: 05-26 19:49
+            - generic [ref=e291]: 力量钻石：金刚石散热材料应用场景尚未达到大规模市场化应用阶段
+            - generic [ref=e292]: 【力量钻石：金刚石散热材料应用场景尚未达到大规模市场化应用阶段】力量钻石(301071)发布股票交易异常波动公告，近期“金刚石散热材料”关注度较高，截止目前，该应用场景尚未达到大规模市场化应用阶段，市场化进度尚存在重大不确定性，未对公司主营...
+          - generic "海尔发布超轻AI运动外骨骼机器人" [ref=e293]:
+            - generic [ref=e294]:
+              - generic [ref=e295]: 东财7x24
+              - generic [ref=e296]: 05-26 19:47
+            - generic [ref=e297]: 海尔发布超轻AI运动外骨骼机器人
+            - generic [ref=e298]: 【海尔发布超轻AI运动外骨骼机器人】26日，海尔发布超轻人工智能（AI）运动外骨骼机器人——海尔外骨骼机器人W3。此机器人可使使用者体能消耗最高降低37%。
+          - generic "国家新闻出版署：5月共154款国产网络游戏获批" [ref=e299]:
+            - generic [ref=e300]:
+              - generic [ref=e301]: 东财7x24
+              - generic [ref=e302]: 05-26 19:47
+            - generic [ref=e303]: 国家新闻出版署：5月共154款国产网络游戏获批
+            - generic [ref=e304]: 【国家新闻出版署：5月共154款国产网络游戏获批】国家新闻出版署公布2026年5月份国产网络游戏审批信息，共154款游戏获批。
+          - generic "【机构调研】这家先进粉体材料供应商高性能高速基板用球形二氧化硅已实现导入销售" [ref=e305] [cursor=pointer]:
+            - generic [ref=e306]:
+              - generic [ref=e307]: 财联社
+              - generic [ref=e308]: 05-26 19:46
+            - generic [ref=e309]: 【机构调研】这家先进粉体材料供应商高性能高速基板用球形二氧化硅已实现导入销售
+            - generic [ref=e310]: 高速基板市场需求快速增长，这家先进粉体材料供应商高性能高速基板用球形二氧化硅已实现导入销售。
+          - generic "财联社5月26日电，美银全球研究将德州仪器目标价从320美元上调至370美元。" [ref=e311] [cursor=pointer]:
+            - generic [ref=e312]:
+              - generic [ref=e313]: 财联社
+              - generic [ref=e314]: 05-26 19:44
+            - generic [ref=e315]: 财联社5月26日电，美银全球研究将德州仪器目标价从320美元上调至370美元。
+            - generic [ref=e316]: 财联社5月26日电，美银全球研究将德州仪器目标价从320美元上调至370美元。
+          - generic "美银全球研究上调德州仪器目标价" [ref=e317]:
+            - generic [ref=e318]:
+              - generic [ref=e319]: 东财7x24
+              - generic [ref=e320]: 05-26 19:44
+            - generic [ref=e321]: 美银全球研究上调德州仪器目标价
+            - generic [ref=e322]: 【美银全球研究上调德州仪器目标价】美银全球研究将德州仪器目标价从320美元上调至370美元。
+          - generic "国家能源局召开民营企业座谈会" [ref=e323] [cursor=pointer]:
+            - generic [ref=e324]:
+              - generic [ref=e325]: 财联社
+              - generic [ref=e326]: 05-26 19:44
+            - generic [ref=e327]: 国家能源局召开民营企业座谈会
+            - generic [ref=e328]: 【国家能源局召开民营企业座谈会】财联社5月26日电，国家能源局5月25日召开能源领域民营企业座谈会，围绕强化企业科技创新主体地位，鼓励和支持民营企业开展能源科技创新，听取意见建议。来自风电、太阳能、储能、氢能、数智化等领域的企业负责人参加座...
+          - generic "国家能源局召开民营企业座谈会" [ref=e329]:
+            - generic [ref=e330]:
+              - generic [ref=e331]: 东财7x24
+              - generic [ref=e332]: 05-26 19:44
+            - generic [ref=e333]: 国家能源局召开民营企业座谈会
+            - generic [ref=e334]: 【国家能源局召开民营企业座谈会】国家能源局5月25日召开能源领域民营企业座谈会，围绕强化企业科技创新主体地位，鼓励和支持民营企业开展能源科技创新，听取意见建议。来自风电、太阳能、储能、氢能、数智化等领域的企业负责人参加座谈会。
+          - generic "5月158款游戏版号获批 腾讯网易新游在列" [ref=e335] [cursor=pointer]:
+            - generic [ref=e336]:
+              - generic [ref=e337]: 财联社
+              - generic [ref=e338]: 05-26 19:44
+            - generic [ref=e339]: 5月158款游戏版号获批 腾讯网易新游在列
+            - generic [ref=e340]: 【5月158款游戏版号获批 腾讯网易新游在列】财联社5月26日电，今日，国家新闻出版署发布2026年5月份网络游戏审批信息，共158款游戏获得版号，其中国产游戏154款，进口游戏4款；涉及腾讯、网易、三七互娱、恺英网络、莉莉丝游戏等公司新游...
+          - generic "伊朗外交部：美国公然违反停火协议" [ref=e341]:
+            - generic [ref=e342]:
+              - generic [ref=e343]: 东财7x24
+              - generic [ref=e344]: 05-26 19:43
+            - generic [ref=e345]: 伊朗外交部：美国公然违反停火协议
+            - generic [ref=e346]: 【伊朗外交部：美国公然违反停火协议】当地时间26日，伊朗外交部发表声明称，美国公然违反停火协议。26日稍早前，伊朗革命卫队称在波斯湾的伊朗领空击落一架美军MQ-9型“死神”无人机。除击落MQ-9无人机外，伊朗革命卫队称还向一架RQ-4无人机...
+          - generic "伊朗外交部：美国公然违反停火协议" [ref=e347] [cursor=pointer]:
+            - generic [ref=e348]:
+              - generic [ref=e349]: 财联社
+              - generic [ref=e350]: 05-26 19:41
+            - generic [ref=e351]: 伊朗外交部：美国公然违反停火协议
+            - generic [ref=e352]: 【伊朗外交部：美国公然违反停火协议】财联社5月26日电，伊朗外交部发表声明称，美国公然违反停火协议。 (央视新闻)
+          - generic "林州重机：因涉嫌信息披露违法违规 证监会决定对公司立案调查" [ref=e353] [cursor=pointer]:
+            - generic [ref=e354]:
+              - generic [ref=e355]: 财联社
+              - generic [ref=e356]: 05-26 19:41
+            - generic [ref=e357]: 林州重机：因涉嫌信息披露违法违规 证监会决定对公司立案调查
+            - generic [ref=e358]: 【林州重机：因涉嫌信息披露违法违规 证监会决定对公司立案调查】财联社5月26日电，林州重机(002535.SZ)公告称，公司于2026年5月26日收到中国证券监督管理委员会下发的《立案告知书》。因公司涉嫌信息披露违法违规，证监会决定对公司立...
+          - generic "林州重机：收到证监会《立案告知书》" [ref=e359]:
+            - generic [ref=e360]:
+              - generic [ref=e361]: 东财7x24
+              - generic [ref=e362]: 05-26 19:41
+            - generic [ref=e363]: 林州重机：收到证监会《立案告知书》
+            - generic [ref=e364]: 【林州重机：收到证监会《立案告知书》】林州重机(002535.SZ)公告称，公司于2026年5月26日收到中国证券监督管理委员会下发的《立案告知书》。因公司涉嫌信息披露违法违规，证监会决定对公司立案调查。
+          - generic "*ST岭南：股票可能被终止上市" [ref=e365] [cursor=pointer]:
+            - generic [ref=e366]:
+              - generic [ref=e367]: 财联社
+              - generic [ref=e368]: 05-26 19:38
+            - generic [ref=e369]: "*ST岭南：股票可能被终止上市"
+            - generic [ref=e370]: 【*ST岭南：股票可能被终止上市】财联社5月26日电，*ST岭南(002717.SZ)公告称，公司股票于2026年5月26日收盘价为0.95元/股，低于1元，可能触及交易类强制退市。此外，公司因2025年度净利润为负、营收低于3亿元、净资产...
+          - generic "*ST岭南：股票可能被终止上市" [ref=e371]:
+            - generic [ref=e372]:
+              - generic [ref=e373]: 东财7x24
+              - generic [ref=e374]: 05-26 19:38
+            - generic [ref=e375]: "*ST岭南：股票可能被终止上市"
+            - generic [ref=e376]: 【*ST岭南：股票可能被终止上市】*ST岭南(002717.SZ)公告称，公司股票于2026年5月26日收盘价为0.95元/股，低于1元，可能触及交易类强制退市。此外，公司因2025年度净利润为负、营收低于3亿元、净资产为负值、财务报告被出...
+          - generic "美银全球研究上调苹果、礼来目标价" [ref=e377]:
+            - generic [ref=e378]:
+              - generic [ref=e379]: 东财7x24
+              - generic [ref=e380]: 05-26 19:38
+            - generic [ref=e381]: 美银全球研究上调苹果、礼来目标价
+            - generic [ref=e382]: 【美银全球研究上调苹果、礼来目标价】美银全球研究将苹果目标价从330美元上调至380美元；将礼来目标价从1133美元上调至1251美元。
+          - generic "财联社5月26日电，英国石油在伦敦下跌9.3%，或创2020年3月以来最大单日跌幅。此前，英国石油公司董事长被撤职。" [ref=e383] [cursor=pointer]:
+            - generic [ref=e384]:
+              - generic [ref=e385]: 财联社
+              - generic [ref=e386]: 05-26 19:38
+            - generic [ref=e387]: 财联社5月26日电，英国石油在伦敦下跌9.3%，或创2020年3月以来最大单日跌幅。此前，英国石油公司董事长被撤职。
+            - generic [ref=e388]: 财联社5月26日电，英国石油在伦敦下跌9.3%，或创2020年3月以来最大单日跌幅。此前，英国石油公司董事长被撤职。
+          - generic "不仅限购 鹏华港美互联网LOF本月第3次提示溢价风险" [ref=e389] [cursor=pointer]:
+            - generic [ref=e390]:
+              - generic [ref=e391]: 财联社
+              - generic [ref=e392]: 05-26 19:35
+            - generic [ref=e393]: 不仅限购 鹏华港美互联网LOF本月第3次提示溢价风险
+            - generic [ref=e394]: 【不仅限购 鹏华港美互联网LOF本月第3次提示溢价风险】财联社5月26日电，今日盘后，鹏华基金公告称，旗下港美互联网LOF二级市场交易价格明显高于基金份额净值，出现较大幅度溢价。5月26日，该基金二级市场的收盘价为2.280元，较5月22日...

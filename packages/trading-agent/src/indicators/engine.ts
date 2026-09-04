@@ -14,6 +14,18 @@ export interface RSIConfig {
 	period: number;
 }
 
+export interface SupertrendConfig {
+	period: number;
+	multiplier: number;
+}
+
+export interface SupertrendResult {
+	upper: (number | null)[];
+	lower: (number | null)[];
+	trend: ("up" | "down" | null)[];
+	values: (number | null)[];
+}
+
 export interface CrossConfig {
 	fast: number;
 	slow: number;
@@ -31,6 +43,17 @@ export interface MACDResult {
 
 export interface RSIResult {
 	values: (number | null)[];
+}
+
+export interface KDConfig {
+	period: number;
+	smoothK: number;
+	smoothD: number;
+}
+
+export interface KDResult {
+	k: (number | null)[];
+	d: (number | null)[];
 }
 
 export type CrossType = "golden" | "death" | "none";
@@ -67,7 +90,7 @@ export function computeMA(closes: (number | null)[], period: number): MAResult {
 
 // ─── Exponential Moving Average ─────────────────────────────────
 
-function computeEMA(values: (number | null)[], period: number): (number | null)[] {
+export function computeEMA(values: (number | null)[], period: number): (number | null)[] {
 	const result: (number | null)[] = [];
 	let ema: number | null = null;
 	const multiplier = 2 / (period + 1);
@@ -177,6 +200,170 @@ export function computeRSI(closes: (number | null)[], config: RSIConfig = { peri
 	return { values };
 }
 
+// ─── KD (Stochastic Oscillator) ─────────────────────────────────
+
+export function computeKD(klines: KlineRow[], config: KDConfig = { period: 9, smoothK: 3, smoothD: 3 }): KDResult {
+	const { period, smoothK, smoothD } = config;
+	const n = klines.length;
+	const k: (number | null)[] = new Array(n).fill(null);
+	const d: (number | null)[] = new Array(n).fill(null);
+	let prevK = 50;
+	let prevD = 50;
+
+	for (let i = period - 1; i < n; i++) {
+		let highestHigh = -Infinity;
+		let lowestLow = Infinity;
+		for (let j = i - period + 1; j <= i; j++) {
+			const h = klines[j].high;
+			const l = klines[j].low;
+			if (h != null) highestHigh = Math.max(highestHigh, h);
+			if (l != null) lowestLow = Math.min(lowestLow, l);
+		}
+		const close = klines[i].close;
+		if (highestHigh === -Infinity || lowestLow === Infinity || close == null) continue;
+
+		const rsv = highestHigh === lowestLow ? 50 : ((close - lowestLow) / (highestHigh - lowestLow)) * 100;
+		const currK: number = ((smoothK - 1) / smoothK) * prevK + (1 / smoothK) * rsv;
+		const currD: number = ((smoothD - 1) / smoothD) * prevD + (1 / smoothD) * currK;
+
+		k[i] = currK;
+		d[i] = currD;
+		prevK = currK;
+		prevD = currD;
+	}
+
+	return { k, d };
+}
+
+// ─── Average True Range ─────────────────────────────────────────
+
+function computeATR(
+	highs: (number | null)[],
+	lows: (number | null)[],
+	closes: (number | null)[],
+	period: number,
+): (number | null)[] {
+	const atr: (number | null)[] = new Array(closes.length).fill(null);
+	let atrValue: number | null = null;
+
+	for (let i = 0; i < closes.length; i++) {
+		const h = highs[i];
+		const l = lows[i];
+		const c = closes[i];
+		const prevC = i > 0 ? closes[i - 1] : null;
+		if (h == null || l == null || c == null) continue;
+
+		const tr1 = h - l;
+		const tr2 = prevC != null ? Math.abs(h - prevC) : 0;
+		const tr3 = prevC != null ? Math.abs(l - prevC) : 0;
+		const tr = Math.max(tr1, tr2, tr3);
+
+		if (atrValue == null) {
+			// Wilder's smoothing initialization: simple average of first `period` TR values
+			let sum = 0;
+			let count = 0;
+			for (let j = Math.max(0, i - period + 1); j <= i; j++) {
+				const hj = highs[j];
+				const lj = lows[j];
+				const cj = closes[j];
+				const pcj = j > 0 ? closes[j - 1] : null;
+				if (hj == null || lj == null || cj == null) continue;
+				const t1 = hj - lj;
+				const t2 = pcj != null ? Math.abs(hj - pcj) : 0;
+				const t3 = pcj != null ? Math.abs(lj - pcj) : 0;
+				sum += Math.max(t1, t2, t3);
+				count++;
+			}
+			if (count >= period) {
+				atrValue = sum / period;
+				atr[i] = atrValue;
+			}
+		} else {
+			atrValue = (atrValue * (period - 1) + tr) / period;
+			atr[i] = atrValue;
+		}
+	}
+	return atr;
+}
+
+// ─── Supertrend ─────────────────────────────────────────────────
+
+export function computeSupertrend(
+	klines: KlineRow[],
+	config: SupertrendConfig = { period: 10, multiplier: 3 },
+): SupertrendResult {
+	const period = config.period;
+	const multiplier = config.multiplier;
+	const n = klines.length;
+
+	const closes = klines.map((k) => k.close);
+	const highs = klines.map((k) => k.high);
+	const lows = klines.map((k) => k.low);
+
+	const upper: (number | null)[] = new Array(n).fill(null);
+	const lower: (number | null)[] = new Array(n).fill(null);
+	const trend: ("up" | "down" | null)[] = new Array(n).fill(null);
+	const values: (number | null)[] = new Array(n).fill(null);
+
+	const atr = computeATR(highs, lows, closes, period);
+
+	let prevFinalUpper: number | null = null;
+	let prevFinalLower: number | null = null;
+	let prevTrend: "up" | "down" | null = null;
+
+	for (let i = 0; i < n; i++) {
+		const h = highs[i];
+		const l = lows[i];
+		const c = closes[i];
+		const atrValue = atr[i];
+		if (h == null || l == null || c == null || atrValue == null) continue;
+
+		const mid = (h + l) / 2;
+		const basicUpper = mid + multiplier * atrValue;
+		const basicLower = mid - multiplier * atrValue;
+
+		let finalUpper: number;
+		let finalLower: number;
+		if (prevFinalUpper != null && prevFinalLower != null) {
+			finalUpper =
+				basicUpper < prevFinalUpper || closes[i - 1] == null || closes[i - 1]! > prevFinalUpper
+					? basicUpper
+					: prevFinalUpper;
+			finalLower =
+				basicLower > prevFinalLower || closes[i - 1] == null || closes[i - 1]! < prevFinalLower
+					? basicLower
+					: prevFinalLower;
+		} else {
+			finalUpper = basicUpper;
+			finalLower = basicLower;
+		}
+
+		let currentTrend: "up" | "down";
+		if (prevTrend != null && prevFinalUpper != null && prevFinalLower != null) {
+			if (prevTrend === "down" && c > prevFinalUpper) {
+				currentTrend = "up";
+			} else if (prevTrend === "up" && c < prevFinalLower) {
+				currentTrend = "down";
+			} else {
+				currentTrend = prevTrend;
+			}
+		} else {
+			currentTrend = c > mid ? "up" : "down";
+		}
+
+		upper[i] = finalUpper;
+		lower[i] = finalLower;
+		trend[i] = currentTrend;
+		values[i] = currentTrend === "up" ? finalLower : finalUpper;
+
+		prevFinalUpper = finalUpper;
+		prevFinalLower = finalLower;
+		prevTrend = currentTrend;
+	}
+
+	return { upper, lower, trend, values };
+}
+
 // ─── Cross Detection ────────────────────────────────────────────
 
 export function detectCross(fastValues: (number | null)[], slowValues: (number | null)[]): CrossResult {
@@ -205,6 +392,34 @@ export function getCloses(klines: KlineRow[]): (number | null)[] {
 
 export function getVolumes(klines: KlineRow[]): (number | null)[] {
 	return klines.map((k) => k.volume);
+}
+
+/** On-Balance Volume: cumulative volume, +/- by close direction. */
+export function computeOBV(klines: KlineRow[]): (number | null)[] {
+	const obv: (number | null)[] = [];
+	let cum = 0;
+	for (let i = 0; i < klines.length; i++) {
+		const k = klines[i];
+		const vol = k.volume;
+		if (vol == null || k.close == null) {
+			obv.push(i === 0 ? cum : obv[i - 1]);
+			continue;
+		}
+		if (i === 0) {
+			cum = vol;
+		} else {
+			const prevClose = klines[i - 1].close;
+			if (prevClose == null) {
+				// keep cum unchanged
+			} else if (k.close > prevClose) {
+				cum += vol;
+			} else if (k.close < prevClose) {
+				cum -= vol;
+			}
+		}
+		obv.push(cum);
+	}
+	return obv;
 }
 
 /**

@@ -94,8 +94,7 @@ async function testEmojiInToolResults<TApi extends Api>(llm: Model<TApi>, option
 - Thinking face: 🤔
 - Rocket: 🚀
 - Mixed text: Mario Zechner wann? Wo? Bin grad äußersr eventuninformiert 🙈
-- Japanese: こんにちは
-- Chinese: 你好
+- Japanese: こんにち�?- Chinese: 你好
 - Mathematical symbols: ∑∫∂√
 - Special quotes: "curly" 'quotes'`,
 			},
@@ -400,7 +399,7 @@ describe("AI Providers Unicode Surrogate Pair Tests", () => {
 			"gpt-4o - should handle emoji in tool results",
 			{ retry: 3, timeout: 30000 },
 			async () => {
-				const llm = getModel("github-copilot", "gpt-4o");
+				const llm = getModel("github-copilot", "gpt-4o" as any);
 				await testEmojiInToolResults(llm, { apiKey: githubCopilotToken });
 			},
 		);
@@ -409,7 +408,7 @@ describe("AI Providers Unicode Surrogate Pair Tests", () => {
 			"gpt-4o - should handle real-world LinkedIn comment data with emoji",
 			{ retry: 3, timeout: 30000 },
 			async () => {
-				const llm = getModel("github-copilot", "gpt-4o");
+				const llm = getModel("github-copilot", "gpt-4o" as any);
 				await testRealWorldLinkedInData(llm, { apiKey: githubCopilotToken });
 			},
 		);
@@ -418,7 +417,7 @@ describe("AI Providers Unicode Surrogate Pair Tests", () => {
 			"gpt-4o - should handle unpaired high surrogate (0xD83D) in tool results",
 			{ retry: 3, timeout: 30000 },
 			async () => {
-				const llm = getModel("github-copilot", "gpt-4o");
+				const llm = getModel("github-copilot", "gpt-4o" as any);
 				await testUnpairedHighSurrogate(llm, { apiKey: githubCopilotToken });
 			},
 		);

@@ -1,0 +1,38 @@
+- generic [ref=e3]:
+  - generic [ref=e4]:
+    - generic [ref=e45]: 上证指数 4109.94 ▲0.06%
+    - generic [ref=e46]: "|"
+    - generic [ref=e47]: 沪深300 4807.68 ▼-0.06%
+    - generic [ref=e48]: "|"
+    - generic [ref=e49]: 科创50 1563.52 ▲4.69%
+    - generic [ref=e50]: "|"
+    - generic [ref=e51]: 中证500 8338.28 ▼-0.05%
+    - generic [ref=e52]: "|"
+    - generic [ref=e53]: 深证成指 15112.40 ▼-0.06%
+    - generic [ref=e54]: "|"
+    - generic [ref=e55]: 创业板指 3685.52 ▼-0.04%
+  - generic [ref=e7]: "市场情绪: 加载中..."
+  - generic [ref=e8]:
+    - generic [ref=e9]: research
+    - generic [ref=e10]: 已连接
+  - generic [ref=e11]:
+    - generic [ref=e13]:
+      - generic [ref=e14]: 股票池
+      - generic [ref=e15]:
+        - generic [ref=e16] [cursor=pointer]:
+          - generic [ref=e17]: 日线MACD金叉_本周周线金叉预备队
+          - generic [ref=e18]: 100 只
+        - generic [ref=e19] [cursor=pointer]:
+          - generic [ref=e20]: 周线RSI低位_即将金叉预备队
+          - generic [ref=e21]: 51 只
+        - generic [ref=e22] [cursor=pointer]:
+          - generic [ref=e23]: 2025年报营收利润双增长Top10
+          - generic [ref=e24]: 10 只
+        - generic [ref=e25] [cursor=pointer]:
+          - generic [ref=e26]: PE小于20且市值大于100亿
+          - generic [ref=e27]: 50 只
+    - generic [ref=e28]:
+      - generic [ref=e57]: 选出日线多头排列的股票，按市值从大到小排列，取前10只
+      - generic [ref=e31]:
+        - textbox "输入消息..." [ref=e32]
+        - button "发送" [active] [ref=e33]

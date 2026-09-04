@@ -1,0 +1,669 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>策略回测</title>
+<script src="/node_modules/lightweight-charts/dist/lightweight-charts.standalone.production.js"></script>
+<style>
+*{margin:0;padding:0;box-sizing:border-box}
+body{background:#0f1117;color:#e0e0e0;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;min-height:100vh}
+.header{display:flex;justify-content:space-between;align-items:center;padding:20px 24px;border-bottom:1px solid #1a1d2b}
+.header h1{font-size:20px;font-weight:600}
+.header .sub{font-size:12px;color:#666;margin-top:2px}
+.header-right{display:flex;gap:12px;align-items:center}
+select,input{background:#1a1d2b;border:1px solid #333;color:#e0e0e0;border-radius:6px;padding:6px 10px;font-size:13px}
+select:focus,input:focus{outline:none;border-color:#2563eb}
+.controls{padding:16px 24px;display:flex;gap:12px;flex-wrap:wrap;align-items:flex-end}
+.controls label{display:flex;flex-direction:column;font-size:12px;color:#888;gap:4px}
+.advanced-toggle{cursor:pointer;padding:8px 24px;font-size:13px;color:#2563eb;user-select:none}
+#advancedPanel{display:none;padding:8px 24px 16px;display:none;flex-wrap:wrap;gap:12px}
+#advancedPanel label{display:flex;flex-direction:column;font-size:12px;color:#888;gap:4px}
+/* Buy/sell condition sections */
+.condition-section{background:#1a1d2b;border:1px solid #333;border-radius:8px;padding:10px 12px;min-width:340px;max-width:620px}
+.condition-header{font-size:12px;color:#888;margin-bottom:6px;display:flex;gap:8px;align-items:baseline}
+.condition-note{font-size:11px;color:#666}
+.condition-row{display:flex;gap:8px;align-items:center;margin-bottom:6px;flex-wrap:wrap}
+.cond-strategy{width:180px}
+.cond-params{display:flex;gap:8px;flex-wrap:wrap}
+.cond-params label{display:flex;flex-direction:column;font-size:11px;color:#888;gap:2px}
+.cond-param{width:90px;padding:4px 6px}
+.cond-remove{background:none;border:1px solid #333;color:#888;border-radius:4px;padding:2px 8px;cursor:pointer;font-size:12px}
+.cond-remove:hover{color:#ef4444;border-color:#ef4444}
+.cond-remove:disabled{opacity:.3;cursor:not-allowed;color:#888;border-color:#333}
+.add-cond-btn{background:none;border:1px dashed #333;color:#2563eb;border-radius:6px;padding:4px 12px;cursor:pointer;font-size:12px;margin-top:4px}
+.add-cond-btn:hover{border-color:#2563eb}
+#run-btn{background:#2563eb;color:#fff;border:none;border-radius:6px;padding:8px 20px;cursor:pointer;font-size:14px;white-space:nowrap}
+#run-btn:disabled{opacity:.5;cursor:not-allowed}
+#run-btn:hover:not(:disabled){background:#1d4ed8}
+#loading{text-align:center;padding:40px;color:#888;font-size:15px}
+.hidden{display:none!important}
+/* Report list panel */
+.report-list-panel{border-bottom:1px solid #1a1d2b;background:#0a0c12}
+.report-list-header{cursor:pointer;padding:10px 24px;display:flex;align-items:center;gap:8px;font-size:13px;color:#888;user-select:none}
+.report-list-header:hover{color:#e0e0e0}
+.report-list-header .arrow{transition:transform .2s;font-size:10px}
+.report-list-header .arrow.open{transform:rotate(90deg)}
+.report-list-body{overflow-x:auto;padding:0 24px 8px}
+.report-list-body table{width:100%;border-collapse:collapse;font-size:12px}
+.report-list-body th{text-align:left;padding:6px 8px;color:#666;font-weight:500;border-bottom:1px solid #1a1d2b;white-space:nowrap}
+.report-list-body td{padding:6px 8px;border-bottom:1px solid #111;white-space:nowrap}
+.report-list-body tr.report-row{cursor:pointer;transition:background .15s}
+.report-list-body tr.report-row:hover{background:#1a1d2b}
+.report-list-body tr.report-row:active{background:#252840}
+.report-list-body .metric-pos{color:#ef4444}
+.report-list-body .metric-neg{color:#22c55e}
+.report-list-body .action-btn{background:none;border:1px solid #333;color:#888;border-radius:4px;padding:2px 6px;cursor:pointer;font-size:11px;margin:0 2px}
+.report-list-body .action-btn:hover{color:#e0e0e0;border-color:#666}
+.report-list-body .action-btn.danger:hover{color:#ef4444;border-color:#ef4444}
+#error{background:rgba(239,68,68,.1);border:1px solid #ef4444;color:#ef4444;padding:12px 16px;border-radius:6px;margin:12px 24px}
+.metrics-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:12px;padding:16px 24px}
+.metric-card{background:#1a1d2b;border-radius:8px;padding:16px;border:1px solid #222;text-align:center}
+.metric-label{font-size:11px;color:#888;text-transform:uppercase;letter-spacing:.05em}
+.metric-value{font-size:22px;font-weight:700;margin-top:4px;font-variant-numeric:tabular-nums}
+.text-up{color:#ef4444}.text-down{color:#22c55e}.text-neutral{color:#888}
+.stats-bar{display:flex;gap:24px;padding:8px 24px;font-size:12px;color:#666;flex-wrap:wrap}
+.chart-container{width:calc(100% - 48px);height:380px;margin:12px 24px;border-radius:8px;overflow:hidden;border:1px solid #1a1d2b}
+h2{font-size:16px;font-weight:600;padding:16px 24px 8px}
+.table-wrapper{overflow-x:auto;margin:0 24px 24px;border-radius:8px;border:1px solid #1a1d2b}
+table{width:100%;border-collapse:collapse;font-size:13px}
+th{background:#1a1d2b;padding:8px 12px;text-align:left;color:#888;border-bottom:1px solid #333;position:sticky;top:0;font-weight:500}
+td{padding:7px 12px;border-bottom:1px solid #1a1d2b;font-variant-numeric:tabular-nums;white-space:nowrap}
+tr:hover td{background:rgba(37,99,235,.05)}
+</style>
+</head>
+<body>
+<div class="header">
+  <div>
+    <h1>策略回测</h1>
+    <div class="sub">选择股池 → 配置策略 → 运行 → 查看结果</div>
+  </div>
+</div>
+
+<!-- Saved reports list -->
+<div class="report-list-panel hidden" id="report-list-panel">
+  <div class="report-list-header" onclick="toggleReportList()">
+    <span class="arrow" id="report-arrow">▶</span> 📋 已保存报告 (<span id="report-count">0</span>)
+  </div>
+  <div class="report-list-body hidden" id="report-list-body">
+    <table><thead><tr><th>股池</th><th>策略</th><th>区间</th><th>总收益</th><th>年化</th><th>回撤</th><th>胜率</th><th>交易</th><th>保存时间</th><th>操作</th></tr></thead><tbody id="report-tbody"></tbody></table>
+  </div>
+</div>
+
+<div class="controls">
+  <div class="condition-section">
+    <div class="condition-header">买入条件 <span class="condition-note">任一触发即买入</span></div>
+    <div id="buy-rows"></div>
+    <button class="add-cond-btn" id="add-buy-btn" onclick="addConditionRow('buy')">＋ 添加买入条件</button>
+  </div>
+  <div class="condition-section">
+    <div class="condition-header">卖出条件 <span class="condition-note">任一触发即卖出（留空 = 仅被动卖出）</span></div>
+    <div id="sell-rows"></div>
+    <button class="add-cond-btn" id="add-sell-btn" onclick="addConditionRow('sell')">＋ 添加卖出条件</button>
+  </div>
+  <label>最大持仓 <input type="number" id="maxPositions" value="10" min="1" max="100"></label>
+  <label>初始资金(万) <input type="number" id="initialCapital" value="100" step="10"></label>
+  <label>排序 <select id="rankBy">
+    <option value="momentum">动量</option><option value="value">价值</option><option value="turnover" selected>成交额</option>
+    <option value="technical">技术综合</option><option value="low_volatility">低波动</option>
+    <option value="signal_recency">信号新鲜度</option>
+<option value="turnover_rate">换手率</option>
+<option value="dynamic">动态(IC)</option>
+    <option value="ma_alignment">MA排列</option><option value="weekly_ma_alignment">周线MA排列</option><option value="market_cap">总市值</option><option value="random">随机</option>
+  </select></label>
+  <label>起始 <input type="date" id="startDate"></label>
+  <label>结束 <input type="date" id="endDate"></label>
+  <label>股池 <select id="pool-select" style="min-width:200px"><option value="">加载中...</option></select></label>
+  <button id="run-btn" onclick="runBacktest()">▶ 运行回测</button>
+  <button id="save-btn" class="hidden" onclick="saveReport()" style="background:#1a1d2b;color:#e0e0e0;border:1px solid #333;border-radius:6px;padding:8px 14px;cursor:pointer;font-size:13px">📄 保存报告</button>
+</div>
+
+<div class="advanced-toggle" onclick="toggleAdvanced()">▶ 高级设置</div>
+<div id="advancedPanel">
+  <label>满仓 <select id="fullPosition"><option value="true" selected>是</option><option value="false">否</option></select></label>
+  <label>仓位方法 <select id="positionSizingMethod"><option value="fixed">固定</option><option value="atr">ATR</option></select></label>
+  <label>满仓模式 <select id="fullPositionMode"><option value="equal_weight" selected>等权</option><option value="add_to_holdings">加仓</option><option value="linear">线性</option></select></label>
+  <label>单标的上限 <input type="number" id="maxPositionWeight" value="0.1" step="0.05" min="0.01" max="1"></label>
+  <label>滑点(%) <input type="number" id="slippage" value="0.1" step="0.01" min="0"></label>
+  <label>佣金(%) <input type="number" id="commission" value="0.02" step="0.01" min="0"></label>
+  <label>印花税(%) <input type="number" id="taxRate" value="0.1" step="0.01" min="0"></label>
+  <!-- removed: dead #rebalanceFrequency control (was never read) -->
+  <label>最大持仓天数 <input type="number" id="maxHoldingDays" value="0" min="0"></label>
+  <label>止损(%) <input type="number" id="stopLossPct" value="0" step="0.5" min="0" max="50"><span style="color:#888;font-size:11px">0=关闭，开盘跌破买入价x%卖出</span></label>
+  <label>止盈(%) <input type="number" id="takeProfitPct" value="0" step="1" min="0" max="100"><span style="color:#888;font-size:11px">0=关闭，开盘超过买入价x%卖出</span></label>
+  <label>移动止损(%) <input type="number" id="trailingStopPct" value="0" step="0.5" min="0" max="50"><span style="color:#888;font-size:11px">0=关闭，从持仓最高价回撤x%卖出</span></label>
+  <label>回撤熔断(%) <input type="number" id="drawdownLimitPct" value="0" step="1" min="0" max="50"><span style="color:#888;font-size:11px">0=关闭，总资金回撤超x%清仓，收窄至一半恢复</span></label>
+  <label>调仓频率 <input type="number" id="rFreq" value="1" min="1"><span style="color:#888;font-size:11px">(天)</span></label>
+</div>
+
+<div id="loading" class="hidden">⏳ 回测运行中...</div>
+<div id="error" class="hidden"></div>
+<div id="results" class="hidden">
+  <div id="metrics" class="metrics-grid"></div>
+  <div id="stats" class="stats-bar"></div>
+  <div id="equity-chart" class="chart-container"></div>
+  <div style="padding:0 24px">
+    <h2 style="cursor:pointer;display:flex;align-items:center;gap:8px;padding:16px 0 8px" onclick="document.getElementById('holdings-table').classList.toggle('hidden');this.querySelector('span').textContent=document.getElementById('holdings-table').classList.contains('hidden')?'▶':'▼'">
+      <span>▼</span> 终持仓 (<span id="holdings-count">0</span>只)
+    </h2>
+    <div id="holdings-table" class="table-wrapper" style="margin:0 0 16px">
+      <table><thead><tr><th>代码</th><th>名称</th><th>最后买入</th><th>持仓数量</th></tr></thead><tbody id="holdings-body"></tbody></table>
+    </div>
+  </div>
+  <h2 style="cursor:pointer;display:flex;align-items:center;gap:8px;padding:16px 24px 8px" onclick="document.getElementById('trade-table-wrap').classList.toggle('hidden');this.querySelector('span').textContent=document.getElementById('trade-table-wrap').classList.contains('hidden')?'▶':'▼'">
+    <span>▼</span> 交易明细 (<span id="trade-count">0</span>笔)
+  </h2>
+  <div id="trade-table-wrap" class="table-wrapper" style="margin:0 24px 24px"><table><thead><tr><th>日期</th><th>代码</th><th>名称</th><th>方向</th><th>价格</th><th>数量</th><th>金额</th><th>盈亏</th><th>持仓(天)</th><th>备注</th></tr></thead><tbody id="trade-body"></tbody></table></div>
+</div>
+
+<script>
+const state = { pools: [], strategies: {}, running: false, result: null, chart: null, reportsOpen: false, reports: [], buyRows: [], sellRows: [] };
+
+function $(id){return document.getElementById(id)}
+function getVal(id){return $(id).value}
+function setVal(id,v){const el=$(id); if(el) el.value=v}
+
+// ─── Buy/sell condition rows ───────────────────────────────────────
+function strategyOptions(dir){
+  const ids = Object.keys(state.strategies);
+  const list = ids.length ? ids.filter(k => dir==='buy' ? state.strategies[k].buys : state.strategies[k].sells)
+                          : (dir==='buy' ? ['volume_contraction'] : []); // degraded: API meta unavailable
+  return list.map(k => ({id:k, label: state.strategies[k]?.description || (k==='volume_contraction' ? '缩量调整' : k)}));
+}
+function defaultFor(dir){ return strategyOptions(dir)[0]?.id || 'volume_contraction'; }
+function labelFor(id){ return state.strategies[id]?.description || (id==='volume_contraction' ? '缩量调整' : id); }
+function conditionLabel(){
+  const buys = state.buyRows.map(r=>labelFor(r.strategy));
+  const sells = state.sellRows.map(r=>labelFor(r.strategy));
+  if (!sells.length) return buys.join('+');
+  return buys.join('+') + ' / 卖出:' + sells.join('+');
+}
+function renderConditionSections(){
+  renderConditionSection('buy');
+  renderConditionSection('sell');
+}
+function renderConditionSection(dir){
+  const rows = dir==='buy' ? state.buyRows : state.sellRows;
+  const wrap = $(dir+'-rows');
+  wrap.innerHTML = rows.map((row, idx) => renderConditionRow(dir, idx, row)).join('');
+}
+function renderConditionRow(dir, idx, row){
+  const opts = strategyOptions(dir).map(o =>
+    `<option value="${o.id}" ${o.id===row.strategy?'selected':''}>${o.label}</option>`).join('');
+  const isLastBuy = dir==='buy' && state.buyRows.length===1;
+  return `<div class="condition-row" data-dir="${dir}" data-idx="${idx}">
+    <select class="cond-strategy">${opts}</select>
+    <span class="cond-params">${renderRowParamsHTML(dir, idx, row)}</span>
+    <button class="cond-remove" ${isLastBuy?'disabled title="至少保留一个买入条件"':'title="删除该条件"'}>✕</button>
+  </div>`;
+}
+function renderRowParamsHTML(dir, idx, row){
+  const meta = state.strategies[row.strategy];
+  if (!meta || !meta.params) return '';
+  const rowParams = state[dir+'Rows'][idx].params;
+  return Object.entries(meta.params).map(([key, def]) => {
+    // Params are numeric by contract, but report JSON is user-editable on disk,
+    // so escape everything interpolated into HTML (attribute-injection safe).
+    const v = rowParams[key] ?? def.default;
+    const step = def.step ?? 1;
+    const min = def.min ?? ''; const max = def.max ?? '';
+    return `<label>${esc(def.label)} <input class="cond-param" data-param="${esc(key)}" type="number" value="${esc(v)}" min="${esc(min)}" max="${esc(max)}" step="${esc(step)}"></label>`;
+  }).join('');
+}
+function addConditionRow(dir){
+  const rows = dir==='buy' ? state.buyRows : state.sellRows;
+  rows.push({ strategy: defaultFor(dir), params: {} });
+  renderConditionSections();
+}
+function removeConditionRow(dir, idx){
+  const rows = dir==='buy' ? state.buyRows : state.sellRows;
+  if (dir==='buy' && rows.length===1) return; // keep at least one buy condition
+  rows.splice(idx, 1);
+  renderConditionSections();
+}
+function onStrategyChange(rowEl){
+  const dir = rowEl.dataset.dir; const idx = Number(rowEl.dataset.idx);
+  const rows = dir==='buy' ? state.buyRows : state.sellRows;
+  const next = rowEl.querySelector('.cond-strategy').value;
+  rows[idx].strategy = next;
+  rows[idx].params = {}; // reset params when switching strategy
+  rowEl.querySelector('.cond-params').innerHTML = renderRowParamsHTML(dir, idx, rows[idx]);
+}
+function readRowParams(rowEl){
+  const params = {};
+  rowEl.querySelectorAll('.cond-param').forEach(inp => {
+    const v = Number(inp.value);
+    if (inp.value !== '' && !Number.isNaN(v)) params[inp.dataset.param] = v;
+  });
+  return Object.keys(params).length ? params : undefined;
+}
+function buildConditionsConfig(){
+  const config = {};
+  const readRows = dir => [...$(dir+'-rows').querySelectorAll('.condition-row')].map(rowEl => ({
+    strategy: rowEl.querySelector('.cond-strategy').value,
+    params: readRowParams(rowEl),
+  }));
+  const buys = readRows('buy');
+  const sells = readRows('sell');
+  if (buys.length) config.buyStrategies = buys;
+  if (sells.length) config.sellStrategies = sells;
+  return config;
+}
+
+async function init(){
+  try {
+  // Load pools
+  const pools = await fetch('/api/stock-pools').then(r=>r.json());
+  state.pools = pools;
+  const sel = $('pool-select');
+  sel.innerHTML = pools.map(p => {
+    const type = p.is_dynamic ? '(动态)' : '(静态)';
+    const tag = p.name.includes('主线') ? '[主线]' : type;
+    return `<option value="${p.id}">${tag} ${p.name} (${p.item_count||'?'}只)</option>`;
+  }).join('');
+
+  // Load strategies
+  try {
+    state.strategies = await fetch('/api/backtest/strategies').then(r=>r.json());
+  } catch(e){}
+  // Initialize buy/sell condition rows and wire row events (delegated)
+  state.buyRows = [{ strategy: 'volume_contraction', params: {} }];
+  state.sellRows = [];
+  renderConditionSections();
+  ['buy','sell'].forEach(dir => {
+    const wrap = $(dir+'-rows');
+    wrap.addEventListener('change', e => {
+      if (e.target.classList.contains('cond-strategy')) onStrategyChange(e.target.closest('.condition-row'));
+    });
+    wrap.addEventListener('click', e => {
+      if (e.target.classList.contains('cond-remove')) {
+        const row = e.target.closest('.condition-row');
+        removeConditionRow(row.dataset.dir, Number(row.dataset.idx));
+      }
+    });
+  });
+
+  // Default dates
+  const now = new Date();
+  setVal('endDate', now.toISOString().slice(0,10));
+  const yago = new Date(now); yago.setFullYear(yago.getFullYear()-2);
+  setVal('startDate', yago.toISOString().slice(0,10));
+  // Load saved reports in background
+  loadReports().catch(() => {});
+  } catch(e) {
+    $('pool-select').innerHTML = '<option value="">加载失败 — 请刷新重试</option>';
+    console.error('Backtest init error:', e);
+  }
+}
+document.addEventListener('DOMContentLoaded', init);
+
+async function saveReport(){
+  if(!state.lastResult||!state.lastConfig) return;
+  const btn=$('save-btn'); const origText=btn.textContent;
+  btn.textContent='保存中...'; btn.disabled=true;
+  try {
+    const poolId = Number(getVal('pool-select'));
+    const poolName = state.pools.find(p=>p.id===poolId)?.name||'';
+    const strategy = conditionLabel();
+    // Build clean config with strategy-relevant fields
+    const config = {
+      ...buildConditionsConfig(),
+      maxPositions: Number(getVal('maxPositions')),
+      rankBy: getVal('rankBy'), fullPosition: getVal('fullPosition')==='true',
+      positionSizingMethod: getVal('positionSizingMethod'),
+      fullPositionMode: getVal('fullPositionMode'),
+      maxPositionWeight: Number(getVal('maxPositionWeight')),
+      slippage: Number(getVal('slippage'))/100,
+      commission: Number(getVal('commission'))/100,
+      taxRate: Number(getVal('taxRate'))/100,
+      maxHoldingDays: Number(getVal('maxHoldingDays'))||undefined,
+      stopLossPercent: Number(getVal('stopLossPct'))/100 || undefined,
+      takeProfitPercent: Number(getVal('takeProfitPct'))/100 || undefined,
+      trailingStopPercent: Number(getVal('trailingStopPct'))/100 || undefined,
+      drawdownLimitPercent: Number(getVal('drawdownLimitPct'))/100 || undefined,
+      rebalanceFrequency: Number(getVal('rFreq')),
+      initialCapital: Number(getVal('initialCapital'))*10000,
+      start: getVal('startDate').replace(/-/g,''),
+      end: getVal('endDate').replace(/-/g,''),
+    };
+    const res=await fetch('/api/backtest/save',{
+      method:'POST',headers:{'Content-Type':'application/json'},
+      body:JSON.stringify({
+        title: poolName + ' ' + strategy + ' 回测报告',
+        poolId, poolName, strategy,
+        startDate: state.lastResult.startDate, endDate: state.lastResult.endDate,
+        initialCapital: state.lastResult.initialCapital,
+        strategyCurve: state.lastResult.equityCurve.map(p=>({date:p.date,equity:p.equity})),
+        strategyMetrics: {
+          totalReturn: state.lastResult.metrics.totalReturn,
+          annualizedReturn: state.lastResult.metrics.annualizedReturn,
+          sharpeRatio: state.lastResult.metrics.sharpeRatio,
+          maxDrawdown: state.lastResult.metrics.maxDrawdown,
+          winRate: state.lastResult.metrics.winRate,
+          profitFactor: state.lastResult.metrics.profitFactor,
+          totalTrades: state.lastResult.trades.filter(t=>t.direction==='sell').length
+        },
+        benchmarks: state.lastResult.benchmarks || [], trades: state.lastResult.trades,
+        config
+      })
+    });
+    const data=await res.json();
+    if(data.url) window.open(data.url,'_blank');
+    btn.textContent = origText; btn.disabled = false;
+    // Refresh the report list
+    await loadReports();
+    // Auto-expand the list after first save
+    if (!state.reportsOpen) toggleReportList();
+  } catch(e) {
+    btn.textContent = '❌ 失败';
+    btn.disabled = false;
+    setTimeout(() => { if (btn.textContent === '❌ 失败') btn.textContent = origText; }, 3000);
+    console.error(e);
+  }
+}
+
+function toggleAdvanced(){
+  const p = $('advancedPanel');
+  p.style.display = p.style.display === 'flex' ? 'none' : 'flex';
+}
+
+// ─── Report list management ─────────────────────────────────
+
+async function loadReports(){
+  try {
+    const res = await fetch('/api/backtest/reports');
+    state.reports = await res.json();
+    renderReportList();
+  } catch(e) { console.error('loadReports:', e); }
+}
+
+function toggleReportList(){
+  state.reportsOpen = !state.reportsOpen;
+  $('report-arrow').className = 'arrow' + (state.reportsOpen ? ' open' : '');
+  $('report-list-body').classList.toggle('hidden', !state.reportsOpen);
+}
+
+function renderReportList(){
+  const panel = $('report-list-panel');
+  const tbody = $('report-tbody');
+  const count = $('report-count');
+  count.textContent = state.reports.length;
+  panel.classList.toggle('hidden', state.reports.length === 0);
+
+  if (state.reports.length === 0) { tbody.innerHTML = ''; return; }
+
+  const fmt = (n, d=2) => n != null ? n.toFixed(d) : '-';
+  const fmtDate = (s) => s ? s.slice(0,10) : '-';
+
+  tbody.innerHTML = state.reports.map((r, idx) => {
+    const trCls = r.totalReturn >= 0 ? 'metric-neg' : 'metric-pos';
+    return `<tr class="report-row" ondblclick="restoreReportConfig(${idx})" title="双击恢复回测参数">
+      <td>${esc(r.poolName)}</td><td>${esc(r.strategy)}</td>
+      <td>${fmtDate(r.startDate)}~${fmtDate(r.endDate)}</td>
+      <td class="${trCls}">${r.metrics.totalReturn >= 0 ? '+' : ''}${fmt(r.metrics.totalReturn)}%</td>
+      <td>${fmt(r.metrics.annualizedReturn)}%</td>
+      <td>${fmt(r.metrics.maxDrawdown)}%</td>
+      <td>${fmt(r.metrics.winRate)}%</td>
+      <td>${r.metrics.totalTrades}</td>
+      <td style="color:#666;font-size:11px">${fmtDate(r.createdAt)}</td>
+      <td>
+        <button class="action-btn" onclick="event.stopPropagation();window.open('/reports/${r.fileName}','_blank')">打开</button>
+        <button class="action-btn danger" onclick="event.stopPropagation();deleteReport('${r.fileName}')">🗑</button>
+      </td></tr>`;
+  }).join('');
+}
+
+function esc(s) { return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;').replace(/'/g,'&#39;'); }
+
+async function deleteReport(fileName) {
+  if (!confirm('确定删除这条回测报告？')) return;
+  try {
+    const res = await fetch('/api/backtest/reports/' + encodeURIComponent(fileName), { method: 'DELETE' });
+    if (!res.ok) throw new Error('Delete failed');
+    await loadReports();
+  } catch(e) { alert('删除失败: ' + e.message); }
+}
+
+function restoreReportConfig(idx) {
+  const r = state.reports[idx];
+  if (!r || !r.config) return alert('该报告缺少回测参数');
+
+  const c = r.config;
+  // Restore pool selection
+  if (r.poolId) {
+    const sel = $('pool-select');
+    for (let i = 0; i < sel.options.length; i++) {
+      if (Number(sel.options[i].value) === r.poolId) { sel.selectedIndex = i; break; }
+    }
+  }
+  // Restore buy/sell condition rows (new-style arrays, or legacy single strategy)
+  if (Array.isArray(c.buyStrategies)) {
+    state.buyRows = c.buyStrategies.map(s => ({ strategy: s.strategy, params: s.params ? { ...s.params } : {} }));
+  } else if (c.strategy) {
+    state.buyRows = [{ strategy: c.strategy, params: c.strategyParams ? { ...c.strategyParams } : {} }];
+  } else {
+    state.buyRows = [{ strategy: 'volume_contraction', params: {} }];
+  }
+  state.sellRows = Array.isArray(c.sellStrategies) ? c.sellStrategies.map(s => ({ strategy: s.strategy, params: s.params ? { ...s.params } : {} })) : [];
+  // Sanitize rows: unknown strategies fall back to the section default (skip when meta unavailable)
+  if (Object.keys(state.strategies).length) {
+    state.buyRows.forEach(r => { if (!state.strategies[r.strategy]?.buys) { console.warn('回测恢复: 未知买入策略', r.strategy); r.strategy = defaultFor('buy'); } });
+    state.sellRows.forEach(r => { if (!state.strategies[r.strategy]?.sells) { console.warn('回测恢复: 未知卖出策略', r.strategy); r.strategy = defaultFor('sell'); } });
+  }
+  renderConditionSections();
+  // Restore form fields (use config values, fallback to current)
+  if (c.start) { const s = String(c.start); setVal('startDate', s.slice(0,4)+'-'+s.slice(4,6)+'-'+s.slice(6,8)); }
+  if (c.end) { const s = String(c.end); setVal('endDate', s.slice(0,4)+'-'+s.slice(4,6)+'-'+s.slice(6,8)); }
+  if (c.initialCapital != null) setVal('initialCapital', String(c.initialCapital / 10000));
+  if (c.maxPositions != null) setVal('maxPositions', String(c.maxPositions));
+  if (c.rankBy) setVal('rankBy', c.rankBy);
+  if (c.period) setVal('period', c.period);
+  if (c.fullPosition != null) setVal('fullPosition', String(c.fullPosition));
+  if (c.positionSizingMethod) setVal('positionSizingMethod', c.positionSizingMethod);
+  if (c.fullPositionMode) setVal('fullPositionMode', c.fullPositionMode);
+  if (c.maxPositionWeight != null) setVal('maxPositionWeight', String(c.maxPositionWeight));
+  if (c.slippage != null) setVal('slippage', String(Math.round(c.slippage * 100)));
+  if (c.commission != null) setVal('commission', String(Math.round(c.commission * 100)));
+  if (c.taxRate != null) setVal('taxRate', String(Math.round(c.taxRate * 100)));
+  if (c.maxHoldingDays != null) setVal('maxHoldingDays', String(c.maxHoldingDays));
+  if (c.stopLossPercent != null) setVal('stopLossPct', String(c.stopLossPercent*100));
+  if (c.takeProfitPercent != null) setVal('takeProfitPct', String(c.takeProfitPercent*100));
+  if (c.trailingStopPercent != null) setVal('trailingStopPct', String(c.trailingStopPercent*100));
+  if (c.drawdownLimitPercent != null) setVal('drawdownLimitPct', String(c.drawdownLimitPercent*100));
+  if (c.rebalanceFrequency != null) setVal('rFreq', String(c.rebalanceFrequency));
+  if (c.minLot != null) setVal('minLot', String(c.minLot));
+
+  // Scroll to run button
+  $('run-btn').scrollIntoView({ behavior: 'smooth' });
+  // Flash the run button
+  $('run-btn').style.boxShadow = '0 0 12px #2563eb';
+  setTimeout(() => { $('run-btn').style.boxShadow = ''; }, 1500);
+}
+
+async function runBacktest(){
+  if(state.running) return;
+  state.running = true;
+  $('run-btn').disabled = true;
+  $('loading').classList.remove('hidden');
+  $('error').classList.add('hidden');
+  $('results').classList.add('hidden');
+
+  const config = {
+    ...buildConditionsConfig(),
+    start: getVal('startDate').replace(/-/g,''),
+    end: getVal('endDate').replace(/-/g,''),
+    initialCapital: Number(getVal('initialCapital')) * 10000,
+    maxPositions: Number(getVal('maxPositions')),
+    rankBy: getVal('rankBy'),
+    fullPosition: getVal('fullPosition')==='true',
+    positionSizingMethod: getVal('positionSizingMethod'),
+    fullPositionMode: getVal('fullPositionMode'),
+    maxPositionWeight: Number(getVal('maxPositionWeight')),
+    slippage: Number(getVal('slippage'))/100,
+    commission: Number(getVal('commission'))/100,
+    taxRate: Number(getVal('taxRate'))/100,
+    maxHoldingDays: Number(getVal('maxHoldingDays'))||undefined,
+    stopLossPercent: Number(getVal('stopLossPct'))/100 || undefined,
+    takeProfitPercent: Number(getVal('takeProfitPct'))/100 || undefined,
+    trailingStopPercent: Number(getVal('trailingStopPct'))/100 || undefined,
+    drawdownLimitPercent: Number(getVal('drawdownLimitPct'))/100 || undefined,
+    rebalanceFrequency: Number(getVal('rFreq')),
+    skipNoVolume: true,
+  };
+
+  try {
+    const controller = new AbortController();
+	    const timeoutId = setTimeout(() => controller.abort(), 300000); // 5 min timeout
+	    const res = await fetch('/api/backtest/run',{
+	      signal: controller.signal,
+      method:'POST',headers:{'Content-Type':'application/json'},
+      body:JSON.stringify({poolId:Number(getVal('pool-select')),config})
+    });
+    const data = await res.json();
+    if(data.error) throw new Error(data.error);
+    state.result = data;
+    renderResults(data);
+  }catch(err){
+    $('error').textContent = '回测失败: '+err.message;
+    $('error').classList.remove('hidden');
+  }finally{
+    state.running = false;
+    $('run-btn').disabled = false;
+    $('loading').classList.add('hidden');
+  }
+}
+
+function renderResults(r){
+  $('results').classList.remove('hidden');
+  $('save-btn').classList.remove('hidden');
+  // Store result for save
+  state.lastResult = r;
+  state.lastConfig = {
+    策略: conditionLabel(), 股池: state.pools.find(p=>p.id==Number(getVal('pool-select')))?.name||'',
+    区间: getVal('startDate')+' ~ '+getVal('endDate'),
+    初始资金: (Number(getVal('initialCapital'))*10000).toLocaleString(),
+    最大持仓: getVal('maxPositions'), 排序: getVal('rankBy'),
+    满仓: getVal('fullPosition'), 仓位方法: getVal('positionSizingMethod'),
+    滑点: getVal('slippage')+'%', 佣金: getVal('commission')+'%',
+  };
+  const m = r.metrics;
+  const cls = v => v>0?'text-up':v<0?'text-down':'text-neutral';
+
+  // Build code→name lookup from stocks list
+  const nameMap = {};
+  if(r.stocks) for(const s of r.stocks) nameMap[s.code] = s.name || s.code;
+
+  const sells = r.trades.filter(t=>t.direction==='sell');
+  const buys = r.trades.filter(t=>t.direction==='buy');
+
+  // Turnover: per rebalance cycle, stocks traded / stocks held, averaged
+  const tradeDates = [...new Set(r.trades.map(t=>t.date))].sort();
+  let turnover = '-';
+  if(tradeDates.length > 1){
+    const cycles = [];
+    for(let i=0; i<tradeDates.length; i++){
+      const d = tradeDates[i];
+      const dayTrades = r.trades.filter(t=>t.date===d);
+      const tradedCodes = new Set(dayTrades.map(t=>t.code));
+      // Count holdings before this day's trades
+      const held = new Set();
+      for(const t of r.trades){
+        if(t.date < d){
+          if(t.direction==='buy') held.add(t.code);
+          else held.delete(t.code);
+        }
+      }
+      if(held.size > 0){
+        cycles.push(tradedCodes.size / held.size);
+      }
+    }
+    if(cycles.length > 0) turnover = (cycles.reduce((a,b)=>a+b,0)/cycles.length*100).toFixed(0);
+  }
+
+  // Final holdings: net shares by code
+  const hMap = new Map();
+  for(const t of r.trades){
+    const k = t.code;
+    if(!hMap.has(k)) hMap.set(k,{code:k,shares:0,lastBuy:'',name:nameMap[k]||k});
+    const h = hMap.get(k);
+    if(t.direction==='buy'){ h.shares += t.shares||0; h.lastBuy = t.date; }
+    else h.shares -= t.shares||0;
+  }
+  const finalHoldings = [...hMap.values()].filter(h=>h.shares>0).sort((a,b)=>b.shares-a.shares);
+
+  $('metrics').innerHTML = `
+    <div class="metric-card"><div class="metric-label">总收益率</div><div class="metric-value ${cls(m.totalReturn)}">${m.totalReturn>0?'+':''}${m.totalReturn.toFixed(1)}%</div></div>
+    <div class="metric-card"><div class="metric-label">年化收益</div><div class="metric-value ${cls(m.annualizedReturn)}">${m.annualizedReturn>0?'+':''}${m.annualizedReturn.toFixed(1)}%</div></div>
+    <div class="metric-card"><div class="metric-label">夏普比率</div><div class="metric-value ${m.sharpeRatio>1?'text-up':m.sharpeRatio<0?'text-down':'text-neutral'}">${m.sharpeRatio.toFixed(2)}</div></div>
+    <div class="metric-card"><div class="metric-label">最大回撤</div><div class="metric-value text-down">${m.maxDrawdown.toFixed(1)}%</div></div>
+    <div class="metric-card"><div class="metric-label">胜率</div><div class="metric-value ${m.winRate>50?'text-up':'text-neutral'}">${m.winRate.toFixed(1)}%</div></div>
+    <div class="metric-card"><div class="metric-label">盈亏比</div><div class="metric-value ${m.profitFactor>1?'text-up':'text-neutral'}">${m.profitFactor.toFixed(2)}</div></div>
+    <div class="metric-card"><div class="metric-label">交易次数</div><div class="metric-value" style="color:#e0e0e0">${sells.length}</div></div>
+    <div class="metric-card"><div class="metric-label">成交额</div><div class="metric-value" style="color:#e0e0e0">${turnover}%</div></div>
+    <div class="metric-card"><div class="metric-label">终持仓</div><div class="metric-value" style="color:#f59e0b">${finalHoldings.length}只</div></div>
+    <div class="metric-card"><div class="metric-label">耗时</div><div class="metric-value" style="color:#888;font-size:18px">${(r.elapsedMs/1000).toFixed(1)}s</div></div>
+  `;
+
+  $('stats').innerHTML = `区间: ${r.startDate} ~ ${r.endDate} | 股票: ${r.stocks?.length||0}只 | 初始: ${(r.initialCapital/10000).toFixed(0)}万 | 过滤交易: ${r.filteredTradeCount||0}`;
+
+  // Scroll to results
+  $('results').scrollIntoView({behavior:'smooth'});
+
+  // Equity curve
+  const container = $('equity-chart');
+  container.innerHTML = '';
+  if(state.chart) { try { state.chart.remove(); } catch(e){} }
+  try {
+  state.chart = LightweightCharts.createChart(container,{
+    layout:{background:{type:'solid',color:'transparent'},textColor:'#9ca3af',fontSize:11},
+    grid:{vertLines:{color:'rgba(255,255,255,0.05)'},horzLines:{color:'rgba(255,255,255,0.05)'}},
+    rightPriceScale:{borderColor:'rgba(255,255,255,0.08)',scaleMargins:{top:0.05,bottom:0.1}},
+    timeScale:{borderColor:'rgba(255,255,255,0.08)'},
+  });
+  const area = state.chart.addSeries(LightweightCharts.AreaSeries,{
+    lineColor:'#3b82f6',topColor:'rgba(59,130,246,0.3)',bottomColor:'rgba(59,130,246,0.02)',lineWidth:2,title:'策略'
+  });
+  area.setData(r.equityCurve.map(p=>({time:p.date,value:p.equity})));
+  const bench = r.benchmarks && r.benchmarks.length ? r.benchmarks[0] : null;
+  if (bench && bench.equityCurve.length) {
+    const line = state.chart.addSeries(LightweightCharts.LineSeries,{
+      color:'#f59e0b',lineWidth:1.5,lineStyle:LightweightCharts.LineStyle.Dashed,priceLineVisible:false,title:bench.label||'基准'
+    });
+    line.setData(bench.equityCurve.map(p=>({time:p.date,value:p.equity})));
+  }
+  } catch(e) {
+    container.innerHTML = '<div style="padding:40px;text-align:center;color:#888">图表加载失败: '+e.message+'<br><small>请检查网络连接后刷新</small></div>';
+    console.error('Chart error:', e);
+  }
+
+  // Final holdings
+  const hRows = [];
+  for(const h of finalHoldings){
+    hRows.push(`<tr><td style="font-weight:500">${h.code}</td><td>${h.name}</td><td>${h.lastBuy}</td><td>${h.shares}</td></tr>`);
+  }
+  $('holdings-body').innerHTML = hRows.join('') || '<tr><td colspan="4" style="color:#666;text-align:center">无持仓</td></tr>';
+  $('holdings-count').textContent = finalHoldings.length;
+
+  // Trade table
+  const trades = [...r.trades].reverse();
+  $('trade-count').textContent = trades.length;
+  const rows = [];
+  for(let i=0;i<Math.min(trades.length,500);i++){
+    const t = trades[i];
+    const dirCls = t.direction==='buy'?'color:#3b82f6':'color:#f59e0b';
+    const pnlCls = t.pnl>0?'text-up':t.pnl<0?'text-down':'';
+    rows.push(`<tr>
+      <td>${t.date}</td><td style="font-weight:500">${t.code}</td><td>${nameMap[t.code]||t.code}</td>
+      <td style="${dirCls}">${t.direction==='buy'?'买入':'卖出'}</td>
+      <td>${t.price?.toFixed(2)||'-'}</td><td>${t.shares||0}</td><td>${(t.amount||0).toFixed(0)}</td>
+      <td class="${pnlCls}">${t.pnl!=null?(t.pnl>0?'+':'')+t.pnl.toFixed(0):'-'}</td>
+      <td>${t.daysHeld||'-'}</td><td style="color:#666;max-width:200px;overflow:hidden;text-overflow:ellipsis">${t.memo||''}</td>
+    </tr>`);
+  }
+  if(trades.length>500) rows.push(`<tr><td colspan="9" style="text-align:center;color:#666;padding:12px">显示前500笔，共${trades.length}笔</td></tr>`);
+  $('trade-body').innerHTML = rows.join('');
+
+}
+</script>
+</body>
+</html>

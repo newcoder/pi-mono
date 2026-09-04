@@ -1,0 +1,386 @@
+- generic [ref=e3]:
+  - generic [ref=e4]:
+    - generic [ref=e5]:
+      - generic [ref=e6]: π
+      - generic [ref=e7]: Trading Agent
+    - generic [ref=e8]:
+      - generic [ref=e425] [cursor=pointer]:
+        - generic [ref=e426]: 上证指数
+        - generic [ref=e427]: "0.00"
+        - generic [ref=e428]: ▲
+        - generic [ref=e429]: 0.00%
+      - generic [ref=e430] [cursor=pointer]:
+        - generic [ref=e431]: 沪深300
+        - generic [ref=e432]: "0.00"
+        - generic [ref=e433]: ▲
+        - generic [ref=e434]: 0.00%
+      - generic [ref=e435] [cursor=pointer]:
+        - generic [ref=e436]: 科创50
+        - generic [ref=e437]: "0.00"
+        - generic [ref=e438]: ▲
+        - generic [ref=e439]: 0.00%
+      - generic [ref=e440] [cursor=pointer]:
+        - generic [ref=e441]: 中证500
+        - generic [ref=e442]: "0.00"
+        - generic [ref=e443]: ▲
+        - generic [ref=e444]: 0.00%
+      - generic [ref=e445] [cursor=pointer]:
+        - generic [ref=e446]: 深证成指
+        - generic [ref=e447]: "15876.16"
+        - generic [ref=e448]: ▲
+        - generic [ref=e449]: 0.12%
+      - generic [ref=e450] [cursor=pointer]:
+        - generic [ref=e451]: 创业板指
+        - generic [ref=e452]: "4043.07"
+        - generic [ref=e453]: ▲
+        - generic [ref=e454]: 0.55%
+  - generic [ref=e10]:
+    - generic [ref=e11]: RESEARCH
+    - textbox "搜索股票 (代码/名称/拼音)" [ref=e13]
+  - generic [ref=e14]:
+    - generic [ref=e15]:
+      - generic [ref=e17]: 股票池
+      - generic [ref=e18]:
+        - generic [ref=e19]:
+          - generic [ref=e20] [cursor=pointer]:
+            - generic [ref=e21]:
+              - generic [ref=e22]: 最近访问
+              - button "×" [ref=e23]
+            - generic [ref=e24]: 0 只
+          - generic [ref=e25] [cursor=pointer]:
+            - generic [ref=e26]:
+              - generic [ref=e27]: 周线多头日线缩量调整市值TOP20
+              - button "×" [ref=e28]
+            - generic [ref=e29]: 20 只
+          - generic [ref=e30] [cursor=pointer]:
+            - generic [ref=e31]:
+              - generic [ref=e32]: 同花顺强势股_2026-05-26
+              - button "×" [ref=e33]
+            - generic [ref=e34]: 64 只
+          - generic [ref=e35] [cursor=pointer]:
+            - generic [ref=e36]:
+              - generic [ref=e37]: 同花顺强势股_20260526
+              - button "×" [ref=e38]
+            - generic [ref=e39]: 50 只
+          - generic [ref=e40] [cursor=pointer]:
+            - generic [ref=e41]:
+              - generic [ref=e42]: DoubleEnsemble_Top30_Prob
+              - button "×" [ref=e43]
+            - generic [ref=e44]: 30 只
+          - generic [ref=e45] [cursor=pointer]:
+            - generic [ref=e46]:
+              - generic [ref=e47]: lgbm_40_60
+              - button "×" [ref=e48]
+            - generic [ref=e49]: 21 只
+          - generic [ref=e50] [cursor=pointer]:
+            - generic [ref=e51]:
+              - generic [ref=e52]: LGBM Rank 40-60
+              - button "×" [ref=e53]
+            - generic [ref=e54]: 21 只
+          - generic [ref=e55] [cursor=pointer]:
+            - generic [ref=e56]:
+              - generic [ref=e57]: 周线多头日线缩量回调_202605
+              - button "×" [ref=e58]
+            - generic [ref=e59]: 30 只
+          - generic [ref=e60] [cursor=pointer]:
+            - generic [ref=e61]:
+              - generic [ref=e62]: 未来关注股池
+              - button "×" [ref=e63]
+            - generic [ref=e64]: 50 只
+          - generic [ref=e65] [cursor=pointer]:
+            - generic [ref=e66]:
+              - generic [ref=e67]: 周线多头日线回调缩量
+              - button "×" [ref=e68]
+            - generic [ref=e69]: 50 只
+          - generic [ref=e70] [cursor=pointer]:
+            - generic [ref=e71]:
+              - generic [ref=e72]: 前期强势缩量调整
+              - button "×" [ref=e73]
+            - generic [ref=e74]: 50 只
+          - generic [ref=e75] [cursor=pointer]:
+            - generic [ref=e76]:
+              - generic [ref=e77]: 营收连续两年增长超50%
+              - button "×" [ref=e78]
+            - generic [ref=e79]: 45 只
+          - generic [ref=e80] [cursor=pointer]:
+            - generic [ref=e81]:
+              - generic [ref=e82]: 日线多头排列市值TOP10
+              - button "×" [ref=e83]
+            - generic [ref=e84]: 10 只
+        - generic [ref=e86]:
+          - generic [ref=e87]: 📂
+          - generic [ref=e88]: 选择股票池查看个股
+    - generic [ref=e90]:
+      - generic [ref=e94]:
+        - generic [ref=e95]: 工具调用
+        - button "收起" [ref=e96] [cursor=pointer]:
+          - img [ref=e97]
+      - generic [ref=e101]:
+        - button "设置" [ref=e102] [cursor=pointer]:
+          - img [ref=e103]
+        - button "附件" [ref=e106] [cursor=pointer]:
+          - img [ref=e107]
+        - button "Choose File"
+        - textbox "输入消息..." [ref=e109]
+        - button "发送" [ref=e110] [cursor=pointer]:
+          - img [ref=e111]
+    - generic [ref=e405]:
+      - generic [ref=e406]:
+        - heading "模型配置" [level=3] [ref=e407]
+        - button "×" [ref=e408] [cursor=pointer]
+      - generic [ref=e409]:
+        - generic [ref=e410]:
+          - generic [ref=e411]: 提供商
+          - combobox "提供商" [ref=e412]:
+            - option "选择提供商"
+            - option "amazon-bedrock"
+            - option "anthropic"
+            - option "azure-openai-responses"
+            - option "cerebras"
+            - option "cloudflare-workers-ai"
+            - option "deepseek"
+            - option "fireworks"
+            - option "github-copilot"
+            - option "google"
+            - option "google-antigravity"
+            - option "google-gemini-cli"
+            - option "google-vertex"
+            - option "groq"
+            - option "huggingface"
+            - option "kimi-coding" [selected]
+            - option "minimax"
+            - option "minimax-cn"
+            - option "mistral"
+            - option "openai"
+            - option "openai-codex"
+            - option "opencode"
+            - option "opencode-go"
+            - option "openrouter"
+            - option "vercel-ai-gateway"
+            - option "xai"
+            - option "zai"
+        - generic [ref=e413]:
+          - generic [ref=e414]: 模型
+          - combobox "模型" [ref=e415]:
+            - option "选择模型"
+            - option "Kimi K2.6"
+            - option "kimi-for-coding" [selected]
+            - option "Kimi K2 Thinking"
+            - option "kimi-k2-turbo-preview"
+        - generic [ref=e416]:
+          - generic [ref=e417]: API Key
+          - textbox "API Key" [ref=e418]:
+            - /placeholder: 输入 API Key (可选)
+            - text: sk-4eabf1d92b824440b2350152537a4ba1
+        - generic [ref=e419]:
+          - generic [ref=e420]: Base URL
+          - textbox "Base URL" [ref=e421]:
+            - /placeholder: 输入 Base URL (可选)
+        - generic [ref=e422]:
+          - button "保存" [ref=e423] [cursor=pointer]
+          - button "取消" [ref=e424] [cursor=pointer]
+    - generic [ref=e114]:
+      - generic [ref=e115]:
+        - generic [ref=e116] [cursor=pointer]:
+          - generic [ref=e117]: 📅 投资日历
+          - generic [ref=e118]:
+            - button "刷新日历数据" [ref=e119]:
+              - img [ref=e120]
+            - img [ref=e123]
+        - generic [ref=e126]:
+          - generic [ref=e166]:
+            - button "<" [ref=e167] [cursor=pointer]
+            - generic [ref=e168]: 2026年5月
+            - button ">" [ref=e169] [cursor=pointer]
+          - generic [ref=e170]:
+            - generic [ref=e171]: 日
+            - generic [ref=e172]: 一
+            - generic [ref=e173]: 二
+            - generic [ref=e174]: 三
+            - generic [ref=e175]: 四
+            - generic [ref=e176]: 五
+            - generic [ref=e177]: 六
+          - generic [ref=e178]:
+            - generic [ref=e185] [cursor=pointer]: "1"
+            - generic [ref=e187] [cursor=pointer]: "2"
+            - generic [ref=e189] [cursor=pointer]: "3"
+            - generic [ref=e191] [cursor=pointer]: "4"
+            - generic [ref=e193] [cursor=pointer]: "5"
+            - generic [ref=e195] [cursor=pointer]: "6"
+            - generic [ref=e197] [cursor=pointer]: "7"
+            - generic [ref=e199] [cursor=pointer]: "8"
+            - generic [ref=e201] [cursor=pointer]: "9"
+            - generic [ref=e203] [cursor=pointer]: "10"
+            - generic [ref=e205] [cursor=pointer]: "11"
+            - generic [ref=e207] [cursor=pointer]: "12"
+            - generic [ref=e209] [cursor=pointer]: "13"
+            - generic [ref=e211] [cursor=pointer]: "14"
+            - generic [ref=e213] [cursor=pointer]: "15"
+            - generic [ref=e215] [cursor=pointer]: "16"
+            - generic [ref=e217] [cursor=pointer]: "17"
+            - generic [ref=e219] [cursor=pointer]: "18"
+            - generic [ref=e223] [cursor=pointer]: "19"
+            - generic [ref=e225] [cursor=pointer]: "20"
+            - generic [ref=e227] [cursor=pointer]: "21"
+            - generic [ref=e231] [cursor=pointer]: "22"
+            - generic [ref=e233] [cursor=pointer]: "23"
+            - generic [ref=e235] [cursor=pointer]: "24"
+            - generic [ref=e237] [cursor=pointer]: "25"
+            - generic [ref=e241] [cursor=pointer]: "26"
+            - generic [ref=e243] [cursor=pointer]: "27"
+            - generic [ref=e245] [cursor=pointer]: "28"
+            - generic [ref=e247] [cursor=pointer]: "29"
+            - generic [ref=e249] [cursor=pointer]: "30"
+            - generic [ref=e251] [cursor=pointer]: "31"
+          - generic [ref=e252]:
+            - generic [ref=e253]: 本月重点关注
+            - generic [ref=e254] [cursor=pointer]:
+              - generic [ref=e255]:
+                - generic [ref=e257]: 05-18
+                - generic [ref=e258]: 新天力 业绩预告
+              - generic [ref=e259]: "公告日期: 20260518; 报告期[20260331]: 2026年一季报"
+            - generic [ref=e260] [cursor=pointer]:
+              - generic [ref=e261]:
+                - generic [ref=e263]: 05-21
+                - generic [ref=e264]: 高特电子 业绩预告
+              - generic [ref=e265]: "公告日期: 20260521; 报告期[20260331]: 2026年一季报"
+            - generic [ref=e266] [cursor=pointer]:
+              - generic [ref=e267]:
+                - generic [ref=e269]: 05-21
+                - generic [ref=e270]: 惠康科技 业绩预告
+              - generic [ref=e271]: "最新价: 89.18; 最新涨跌幅: 0.314961; 公告日期: 20260521; 报告期[20260331]: 2026年一季报; 净利润增长率上限[20260331]: 9.8"
+            - generic [ref=e272] [cursor=pointer]:
+              - generic [ref=e273]:
+                - generic [ref=e275]: 05-21
+                - generic [ref=e276]: 新睿电子 业绩预告
+              - generic [ref=e277]: "公告日期: 20260521; 报告期[20260331]: 2026年一季报"
+            - generic [ref=e278] [cursor=pointer]:
+              - generic [ref=e279]:
+                - generic [ref=e281]: 05-25
+                - generic [ref=e282]: 彩客科技 业绩预告
+              - generic [ref=e283]: "公告日期: 20260525; 报告期[20260331]: 2026年一季报"
+      - generic [ref=e127]:
+        - generic [ref=e128] [cursor=pointer]:
+          - generic [ref=e129]: 📰 财经新闻
+          - img [ref=e130]
+        - generic [ref=e133]:
+          - generic "首批AI训练推理芯片通过国家安全可靠测评" [ref=e284] [cursor=pointer]:
+            - generic [ref=e285]:
+              - generic [ref=e286]: 财联社
+              - generic [ref=e287]: 05-27 08:53
+            - generic [ref=e288]: 首批AI训练推理芯片通过国家安全可靠测评
+            - generic [ref=e289]: 【首批AI训练推理芯片通过国家安全可靠测评】《科创板日报》27日讯，中国信息安全测评中心与国家保密科技测评中心发布了《安全可靠测评结果公告（2026年第2号）》，根据《安全可靠测评工作指南V3.0》要求，公布了新一批测评结果。海思半导体昇腾...
+          - generic "伊朗总统：毫不动摇捍卫领土与国家主权" [ref=e290] [cursor=pointer]:
+            - generic [ref=e291]:
+              - generic [ref=e292]: 财联社
+              - generic [ref=e293]: 05-27 08:52
+            - generic [ref=e294]: 伊朗总统：毫不动摇捍卫领土与国家主权
+            - generic [ref=e295]: 【伊朗总统：毫不动摇捍卫领土与国家主权】当地时间5月26日，伊朗总统佩泽希齐扬发表讲话时表示，伊朗向伊斯兰国家伸出了“兄弟般的友谊之手”。与此同时，伊朗在捍卫自身领土和国家主权上没有丝毫动摇。当天晚些时候，佩泽希齐扬在社交媒体上发文表示，当...
+          - generic "绿盟科技成立网络安全技术公司 含AI业务" [ref=e296]:
+            - generic [ref=e297]:
+              - generic [ref=e298]: 东财7x24
+              - generic [ref=e299]: 05-27 08:52
+            - generic [ref=e300]: 绿盟科技成立网络安全技术公司 含AI业务
+            - generic [ref=e301]: 【绿盟科技成立网络安全技术公司 含AI业务】企查查APP显示，近日，绿盟（海口）网络安全技术有限公司成立，注册资本1000万元，经营范围包含：区块链技术相关软件和服务；软件销售；人工智能应用软件开发；软件开发等。企查查股权穿透显示，该公司由...
+          - generic "日本参议院表决通过设立“国家情报会议”法案" [ref=e302]:
+            - generic [ref=e303]:
+              - generic [ref=e304]: 东财7x24
+              - generic [ref=e305]: 05-27 08:51
+            - generic [ref=e306]: 日本参议院表决通过设立“国家情报会议”法案
+            - generic [ref=e307]: 【日本参议院表决通过设立“国家情报会议”法案】日本国会参议院全体会议5月27日表决通过设立“国家情报会议”的法案。该法案由高市早苗政府推动，意在整合、强化情报力量，此前已在日本国会众议院获得通过。相关法案持续引发日本各界担忧。
+          - generic "智谱等在上海成立人工智能产业创投合伙企业" [ref=e308] [cursor=pointer]:
+            - generic [ref=e309]:
+              - generic [ref=e310]: 财联社
+              - generic [ref=e311]: 05-27 08:51
+            - generic [ref=e312]: 智谱等在上海成立人工智能产业创投合伙企业
+            - generic [ref=e313]: 【智谱等在上海成立人工智能产业创投合伙企业】财联社5月27日电，企查查显示，近日，上海智谱国泰海通人工智能产业创业投资合伙企业（有限合伙）成立，经营范围包含：创业投资（限投资未上市企业）。企查查股权穿透显示，该企业由智谱全资子公司北京智谱未...
+          - generic "英矽智能与Human Longevity达成合作 共同开发业内首个面向长寿科学的AI基础模型" [ref=e314] [cursor=pointer]:
+            - generic [ref=e315]:
+              - generic [ref=e316]: 财联社
+              - generic [ref=e317]: 05-27 08:51
+            - generic [ref=e318]: 英矽智能与Human Longevity达成合作 共同开发业内首个面向长寿科学的AI基础模型
+            - generic [ref=e319]: 【英矽智能与Human Longevity达成合作 共同开发业内首个面向长寿科学的AI基础模型】财联社5月27日电，英矽智能与Human Longevity旗下新成立的公司Human Life Foundation Models宣布达成一项...
+          - generic "【电报解读】大涨超19%！美光科技总市值突破1万亿美元，快速整理供应商名单（附表）" [ref=e320] [cursor=pointer]:
+            - generic [ref=e321]:
+              - generic [ref=e322]: 财联社
+              - generic [ref=e323]: 05-27 08:50
+            - generic [ref=e324]: 【电报解读】大涨超19%！美光科技总市值突破1万亿美元，快速整理供应商名单（附表）
+            - generic [ref=e325]: 大涨超19%！美光科技总市值突破1万亿美元，快速整理供应商名单（附表），这家公司半导体材料领域客户包括美光、三星。
+          - generic "日本国会通过法案设立“国家情报会议”" [ref=e326] [cursor=pointer]:
+            - generic [ref=e327]:
+              - generic [ref=e328]: 财联社
+              - generic [ref=e329]: 05-27 08:49
+            - generic [ref=e330]: 日本国会通过法案设立“国家情报会议”
+            - generic [ref=e331]: 【日本国会通过法案设立“国家情报会议”】财联社5月27日电，日本国会参议院全体会议27日表决通过设立“国家情报会议”的法案。该法案由高市早苗政府推动，意在整合、强化情报力量，此前已在日本国会众议院获得通过。相关法案持续引发日本各界担忧。 (...
+          - generic "两市融资余额增加73.41亿元" [ref=e332] [cursor=pointer]:
+            - generic [ref=e333]:
+              - generic [ref=e334]: 财联社
+              - generic [ref=e335]: 05-27 08:47
+            - generic [ref=e336]: 两市融资余额增加73.41亿元
+            - generic [ref=e337]: 【两市融资余额增加73.41亿元】财联社5月27日电，截至5月26日，上交所融资余额报14846.78亿元，较前一交易日增加38.21亿元；深交所融资余额报14172.03亿元，较前一交易日增加35.2亿元；两市合计29018.81亿元，较...
+          - generic "两市融资余额增加73.41亿元" [ref=e338]:
+            - generic [ref=e339]:
+              - generic [ref=e340]: 东财7x24
+              - generic [ref=e341]: 05-27 08:47
+            - generic [ref=e342]: 两市融资余额增加73.41亿元
+            - generic [ref=e343]: 【两市融资余额增加73.41亿元】截至5月26日，上交所融资余额报14846.78亿元，较前一交易日增加38.21亿元；深交所融资余额报14172.03亿元，较前一交易日增加35.2亿元；两市合计29018.81亿元，较前一交易日增加73....
+          - generic "日本东证指数日内转跌" [ref=e344]:
+            - generic [ref=e345]:
+              - generic [ref=e346]: 东财7x24
+              - generic [ref=e347]: 05-27 08:47
+            - generic [ref=e348]: 日本东证指数日内转跌
+            - generic [ref=e349]: 日本东证指数回吐涨幅，日内转跌。
+          - generic "伊朗总统：已准备好达成“有尊严的”框架协议" [ref=e350] [cursor=pointer]:
+            - generic [ref=e351]:
+              - generic [ref=e352]: 财联社
+              - generic [ref=e353]: 05-27 08:45
+            - generic [ref=e354]: 伊朗总统：已准备好达成“有尊严的”框架协议
+            - generic [ref=e355]: 【伊朗总统：已准备好达成“有尊严的”框架协议】当地时间5月26日，伊朗总统佩泽希齐扬与卡塔尔埃米尔（国家元首）塔米姆通电话。佩泽希齐扬表示， 伊朗已准备好达成一个“有尊严的”框架协议，以结束地区内正在持续的战争与紧张局势。塔米姆表示，卡塔尔...
+          - generic "特朗普任命美前司法部长邦迪加入白宫人工智能顾问委员会" [ref=e356]:
+            - generic [ref=e357]:
+              - generic [ref=e358]: 东财7x24
+              - generic [ref=e359]: 05-27 08:44
+            - generic [ref=e360]: 特朗普任命美前司法部长邦迪加入白宫人工智能顾问委员会
+            - generic [ref=e361]: 【特朗普任命美前司法部长邦迪加入白宫人工智能顾问委员会】当地时间5月26日，美国总统特朗普已任命前司法部长帕姆·邦迪加入白宫人工智能政策顾问委员会。
+          - generic "环旭电子将于PCIM Europe 2026展示先进碳化硅芯片预埋封装技术" [ref=e362]:
+            - generic [ref=e363]:
+              - generic [ref=e364]: 东财7x24
+              - generic [ref=e365]: 05-27 08:43
+            - generic [ref=e366]: 环旭电子将于PCIM Europe 2026展示先进碳化硅芯片预埋封装技术
+            - generic [ref=e367]: 【环旭电子将于PCIM Europe 2026展示先进碳化硅芯片预埋封装技术】环旭电子今日宣布，其于新世代功率解决方案领域所开发的先进功率半导体封装技术取得重大突破。环旭电子成功将碳化硅（SiC）晶粒预埋于多层ABF基板之中，并创新采用单面...
+          - generic "建设银行A股股价创历史新高 大行为何轮番“起舞”" [ref=e368]:
+            - generic [ref=e369]:
+              - generic [ref=e370]: 东财7x24
+              - generic [ref=e371]: 05-27 08:41
+            - generic [ref=e372]: 建设银行A股股价创历史新高 大行为何轮番“起舞”
+            - generic [ref=e373]: 【建设银行A股股价创历史新高 大行为何轮番“起舞”】5月26日，建设银行A股股价续创新高。截至收盘，建行涨1.68%，股价报10.31元，总市值约2.05万亿元。拉长时间来看，建设银行是唯一一家年内涨幅超过10%的国有大行，其余表现靠前银行...
+          - generic "“在美国等绿卡”不再可行？美国最新移民政策调整引争议 科技行业最受伤" [ref=e374]:
+            - generic [ref=e375]:
+              - generic [ref=e376]: 东财7x24
+              - generic [ref=e377]: 05-27 08:41
+            - generic [ref=e378]: “在美国等绿卡”不再可行？美国最新移民政策调整引争议 科技行业最受伤
+            - generic [ref=e379]: 【“在美国等绿卡”不再可行？美国最新移民政策调整引争议 科技行业最受伤】“这个周末我接了好几个身边朋友的电话，都对这个政策非常担心。它的打击面非常广。”美国陆律师事务所（LawOfficeofLu&Associates）的管理律师陆颖26日...
+          - generic "财联社5月27日电，日本东证指数回吐涨幅，日内转跌。" [ref=e380] [cursor=pointer]:
+            - generic [ref=e381]:
+              - generic [ref=e382]: 财联社
+              - generic [ref=e383]: 05-27 08:40
+            - generic [ref=e384]: 财联社5月27日电，日本东证指数回吐涨幅，日内转跌。
+            - generic [ref=e385]: 财联社5月27日电，日本东证指数回吐涨幅，日内转跌。
+          - generic "在美日资企业工厂爆炸致多人死伤" [ref=e386] [cursor=pointer]:
+            - generic [ref=e387]:
+              - generic [ref=e388]: 财联社
+              - generic [ref=e389]: 05-27 08:39
+            - generic [ref=e390]: 在美日资企业工厂爆炸致多人死伤
+            - generic [ref=e391]: 【在美日资企业工厂爆炸致多人死伤】财联社5月27日电，据美国媒体26日报道，日本制纸集团旗下企业位于美国华盛顿州的造纸厂当天发生化学储罐内爆事故，目前已造成至少1人死亡、10人受伤，另有9人下落不明。 (新华社)
+          - generic "AIDC供电架构变革 超级电容有望成为结构性必需品" [ref=e392]:
+            - generic [ref=e393]:
+              - generic [ref=e394]: 东财7x24
+              - generic [ref=e395]: 05-27 08:38
+            - generic [ref=e396]: AIDC供电架构变革 超级电容有望成为结构性必需品
+            - generic [ref=e397]: 【AIDC供电架构变革 超级电容有望成为结构性必需品】机构指出，AIDC算力密度跃迁驱动供电架构变革，超级电容成为结构性必需品。超级电容已从实验室方案走向机柜级标配，2026年下半年Rubin平台放量将是相关产业链业绩兑现的关键窗口。
+          - generic "5月27日投资避雷针：3连板人气股提示风险 MLCC产品营收占比未达1%" [ref=e398]:
+            - generic [ref=e399]:
+              - generic [ref=e400]: 东财7x24
+              - generic [ref=e401]: 05-27 08:36
+            - generic [ref=e402]: 5月27日投资避雷针：3连板人气股提示风险 MLCC产品营收占比未达1%
+            - generic [ref=e403]: 【5月27日投资避雷针：3连板人气股提示风险 MLCC产品营收占比未达1%】近日A股及海外市场潜在风险事件如下。国内经济信息方面包括：1）客户备货谨慎下采购意愿偏低，行业DDR4内存条价格跌幅扩大；2）千禾味业伍超群表示，原材料涨价压力将在...

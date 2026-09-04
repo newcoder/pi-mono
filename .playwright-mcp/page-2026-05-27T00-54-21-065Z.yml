@@ -1,0 +1,106 @@
+- generic [ref=e3]:
+  - generic [ref=e4]:
+    - generic [ref=e5]:
+      - generic [ref=e6]: π
+      - generic [ref=e7]: Trading Agent
+    - generic [ref=e9]: 加载中...
+  - generic [ref=e10]:
+    - generic [ref=e11]: RESEARCH
+    - textbox "搜索股票 (代码/名称/拼音)" [ref=e13]
+  - generic [ref=e14]:
+    - generic [ref=e15]:
+      - generic [ref=e17]: 股票池
+      - generic [ref=e18]:
+        - generic [ref=e19]:
+          - generic [ref=e20] [cursor=pointer]:
+            - generic [ref=e21]:
+              - generic [ref=e22]: 最近访问
+              - button "×" [ref=e23]
+            - generic [ref=e24]: 0 只
+          - generic [ref=e25] [cursor=pointer]:
+            - generic [ref=e26]:
+              - generic [ref=e27]: 周线多头日线缩量调整市值TOP20
+              - button "×" [ref=e28]
+            - generic [ref=e29]: 20 只
+          - generic [ref=e30] [cursor=pointer]:
+            - generic [ref=e31]:
+              - generic [ref=e32]: 同花顺强势股_2026-05-26
+              - button "×" [ref=e33]
+            - generic [ref=e34]: 64 只
+          - generic [ref=e35] [cursor=pointer]:
+            - generic [ref=e36]:
+              - generic [ref=e37]: 同花顺强势股_20260526
+              - button "×" [ref=e38]
+            - generic [ref=e39]: 50 只
+          - generic [ref=e40] [cursor=pointer]:
+            - generic [ref=e41]:
+              - generic [ref=e42]: DoubleEnsemble_Top30_Prob
+              - button "×" [ref=e43]
+            - generic [ref=e44]: 30 只
+          - generic [ref=e45] [cursor=pointer]:
+            - generic [ref=e46]:
+              - generic [ref=e47]: lgbm_40_60
+              - button "×" [ref=e48]
+            - generic [ref=e49]: 21 只
+          - generic [ref=e50] [cursor=pointer]:
+            - generic [ref=e51]:
+              - generic [ref=e52]: LGBM Rank 40-60
+              - button "×" [ref=e53]
+            - generic [ref=e54]: 21 只
+          - generic [ref=e55] [cursor=pointer]:
+            - generic [ref=e56]:
+              - generic [ref=e57]: 周线多头日线缩量回调_202605
+              - button "×" [ref=e58]
+            - generic [ref=e59]: 30 只
+          - generic [ref=e60] [cursor=pointer]:
+            - generic [ref=e61]:
+              - generic [ref=e62]: 未来关注股池
+              - button "×" [ref=e63]
+            - generic [ref=e64]: 50 只
+          - generic [ref=e65] [cursor=pointer]:
+            - generic [ref=e66]:
+              - generic [ref=e67]: 周线多头日线回调缩量
+              - button "×" [ref=e68]
+            - generic [ref=e69]: 50 只
+          - generic [ref=e70] [cursor=pointer]:
+            - generic [ref=e71]:
+              - generic [ref=e72]: 前期强势缩量调整
+              - button "×" [ref=e73]
+            - generic [ref=e74]: 50 只
+          - generic [ref=e75] [cursor=pointer]:
+            - generic [ref=e76]:
+              - generic [ref=e77]: 营收连续两年增长超50%
+              - button "×" [ref=e78]
+            - generic [ref=e79]: 45 只
+          - generic [ref=e80] [cursor=pointer]:
+            - generic [ref=e81]:
+              - generic [ref=e82]: 日线多头排列市值TOP10
+              - button "×" [ref=e83]
+            - generic [ref=e84]: 10 只
+        - generic [ref=e86]:
+          - generic [ref=e87]: 📂
+          - generic [ref=e88]: 选择股票池查看个股
+    - generic [ref=e90]:
+      - generic [ref=e94]:
+        - generic [ref=e95]: 工具调用
+        - button "收起" [ref=e96] [cursor=pointer]:
+          - img [ref=e97]
+      - generic [ref=e101]:
+        - button "设置" [ref=e102] [cursor=pointer]:
+          - img [ref=e103]
+        - button "附件" [ref=e106] [cursor=pointer]:
+          - img [ref=e107]
+        - button "Choose File"
+        - textbox "输入消息..." [ref=e109]
+        - button "发送" [ref=e110] [cursor=pointer]:
+          - img [ref=e111]
+    - generic [ref=e114]:
+      - generic [ref=e116] [cursor=pointer]:
+        - generic [ref=e117]: 📅 投资日历
+        - generic [ref=e118]:
+          - button "刷新日历数据" [ref=e119]:
+            - img [ref=e120]
+          - img [ref=e123]
+      - generic [ref=e128] [cursor=pointer]:
+        - generic [ref=e129]: 📰 财经新闻
+        - img [ref=e130]

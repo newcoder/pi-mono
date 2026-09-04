@@ -290,28 +290,43 @@
 
 ---
 
-## 14. backtest_strategy — 策略回测
+## 14. backtest_strategy — 策略回测（单股票或股票池）
 
-**用途**：对单只股票运行技术指标回测，验证策略历史表现
+**用途**：对单只股票运行技术指标回测，**或对股票池中所有股票进行组合级回测**。
+
+**两种调用方式**：
+1. **单股票回测**：传 `code`，对一只股票回测
+2. **股票池组合回测**：传 `pool_id`，对股票池中所有股票**作为一个整体组合**进行回测，所有股票共享同一个资金池、按统一时间线推进，支持动态仓位分配和停牌跳过。**不要逐只调用 backtest_strategy。**
 
 **调用时机**：用户要求"回测XX策略"时
 
 **参数**：
 | 参数 | 类型 | 必填 | 默认值 | 说明 |
 |------|------|------|--------|------|
-| code | string | 是 | - | 6位股票代码 |
+| code | string | 条件 | - | 6位股票代码。**与 pool_id 二选一**，提供 code 时回测单只股票 |
 | market | 1 \| 0 | 否 | 1 | 1=上海，0=深圳 |
-| strategy | string | 是 | - | 策略类型：ma_cross/macd_cross/rsi_reversal/bollinger_breakout |
+| pool_id | number | 条件 | - | **股票池编号**。提供 pool_id 时，对池中所有股票进行组合回测，code 被忽略 |
+| strategy | string | 是 | - | 策略类型：ma_cross/macd_cross/rsi_reversal/bollinger_breakout/supertrend |
 | start | string | 否 | - | 起始日期 YYYYMMDD，**默认一年前** |
 | end | string | 否 | - | 结束日期 YYYYMMDD，默认今天 |
 | period | string | 否 | "daily" | 周期：daily/week/month |
 | adjust | string | 否 | "bfq" | **默认不复权**（bfq=不复权，qfq=前复权，hfq=后复权） |
-| initialCapital | number | 否 | 100000 | 初始资金 |
-| positionSize | number | 否 | 1.0 | 仓位比例 0-1 |
+| initialCapital | number | 否 | 100000 | 初始资金（组合回测时为整个组合的初始资金） |
+| positionSize | number | 否 | 1.0 | 单股票模式下每笔交易的仓位比例 0-1 |
+| full_position | boolean | 否 | false | 是否一直满仓（组合回测有效） |
+| full_position_mode | string | 否 | "add_to_holdings" | 满仓模式：`add_to_holdings`=把剩余现金加到已有持仓；`equal_weight`=目标等权再平衡 |
+| rebalance_threshold | number | 否 | 0 | 等权再平衡触发阈值，如 0.05=偏离目标权重 5% 才调仓（仅 equal_weight 有效） |
+| max_position_weight | number | 否 | 0.1 | 单标的最大权重上限，防止目标集合过小时 all-in 单只股票 |
+| min_trade_amount | number | 否 | 0 | 最小交易金额（元），小于该金额的交易被忽略 |
 | slippage | number | 否 | 0.001 | 滑点 0.1% |
 | commission | number | 否 | 0.0003 | 手续费 0.03%/边 |
 | maxHoldingDays | number | 否 | - | 最大持仓天数 |
+| min_lot | number | 否 | 100 | 最小交易单位（股），默认100股 |
 | params | object | 否 | - | 策略参数，如 {"fast":5,"slow":10} |
+| benchmark_index | string | 否 | - | 基准指数代码，多个用逗号分隔，如 `sh000905,sh000300`。提供后生成带指数对比的 HTML 报告 |
+| save_holdings_as_pool | boolean | 否 | false | 是否将回测终点时的持仓保存为一个新的股票池 |
+| save_to_portfolio | string | 否 | - | 将回测交易记录保存到指定组合名称，若不存在则自动创建 |
+| portfolio_description | string | 否 | - | 新建组合时的描述 |
 
 **重要默认值**：
 - **默认使用 bfq（不复权）数据**（本地数据库主要存储不复权数据）
@@ -326,20 +341,59 @@
 | MACD金叉 | macd_cross | {fast: 12, slow: 26, signal: 9} |
 | RSI超卖买入 | rsi_reversal | {period: 14, oversold: 30, overbought: 70} |
 | 布林带突破 | bollinger_breakout | {period: 20, stdDev: 2} |
+| Supertrend趋势跟踪 | supertrend | {period: 10, multiplier: 3, drawdownSellPct: 10} |
 
 **示例**：
 ```json
+// 单股票回测
 {"code": "600519", "strategy": "ma_cross", "start": "20240101", "end": "20241231", "params": {"fast": 5, "slow": 10}}
+
+// 股票池组合回测（满仓等权重，单标的上限10%）
+{"pool_id": 53, "strategy": "supertrend", "start": "20230615", "end": "20260612", "initialCapital": 100000000, "full_position": true, "full_position_mode": "equal_weight", "max_position_weight": 0.1}
+
+// 带指数对比 + 保存最终持仓
+{"pool_id": 53, "strategy": "supertrend", "start": "20230615", "end": "20260612", "initialCapital": 100000000, "full_position": true, "full_position_mode": "equal_weight", "benchmark_index": "sh000905,sh000300", "save_holdings_as_pool": true}
 ```
 
 **报告解读**：
+- 股池回测会自动生成 HTML 报告（含资金曲线、回撤曲线、月度收益热力图、调仓明细）
+- 提供 `benchmark_index` 时，报告中会叠加指数曲线和指数最大回撤
 - 关注总收益率、夏普比率、最大回撤三个核心指标
 - 胜率>50%且盈亏比>1.5 视为较优策略
 - 最大回撤>30% 说明风险过高
+- **组合回测**额外关注：各股票资金分配是否均衡、是否有股票长期无交易（信号不足）
+- 若 `save_holdings_as_pool=true`，工具会返回最终持仓保存的新股池 ID
+- **必须使用本地数据库真实行情数据**，禁止构造模拟数据
 
 ---
 
-## 15. get_stock_news — 个股新闻资讯
+## 15. generate_report — 生成组合回测报告（仅限真实组合数据）
+
+**用途**：从本地数据库中的真实组合交易记录生成独立 HTML 报告。
+
+**调用时机**：用户要求"生成报告""导出报告""看 HTML 报告"，且已经有组合（portfolio）数据时。
+
+**限制**：
+- **必须提供 `portfolio_id` 或 `portfolio_name` 之一**
+- **禁止传入自定义交易记录、权益曲线或指标**。工具会自动从组合数据库读取真实交易，重建权益曲线并计算指标
+- 如果没有组合，先用 `backtest_strategy` 的 `save_to_portfolio` 参数创建组合，再调用本工具
+
+**参数**：
+| 参数 | 类型 | 必填 | 默认值 | 说明 |
+|------|------|------|--------|------|
+| portfolio_id | number | 条件 | - | 组合编号（id/name 至少填一个） |
+| portfolio_name | string | 条件 | - | 组合名称（id/name 至少填一个） |
+| start_date | string | 否 | 组合创建日 | 起始日期 YYYY-MM-DD |
+| end_date | string | 否 | 今天 | 结束日期 YYYY-MM-DD |
+
+**示例**：
+```json
+{"portfolio_name": "Supertrend53号股池"}
+```
+
+---
+
+## 16. get_stock_news — 个股新闻资讯
 
 **用途**：获取指定股票最近的新闻资讯，自动识别利空/利多事件类型
 
@@ -361,7 +415,7 @@
 
 ---
 
-## 16. screen_by_news — 新闻事件筛选
+## 17. screen_by_news — 新闻事件筛选
 
 **用途**：基于新闻事件（减持、增持、定增、业绩预亏/预增等）筛选股票
 
@@ -394,7 +448,7 @@
 
 ---
 
-## 17. get_market_news — 市场宏观新闻
+## 18. get_market_news — 市场宏观新闻
 
 **用途**：获取市场宏观新闻和财经要闻，分析对市场/行业板块的影响
 
@@ -426,7 +480,7 @@
 
 ---
 
-## 18. refresh_calendar — 刷新投资日历
+## 19. refresh_calendar — 刷新投资日历
 
 **用途**：获取未来1-2个月的市场事件（宏观数据、行业展会、限售解禁、财报披露等）
 
@@ -441,7 +495,7 @@
 
 ---
 
-## 19. analyze_calendar_impact — 投资日历深度影响分析
+## 20. analyze_calendar_impact — 投资日历深度影响分析
 
 **用途**：深度分析投资日历中未来事件对个股的影响，识别利好/利空，并可自动保存到「未来关注股池」
 
@@ -479,7 +533,7 @@
 
 ---
 
-## 20. manage_stock_pool — 股票池管理
+## 21. manage_stock_pool — 股票池管理
 
 **用途**：创建、查询、删除股票池。股票池是一组股票的命名集合（不可变），用于后续分析、回测、对比。
 
@@ -539,11 +593,11 @@
 **股票池使用场景**：
 1. 用户筛选出股票 → **自动保存为股票池**，并告知用户池子名称
 2. 用户说"分析一下我刚才保存的那批股票" → 先 show 出股票列表，再逐个分析
-3. 用户说"回测我的股票池" → show 出列表，然后对每只股票调用 backtest_strategy
+3. 用户说"回测我的股票池" → **直接用 pool_id 调用 backtest_strategy，不要逐只股票单独调用**。组合回测会共享资金池、动态分配仓位、按统一时间线推进。
 
 ---
 
-## 21. save_hot_stocks_as_pool — 保存同花顺强势股为股票池
+## 22. save_hot_stocks_as_pool — 保存同花顺强势股为股票池
 
 **用途**：获取同花顺当日强势股（热点）数据，并保存为一个新的股票池。每只股票包含代码、名称、题材归因和涨跌幅信息。
 
@@ -583,7 +637,7 @@
 
 ---
 
-## 22. scan_stock_radar — 个股机会风险雷达 V3（事件驱动）
+## 23. scan_stock_radar — 个股机会风险雷达 V3（事件驱动）
 
 **用途**：扫描A股中**"最近有动静"的股票**（有事件/公告/新闻的个股），分析利好利空，输出机会榜和风险榜。采用事件驱动架构：从iwencai事件查询（10类事件）和财联社/东财新闻中提取有动静的股票，**跳过无事件股票**，大幅提高效率。
 
@@ -713,10 +767,14 @@
 
 ## 回测流程
 
-1. **确认策略类型和参数**
+1. **确认策略类型和参数**（策略类型、时间区间、初始资金、满仓/仓位模式）
 2. **调用 backtest_strategy**
-3. **解读结果**：总收益、夏普、最大回撤、胜率、盈亏比
-4. **给出评价**：策略是否有效、是否建议实盘、改进方向
+   - 股票池回测必须传 `pool_id`，不要逐只股票调用
+   - 需要与指数对比时，加 `benchmark_index`，如 `"sh000905,sh000300"`
+   - 需要保存最终持仓时，加 `save_holdings_as_pool: true`
+3. **解读结果**：总收益、年化、夏普、最大回撤、胜率、盈亏比
+4. **查看 HTML 报告**（工具返回的 reportUrl）和保存的持仓股池（如有）
+5. **给出评价**：策略是否有效、是否建议实盘、改进方向
 
 ---
 

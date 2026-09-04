@@ -1,0 +1,263 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>批量回测</title>
+<style>
+*{margin:0;padding:0;box-sizing:border-box}
+body{background:#0f1117;color:#e0e0e0;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;min-height:100vh}
+.header{padding:20px 24px;border-bottom:1px solid #1a1d2b}
+.header h1{font-size:20px;font-weight:600}
+.header .sub{font-size:12px;color:#666;margin-top:2px}
+.controls{padding:16px 24px;display:flex;gap:16px;flex-wrap:wrap;align-items:flex-start}
+.controls .group{background:#1a1d2b;border:1px solid #333;border-radius:8px;padding:12px 14px;min-width:180px}
+.controls .group-title{font-size:12px;color:#888;margin-bottom:8px;display:flex;align-items:center;justify-content:space-between}
+.controls .group-title .count{color:#2563eb;font-size:11px}
+.controls .group-body{display:flex;flex-direction:column;gap:6px;max-height:220px;overflow-y:auto}
+.controls label.chk{display:flex;align-items:center;gap:6px;font-size:13px;color:#c0c0c0;cursor:pointer;padding:2px 0}
+.controls label.chk input[type=checkbox]{accent-color:#2563eb;cursor:pointer}
+.controls label.date{display:flex;flex-direction:column;font-size:12px;color:#888;gap:4px}
+.controls input[type=date]{background:#0f1117;border:1px solid #333;color:#e0e0e0;border-radius:6px;padding:6px 10px;font-size:13px}
+.controls input[type=date]:focus{outline:none;border-color:#2563eb}
+.controls .fixed-val{font-size:18px;font-weight:600;color:#2563eb;padding-top:14px}
+#run-btn{background:#2563eb;color:#fff;border:none;border-radius:6px;padding:10px 28px;cursor:pointer;font-size:14px;margin:0 24px 8px}
+#run-btn:disabled{opacity:.5;cursor:not-allowed}
+#run-btn:hover:not(:disabled){background:#1d4ed8}
+#progress-wrap{margin:0 24px 12px;display:none}
+#progress-bar{height:8px;background:#1a1d2b;border-radius:4px;overflow:hidden}
+#progress-fill{height:100%;width:0;background:#2563eb;transition:width .3s;border-radius:4px}
+#progress-text{font-size:12px;color:#888;margin-top:6px}
+#error{background:rgba(239,68,68,.1);border:1px solid #ef4444;color:#ef4444;padding:12px 16px;border-radius:6px;margin:12px 24px}
+.hidden{display:none!important}
+.results{padding:0 24px 24px}
+.results-header{display:flex;align-items:center;gap:12px;margin-bottom:12px}
+.results-header h2{font-size:16px;font-weight:600}
+.table-wrapper{overflow-x:auto;border-radius:8px;border:1px solid #1a1d2b;max-height:70vh;overflow-y:auto}
+table{width:100%;border-collapse:collapse;font-size:13px}
+th{background:#1a1d2b;padding:8px 12px;text-align:left;color:#888;border-bottom:1px solid #333;position:sticky;top:0;font-weight:500;cursor:pointer;user-select:none;white-space:nowrap}
+th:hover{color:#e0e0e0}
+th.sorted-asc::after{content:" ▲";font-size:10px}
+th.sorted-desc::after{content:" ▼";font-size:10px}
+td{padding:7px 12px;border-bottom:1px solid #1a1d2b;font-variant-numeric:tabular-nums;white-space:nowrap}
+tr:hover td{background:rgba(37,99,235,.05)}
+.metric-pos{color:#ef4444}.metric-neg{color:#22c55e}
+.err{color:#ef4444;font-size:12px}
+</style>
+</head>
+<body>
+<div class="header">
+  <h1>策略回测 — 批量网格</h1>
+  <div class="sub">多选策略 × 排序 × 持仓 × 股池，批量运行后按指标排序查看</div>
+</div>
+
+<div class="controls">
+  <div class="group">
+    <div class="group-title">策略 <span class="count" id="strategy-count">0</span></div>
+    <div class="group-body" id="strategy-group"></div>
+  </div>
+  <div class="group">
+    <div class="group-title">排序 <span class="count" id="rank-count">0</span></div>
+    <div class="group-body" id="rank-group"></div>
+  </div>
+  <div class="group">
+    <div class="group-title">最大持仓 <span class="count" id="pos-count">0</span></div>
+    <div class="group-body" id="pos-group"></div>
+  </div>
+  <div class="group">
+    <div class="group-title">股池 <span class="count" id="pool-count">0</span></div>
+    <div class="group-body" id="pool-group"></div>
+  </div>
+  <div class="group">
+    <div class="group-title">时间区间</div>
+    <div class="group-body">
+      <label class="date">起始 <input type="date" id="startDate"></label>
+      <label class="date" style="margin-top:8px">结束 <input type="date" id="endDate"></label>
+      <label class="date" style="margin-top:8px">初始资金 <span class="fixed-val">1亿</span></label>
+    </div>
+  </div>
+</div>
+
+<button id="run-btn" onclick="runBatch()">▶ 运行批量回测</button>
+<div id="progress-wrap">
+  <div id="progress-bar"><div id="progress-fill"></div></div>
+  <div id="progress-text"></div>
+</div>
+<div id="error" class="hidden"></div>
+
+<div class="results hidden" id="results">
+  <div class="results-header">
+    <h2>回测结果</h2>
+    <span style="font-size:12px;color:#888" id="result-count"></span>
+  </div>
+  <div class="table-wrapper">
+    <table><thead id="result-thead"></thead><tbody id="result-tbody"></tbody></table>
+  </div>
+</div>
+
+<script>
+const STRATEGIES = [
+  ['ma_cross','MA金叉/死叉'],['macd_cross','MACD金叉/死叉'],['rsi_reversal','RSI超卖/超买'],
+  ['bollinger_breakout','布林带突破'],['supertrend','Supertrend'],['hammer','锤子线'],
+  ['bullish_engulf','阳包阴'],['morning_star','晨星'],['three_soldiers','红三兵'],
+  ['tech_composite','技术综合'],['breakout','突破买入'],['volume_contraction','缩量调整'],
+  ['always_buy','全买入'],['kd_daily','日线KD'],['kd_weekly','周线KD'],
+  ['ma_alignment','均线多头排列'],['ema_cross','EMA交叉'],['ma_weekly_trend','周线趋势回踩'],
+  ['donchian_breakout','唐奇安通道突破'],['roc_momentum','ROC动量'],['macd_hist_reversal','MACD柱缩短'],
+  ['rsi_divergence','RSI底背离'],['volume_breakout','放量突破'],['shrink_volume_pullback','缩量回踩'],
+  ['obv_trend','OBV趋势'],['harami','孕线'],['doji_reversal','十字星反转']
+];
+const RANKS = [
+  ['momentum','动量'],['value','价值'],['turnover','成交额'],['technical','技术综合'],
+  ['low_volatility','低波动'],['signal_recency','信号新鲜度'],['turnover_rate','换手率'],
+  ['ma_alignment','MA排列'],['weekly_ma_alignment','周线MA排列'],['market_cap','总市值']
+];
+const POSITIONS = [10, 20, 30];
+const COLUMNS = [
+  ['strategy','策略'],['rankBy','排序'],['maxPos','持仓'],['poolName','股池'],
+  ['totalReturn','总收益%'],['annualizedReturn','年化%'],['sharpeRatio','夏普'],
+  ['maxDrawdown','回撤%'],['winRate','胜率%'],['profitFactor','盈亏比'],
+  ['totalTrades','交易次数'],['elapsedMs','耗时(s)'],['error','错误']
+];
+
+const $ = (id) => document.getElementById(id);
+let state = { running: false, sortCol: 'totalReturn', sortDir: 'desc', results: [] };
+
+function buildCheckboxes(containerId, items, onchange) {
+  const c = $(containerId);
+  c.innerHTML = items.map(([val, label]) =>
+    `<label class="chk"><input type="checkbox" value="${val}" onchange="updateCounts()">${label}</label>`
+  ).join('');
+}
+
+function updateCounts() {
+  $('strategy-count').textContent = $('strategy-group').querySelectorAll('input:checked').length;
+  $('rank-count').textContent = $('rank-group').querySelectorAll('input:checked').length;
+  $('pos-count').textContent = $('pos-group').querySelectorAll('input:checked').length;
+  $('pool-count').textContent = $('pool-group').querySelectorAll('input:checked').length;
+}
+
+function getChecked(containerId) {
+  return [...$(containerId).querySelectorAll('input:checked')].map((el) => el.value);
+}
+
+async function init() {
+  buildCheckboxes('strategy-group', STRATEGIES);
+  buildCheckboxes('rank-group', RANKS);
+  buildCheckboxes('pos-group', POSITIONS.map((p) => [String(p), String(p) + '只']));
+
+  // Load pools
+  const pools = await fetch('/api/stock-pools').then((r) => r.json());
+  const poolOpts = pools.map((p) => [String(p.id), `${p.is_dynamic ? '(动态)' : '(静态)'} ${p.name} (${p.item_count ?? '?'}只)`]);
+  buildCheckboxes('pool-group', poolOpts);
+
+  // Default dates: last 2 years
+  const now = new Date();
+  $('endDate').value = now.toISOString().slice(0, 10);
+  const d2y = new Date(now); d2y.setFullYear(d2y.getFullYear() - 2);
+  $('startDate').value = d2y.toISOString().slice(0, 10);
+  updateCounts();
+}
+
+function sortResults(col) {
+  if (state.sortCol === col) state.sortDir = state.sortDir === 'desc' ? 'asc' : 'desc';
+  else { state.sortCol = col; state.sortDir = 'desc'; }
+  renderResults();
+}
+
+function fmt(n, d = 2) {
+  if (n == null || Number.isNaN(n)) return '-';
+  return n.toFixed(d);
+}
+
+function renderResults() {
+  const sorted = [...state.results].sort((a, b) => {
+    const va = a[state.sortCol], vb = b[state.sortCol];
+    if (va == null && vb == null) return 0;
+    if (va == null) return 1;
+    if (vb == null) return -1;
+    if (typeof va === 'string') return state.sortDir === 'asc' ? va.localeCompare(vb) : vb.localeCompare(va);
+    return state.sortDir === 'desc' ? vb - va : va - vb;
+  });
+
+  $('result-thead').innerHTML = '<tr>' + COLUMNS.map(([key, label]) =>
+    `<th onclick="sortResults('${key}')" class="${state.sortCol === key ? 'sorted-' + state.sortDir : ''}">${label}</th>`
+  ).join('') + '</tr>';
+
+  $('result-tbody').innerHTML = sorted.map((r) => {
+    const trCls = r.totalReturn >= 0 ? 'metric-pos' : 'metric-neg';
+    const errHtml = r.error ? `<span class="err">${r.error}</span>` : '-';
+    return `<tr>
+      <td>${r.strategy}</td><td>${r.rankBy ?? '-'}</td><td>${r.maxPos}</td><td>${r.poolName}</td>
+      <td class="${trCls}">${fmt(r.totalReturn)}</td><td>${fmt(r.annualizedReturn)}</td><td>${fmt(r.sharpeRatio)}</td>
+      <td>${fmt(r.maxDrawdown)}</td><td>${fmt(r.winRate)}</td><td>${fmt(r.profitFactor)}</td>
+      <td>${r.totalTrades}</td><td>${fmt(r.elapsedMs / 1000, 1)}</td><td>${errHtml}</td>
+    </tr>`;
+  }).join('');
+  $('result-count').textContent = `${sorted.length} 个组合`;
+}
+
+async function runBatch() {
+  if (state.running) return;
+  const strategies = getChecked('strategy-group');
+  const rankBys = getChecked('rank-group');
+  const maxPositionsList = getChecked('pos-group').map(Number);
+  const poolIds = getChecked('pool-group').map(Number);
+
+  if (strategies.length === 0) return alert('请至少选择1个策略');
+  if (poolIds.length === 0) return alert('请至少选择1个股池');
+
+  state.running = true;
+  $('run-btn').disabled = true;
+  $('results').classList.add('hidden');
+  $('error').classList.add('hidden');
+  $('progress-wrap').style.display = 'block';
+  $('progress-fill').style.width = '0%';
+  $('progress-text').textContent = '开始运行...';
+
+  const total = strategies.length * (rankBys.length || 1) * maxPositionsList.length * poolIds.length;
+
+  try {
+    const res = await fetch('/api/backtest/batch', {
+      method: 'POST', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        strategies, rankBys, maxPositionsList, poolIds,
+        start: $('startDate').value.replace(/-/g, ''),
+        end: $('endDate').value.replace(/-/g, ''),
+        initialCapital: 100000000
+      })
+    });
+    const data = await res.json();
+    if (data.error) throw new Error(data.error);
+    state.results = data.results || [];
+    $('progress-fill').style.width = '100%';
+    $('progress-text').textContent = `完成 ${state.results.length}/${total}`;
+    $('results').classList.remove('hidden');
+    renderResults();
+  } catch (e) {
+    $('error').textContent = '批量回测失败: ' + e.message;
+    $('error').classList.remove('hidden');
+  } finally {
+    state.running = false;
+    $('run-btn').disabled = false;
+  }
+}
+
+// Listen for progress events via WS (optional — progress bar also completes via fetch)
+const ws = new WebSocket(`ws://${location.host}/ws`);
+ws.onmessage = (ev) => {
+  try {
+    const msg = JSON.parse(ev.data);
+    if (msg.type === 'trading_event' && msg.event?.type === 'batch_progress') {
+      const { done, total } = msg.event;
+      $('progress-fill').style.width = `${(done / total) * 100}%`;
+      const c = msg.event.current;
+      $('progress-text').textContent = `运行中 ${done}/${total}: ${c.strategy} / ${c.rankBy ?? '-'} / ${c.maxPos}只 / ${c.poolName}`;
+    }
+  } catch {}
+};
+
+document.addEventListener('DOMContentLoaded', init);
+</script>
+</body>
+</html>

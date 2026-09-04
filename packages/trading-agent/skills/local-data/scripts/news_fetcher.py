@@ -1,0 +1,420 @@
+#!/usr/bin/env python3
+"""
+Stock news fetcher.
+Fetches news from Eastmoney (东方财富), Securities Times (证券时报), and CLS (财联社).
+Supports both individual stock news and market-wide news scanning.
+"""
+import argparse
+import importlib.util
+import json
+import sys
+import os
+import re
+import time
+from datetime import datetime, timedelta
+from typing import Dict, List, Optional, Tuple
+from urllib.parse import quote
+
+import requests
+import logging
+from requests.adapters import HTTPAdapter
+from urllib3.util.retry import Retry
+
+logger = logging.getLogger(__name__)
+
+
+def _safe_json(resp):
+    """Safely parse JSON from a requests Response.
+
+    Returns parsed dict/list, or {} on empty/parse-failed body.
+    Avoids JSONDecodeError crashes when upstream (Eastmoney, CLS, etc.)
+    returns 200 OK with an empty or malformed body for delisted stocks.
+    """
+    text = resp.text if hasattr(resp, "text") else ""
+    if not text or not text.strip():
+        return {}
+    try:
+        return resp.json()
+    except (ValueError, json.JSONDecodeError):
+        logger.debug(f"JSON parse failed for {resp.url} (status={resp.status_code})")
+        return {}
+
+_SCRIPT_DIR = os.path.dirname(os.path.abspath(__file__))
+if _SCRIPT_DIR not in sys.path:
+    sys.path.insert(0, _SCRIPT_DIR)
+
+_A_STOCK_DATA_DIR = os.path.normpath(os.path.join(_SCRIPT_DIR, "..", "..", "a-stock-data", "scripts"))
+
+
+def _load_astockdata_news_fetcher():
+    """Load a-stock-data news_fetcher module by path to avoid name collision."""
+    module_path = os.path.join(_A_STOCK_DATA_DIR, "news_fetcher.py")
+    spec = importlib.util.spec_from_file_location("astockdata_news_fetcher", module_path)
+    module = importlib.util.module_from_spec(spec)
+    sys.modules[spec.name] = module
+    spec.loader.exec_module(module)
+    return module
+
+# Retry-enabled session
+_SESSION = requests.Session()
+_SESSION.mount("https://", HTTPAdapter(max_retries=Retry(total=3, backoff_factor=1.0)))
+_SESSION.mount("http://", HTTPAdapter(max_retries=Retry(total=3, backoff_factor=1.0)))
+
+
+# ── a-stock-data Eastmoney stock news (rich content + source URL) ────────────
+
+def fetch_astockdata_eastmoney_news(code: str, limit: int = 10) -> List[Dict]:
+    """Fetch individual stock news from a-stock-data news_fetcher (Eastmoney search-api-web)."""
+    try:
+        module = _load_astockdata_news_fetcher()
+        result = module.fetch_news(code=code, sources=["eastmoney_stock"], limit_per_source=limit)
+        items = []
+        for it in result.get("items", []):
+            if "error" in it:
+                continue
+            items.append({
+                "code": code,
+                "title": it.get("title", ""),
+                "content": it.get("content", ""),
+                "source": it.get("source", ""),
+                "source_type": it.get("source_type", "eastmoney_stock"),
+                "pub_time": it.get("time", ""),
+                "url": it.get("url", ""),
+            })
+        return items
+    except Exception:
+        logger.warning(f"a-stock-data eastmoney news error for {code}", exc_info=True)
+        return []
+
+
+# ── Eastmoney (akshare fallback) ─────────────────────────────────────────────
+
+def fetch_eastmoney_news(code: str, limit: int = 20) -> List[Dict]:
+    """Fetch news for a single stock from Eastmoney (a-stock-data search-api-web direct)."""
+    try:
+        items = fetch_astockdata_eastmoney_news(code, limit=limit)
+        if items:
+            return items
+    except Exception:
+        logger.warning(f"Eastmoney a-stock-data fetch error for {code}", exc_info=True)
+    return []
+
+
+# ── Securities Times (证券时报) ─────────────────────────────────────────────
+
+STCN_SEARCH_URL = "https://search.stcn.com/api/search"
+
+
+def fetch_stcn_news(code: str, name: str, limit: int = 10) -> List[Dict]:
+    """Fetch news from Securities Times search API."""
+    try:
+        keyword = f"{name} {code}" if name else code
+        params = {
+            "q": keyword,
+            "page": 1,
+            "per_page": limit,
+        }
+        headers = {
+            "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36",
+            "Accept": "application/json",
+        }
+        resp = _SESSION.get(STCN_SEARCH_URL, params=params, headers=headers, timeout=15)
+        resp.raise_for_status()
+        data = _safe_json(resp)
+
+        results = []
+        items = data.get("data", {}).get("list", []) if isinstance(data, dict) else []
+        for item in items[:limit]:
+            pub_time = item.get("pub_time") or item.get("pubTime") or item.get("publish_time", "")
+            if pub_time and len(pub_time) == 10:  # YYYY-MM-DD
+                pub_time += " 00:00:00"
+            results.append({
+                "code": code,
+                "title": item.get("title", ""),
+                "content": item.get("summary", item.get("description", "")),
+                "source": "stcn",
+                "source_type": "stcn_search",
+                "pub_time": pub_time,
+                "url": item.get("url", ""),
+            })
+        return results
+    except Exception:
+        logger.warning(f"STCN fetch error for {code}", exc_info=True)
+        return []
+
+
+# ── CLS (财联社) ────────────────────────────────────────────────────────────
+
+CLS_SEARCH_URL = "https://www.cls.cn/searchPage"
+CLS_API_URL = "https://www.cls.cn/v3/searches/home"
+
+
+def fetch_cls_news(code: str, name: str, limit: int = 10) -> List[Dict]:
+    """Fetch news from CLS (财联社) via their API."""
+    try:
+        keyword = name if name else code
+        headers = {
+            "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36",
+            "Accept": "application/json",
+            "Referer": "https://www.cls.cn/",
+        }
+        params = {
+            "keyword": keyword,
+            "page": 0,
+            "rn": limit,
+        }
+        resp = _SESSION.get(CLS_API_URL, params=params, headers=headers, timeout=15)
+        resp.raise_for_status()
+        data = _safe_json(resp)
+
+        results = []
+        items = data.get("data", {}).get("roll_data", []) if isinstance(data, dict) else []
+        for item in items[:limit]:
+            ctime = item.get("ctime", 0)
+            pub_time = datetime.fromtimestamp(ctime).strftime("%Y-%m-%d %H:%M:%S") if ctime else ""
+            results.append({
+                "code": code,
+                "title": item.get("title", ""),
+                "content": item.get("brief", ""),
+                "source": "cls",
+                "source_type": "cls_search",
+                "pub_time": pub_time,
+                "url": f"https://www.cls.cn/detail/{item.get('id', '')}",
+            })
+        return results
+    except Exception:
+        logger.warning(f"CLS fetch error for {code}", exc_info=True)
+        return []
+
+
+# ── Unified fetch ───────────────────────────────────────────────────────────
+
+def fetch_stock_news(code: str, name: str = "", sources: List[str] = None, limit_per_source: int = 10) -> List[Dict]:
+    """
+    Fetch news for a single stock from multiple sources.
+    Returns list of news dicts.
+    """
+    if sources is None:
+        sources = ["eastmoney", "cls"]
+
+    all_news = []
+    for source in sources:
+        if source == "eastmoney":
+            news = fetch_eastmoney_news(code, limit=limit_per_source)
+        elif source == "stcn":
+            news = fetch_stcn_news(code, name, limit=limit_per_source)
+        elif source == "cls":
+            news = fetch_cls_news(code, name, limit=limit_per_source)
+        else:
+            continue
+        all_news.extend(news)
+        if source != sources[-1]:
+            time.sleep(0.3)  # Be polite to APIs
+
+    # Sort by pub_time descending
+    all_news.sort(key=lambda x: x.get("pub_time", ""), reverse=True)
+    return all_news
+
+
+# ── Batch fetch for multiple stocks ─────────────────────────────────────────
+
+def fetch_news_batch(codes_names: List[Tuple[str, str]], sources: List[str] = None,
+                     limit_per_source: int = 10, progress_interval: int = 50) -> Dict[str, List[Dict]]:
+    """
+    Fetch news for multiple stocks.
+    codes_names: list of (code, name) tuples
+    Returns dict: code -> list of news
+    """
+    results = {}
+    total = len(codes_names)
+    for i, (code, name) in enumerate(codes_names):
+        news = fetch_stock_news(code, name, sources=sources, limit_per_source=limit_per_source)
+        results[code] = news
+        if (i + 1) % progress_interval == 0 or i == 0:
+            print(f"  Fetched news for {i + 1}/{total} stocks", file=sys.stderr)
+        time.sleep(0.2)  # Rate limiting
+    return results
+
+
+def fetch_stock_news_fast(code: str, name: str = "", limit: int = 10) -> List[Dict]:
+    """Fast single-source fetch using only Eastmoney (fastest, no HTTP overhead)."""
+    return fetch_eastmoney_news(code, limit=limit)
+
+
+def fetch_news_concurrent(codes_names: List[Tuple[str, str]], limit: int = 10,
+                          max_workers: int = 10, batch_size: int = 100) -> List[Dict]:
+    """
+    Concurrently fetch news for many stocks using thread pool.
+    Returns flat list of news dicts (each includes 'code' key).
+    Processes in batches to avoid overwhelming the API.
+    """
+    from concurrent.futures import ThreadPoolExecutor, as_completed
+
+    all_news = []
+    total = len(codes_names)
+
+    for batch_start in range(0, total, batch_size):
+        batch = codes_names[batch_start:batch_start + batch_size]
+        batch_news = []
+
+        with ThreadPoolExecutor(max_workers=max_workers) as executor:
+            future_to_code = {
+                executor.submit(fetch_stock_news_fast, code, name, limit): code
+                for code, name in batch
+            }
+            for future in as_completed(future_to_code):
+                code = future_to_code[future]
+                try:
+                    news = future.result(timeout=30)
+                    for item in news:
+                        item["code"] = code
+                    batch_news.extend(news)
+                except Exception as e:
+                    print(f"  Fetch error for {code}: {e}", file=sys.stderr)
+
+        all_news.extend(batch_news)
+        processed = min(batch_start + batch_size, total)
+        print(f"  Fetched {processed}/{total} stocks ({len(batch_news)} news items)", file=sys.stderr)
+
+        # Small delay between batches to be polite
+        if batch_start + batch_size < total:
+            time.sleep(0.5)
+
+    return all_news
+
+
+# ── Market-wide news sources ────────────────────────────────────────────────
+
+def fetch_cls_telegraph(limit: int = 100) -> List[Dict]:
+    """Fetch market-wide telegraph news from cls.cn (财联社电报)."""
+    url = "https://www.cls.cn/nodeapi/telegraphList"
+    params = {"rn": str(limit), "page": "1"}
+    ua = "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36"
+    headers = {
+        "User-Agent": ua,
+        "Referer": "https://www.cls.cn/",
+        "Accept": "application/json, text/plain, */*",
+    }
+    try:
+        r = _SESSION.get(url, params=params, headers=headers, timeout=15)
+        r.raise_for_status()
+        data = _safe_json(r)
+        items = data.get("data", {}).get("roll_data", []) or []
+        news = []
+        for item in items:
+            news.append({
+                "title": item.get("title", "") or item.get("brief", ""),
+                "content": item.get("content", "") or item.get("brief", ""),
+                "source": "cls",
+                "source_type": "cls_telegraph",
+                "pub_time": item.get("ctime", ""),
+                "url": "",
+            })
+        return news
+    except Exception:
+        logger.warning("CLS telegraph fetch failed", exc_info=True)
+        return []
+
+
+def fetch_eastmoney_global_news(limit: int = 100) -> List[Dict]:
+    """Fetch market-wide 7x24 news from Eastmoney (东财全球资讯)."""
+    import uuid
+    url = "https://np-weblist.eastmoney.com/comm/web/getFastNewsList"
+    params = {
+        "client": "web",
+        "biz": "web_724",
+        "fastColumn": "102",
+        "sortEnd": "",
+        "pageSize": str(limit),
+        "req_trace": str(uuid.uuid4()),
+    }
+    ua = "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36"
+    headers = {
+        "User-Agent": ua,
+        "Referer": "https://kuaixun.eastmoney.com/",
+        "Accept": "application/json, text/plain, */*",
+    }
+    try:
+        r = _SESSION.get(url, params=params, headers=headers, timeout=15)
+        r.raise_for_status()
+        data = _safe_json(r)
+        items = data.get("data", {}).get("fastNewsList", []) or []
+        news = []
+        for item in items:
+            news.append({
+                "title": item.get("title", ""),
+                "content": item.get("summary", ""),
+                "source": "eastmoney",
+                "source_type": "eastmoney_global",
+                "pub_time": item.get("showTime", ""),
+                "url": "",
+            })
+        return news
+    except Exception:
+        logger.warning("Eastmoney global news fetch failed", exc_info=True)
+        return []
+
+
+def fetch_news(code: str = "", sources: List[str] = None, limit_per_source: int = 10) -> Dict:
+    """
+    Unified news fetch entry point.
+    If code is provided, fetch stock news; otherwise fetch market-wide news.
+    Returns dict: {"success": bool, "items": list of news dicts}.
+    """
+    if sources is None:
+        sources = ["eastmoney"] if code else ["cls_telegraph", "eastmoney_global"]
+
+    items = []
+    for source in sources:
+        try:
+            if code:
+                if source == "eastmoney":
+                    items.extend(fetch_eastmoney_news(code, limit=limit_per_source))
+                elif source == "cls":
+                    items.extend(fetch_cls_news(code, "", limit=limit_per_source))
+                elif source == "stcn":
+                    items.extend(fetch_stcn_news(code, "", limit=limit_per_source))
+            else:
+                if source == "cls_telegraph":
+                    items.extend(fetch_cls_telegraph(limit=limit_per_source))
+                elif source == "eastmoney_global":
+                    items.extend(fetch_eastmoney_global_news(limit=limit_per_source))
+        except Exception:
+            logger.warning(f"fetch_news failed for source {source}", exc_info=True)
+
+    # Sort by pub_time descending
+    items.sort(key=lambda x: x.get("pub_time", ""), reverse=True)
+    return {"success": len(items) > 0, "items": items}
+
+
+# ── CLI ─────────────────────────────────────────────────────────────────────
+
+def main():
+    parser = argparse.ArgumentParser(description="Fetch stock news")
+    parser.add_argument("--code", help="Single stock code")
+    parser.add_argument("--name", default="", help="Stock name")
+    parser.add_argument("--sources", default="eastmoney,stcn,cls", help="Comma-separated sources")
+    parser.add_argument("--limit", type=int, default=10, help="Limit per source")
+    parser.add_argument("--output", help="Output JSON file")
+    args = parser.parse_args()
+
+    sources = [s.strip() for s in args.sources.split(",") if s.strip()]
+
+    if args.code:
+        news = fetch_stock_news(args.code, args.name, sources=sources, limit_per_source=args.limit)
+        result = {"code": args.code, "news_count": len(news), "news": news}
+    else:
+        result = {"error": "Please specify --code"}
+
+    result_json = json.dumps(result, ensure_ascii=False, indent=2, default=str)
+
+    if args.output:
+        with open(args.output, "w", encoding="utf-8") as f:
+            f.write(result_json)
+        print(f"News saved to: {args.output}", file=sys.stderr)
+    else:
+        print(result_json)
+
+
+if __name__ == "__main__":
+    main()

@@ -108,6 +108,22 @@ export interface SectorRow {
 	updated_at?: string;
 }
 
+export interface HotStockRow {
+	date: string;
+	code: string;
+	market: number;
+	name?: string | null;
+	reason?: string | null;
+	price?: number | null;
+	change_pct?: number | null;
+	turnover_pct?: number | null;
+	amount?: number | null;
+	pe_ttm?: number | null;
+	pb?: number | null;
+	mcap_yi?: number | null;
+	updated_at?: string;
+}
+
 export interface ConceptStockRow {
 	concept: string;
 	code: string;
@@ -162,6 +178,7 @@ export interface StockPoolRow {
 	id?: number;
 	name: string;
 	description?: string;
+	is_dynamic?: number;
 	created_at?: string;
 	updated_at?: string;
 }
@@ -172,6 +189,16 @@ export interface StockPoolItemRow {
 	market: number;
 	name?: string;
 	added_at?: string;
+}
+
+export interface DynamicPoolItemRow {
+	pool_id: number;
+	date: string;
+	code: string;
+	market: number;
+	name?: string | null;
+	weight?: number | null;
+	created_at?: string;
 }
 
 export interface AdjustFactorRow {
@@ -246,5 +273,182 @@ export interface CalendarEventRow {
 	affected_sectors?: string[] | null;
 	importance?: "high" | "medium" | "low";
 	source?: string | null;
+	updated_at?: string;
+}
+
+export interface PortfolioRow {
+	id: number;
+	name: string;
+	description?: string | null;
+	initial_cash: number;
+	created_at?: string;
+	updated_at?: string;
+}
+
+export interface PortfolioTradeRow {
+	id?: number;
+	portfolio_id: number;
+	trade_date: string;
+	code: string;
+	market: number;
+	direction: "buy" | "sell";
+	quantity: number;
+	price: number;
+	adjust?: string;
+	commission?: number | null;
+	tax?: number | null;
+	memo?: string | null;
+	created_at?: string;
+}
+
+export interface PortfolioHolding {
+	code: string;
+	market: number;
+	quantity: number;
+	avgCost: number;
+	totalCost: number;
+}
+
+export interface PortfolioValueBreakdown {
+	date: string;
+	cash: number;
+	holdings: Array<{
+		code: string;
+		market: number;
+		quantity: number;
+		avgCost: number;
+		marketPrice: number | null;
+		marketValue: number;
+		unrealizedPnl: number;
+	}>;
+	totalValue: number;
+	totalCost: number;
+	unrealizedPnl: number;
+	unrealizedPnlPct: number;
+}
+
+export interface IndustryKlineRow {
+	code: string;
+	period: string;
+	date: string;
+	open: number | null;
+	high: number | null;
+	low: number | null;
+	close: number | null;
+	volume: number | null;
+	turnover: number | null;
+	change_pct: number | null;
+	change_amount: number | null;
+	amplitude: number | null;
+	turnover_rate: number | null;
+}
+
+export interface IndustryQuoteRow {
+	code: string;
+	snapshot_date: string;
+	name?: string | null;
+	latest: number | null;
+	open: number | null;
+	high: number | null;
+	low: number | null;
+	prev_close: number | null;
+	volume: number | null;
+	turnover: number | null;
+	change_pct: number | null;
+	change_amount: number | null;
+	amplitude: number | null;
+	turnover_rate: number | null;
+	up_count: number | null;
+	down_count: number | null;
+	flat_count: number | null;
+	leading_stock: string | null;
+	leading_stock_code: string | null;
+	leading_change_pct: number | null;
+	lagging_stock: string | null;
+	lagging_stock_code: string | null;
+	lagging_change_pct: number | null;
+	updated_at?: string;
+}
+
+export interface IndustryIndexRow {
+	code: string;
+	name: string;
+	updated_at?: string;
+}
+
+export interface IndustryIndicatorRow {
+	code: string;
+	date: string;
+	period_days: number;
+	momentum_return: number | null;
+	momentum_rank: number | null;
+	has_momentum: number | null;
+	updated_at?: string;
+}
+
+export interface StockIndicatorRow {
+	code: string;
+	market: number;
+	date: string;
+	indicator_name: string;
+	indicator_value: number | null;
+	indicator_rank: number | null;
+	has_signal: number | null;
+	updated_at?: string;
+}
+
+export interface FactorIcRow {
+	date: string;
+	factor_name: string;
+	ic_value: number | null;
+	sample_count: number | null;
+	updated_at?: string;
+}
+
+export interface IndustrySyntheticKlineRow {
+	code: string;
+	standard: string;
+	date: string;
+	close: number | null;
+	constituent_count: number | null;
+	updated_at?: string;
+}
+
+export interface ConceptSyntheticKlineRow {
+	concept: string;
+	date: string;
+	close: number | null;
+	constituent_count: number | null;
+	updated_at?: string;
+}
+
+export interface ConceptFilterResultRow {
+	concept: string;
+	constituent_count: number | null;
+	dispersion: number | null;
+	max_benchmark_correlation: number | null;
+	size_pass: number | null;
+	dispersion_pass: number | null;
+	independence_pass: number | null;
+	rank_score: number | null;
+	rank: number | null;
+	updated_at?: string;
+}
+
+export interface ConceptIndicatorRow {
+	concept: string;
+	date: string;
+	period_days: number;
+	momentum_return: number | null;
+	momentum_rank: number | null;
+	has_momentum: number | null;
+	updated_at?: string;
+}
+
+export interface TrackedThemeRow {
+	concept: string;
+	master_theme: string;
+	status: "tracked" | "merged" | "excluded";
+	notes: string | null;
 	updated_at?: string;
 }

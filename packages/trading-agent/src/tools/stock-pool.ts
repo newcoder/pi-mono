@@ -6,6 +6,7 @@ const stockPoolParams = Type.Object({
 	action: Type.Union(
 		[
 			Type.Literal("create", { description: "创建新股票池（一次性传入所有股票）" }),
+			Type.Literal("create_dynamic", { description: "创建动态股池（成分股按日期变化，初始为空）" }),
 			Type.Literal("list", { description: "列出所有股票池（返回编号、名称、股票数）" }),
 			Type.Literal("show", { description: "显示某个股票池的内容，可通过id或name定位" }),
 			Type.Literal("delete", { description: "删除股票池，可通过id或name定位" }),
@@ -72,7 +73,7 @@ export const manageStockPoolTool: AgentTool<typeof stockPoolParams, StockPoolDet
 	name: "manage_stock_pool",
 	label: "股票池管理",
 	description:
-		"创建、查询、删除股票池。股票池是一组股票的命名集合（不可变），可用于后续分析、回测、对比等操作。创建时一次性传入所有股票。查询和删除可以通过编号(id)或名称(name)定位。",
+		"创建、查询、删除股票池。支持静态股池（create，一次性传入所有股票）和动态股池（create_dynamic，成分股按交易日变化）。查询和删除可以通过编号(id)或名称(name)定位。动态股池的成分股需要通过数据同步接口按日期写入。",
 	parameters: stockPoolParams,
 	execute: async (_id, params) => {
 		const store = getDataStore();
@@ -125,6 +126,38 @@ export const manageStockPoolTool: AgentTool<typeof stockPoolParams, StockPoolDet
 					},
 				],
 				details: { poolId, name: params.name, count: params.codes.length },
+			};
+		}
+
+		// ─── create_dynamic ───────────────────────────────────────
+		if (action === "create_dynamic") {
+			if (!params.name) {
+				return {
+					content: [{ type: "text", text: "创建动态股池需要提供名称（name）。" }],
+					details: { error: "missing name" },
+				};
+			}
+			const existing = await store.getStockPoolByName(params.name);
+			if (existing) {
+				return {
+					content: [
+						{
+							type: "text",
+							text: `动态股池 "${params.name}" 已存在（ID: ${existing.id}）。请使用其他名称，或先删除旧池子。`,
+						},
+					],
+					details: { existing },
+				};
+			}
+			const poolId = await store.createStockPool(params.name, params.description, true);
+			return {
+				content: [
+					{
+						type: "text",
+						text: `动态股池 "${params.name}" 创建成功（ID: ${poolId}），初始为空。请使用数据同步接口按日期写入成分股。`,
+					},
+				],
+				details: { poolId, name: params.name, is_dynamic: true },
 			};
 		}
 

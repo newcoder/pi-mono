@@ -1,0 +1,557 @@
+- generic [ref=e3]:
+  - generic [ref=e4]:
+    - generic [ref=e5]:
+      - generic [ref=e6]: π
+      - generic [ref=e7]: Trading Agent
+    - generic [ref=e8]:
+      - generic [ref=e903] [cursor=pointer]:
+        - generic [ref=e904]: 上证指数
+        - generic [ref=e905]: "3993.23"
+        - generic [ref=e906]: ▼
+        - generic [ref=e907]: "-0.42%"
+      - generic [ref=e908] [cursor=pointer]:
+        - generic [ref=e909]: 沪深300
+        - generic [ref=e910]: "4748.59"
+        - generic [ref=e911]: ▼
+        - generic [ref=e912]: "-1.11%"
+      - generic [ref=e913] [cursor=pointer]:
+        - generic [ref=e914]: 科创50
+        - generic [ref=e915]: "1652.22"
+        - generic [ref=e916]: ▼
+        - generic [ref=e917]: "-0.65%"
+      - generic [ref=e918] [cursor=pointer]:
+        - generic [ref=e919]: 中证500
+        - generic [ref=e920]: "8063.86"
+        - generic [ref=e921]: ▼
+        - generic [ref=e922]: "-1.37%"
+      - generic [ref=e923] [cursor=pointer]:
+        - generic [ref=e924]: 深证成指
+        - generic [ref=e925]: "14954.10"
+        - generic [ref=e926]: ▼
+        - generic [ref=e927]: "-2.06%"
+      - generic [ref=e928] [cursor=pointer]:
+        - generic [ref=e929]: 创业板指
+        - generic [ref=e930]: "3854.79"
+        - generic [ref=e931]: ▼
+        - generic [ref=e932]: "-2.70%"
+  - generic [ref=e39]:
+    - generic [ref=e40]: RESEARCH
+    - textbox "搜索股票 (代码/名称/拼音)" [ref=e42]
+  - generic [ref=e43]:
+    - generic [ref=e44]:
+      - generic [ref=e46]: 股票池
+      - generic [ref=e47]:
+        - generic [ref=e48]:
+          - generic [ref=e933] [cursor=pointer]:
+            - generic [ref=e934]:
+              - generic [ref=e935]: "[62] 最近访问"
+              - button "×" [ref=e936]
+            - generic [ref=e937]: 3 只
+          - generic [ref=e938] [cursor=pointer]:
+            - generic [ref=e939]:
+              - generic [ref=e940]: "[61] 53号股池_Alpha5D_Top20"
+              - button "×" [ref=e941]
+            - generic [ref=e942]: 20 只
+          - generic [ref=e943] [cursor=pointer]:
+            - generic [ref=e944]:
+              - generic [ref=e945]: "[60] 物理AI核心股池"
+              - button "×" [ref=e946]
+            - generic [ref=e947]: 18 只
+          - generic [ref=e948] [cursor=pointer]:
+            - generic [ref=e949]:
+              - generic [ref=e950]: "[58] 周线多头排列+日线金叉"
+              - button "×" [ref=e951]
+            - generic [ref=e952]: 25 只
+          - generic [ref=e953] [cursor=pointer]:
+            - generic [ref=e954]:
+              - generic [ref=e955]: "[57] 东方财富人气飙升榜TOP30"
+              - button "×" [ref=e956]
+            - generic [ref=e957]: 26 只
+          - generic [ref=e958] [cursor=pointer]:
+            - generic [ref=e959]:
+              - generic [ref=e960]: "[56] 东方财富人气榜TOP30"
+              - button "×" [ref=e961]
+            - generic [ref=e962]: 30 只
+          - generic [ref=e963] [cursor=pointer]:
+            - generic [ref=e964]:
+              - generic [ref=e965]: "[55] 雷达机会榜_20260609"
+              - button "×" [ref=e966]
+            - generic [ref=e967]: 20 只
+          - generic [ref=e968] [cursor=pointer]:
+            - generic [ref=e969]:
+              - generic [ref=e970]: "[54] ML_自选股"
+              - button "×" [ref=e971]
+            - generic [ref=e972]: 50 只
+          - generic [ref=e973] [cursor=pointer]:
+            - generic [ref=e974]:
+              - generic [ref=e975]: "[53] 自选股"
+              - button "×" [ref=e976]
+            - generic [ref=e977]: 276 只
+          - generic [ref=e978] [cursor=pointer]:
+            - generic [ref=e979]:
+              - generic [ref=e980]: "[51] 周线金叉股_市值TOP20"
+              - button "×" [ref=e981]
+            - generic [ref=e982]: 20 只
+          - generic [ref=e983] [cursor=pointer]:
+            - generic [ref=e984]:
+              - generic [ref=e985]: "[50] 周线多头排列_调整缩量_市值TOP9"
+              - button "×" [ref=e986]
+            - generic [ref=e987]: 9 只
+          - generic [ref=e988] [cursor=pointer]:
+            - generic [ref=e989]:
+              - generic [ref=e990]: "[49] ML_算力概念股核心池_预测排序"
+              - button "×" [ref=e991]
+            - generic [ref=e992]: 13 只
+          - generic [ref=e993] [cursor=pointer]:
+            - generic [ref=e994]:
+              - generic [ref=e995]: "[48] 算力概念股核心池"
+              - button "×" [ref=e996]
+            - generic [ref=e997]: 13 只
+          - generic [ref=e998] [cursor=pointer]:
+            - generic [ref=e999]:
+              - generic [ref=e1000]: "[23] 周线多头日线缩量回调_202605"
+              - button "×" [ref=e1001]
+            - generic [ref=e1002]: 30 只
+        - generic [ref=e119]:
+          - generic [ref=e1003]: 最近访问
+          - generic [ref=e1004] [cursor=pointer]:
+            - generic [ref=e1005]: "600519"
+            - generic [ref=e1006]: 贵州茅台
+            - generic [ref=e1007]: +1.58%
+          - generic [ref=e1008] [cursor=pointer]:
+            - generic [ref=e1009]: "002463"
+            - generic [ref=e1010]: 沪电股份
+            - generic [ref=e1011]: "-7.43%"
+          - generic [ref=e1012] [cursor=pointer]:
+            - generic [ref=e1013]: "300408"
+            - generic [ref=e1014]: 三环集团
+            - generic [ref=e1015]: "-6.40%"
+    - generic [ref=e124]:
+      - generic [ref=e674]:
+        - generic [ref=e675]:
+          - generic [ref=e676]:
+            - generic [ref=e677]: 贵州茅台
+            - generic [ref=e678]: "600519"
+          - generic [ref=e679]:
+            - generic [ref=e680]: "1275.88"
+            - generic [ref=e681]: +1.58%
+          - generic [ref=e682]:
+            - button "日线" [ref=e683] [cursor=pointer]
+            - button "周线" [ref=e684] [cursor=pointer]
+            - button "月线" [ref=e685] [cursor=pointer]
+          - button "收起/展开" [ref=e686] [cursor=pointer]:
+            - img [ref=e687]
+        - generic [ref=e689]:
+          - generic [ref=e690]:
+            - generic [ref=e691]: 分时
+            - table [ref=e694]:
+              - row [ref=e695]:
+                - cell
+                - cell [ref=e696]:
+                  - link "Charting by TradingView" [ref=e700] [cursor=pointer]:
+                    - /url: https://www.tradingview.com/?utm_medium=lwc-link&utm_campaign=lwc-chart&utm_source=localhost/
+                    - img [ref=e701]
+                - cell [ref=e705]
+              - row [ref=e709]:
+                - cell
+                - cell [ref=e710]
+                - cell [ref=e714]
+          - generic [ref=e717]:
+            - generic [ref=e718]: 日线
+            - table [ref=e721]:
+              - row [ref=e722]:
+                - cell [ref=e723]
+                - cell [ref=e727]:
+                  - link "Charting by TradingView" [ref=e731] [cursor=pointer]:
+                    - /url: https://www.tradingview.com/?utm_medium=lwc-link&utm_campaign=lwc-chart&utm_source=localhost/
+                    - img [ref=e732]
+                - cell [ref=e736]
+              - row [ref=e740]:
+                - cell [ref=e741]
+                - cell [ref=e744]
+                - cell [ref=e748]
+        - button "分析此股票" [ref=e752] [cursor=pointer]
+      - generic [ref=e125]:
+        - generic [ref=e126]:
+          - generic [ref=e444]:
+            - generic [ref=e445]: 你
+            - generic [ref=e446]: 推荐3只白酒股，给出股票代码和名称
+          - generic [ref=e447]:
+            - generic [ref=e448]: AI
+            - generic [ref=e449]: 我来查找白酒行业的股票。让我先获取白酒行业的成分股信息。
+          - generic [ref=e451]: AI
+          - generic [ref=e453]:
+            - generic [ref=e454]: AI
+            - generic [ref=e455]: 白酒属于申万二级行业，让我查看一下。
+          - generic [ref=e456]:
+            - generic [ref=e457]: AI
+            - generic [ref=e458]: 找到了，白酒II（代码801125，共20只）。让我获取白酒板块的股票列表和实时行情。
+          - generic [ref=e459]:
+            - generic [ref=e460]: AI
+            - generic [ref=e461]: 现在让我获取这些白酒股的实时行情，看看龙头表现。
+          - generic [ref=e462]:
+            - generic [ref=e463]: AI
+            - generic [ref=e464]:
+              - text: "---"
+              - text: "## 🍶 推荐3只白酒股"
+              - text: 根据当前行情数据，为你推荐以下3只白酒龙头：
+              - text: "---"
+              - text: "### 1️⃣"
+              - strong [ref=e465]:
+                - generic [ref=e466]: 贵州茅台（600519）
+              - text: — 白酒绝对龙头
+              - text: "| 指标 | 数据 |"
+              - text: "|------|------|"
+              - text: "| 最新价 |"
+              - strong [ref=e467]: 1,275.88元
+              - text: （+1.58%） |
+              - text: "| PE | 行业标杆估值 |"
+              - strong [ref=e468]: 推荐理由
+              - text: ：A股"股王"，白酒行业定价锚。品牌壁垒极深（"国酒"认知），毛利率长期90%+，经营现金流充裕，分红稳定。外资和机构资金核心配置标的，适合长期价值投资。
+              - text: "---"
+              - text: "### 2️⃣"
+              - strong [ref=e469]:
+                - generic [ref=e470]: 山西汾酒（600809）
+              - text: — 清香型白酒龙头
+              - text: "| 指标 | 数据 |"
+              - text: "|------|------|"
+              - text: "| 最新价 |"
+              - strong [ref=e471]: 118.79元
+              - text: （+1.66%） |
+              - text: "| 总市值 | 1,449亿 |"
+              - text: "| PE | 13.2倍 |"
+              - strong [ref=e472]: 推荐理由
+              - text: ：清香型白酒绝对龙头，"汾老大"品牌底蕴深厚。近年来全国化扩张强劲，省外市场增速亮眼。PE仅13.2倍，处于历史估值低位区间，性价比较高。
+              - text: "---"
+              - text: "### 3️⃣"
+              - strong [ref=e473]:
+                - generic [ref=e474]: 泸州老窖（000568）
+              - text: — 浓香型高端白酒
+              - text: "| 指标 | 数据 |"
+              - text: "|------|------|"
+              - text: "| 最新价 |"
+              - strong [ref=e475]: 85.41元
+              - text: （+1.14%） |
+              - text: "| 总市值 | 1,257亿 |"
+              - text: "| PE | 12.64倍 |"
+              - strong [ref=e476]: 推荐理由
+              - text: ：国窖1573品牌力强劲，高端白酒三强之一（茅五泸）。当前PE仅12.64倍，估值处于历史底部区域，在白酒板块中具备较高的安全边际和估值修复弹性。
+              - text: "---"
+              - text: "### 📊 三只白酒股核心指标对比"
+              - text: "| 股票 | 代码 | 最新价 | 涨跌幅 | 市值(亿) | PE |"
+              - text: "|------|------|--------|--------|----------|-----|"
+              - generic [ref=e477]: "| 贵州茅台 | 600519 | 1,275.88 | +1.58% | — | — |"
+              - generic [ref=e478]: "| 山西汾酒 | 600809 | 118.79 | +1.66% | 1,449 | 13.2 |"
+              - generic [ref=e479]: "| 泸州老窖 | 000568 | 85.41 | +1.14% | 1,257 | 12.64 |"
+              - text: ">"
+              - strong [ref=e480]: 提示
+              - text: ：以上推荐仅基于公开市场数据，不构成投资建议。白酒板块近期回调明显，部分标的PE已回落至历史低位，可结合个人风险偏好和投资期限综合判断。
+        - generic [ref=e127]:
+          - generic [ref=e128]:
+            - generic [ref=e129]: 工具调用
+            - button "收起" [ref=e130] [cursor=pointer]:
+              - img [ref=e131]
+          - generic [ref=e133]:
+            - generic [ref=e481]:
+              - generic [ref=e482]:
+                - generic [ref=e483]: ✓
+                - generic [ref=e484]: get_industry_stocks
+                - generic [ref=e485]: 20:00:44
+              - generic [ref=e486]: "SQLITE_ERROR: no such column: 白酒"
+            - generic [ref=e487]:
+              - generic [ref=e488]:
+                - generic [ref=e489]: ✓
+                - generic [ref=e490]: list_industries
+                - generic [ref=e491]: 20:00:46
+              - generic [ref=e492]: 【申万一级 行业列表】共38个 801010 农林牧渔I (104只) 801020 采掘I (0只) 801030 化工I (410只) 801040 钢铁I (44只) 801050 有色金属I (142只) 801060 建筑建材I (0只) 801070 机械设备I (0只) 801080 电子I (481只) 801090 交运设备I (0只) 801100 信息设备I (0只) 801110 家用电器I (94只) 801120 食品饮料I (123只) 801130 纺织服装I (106只) 801
+            - generic [ref=e493]:
+              - generic [ref=e494]:
+                - generic [ref=e495]: ✓
+                - generic [ref=e496]: list_industries
+                - generic [ref=e497]: 20:00:48
+              - generic [ref=e498]: 【申万二级 行业列表】共182个 801011 林业II (4只) 801012 农产品加工II (22只) 801013 农业综合II (0只) 801014 饲料II (17只) 801015 渔业II (6只) 801016 种植业II (20只) 801017 畜禽养殖II (23只) 801018 动物保健II (10只) 801019 农业综合II (2只) 801021 煤炭开采II (0只) 801022 其他采掘II (0只) 801023 石油开采II (0只) 801024 采掘服务II (0只
+            - generic [ref=e499]:
+              - generic [ref=e500]:
+                - generic [ref=e501]: ✓
+                - generic [ref=e502]: get_industry_stocks
+                - generic [ref=e503]: 20:00:50
+              - generic [ref=e504]: "【白酒II】代码: 801125 标准: sw_l2 共20只股票 000568 泸州老窖 SZ 000596 古井贡酒 SZ 000799 酒鬼酒 SZ 000858 五 粮 液 SZ 000860 顺鑫农业 SZ 000995 皇台酒业 SZ 002304 洋河股份 SZ 002646 天佑德酒 SZ 600197 伊力特 SH 600199 金种子酒 SH 600519 贵州茅台 SH 600559 老白干酒 SH 600696 退市岩石 SH 600702 舍得酒业 SH 600779 水井坊"
+            - generic [ref=e505]:
+              - generic [ref=e506]:
+                - generic [ref=e507]: ✓
+                - generic [ref=e508]: get_quote
+                - generic [ref=e509]: 20:00:54
+              - generic [ref=e510]: "【五 粮 液 000858】 最新价: 79.14 涨跌: 0.04% 开盘: 79.03 最高: 79.75 最低: 78.60 昨收: 79.11 成交量: 2307.26万手 成交额: 18万元 市值: 总3072 流通3072 PE: 24.38 52周高: — 52周低: —"
+            - generic [ref=e511]:
+              - generic [ref=e512]:
+                - generic [ref=e513]: ✓
+                - generic [ref=e514]: get_quote
+                - generic [ref=e515]: 20:00:54
+              - generic [ref=e516]: "【泸州老窖 000568】 最新价: 85.41 涨跌: 1.14% 开盘: 84.38 最高: 86.68 最低: 84.03 昨收: 84.45 成交量: 1282.77万手 成交额: 11万元 市值: 总1257 流通1256 PE: 12.64 52周高: — 52周低: —"
+            - generic [ref=e517]:
+              - generic [ref=e518]:
+                - generic [ref=e519]: ✓
+                - generic [ref=e520]: get_quote
+                - generic [ref=e521]: 20:00:54
+              - generic [ref=e522]: "【洋河股份 002304】 最新价: 43.24 涨跌: 3% 开盘: 41.98 最高: 43.45 最低: 41.82 昨收: 41.98 成交量: 867.73万手 成交额: 4万元 市值: 总651 流通651 PE: 64.14 52周高: — 52周低: —"
+            - generic [ref=e523]:
+              - generic [ref=e524]:
+                - generic [ref=e525]: ✓
+                - generic [ref=e526]: get_quote
+                - generic [ref=e527]: 20:00:54
+              - generic [ref=e528]: "【贵州茅台 600519】 最新价: 1275.88 涨跌: 1.5828% 开盘: 1252.08 最高: 1282.00 最低: 1250.21 昨收: 1256.00 成交量: 3.92万手 成交额: 0元 市值: 总0 流通0 PE: — 52周高: — 52周低: —"
+            - generic [ref=e529]:
+              - generic [ref=e530]:
+                - generic [ref=e531]: ✓
+                - generic [ref=e532]: get_quote
+                - generic [ref=e533]: 20:00:54
+              - generic [ref=e534]: "【山西汾酒 600809】 最新价: 118.79 涨跌: 1.66% 开盘: 116.00 最高: 119.93 最低: 115.82 昨收: 116.85 成交量: 1186.44万手 成交额: 14万元 市值: 总1449 流通1449 PE: 13.2 52周高: — 52周低: —"
+            - generic [ref=e535]:
+              - generic [ref=e536]:
+                - generic [ref=e537]: ✓
+                - generic [ref=e538]: get_quote
+                - generic [ref=e539]: 20:00:54
+              - generic [ref=e540]: "【今世缘 603369】 最新价: 24.43 涨跌: -0.33% 开盘: 24.33 最高: 24.74 最低: 24.20 昨收: 24.51 成交量: 1005.53万手 成交额: 2万元 市值: 总305 流通305 PE: 12.99 52周高: — 52周低: —"
+      - generic [ref=e135]:
+        - button "设置" [ref=e136] [cursor=pointer]:
+          - img [ref=e137]
+        - button "附件" [ref=e140] [cursor=pointer]:
+          - img [ref=e141]
+        - button "Choose File"
+        - textbox "输入消息..." [ref=e143]
+        - button "发送" [ref=e144] [cursor=pointer]:
+          - img [ref=e145]
+    - generic [ref=e148]:
+      - generic [ref=e149]:
+        - generic [ref=e150] [cursor=pointer]:
+          - generic [ref=e151]: 📅 投资日历
+          - generic [ref=e152]:
+            - button "刷新日历数据" [ref=e153]:
+              - img [ref=e154]
+            - img [ref=e157]
+        - generic [ref=e160]:
+          - generic [ref=e161]:
+            - button "<" [ref=e162] [cursor=pointer]
+            - generic [ref=e163]: 2026年6月
+            - button ">" [ref=e164] [cursor=pointer]
+          - generic [ref=e165]:
+            - generic [ref=e166]: 日
+            - generic [ref=e167]: 一
+            - generic [ref=e168]: 二
+            - generic [ref=e169]: 三
+            - generic [ref=e170]: 四
+            - generic [ref=e171]: 五
+            - generic [ref=e172]: 六
+          - generic [ref=e173]:
+            - generic [ref=e176] [cursor=pointer]: "1"
+            - generic [ref=e182] [cursor=pointer]: "2"
+            - generic [ref=e186] [cursor=pointer]: "3"
+            - generic [ref=e188] [cursor=pointer]: "4"
+            - generic [ref=e192] [cursor=pointer]: "5"
+            - generic [ref=e194] [cursor=pointer]: "6"
+            - generic [ref=e196] [cursor=pointer]: "7"
+            - generic [ref=e198] [cursor=pointer]: "8"
+            - generic [ref=e200] [cursor=pointer]: "9"
+            - generic [ref=e204] [cursor=pointer]: "10"
+            - generic [ref=e208] [cursor=pointer]: "11"
+            - generic [ref=e210] [cursor=pointer]: "12"
+            - generic [ref=e212] [cursor=pointer]: "13"
+            - generic [ref=e214] [cursor=pointer]: "14"
+            - generic [ref=e216] [cursor=pointer]: "15"
+            - generic [ref=e220] [cursor=pointer]: "16"
+            - generic [ref=e222] [cursor=pointer]: "17"
+            - generic [ref=e224] [cursor=pointer]: "18"
+            - generic [ref=e226] [cursor=pointer]: "19"
+            - generic [ref=e228] [cursor=pointer]: "20"
+            - generic [ref=e230] [cursor=pointer]: "21"
+            - generic [ref=e232] [cursor=pointer]: "22"
+            - generic [ref=e234] [cursor=pointer]: "23"
+            - generic [ref=e236] [cursor=pointer]: "24"
+            - generic [ref=e238] [cursor=pointer]: "25"
+            - generic [ref=e240] [cursor=pointer]: "26"
+            - generic [ref=e242] [cursor=pointer]: "27"
+            - generic [ref=e244] [cursor=pointer]: "28"
+            - generic [ref=e246] [cursor=pointer]: "29"
+            - generic [ref=e248] [cursor=pointer]: "30"
+          - generic [ref=e249]:
+            - generic [ref=e250]: 本月重点关注
+            - generic [ref=e251] [cursor=pointer]:
+              - generic [ref=e252]:
+                - generic [ref=e254]: 预计
+                - generic [ref=e255]: OPEC+产量会议
+              - generic [ref=e256]: 决定下半年原油产量政策 (2026年6月1-5日)
+            - generic [ref=e257] [cursor=pointer]:
+              - generic [ref=e258]:
+                - generic [ref=e260]: 06-01
+                - generic [ref=e261]: 永大股份 业绩预告
+              - generic [ref=e262]: "公告日期: 20260601; 报告期[20260331]: 2026年一季报"
+            - generic [ref=e263] [cursor=pointer]:
+              - generic [ref=e264]:
+                - generic [ref=e266]: 预计
+                - generic [ref=e267]: 618购物节
+              - generic [ref=e268]: 年中电商大促 (2026年6月1-18日)
+            - generic [ref=e269] [cursor=pointer]:
+              - generic [ref=e270]:
+                - generic [ref=e272]: 预计
+                - generic [ref=e273]: 苹果WWDC
+              - generic [ref=e274]: 苹果年度开发者大会，iOS/macOS新系统发布 (2026年6月2-13日)
+            - generic [ref=e275] [cursor=pointer]:
+              - generic [ref=e276]:
+                - generic [ref=e278]: 预计
+                - generic [ref=e279]: Computex台北电脑展
+              - generic [ref=e280]: 全球第二大电脑展，AI PC新品发布 (2026年6月2-5日)
+            - generic [ref=e281] [cursor=pointer]:
+              - generic [ref=e282]:
+                - generic [ref=e284]: 06-04
+                - generic [ref=e285]: 臻宝科技 业绩预告
+              - generic [ref=e286]: "公告日期: 20260604; 报告期[20260331]: 2026年一季报"
+            - generic [ref=e287] [cursor=pointer]:
+              - generic [ref=e288]:
+                - generic [ref=e290]: 06-04
+                - generic [ref=e291]: 惠科股份 业绩预告
+              - generic [ref=e292]: "公告日期: 20260604; 报告期[20260331]: 2026年一季报"
+            - generic [ref=e293] [cursor=pointer]:
+              - generic [ref=e294]:
+                - generic [ref=e296]: 06-04
+                - generic [ref=e297]: 科莱瑞迪 业绩预告
+              - generic [ref=e298]: "公告日期: 20260604; 报告期[20260331]: 2026年一季报"
+            - generic [ref=e299] [cursor=pointer]:
+              - generic [ref=e300]:
+                - generic [ref=e302]: 06-09
+                - generic [ref=e303]: 环旭电子 业绩预告
+              - generic [ref=e304]: "最新价: 40.74; 最新涨跌幅: 5.054152; 公告日期: 20260609; 报告期[20260331]: 2026年一季报; 变动类型[20260331]: 不确定"
+            - generic [ref=e305] [cursor=pointer]:
+              - generic [ref=e306]:
+                - generic [ref=e308]: 预计
+                - generic [ref=e309]: SNEC光伏展
+              - generic [ref=e310]: 全球最大光伏展 (2026年6月10-12日)
+            - generic [ref=e311] [cursor=pointer]:
+              - generic [ref=e312]:
+                - generic [ref=e314]: 预计
+                - generic [ref=e315]: 迎峰度夏
+              - generic [ref=e316]: 夏季用电高峰，电力保供政策密集 (2026年6月15-30日)
+      - generic [ref=e317]:
+        - generic [ref=e318] [cursor=pointer]:
+          - generic [ref=e319]: 📰 财经新闻
+          - img [ref=e320]
+        - generic [ref=e323]:
+          - generic "花旗银行预计金价到9月可能会跌至每盎司3500美元" [ref=e753]:
+            - generic [ref=e754]:
+              - generic [ref=e755]: 东财7x24
+              - generic [ref=e756]: 06-10 19:56
+            - generic [ref=e757]: 花旗银行预计金价到9月可能会跌至每盎司3500美元
+            - generic [ref=e758]: 【花旗银行预计金价到9月可能会跌至每盎司3500美元】花旗银行预计，如果霍尔木兹海峡受阻持续到今年夏天，全球黄金购买需求可能进一步收缩，金价到9月可能会跌至每盎司3500美元。目前，花旗银行将三个月黄金的目标价从每盎司4300美元下跌至每盎...
+          - generic "阳光股份：截至目前 阳光金汇整体资产及经营规模较小" [ref=e759]:
+            - generic [ref=e760]:
+              - generic [ref=e761]: 东财7x24
+              - generic [ref=e762]: 06-10 19:56
+            - generic [ref=e763]: 阳光股份：截至目前 阳光金汇整体资产及经营规模较小
+            - generic [ref=e764]: 【阳光股份：截至目前 阳光金汇整体资产及经营规模较小】阳光股份(000608.SZ)公告称，截至目前，阳光金汇整体资产及经营规模较小，阳光数字科技注册资本未实缴，未有实际运营，未有人员储备。上述两家公司对上市公司整体资产、营收及利润无重大影...
+          - generic "智界汽车赵长江晒出智界RX公告图" [ref=e765]:
+            - generic [ref=e766]:
+              - generic [ref=e767]: 东财7x24
+              - generic [ref=e768]: 06-10 19:56
+            - generic [ref=e769]: 智界汽车赵长江晒出智界RX公告图
+            - generic [ref=e770]: 【智界汽车赵长江晒出智界RX公告图】6月10日，智界汽车执行董事及执行副总裁赵长江在社交媒体平台晒出智界RX公告图。图片信息显示，新车定位轿跑SUV。余承东此前透露，这是鸿蒙智行首款跳出数字序列命名的新车，将于秋天正式发布。
+          - generic "中公教育：多名董事及高管拟增持4500万至9000万元" [ref=e771]:
+            - generic [ref=e772]:
+              - generic [ref=e773]: 东财7x24
+              - generic [ref=e774]: 06-10 19:56
+            - generic [ref=e775]: 中公教育：多名董事及高管拟增持4500万至9000万元
+            - generic [ref=e776]: 【中公教育：多名董事及高管拟增持4500万至9000万元】中公教育6月10日公告，公司董事兼副总经理何有立、董事金桦、职工董事孙维、副总经理桂红植、财务总监王玥、董事会秘书龚亚芳及核心骨干员工张红军、刘彦、刘伟伟、李雨、李文计划增持公司股份...
+          - generic "六九一二：拟收购成都菁蓉联创科技不低于51%股权" [ref=e777]:
+            - generic [ref=e778]:
+              - generic [ref=e779]: 东财7x24
+              - generic [ref=e780]: 06-10 19:54
+            - generic [ref=e781]: 六九一二：拟收购成都菁蓉联创科技不低于51%股权
+            - generic [ref=e782]: 【六九一二：拟收购成都菁蓉联创科技不低于51%股权】六九一二(301592.SZ)公告称，公司拟以现金方式收购成都菁蓉联创科技有限公司不低于51%的股权，以实现对其控股。本次交易不构成关联交易及重大资产重组，尚处于筹划阶段，具体交易方案、价...
+          - generic "中央网信办在京召开全国网络生态治理工作会议" [ref=e783]:
+            - generic [ref=e784]:
+              - generic [ref=e785]: 东财7x24
+              - generic [ref=e786]: 06-10 19:53
+            - generic [ref=e787]: 中央网信办在京召开全国网络生态治理工作会议
+            - generic [ref=e788]: 【中央网信办在京召开全国网络生态治理工作会议】6月10日，中央网信办在京召开全国网络生态治理工作会议。会议强调，要明确目标任务、聚焦工作重点，持续提升网络生态治理能力水平。在强化标本兼治上下功夫，提升专项行动质效，完善长效治理机制，抓好制度...
+          - generic "公募基金投资先进制造和科创股票超过6万亿" [ref=e789]:
+            - generic [ref=e790]:
+              - generic [ref=e791]: 东财7x24
+              - generic [ref=e792]: 06-10 19:51
+            - generic [ref=e793]: 公募基金投资先进制造和科创股票超过6万亿
+            - generic [ref=e794]: 【公募基金投资先进制造和科创股票超过6万亿】目前，公募基金投资于先进制造和科创领域股票超过6万亿元。ETF产品正成为连接科技创新与资本市场投融资两端的桥梁。今年以来上交所共推动6只科创板宽基ETF和9只科创板行业主题ETF上市，标的涵盖科创...
+          - generic "天娱数科：没有物理AI业务 与2026年世界杯不存在业务合作关系" [ref=e795]:
+            - generic [ref=e796]:
+              - generic [ref=e797]: 东财7x24
+              - generic [ref=e798]: 06-10 19:50
+            - generic [ref=e799]: 天娱数科：没有物理AI业务 与2026年世界杯不存在业务合作关系
+            - generic [ref=e800]: 【天娱数科：没有物理AI业务 与2026年世界杯不存在业务合作关系】天娱数科(002354)发布股票交易异常波动的公告，公司关注到近期有部分媒体对公司业务相关讨论涉及“物理AI”“世界杯”概念。截至目前，公司没有物理AI业务，未形成相关业务...
+          - generic "日本核污染水排海因异常警报停止" [ref=e801]:
+            - generic [ref=e802]:
+              - generic [ref=e803]: 东财7x24
+              - generic [ref=e804]: 06-10 19:48
+            - generic [ref=e805]: 日本核污染水排海因异常警报停止
+            - generic [ref=e806]: 【日本核污染水排海因异常警报停止】据日本共同社报道，10日16时（北京时间15时）许，东京电力公司福岛第一核电站在进行核污染水输送作业时，系统异常警报被触发，导致核污染水排海作业自动停止。
+          - generic "伊拉克重申国际联盟将于9月前撤军" [ref=e807]:
+            - generic [ref=e808]:
+              - generic [ref=e809]: 东财7x24
+              - generic [ref=e810]: 06-10 19:47
+            - generic [ref=e811]: 伊拉克重申国际联盟将于9月前撤军
+            - generic [ref=e812]: 【伊拉克重申国际联盟将于9月前撤军】伊拉克政府发言人海德尔·阿布迪当地时间10日在新闻发布会上重申，美国主导的国际联盟在伊拉克境内的军事存在将于今年9月结束。阿布迪还强调，伊拉克绝不接受任何国家干涉其内政，拒绝成为任何国家攻击其邻国的跳板。
+          - generic "超图软件：拟4000万元-6000万元回购股份" [ref=e813]:
+            - generic [ref=e814]:
+              - generic [ref=e815]: 东财7x24
+              - generic [ref=e816]: 06-10 19:44
+            - generic [ref=e817]: 超图软件：拟4000万元-6000万元回购股份
+            - generic [ref=e818]: 【超图软件：拟4000万元-6000万元回购股份】超图软件(300036.SZ)公告称，公司拟使用自有资金以集中竞价方式回购股份，回购总金额不低于4000万元且不超过6000万元，回购价格不超过16元/股。回购股份将用于实施员工持股计划及/...
+          - generic "康德莱：控股股东上海康德莱控股拟增持1%-2%公司股份" [ref=e819]:
+            - generic [ref=e820]:
+              - generic [ref=e821]: 东财7x24
+              - generic [ref=e822]: 06-10 19:44
+            - generic [ref=e823]: 康德莱：控股股东上海康德莱控股拟增持1%-2%公司股份
+            - generic [ref=e824]: 【康德莱：控股股东上海康德莱控股拟增持1%-2%公司股份】康德莱6月10日公告，公司控股股东上海康德莱控股集团有限公司计划增持公司股份，拟累计增持数量不低于436.79万股，即不低于公司已发行总股本的1％，且不超过873.58万股，即不超过...
+          - generic "长盈通：器件保偏光纤相关业务营收占比不足1%" [ref=e825]:
+            - generic [ref=e826]:
+              - generic [ref=e827]: 东财7x24
+              - generic [ref=e828]: 06-10 19:44
+            - generic [ref=e829]: 长盈通：器件保偏光纤相关业务营收占比不足1%
+            - generic [ref=e830]: 【长盈通：器件保偏光纤相关业务营收占比不足1%】长盈通(688143)公告称，公司股票连续三十个交易日内(2026年5月6日至6月10日)收盘价格涨幅偏离值累计超过200%，属于严重异常波动。截至目前，公司器件保偏光纤相关业务营收占比不足1...
+          - generic "阿曼附近海域一油轮起火2人失踪" [ref=e831]:
+            - generic [ref=e832]:
+              - generic [ref=e833]: 东财7x24
+              - generic [ref=e834]: 06-10 19:42
+            - generic [ref=e835]: 阿曼附近海域一油轮起火2人失踪
+            - generic [ref=e836]: 【阿曼附近海域一油轮起火2人失踪】英国海上贸易行动办公室10日发布通报说，在阿曼苏哈尔东北约20海里处一艘油轮机舱起火，造成2名船员失踪。
+          - generic "硅基流动：与贵州移动深化战略合作 加速“Token工厂”建设" [ref=e837]:
+            - generic [ref=e838]:
+              - generic [ref=e839]: 东财7x24
+              - generic [ref=e840]: 06-10 19:42
+            - generic [ref=e841]: 硅基流动：与贵州移动深化战略合作 加速“Token工厂”建设
+            - generic [ref=e842]: 【硅基流动：与贵州移动深化战略合作 加速“Token工厂”建设】据硅基流动消息，6月9日，硅基流动与中国移动通信集团贵州有限公司（下称“贵州移动”）就进一步深化战略合作正式签署协议。
+          - generic "A股ESG强信披首年，酒企碳排放冰火两重天｜ESG信披观察" [ref=e843] [cursor=pointer]:
+            - generic [ref=e844]:
+              - generic [ref=e845]: 21世纪经济报道
+              - generic [ref=e846]: 06-10 16:05
+            - generic [ref=e847]: A股ESG强信披首年，酒企碳排放冰火两重天｜ESG信披观察
+            - generic [ref=e848]: 在此背景下，21世纪经济报道记者梳理A股上市酒企名单后发现，古井贡酒（000596.SZ）、贵州茅台（600519.SH）、今世缘（603369.SH）、口子窖（603589.SH）、泸州老窖（000568.SZ）、青岛啤酒（600600....
+          - generic "企查查的“踩线生意”：注册用户超1.6亿，却频遭央行罚单、违规通报、诉讼纠纷｜读懂IPO" [ref=e849] [cursor=pointer]:
+            - generic [ref=e850]:
+              - generic [ref=e851]: 时代财经
+              - generic [ref=e852]: 06-10 08:26
+            - generic [ref=e853]: 企查查的“踩线生意”：注册用户超1.6亿，却频遭央行罚单、违规通报、诉讼纠纷｜读懂IPO
+            - generic [ref=e854]: 来源|时代商业研究院 作者|赖钧洪、郑琳 作为国内商业大数据服务领域的头部企业，企查查科技股份有限公司（下称“企查查”）凭借“查企业、查老板、查关系”的便捷功能，累计注册用户已突破1.6亿，毛利率一度超过90%，净利率接近48%，盈...
+          - generic "白酒概念下跌1.10%，8股主力资金净流出超3000万元" [ref=e855] [cursor=pointer]:
+            - generic [ref=e856]:
+              - generic [ref=e857]: 证券时报网
+              - generic [ref=e858]: 06-09 16:36
+            - generic [ref=e859]: 白酒概念下跌1.10%，8股主力资金净流出超3000万元
+            - generic [ref=e860]: （数据宝） 白酒概念资金流出榜 代码 简称 今日涨跌幅（%） 今日换手率（%） 主力资金流量（万元） 000858 五粮液 -1.06 0.56 -20046.20 600519 贵州茅台 -0.55 0.22 -11486.16 60...
+          - generic "人均浮盈超580万元 中际旭创69名员工解锁低价筹码" [ref=e861] [cursor=pointer]:
+            - generic [ref=e862]:
+              - generic [ref=e863]: 财联社
+              - generic [ref=e864]: 06-05 08:43
+            - generic [ref=e865]: 人均浮盈超580万元 中际旭创69名员工解锁低价筹码
+            - generic [ref=e866]: 近日，中际旭创（300308.SZ）股价超越贵州茅台（600519.SH），一举一动牵动着市场神经。昨日晚间中际旭创公告，第三期限制性股票激励计划预留部分第一个归属期归属股份6月8日上市流通，归属价格35.16元/股。
+          - generic "股价刚超越茅台 中际旭创69名员工解锁低价筹码 人均浮盈584.5万元|速读公告" [ref=e867] [cursor=pointer]:
+            - generic [ref=e868]:
+              - generic [ref=e869]: 财联社
+              - generic [ref=e870]: 06-04 23:24
+            - generic [ref=e871]: 股价刚超越茅台 中际旭创69名员工解锁低价筹码 人均浮盈584.5万元|速读公告
+            - generic [ref=e872]: 财联社6月4日讯（记者付静）中际旭创（300308.SZ）昨日盘中股价刚刚超越贵州茅台（600519.SH），一举一动牵动着市场神经。今日晚间中际旭创公告，第三期限制性股票激励计划预留部分第一个归属期归属股份6月8日上市流通，归属价格35....

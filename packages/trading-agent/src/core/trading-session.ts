@@ -8,9 +8,13 @@ export interface TradingSessionOptions {
 	baseSystemPrompt: string;
 	tools: TradingSessionConfig["tools"];
 	getApiKey?: (provider: string) => Promise<string | undefined> | string | undefined;
-	streamFn?: StreamFn;
+	streamFn: StreamFn;
 	beforeToolCall?: Agent["beforeToolCall"];
 	afterToolCall?: Agent["afterToolCall"];
+	/** 恢复历史会话：作为 Agent 初始 messages */
+	initialMessages?: AgentMessage[];
+	/** 会话首个 prompt（空历史且 input 非空）时触发一次，参数为原始输入文本 */
+	onFirstPrompt?: (input: string) => void;
 }
 
 export interface PromptOptions {
@@ -29,6 +33,7 @@ export class TradingSession extends EventEmitter {
 		reject: (err: Error) => void;
 	}> = [];
 	private isPrompting = false;
+	private firstPromptFired = false;
 
 	constructor(private config: TradingSessionOptions) {
 		super();
@@ -39,6 +44,7 @@ export class TradingSession extends EventEmitter {
 				systemPrompt: config.baseSystemPrompt,
 				tools: config.tools,
 				thinkingLevel: "off",
+				messages: config.initialMessages,
 			},
 			getApiKey: config.getApiKey,
 			streamFn: config.streamFn,
@@ -97,6 +103,10 @@ export class TradingSession extends EventEmitter {
 	}
 
 	async prompt(input: string, opts?: PromptOptions): Promise<void> {
+		if (!this.firstPromptFired && this.agent.state.messages.length === 0 && input.trim()) {
+			this.firstPromptFired = true;
+			this.config.onFirstPrompt?.(input);
+		}
 		return new Promise((resolve, reject) => {
 			this.promptQueue.push({ input, opts, resolve, reject });
 			this.processPromptQueue();
@@ -169,6 +179,10 @@ export class TradingSession extends EventEmitter {
 	dispose(): void {
 		this.unsubAgent?.();
 		this.removeAllListeners();
+		// 拒绝所有排队中的 prompt，否则 ws-handler 等待这些 promise 会永久挂起
+		for (const { reject } of this.promptQueue) {
+			reject(new Error("Session disposed"));
+		}
 		this.promptQueue = [];
 	}
 }

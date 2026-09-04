@@ -1,0 +1,117 @@
+- generic [ref=e3]:
+  - generic [ref=e4]:
+    - generic [ref=e5]:
+      - generic [ref=e6]: π
+      - generic [ref=e7]: Trading Agent
+    - generic [ref=e234]: 暂无指数数据
+  - generic [ref=e10]:
+    - generic [ref=e53]: 情绪 58
+    - generic [ref=e56]: 中性
+    - generic [ref=e57]: 涨2341
+    - generic [ref=e59]: 跌1876
+    - generic [ref=e61]: 涨停45
+    - generic [ref=e62]: 跌停12
+    - generic [ref=e63]: 北向 +23.5亿
+  - generic [ref=e12]:
+    - generic [ref=e13]: 交易中
+    - generic [ref=e219]: 连接中...
+  - generic [ref=e17]:
+    - generic [ref=e18]:
+      - generic [ref=e19]: 股票池
+      - generic [ref=e20]:
+        - generic [ref=e64] [cursor=pointer]:
+          - generic [ref=e65]:
+            - generic [ref=e66]: 未来关注股池
+            - button "×" [ref=e67]
+          - generic [ref=e68]: 12 只
+        - generic [ref=e69] [cursor=pointer]:
+          - generic [ref=e70]:
+            - generic [ref=e71]: 自选股
+            - button "×" [ref=e72]
+          - generic [ref=e73]: 5 只
+        - generic [ref=e74]: 未来关注股池
+        - generic [ref=e75] [cursor=pointer]:
+          - generic [ref=e76]: "600519"
+          - generic [ref=e77]: 贵州茅台
+        - generic [ref=e78] [cursor=pointer]:
+          - generic [ref=e79]: "000858"
+          - generic [ref=e80]: 五粮液
+        - generic [ref=e81] [cursor=pointer]:
+          - generic [ref=e82]: "002352"
+          - generic [ref=e83]: 顺丰控股
+        - generic [ref=e84] [cursor=pointer]:
+          - generic [ref=e85]: "300750"
+          - generic [ref=e86]: 宁德时代
+      - generic [ref=e179]:
+        - generic [ref=e180]:
+          - generic [ref=e181]:
+            - generic [ref=e182]: 贵州茅台
+            - generic [ref=e183]: "600519"
+          - generic [ref=e184]:
+            - generic [ref=e185]: "1523.50"
+            - generic [ref=e186]: +1.20%
+        - generic [ref=e187]:
+          - generic [ref=e188]:
+            - generic [ref=e189]: 市值
+            - generic [ref=e190]: 1.92万亿
+          - generic [ref=e191]:
+            - generic [ref=e192]: PE
+            - generic [ref=e193]: "28.50"
+          - generic [ref=e194]:
+            - generic [ref=e195]: PB
+            - generic [ref=e196]: "8.20"
+          - generic [ref=e197]:
+            - generic [ref=e198]: 股息率
+            - generic [ref=e199]: 1.52%
+        - button "分析此股票" [ref=e201] [cursor=pointer]
+    - generic [ref=e21]:
+      - generic [ref=e22]:
+        - generic [ref=e220]:
+          - generic [ref=e221]: π
+          - generic [ref=e223]: 你好！我是您的股票分析助手。我可以帮您分析股票走势、查询投资日历、筛选股票等。请问有什么可以帮您的？
+        - generic [ref=e224]:
+          - generic [ref=e225]: 你
+          - generic [ref=e227]: 分析一下贵州茅台的走势
+        - generic [ref=e228]:
+          - generic [ref=e229]: π
+          - generic [ref=e231]: 贵州茅台(600519)今日上涨1.23%，收于1688.88元。从技术面看，股价站稳60日均线，MACD金叉形成，成交量温和放大。建议关注1700元整数关口阻力。
+      - generic [ref=e24]:
+        - textbox "输入消息..." [ref=e25]
+        - button "发送" [ref=e26] [cursor=pointer]:
+          - img [ref=e27]
+    - generic [ref=e30]:
+      - generic [ref=e31]:
+        - generic [ref=e32]: 投资日历
+        - button "刷新日历数据" [ref=e33] [cursor=pointer]:
+          - img [ref=e34]
+      - generic [ref=e37]:
+        - generic [ref=e118]:
+          - button "<" [ref=e119] [cursor=pointer]
+          - generic [ref=e120]: 2026年5月
+          - button ">" [ref=e121] [cursor=pointer]
+        - generic [ref=e122]:
+          - generic [ref=e123]: 日
+          - generic [ref=e124]: 一
+          - generic [ref=e125]: 二
+          - generic [ref=e126]: 三
+          - generic [ref=e127]: 四
+          - generic [ref=e128]: 五
+          - generic [ref=e129]: 六
+        - generic [ref=e130]:
+          - generic [ref=e136] [cursor=pointer]: "1"
+          - generic [ref=e138] [cursor=pointer]: "2"
+          - generic [ref=e140] [cursor=pointer]: "19"
+          - generic [ref=e142] [cursor=pointer]: "20"
+          - generic [ref=e146] [cursor=pointer]: "22"
+          - generic [ref=e150] [cursor=pointer]: "25"
+        - generic [ref=e153]:
+          - generic [ref=e154]: 本月重点关注
+          - generic [ref=e156] [cursor=pointer]:
+            - generic [ref=e158]: 05-20
+            - generic [ref=e159]: LPR利率公布
+          - generic [ref=e161] [cursor=pointer]:
+            - generic [ref=e163]: 05-22
+            - generic [ref=e164]: 英伟达财报
+          - generic [ref=e166] [cursor=pointer]:
+            - generic [ref=e168]: 05-25
+            - generic [ref=e169]: 宁德时代股东大会

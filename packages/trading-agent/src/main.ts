@@ -1,10 +1,11 @@
 #!/usr/bin/env node
 import { join, resolve } from "node:path";
 import { createInterface } from "node:readline";
-import type { AgentTool } from "@mariozechner/pi-agent-core";
-import { streamSimple } from "@mariozechner/pi-ai";
+import type { AgentMessage, AgentTool } from "@mariozechner/pi-agent-core";
+import { streamSimple } from "@mariozechner/pi-ai/compat";
 import { loadUserConfig } from "./config/user-config.js";
 import { loadModelRegistry, selectDefaultModel } from "./core/model-config.js";
+import { SessionManager } from "./core/session-manager.js";
 import { SessionMemory } from "./core/session-memory.js";
 import { discoverAllSkillDirs, loadSkillFromFile, loadSystemPromptFromFile } from "./core/skill-loader.js";
 import { SkillRegistry } from "./core/skill-registry.js";
@@ -16,6 +17,7 @@ import { TaskScheduler } from "./scheduler/task-scheduler.js";
 import { BackgroundSyncService } from "./server/background-sync.js";
 import { startServer } from "./server/index.js";
 import { advancedScreenTool } from "./tools/advanced-screening.js";
+import { analyzeMarketThemeTool } from "./tools/analyze-market-theme.js";
 import { backtestStrategyTool } from "./tools/backtest.js";
 import { compareStocksTool } from "./tools/compare-stocks.js";
 import {
@@ -24,14 +26,18 @@ import {
 	verifyConceptStocksTool,
 } from "./tools/concept-analysis.js";
 import { getConceptStocksTool, listConceptsTool } from "./tools/concept-stocks.js";
-import { syncFundamentalsTool, syncKlineTool, syncNewsTool } from "./tools/data-sync.js";
+import { syncFundamentalsTool, syncHotStocksTool, syncKlineTool, syncNewsTool } from "./tools/data-sync.js";
+import { discoverTradingIdeasTool } from "./tools/discover-trading-ideas.js";
 import { getIndustryStocksTool, getStockIndustriesTool, listIndustriesTool } from "./tools/industry-classification.js";
 import { analyzeCalendarImpactTool, refreshCalendarTool } from "./tools/investment-calendar.js";
 import { iwencaiScreenTool } from "./tools/iwencai-screening.js";
 import { getMacroTool } from "./tools/macro-data.js";
 import { getFundamentalsTool, getKlineTool, getQuoteTool } from "./tools/market-data.js";
 import { predictStockRankingTool } from "./tools/ml-prediction.js";
+import { navigateToTool } from "./tools/navigate-to.js";
 import { getMarketNewsTool, getStockNewsTool, screenByNewsTool } from "./tools/news-analysis.js";
+import { managePortfolioTool } from "./tools/portfolio.js";
+import { generateReportTool } from "./tools/report.js";
 import { saveHotStocksAsPoolTool } from "./tools/save-hot-stocks-as-pool.js";
 import { screenStocksTool } from "./tools/screening.js";
 import { getSectorRotationTool } from "./tools/sector-rotation.js";
@@ -42,6 +48,9 @@ import { TradingApp } from "./ui/trading-app.js";
 
 let globalStore: ReturnType<typeof createDataStore> | null = null;
 let globalBgSync: BackgroundSyncService | null = null;
+
+/** Optional async flush hook registered by a mode (e.g. web session flush on shutdown). */
+let shutdownFlush: (() => Promise<void>) | undefined;
 
 function cleanup() {
 	if (globalBgSync) {
@@ -54,14 +63,23 @@ function cleanup() {
 	}
 }
 
+// Flush-aware shutdown: run the registered flush hook first so pending
+// session writes survive SIGINT/SIGTERM, then clean up global resources.
+async function shutdown() {
+	try {
+		await shutdownFlush?.();
+	} catch (err) {
+		console.error("[Shutdown] Flush hook failed:", err);
+	}
+	cleanup();
+}
+
 process.on("exit", cleanup);
 process.on("SIGINT", () => {
-	cleanup();
-	process.exit(0);
+	void shutdown().finally(() => process.exit(0));
 });
 process.on("SIGTERM", () => {
-	cleanup();
-	process.exit(0);
+	void shutdown().finally(() => process.exit(0));
 });
 
 function getDataDir(): string {
@@ -84,12 +102,13 @@ async function handleSyncCommands(): Promise<boolean> {
 		const code = args[klineIdx + 1];
 		if (!code) {
 			console.error(
-				"Usage: --sync-kline <code> [--period daily] [--adjust bfq] [--start YYYYMMDD] [--end YYYYMMDD]",
+				"Usage: --sync-kline <code> [--period daily|week|month] [--adjust bfq] [--start YYYYMMDD] [--end YYYYMMDD]",
 			);
 			process.exit(1);
 		}
 		const periodIdx = args.indexOf("--period");
-		const period = periodIdx >= 0 ? args[periodIdx + 1] : "daily";
+		const rawPeriod = periodIdx >= 0 ? args[periodIdx + 1] : "daily";
+		const period = rawPeriod === "weekly" ? "week" : rawPeriod === "monthly" ? "month" : rawPeriod;
 		const adjustIdx = args.indexOf("--adjust");
 		const adjust = adjustIdx >= 0 ? args[adjustIdx + 1] : "bfq";
 		const startIdx = args.indexOf("--start");
@@ -120,8 +139,8 @@ async function handleSyncCommands(): Promise<boolean> {
 		// Recalculate fundamental indicators for this stock
 		console.log(`Recalculating indicators for ${code}...`);
 		try {
-			const { runJsonScript } = await import("./tools/_utils.js");
-			const result = await runJsonScript("calc_fundamental_indicators.py", ["--code", code], 60_000);
+			const { runLocalDataJsonScript } = await import("./tools/_utils.js");
+			const result = await runLocalDataJsonScript("calc_fundamental_indicators.py", ["--code", code], 60_000);
 			console.log(`Indicators recalculated: ${result.rows_inserted ?? "?"} rows`);
 		} catch (e) {
 			console.warn(`Indicator recalculation failed for ${code}:`, e);
@@ -134,7 +153,7 @@ async function handleSyncCommands(): Promise<boolean> {
 	// --sync-quotes
 	if (args.includes("--sync-quotes")) {
 		console.log("Syncing all A-share quotes...");
-		const count = await sync.syncStockList("all");
+		const count = await sync.syncStockList();
 		console.log(`Synced ${count} stocks.`);
 		store.close();
 		return true;
@@ -263,6 +282,8 @@ const BUILTIN_TOOLS = new Map<string, AgentTool<any>>([
 	["iwencai_screen", iwencaiScreenTool],
 	["advanced_screen", advancedScreenTool],
 	["compare_stocks", compareStocksTool],
+	["discover_trading_ideas", discoverTradingIdeasTool],
+	["analyze_market_theme", analyzeMarketThemeTool],
 	["get_sector_rotation", getSectorRotationTool],
 	["get_concept_stocks", getConceptStocksTool],
 	["list_concepts", listConceptsTool],
@@ -271,6 +292,7 @@ const BUILTIN_TOOLS = new Map<string, AgentTool<any>>([
 	["get_stock_industries", getStockIndustriesTool],
 	["backtest_strategy", backtestStrategyTool],
 	["manage_stock_pool", manageStockPoolTool],
+	["manage_portfolio", managePortfolioTool],
 	["save_hot_stocks_as_pool", saveHotStocksAsPoolTool],
 	["analyze_sentiment", analyzeSentimentTool],
 	["get_stock_news", getStockNewsTool],
@@ -278,6 +300,7 @@ const BUILTIN_TOOLS = new Map<string, AgentTool<any>>([
 	["get_market_news", getMarketNewsTool],
 	["sync_kline", syncKlineTool],
 	["sync_fundamentals", syncFundamentalsTool],
+	["sync_hot_stocks", syncHotStocksTool],
 	["sync_news", syncNewsTool],
 	["refresh_calendar", refreshCalendarTool],
 	["analyze_calendar_impact", analyzeCalendarImpactTool],
@@ -286,6 +309,8 @@ const BUILTIN_TOOLS = new Map<string, AgentTool<any>>([
 	["analyze_concept_persistence", analyzeConceptPersistenceTool],
 	["scan_stock_radar", scanStockRadarTool],
 	["predict_stock_ranking", predictStockRankingTool],
+	["navigate_to", navigateToTool],
+	["generate_report", generateReportTool],
 ]);
 
 const BUILTIN_ROUTINES = new Map([
@@ -323,7 +348,7 @@ async function main() {
 	setDataSync(sync);
 	globalStore = store;
 	console.log(`[DataStore] Initialized at ${dataDir}/market.db`);
-	const modelRegistry = loadModelRegistry();
+	const modelRegistry = await loadModelRegistry();
 	const error = modelRegistry.getError();
 	if (error) {
 		console.warn("Warning: failed to load models.json:", error);
@@ -408,51 +433,78 @@ async function main() {
 		});
 	};
 
-	const session = new TradingSession({
-		model,
-		baseSystemPrompt: systemPrompt,
-		tools,
-		getApiKey: (provider) => modelRegistry.authStorage.getApiKey(provider, { includeFallback: true }),
-		streamFn,
-		beforeToolCall: (context) => {
-			const { toolCall } = context;
-			const timestamp = new Date().toISOString().slice(11, 23);
-			console.log(`\n[${timestamp}] [ToolCall ] ${toolCall.name} args=${JSON.stringify(toolCall.arguments)}`);
-			return Promise.resolve(undefined);
-		},
-		afterToolCall: (context) => {
-			const { toolCall, result, isError } = context;
-			const timestamp = new Date().toISOString().slice(11, 23);
-			const status = isError ? "ERROR" : "OK";
-			const firstContent = result.content?.[0];
-			const text = firstContent && "text" in firstContent ? firstContent.text : "";
-			const preview = text.slice(0, 120).replace(/\n/g, "\\n");
-			console.log(
-				`[${timestamp}] [ToolResult] ${toolCall.name} status=${status} preview=${preview}${text.length > 120 ? "..." : ""}`,
-			);
+	// ─── Session factory ─────────────────────────────────────────
+	// Each mode (and in web mode, each chat session) gets its own TradingSession.
+	// The `let ts` indirection lets the afterToolCall closure emit events on the
+	// instance being created; the closure only runs after construction returns.
+	const createTradingSession = (
+		initialMessages?: AgentMessage[],
+		hooks?: { onFirstPrompt?: (input: string) => void },
+	): TradingSession => {
+		let ts: TradingSession;
+		ts = new TradingSession({
+			model,
+			baseSystemPrompt: systemPrompt,
+			tools,
+			getApiKey: (provider) => modelRegistry.getApiKeyForProvider(provider),
+			streamFn,
+			initialMessages,
+			onFirstPrompt: hooks?.onFirstPrompt,
+			beforeToolCall: (context) => {
+				const { toolCall } = context;
+				const timestamp = new Date().toISOString().slice(11, 23);
+				console.log(`\n[${timestamp}] [ToolCall ] ${toolCall.name} args=${JSON.stringify(toolCall.arguments)}`);
+				return Promise.resolve(undefined);
+			},
+			afterToolCall: (context) => {
+				const { toolCall, result, isError } = context;
+				const timestamp = new Date().toISOString().slice(11, 23);
+				const status = isError ? "ERROR" : "OK";
+				const firstContent = result.content?.[0];
+				const text = firstContent && "text" in firstContent ? firstContent.text : "";
+				const preview = text.slice(0, 120).replace(/\n/g, "\\n");
+				console.log(
+					`[${timestamp}] [ToolResult] ${toolCall.name} status=${status} preview=${preview}${text.length > 120 ? "..." : ""}`,
+				);
 
-			// Emit sentiment update event for TUI when analyze_sentiment succeeds
-			if (!isError && toolCall.name === "analyze_sentiment" && result.details) {
-				const d = result.details;
-				session.emit("trading_event", {
-					type: "sentiment_update",
-					data: {
-						advance: d.advance ?? 0,
-						decline: d.decline ?? 0,
-						flat: d.flat ?? 0,
-						limitUp: d.limit_up ?? 0,
-						limitDown: d.limit_down ?? 0,
-						northboundFlow: d.northbound_flow ?? 0,
-						sentimentIndex: d.sentiment_index ?? 50,
-						topSectors: d.top_sectors ?? [],
-						bottomSectors: d.bottom_sectors ?? [],
-					},
-				});
-			}
+				// Emit sentiment update event for TUI when analyze_sentiment succeeds
+				if (!isError && toolCall.name === "analyze_sentiment" && result.details) {
+					const d = result.details;
+					ts.emit("trading_event", {
+						type: "sentiment_update",
+						data: {
+							advance: d.advance ?? 0,
+							decline: d.decline ?? 0,
+							flat: d.flat ?? 0,
+							limitUp: d.limit_up ?? 0,
+							limitDown: d.limit_down ?? 0,
+							northboundFlow: d.northbound_flow ?? 0,
+							sentimentIndex: d.sentiment_index ?? 50,
+							topSectors: d.top_sectors ?? [],
+							bottomSectors: d.bottom_sectors ?? [],
+						},
+					});
+				}
 
-			return Promise.resolve(undefined);
-		},
-	});
+				// Emit navigate event for web frontend when navigate_to succeeds
+				if (!isError && toolCall.name === "navigate_to" && result.details) {
+					const d = result.details;
+					if (d.action === "navigate" && d.url) {
+						ts.emit("trading_event", {
+							type: "navigate",
+							target: d.target as string,
+							url: d.url as string,
+							label: d.label as string | undefined,
+							newTab: d.newTab as boolean | undefined,
+						});
+					}
+				}
+
+				return Promise.resolve(undefined);
+			},
+		});
+		return ts;
+	};
 
 	// Setup scheduler with routines from skills
 	const scheduler = new TaskScheduler();
@@ -472,28 +524,28 @@ async function main() {
 			timezone: routine.timezone || config.timezone || "Asia/Shanghai",
 		});
 	}
-	scheduler.start(session, memory);
 
-	// Manual trigger commands
-	const manualTrigger = async (cmd: string) => {
+	// Manual trigger commands (bound to the session of the active mode)
+	const makeManualTrigger = (target: TradingSession) => async (cmd: string) => {
 		if (cmd === "/pre-market") {
-			await scheduler.runNow("pre-market", session, memory);
+			await scheduler.runNow("pre-market", target, memory);
 			return true;
 		}
 		if (cmd === "/post-market") {
-			await scheduler.runNow("post-market", session, memory);
+			await scheduler.runNow("post-market", target, memory);
 			return true;
 		}
 		return false;
 	};
 
 	// ─── Shared sentiment initialization ────────────────────────
-	async function initSentiment() {
+	// Emits the sentiment update on the given session (each mode wires its own).
+	async function initSentiment(target: TradingSession) {
 		try {
 			const sentimentResult = await analyzeSentimentTool.execute("init-sentiment", {});
 			if (sentimentResult.details) {
 				const d = sentimentResult.details;
-				session.emit("trading_event", {
+				target.emit("trading_event", {
 					type: "sentiment_update",
 					data: {
 						advance: d.advance ?? 0,
@@ -513,42 +565,127 @@ async function main() {
 		}
 	}
 
-	// Start periodic sentiment refresh
-	const sentimentTimer = setInterval(
-		async () => {
-			try {
-				const result = await analyzeSentimentTool.execute("periodic-sentiment", {});
-				if (result.details) {
-					const d = result.details;
-					session.emit("trading_event", {
-						type: "sentiment_update",
-						data: {
-							advance: d.advance ?? 0,
-							decline: d.decline ?? 0,
-							flat: d.flat ?? 0,
-							limitUp: d.limit_up ?? 0,
-							limitDown: d.limit_down ?? 0,
-							northboundFlow: d.northbound_flow ?? 0,
-							sentimentIndex: d.sentiment_index ?? 50,
-							topSectors: d.top_sectors ?? [],
-							bottomSectors: d.bottom_sectors ?? [],
-						},
-					});
+	// Start periodic sentiment refresh (per session; each mode branch starts its own timer)
+	function startSentimentTimer(target: TradingSession): NodeJS.Timeout {
+		return setInterval(
+			async () => {
+				try {
+					const result = await analyzeSentimentTool.execute("periodic-sentiment", {});
+					if (result.details) {
+						const d = result.details;
+						target.emit("trading_event", {
+							type: "sentiment_update",
+							data: {
+								advance: d.advance ?? 0,
+								decline: d.decline ?? 0,
+								flat: d.flat ?? 0,
+								limitUp: d.limit_up ?? 0,
+								limitDown: d.limit_down ?? 0,
+								northboundFlow: d.northbound_flow ?? 0,
+								sentimentIndex: d.sentiment_index ?? 50,
+								topSectors: d.top_sectors ?? [],
+								bottomSectors: d.bottom_sectors ?? [],
+							},
+						});
+					}
+				} catch (_e) {
+					// Ignore periodic refresh failures
 				}
-			} catch (_e) {
-				// Ignore periodic refresh failures
+			},
+			5 * 60 * 1000,
+		);
+	}
+
+	// ─── Title refinement helpers (web mode) ────────────────────
+	// First user text message (string content or text parts), up to 500 chars
+	function firstUserText(messages: AgentMessage[]): string | undefined {
+		for (const m of messages) {
+			if (m.role !== "user") continue;
+			const c = (m as any).content;
+			if (typeof c === "string") return c;
+			if (Array.isArray(c)) {
+				const text = c
+					.filter((p: any) => p?.type === "text")
+					.map((p: any) => p.text)
+					.join("");
+				if (text) return text;
 			}
-		},
-		5 * 60 * 1000,
-	);
+		}
+		return undefined;
+	}
+
+	// Last assistant text message (text parts only), up to 1000 chars
+	function lastAssistantText(messages: AgentMessage[]): string | undefined {
+		for (let i = messages.length - 1; i >= 0; i--) {
+			const m = messages[i];
+			if (m.role !== "assistant") continue;
+			const c = (m as any).content;
+			if (!Array.isArray(c)) continue;
+			const text = c
+				.filter((p: any) => p?.type === "text")
+				.map((p: any) => p.text)
+				.join("");
+			if (text) return text;
+		}
+		return undefined;
+	}
 
 	// ─── Mode selection ─────────────────────────────────────────
 	const useWeb = process.argv.includes("--web");
 	const useRepl = process.argv.includes("--repl");
 
 	if (useWeb) {
+		// File-backed multi-session: a single SessionManager owns all chat sessions.
+		// The system "default" session is the shared target of scheduler/sentiment,
+		// and both the manager and the default session are passed to startServer
+		// via { sessionManager, defaultSession }.
+		const sessionsDir = join(dataDir, "..", "sessions");
+		const manager = new SessionManager({
+			sessionsDir,
+			createSession: createTradingSession,
+			refineTitle: async (messages) => {
+				try {
+					// Use the first user text plus the last assistant text to refine the title
+					const userText = firstUserText(messages);
+					const asstText = lastAssistantText(messages);
+					if (!userText) return null;
+					const auth = await modelRegistry.getApiKeyAndHeaders(model);
+					if (!auth.ok) return null;
+					const stream = await streamSimple(
+						model as any,
+						{
+							messages: [
+								{
+									role: "user",
+									content: `为下面这段投资对话生成一个不超过 12 个汉字的中文标题，只输出标题本身，不要引号或解释：\n\n用户：${userText.slice(0, 500)}\n助手：${(asstText ?? "").slice(0, 1000)}`,
+									timestamp: Date.now(),
+								},
+							],
+						},
+						{ apiKey: auth.apiKey, headers: auth.headers },
+					);
+					let text = "";
+					for await (const ev of stream as AsyncIterable<{ type: string; delta?: string }>) {
+						if (ev.type === "text_delta" && ev.delta) text += ev.delta;
+						if (ev.type === "error") return null;
+					}
+					const title = text.trim().split("\n")[0].slice(0, 30);
+					return title || null;
+				} catch {
+					return null; // refinement failure: keep the truncated title
+				}
+			},
+		});
+		await manager.init();
+		const { session: defaultSession } = await manager.ensureDefault();
+		scheduler.start(defaultSession, memory);
 		// Start sentiment fetch in background (don't block server startup)
-		initSentiment().catch(() => {});
+		initSentiment(defaultSession).catch(() => {});
+		const sentimentTimer = startSentimentTimer(defaultSession);
+
+		// Preload session metadata so persisted chat sessions show up immediately;
+		// the sessions themselves are lazily loaded by SessionManager on demand.
+		await manager.list();
 
 		const portIdx = process.argv.indexOf("--port");
 		const port = portIdx >= 0 ? Number(process.argv[portIdx + 1]) || 3000 : 3000;
@@ -558,6 +695,8 @@ async function main() {
 			staticDirIdx >= 0
 				? resolve(process.argv[staticDirIdx + 1])
 				: resolve(import.meta.dirname || process.cwd(), "../web/dist");
+
+		const reportsDir = join(dataDir, "..", "reports");
 
 		const bgSync = new BackgroundSyncService();
 		globalBgSync = bgSync;
@@ -575,19 +714,35 @@ async function main() {
 			console.warn("[RecentPool] Failed to ensure recent pool exists:", e);
 		}
 
-		const { httpServer } = startServer(session, { port, staticDir, bgSync, modelRegistry });
+		const { httpServer } = startServer(
+			{ sessionManager: manager, defaultSession },
+			{ port, staticDir, reportsDir, bgSync, modelRegistry },
+		);
 
 		httpServer.on("close", () => {
 			bgSync.stop();
 			clearInterval(sentimentTimer);
 			scheduler.stop();
-			session.dispose();
+			manager.flush().catch(() => {});
 		});
+
+		// SIGINT/SIGTERM shutdown flushes pending session writes (see shutdown())
+		shutdownFlush = () => manager.flush();
 	} else if (useRepl) {
+		const session = createTradingSession();
+		scheduler.start(session, memory);
+		const manualTrigger = makeManualTrigger(session);
+		// Periodic sentiment refresh ran in REPL mode pre-refactor; keep it (no initSentiment).
+		// The timer intentionally outlives the REPL loop (process.exit in runRepl clears it).
+		const _sentimentTimer = startSentimentTimer(session);
 		await runRepl(session, scheduler, manualTrigger, tools);
 	} else {
+		const session = createTradingSession();
+		scheduler.start(session, memory);
+		const manualTrigger = makeManualTrigger(session);
 		const app = new TradingApp(session, manualTrigger);
-		await initSentiment();
+		await initSentiment(session);
+		const sentimentTimer = startSentimentTimer(session);
 
 		// Clean up timer on exit
 		session.on("agent_event", (ev: any) => {

@@ -3,9 +3,14 @@ import type { IncomingMessage, ServerResponse } from "node:http";
 import { homedir } from "node:os";
 import { join } from "node:path";
 import type { ModelRegistry } from "@mariozechner/pi-coding-agent";
+import { runDynamicPoolBacktest, runPoolBacktest } from "../backtest/engine.js";
+import { STRATEGY_META } from "../backtest/strategies.js";
+import { loadUserConfig, saveUserConfig } from "../config/user-config.js";
 import type { TradingSession } from "../core/trading-session.js";
-import { requireStore, requireSync } from "../data/index.js";
-import { runAStockDataJsonScript, runJsonScript } from "../tools/_utils.js";
+import { marketFromCode, requireStore, requireSync } from "../data/index.js";
+import { addReport, listReports, removeReport } from "../report/report-store.js";
+import { runAStockDataJsonScript, runJsonScript, runLocalDataJsonScript } from "../tools/_utils.js";
+import { predictStockRankingTool } from "../tools/ml-prediction.js";
 import type { BackgroundSyncService } from "./background-sync.js";
 import type { MootdxDaemon } from "./mootdx-daemon.js";
 
@@ -32,6 +37,66 @@ function parseQuery(url: string): Record<string, string> {
 		query[key] = value;
 	}
 	return query;
+}
+
+/** Read and parse JSON request body with a configurable size limit (prevents OOM). */
+const DEFAULT_MAX_BODY = 256 * 1024; // 256 KB
+async function readJsonBody(req: IncomingMessage, maxSize = DEFAULT_MAX_BODY): Promise<any> {
+	const chunks: Buffer[] = [];
+	let total = 0;
+	for await (const chunk of req) {
+		const buf = typeof chunk === "string" ? Buffer.from(chunk) : chunk;
+		total += buf.length;
+		if (total > maxSize) throw new Error(`Request body too large (max ${Math.round(maxSize / 1024)}KB)`);
+		chunks.push(buf);
+	}
+	const raw = Buffer.concat(chunks).toString("utf-8");
+	return raw ? JSON.parse(raw) : {};
+}
+
+function todayStr(): string {
+	return new Date().toISOString().slice(0, 10);
+}
+
+/** Fetch minute klines direct from Sina HTTP — ~200ms, no Python subprocess.
+ *  URL: money.finance.sina.com.cn/quotes_service/api/json_v2.php/CN_MarketData.getKLineData */
+async function fetchSinaMinuteKlines(code: string, market: number, period: string) {
+	const prefix = market === 1 ? "sh" : "sz";
+	// Sina supports 1-minute bars via scale=1; anything else falls back to 5m.
+	const scale = { "1m": "1", "5m": "5", "15m": "15", "30m": "30", "60m": "60" }[period] || "5";
+	const url = `https://money.finance.sina.com.cn/quotes_service/api/json_v2.php/CN_MarketData.getKLineData?symbol=${prefix}${code}&scale=${scale}&ma=no&datalen=240`;
+	try {
+		const resp = await fetch(url, { headers: { "User-Agent": "Mozilla/5.0" }, signal: AbortSignal.timeout(8000) });
+		if (!resp.ok) return [];
+		const raw = (await resp.json()) as any[];
+		if (!Array.isArray(raw) || raw.length === 0) return [];
+		const rows: any[] = [];
+		for (const bar of raw) {
+			const date = bar.day;
+			if (!date) continue;
+			rows.push({
+				code,
+				market,
+				period,
+				adjust: "bfq",
+				date,
+				open: parseFloat(bar.open) || null,
+				high: parseFloat(bar.high) || null,
+				low: parseFloat(bar.low) || null,
+				close: parseFloat(bar.close) || null,
+				volume: parseFloat(bar.volume) || null,
+				turnover: null,
+				change_pct: null,
+				change_amount: null,
+				amplitude: null,
+				pre_close: null,
+			});
+		}
+		return rows;
+	} catch (e) {
+		console.warn(`[Sina] Minute fetch failed for ${code}:`, e);
+		return [];
+	}
 }
 
 /** Route incoming HTTP requests to handlers */
@@ -65,54 +130,90 @@ export async function handleRequest(
 			return;
 		}
 
+		// Theme history (market theme classification over time)
+		if (path === "/api/theme-history" && method === "GET") {
+			const store = requireStore();
+			const query = parseQuery(url);
+			const level = query.level;
+			const rows = await store.getThemeHistory(level);
+			json(res, 200, rows);
+			return;
+		}
+
 		// Index quotes (major A-share indices)
 		if (path === "/api/indices" && method === "GET") {
 			const store = requireStore();
 			const indices = [
-				{ code: "000001", name: "上证指数" },
-				{ code: "399001", name: "深证成指" },
-				{ code: "399006", name: "创业板指" },
-				{ code: "000688", name: "科创50" },
-				{ code: "000300", name: "沪深300" },
-				{ code: "000905", name: "中证500" },
+				{ code: "000001", name: "上证指数", market: 1 },
+				{ code: "399001", name: "深证成指", market: 0 },
+				{ code: "399006", name: "创业板指", market: 0 },
+				{ code: "000688", name: "科创50", market: 1 },
+				{ code: "000300", name: "沪深300", market: 1 },
+				{ code: "000905", name: "中证500", market: 1 },
 			];
 			const codeList = indices.map((i) => i.code).join(",");
 
 			let quotes: any[] = [];
-			try {
-				// Fetch real-time index quotes via Sina (batch, reliable)
-				const spotQuotes = await runJsonScript("get_index_quotes.py", ["--codes", codeList], 30000);
-				quotes = spotQuotes.map((q: any) => ({
-					code: q.code,
-					name: q.name,
-					latest: q.price,
-					change_pct: q.change_pct,
-					snapshot_date: new Date().toISOString().slice(0, 10),
-					updated_at: new Date().toISOString(),
-				}));
-			} catch (e) {
-				console.warn("[Indices] Real-time fetch failed, falling back to DB:", e);
-				// Fallback: use cached quotes from DB
-				// Pass market for each index to avoid code collisions
-				// (e.g., 000001 is both 平安银行 market=0 and 上证指数 market=1)
-				const codes = indices.map((i) => i.code);
-				const markets = indices.map((i) =>
-					i.code.startsWith("6") || ["000001", "000688", "000300", "000905"].includes(i.code) ? 1 : 0,
-				);
-				quotes = await store.getLatestQuotes(codes, markets);
+
+			// 1. Read from DB first — background sync updates every 30s during market hours.
+			//    This avoids spawning a Python process on every frontend poll.
+			const dbCodes = indices.map((i) => i.code);
+			const dbMarkets = indices.map((i) => i.market);
+			const dbQuotes = await store.getLatestQuotes(dbCodes, dbMarkets);
+			const maxAge = 90_000; // 90s — max acceptable staleness before falling back to real-time
+
+			let dbFresh = false;
+			if (dbQuotes.length === indices.length) {
+				const now = Date.now();
+				dbFresh = dbQuotes.every((q) => {
+					const updated = q.updated_at ? new Date(q.updated_at).getTime() : 0;
+					return now - updated < maxAge;
+				});
 			}
 
-			// Ensure all requested indices are represented
+			if (dbFresh) {
+				quotes = dbQuotes.map((q) => ({
+					code: q.code,
+					name: q.name || indices.find((i) => i.code === q.code)?.name,
+					latest: q.latest,
+					change_pct: q.change_pct,
+					snapshot_date: q.snapshot_date,
+					updated_at: q.updated_at,
+				}));
+			} else {
+				// 2. DB is stale or missing — fetch real-time via Python script
+				try {
+					const spotQuotes = await runLocalDataJsonScript("get_index_quotes.py", ["--codes", codeList], 30000);
+					quotes = spotQuotes.map((q: any) => ({
+						code: q.code,
+						name: q.name,
+						latest: q.price,
+						change_pct: q.change_pct,
+						snapshot_date: new Date().toISOString().slice(0, 10),
+						updated_at: new Date().toISOString(),
+					}));
+				} catch (e) {
+					console.warn("[Indices] Real-time fetch failed, falling back to DB:", e);
+					// Use whatever DB had (even if stale)
+					quotes = dbQuotes.map((q) => ({
+						code: q.code,
+						name: q.name || indices.find((i) => i.code === q.code)?.name,
+						latest: q.latest,
+						change_pct: q.change_pct,
+						snapshot_date: q.snapshot_date,
+						updated_at: q.updated_at,
+					}));
+				}
+			}
+
+			// 3. Fill any missing indices from klines as last resort
 			const foundCodes = new Set(quotes.map((q) => q.code));
 			for (const idx of indices) {
 				if (!foundCodes.has(idx.code)) {
-					// Last resort: try kline close as fallback
 					try {
-						const market =
-							idx.code.startsWith("6") || ["000001", "000688", "000300", "000905"].includes(idx.code) ? 1 : 0;
 						const klines = await store.getKlines({
 							code: idx.code,
-							market,
+							market: idx.market,
 							period: "daily",
 							adjust: "bfq",
 							limit: 1,
@@ -154,14 +255,14 @@ export async function handleRequest(
 			}
 			const store = requireStore();
 			const sync = requireSync();
-			const market = code.startsWith("6") ? 1 : 0;
+			const market = marketFromCode(code);
 
 			let quote: any = null;
 
-			// 1. Try mootdx (TCP direct) first — fastest and most reliable
+			// 1. Try mootdx (TCP direct) first with a short timeout to avoid UI blocking
 			if (mootdxDaemon) {
 				try {
-					const mootdxResult = await mootdxDaemon.request("quote", { code, market }, 15000);
+					const mootdxResult = await mootdxDaemon.request("quote", { code, market }, 3000);
 					if (mootdxResult && mootdxResult.latest != null) {
 						quote = mootdxResult;
 						console.log(`[Quote] mootdx hit for ${code}: ${mootdxResult._source}`);
@@ -176,7 +277,7 @@ export async function handleRequest(
 				quote = (await store.getLatestQuotes([code], [market]))[0] || null;
 			}
 
-			// 3. Fallback: HTTP real-time fetch
+			// 3. Fallback: HTTP real-time fetch (fast batch-capable source)
 			if (!quote) {
 				try {
 					quote = await sync.getQuoteWithCache(code, market);
@@ -275,6 +376,24 @@ export async function handleRequest(
 			return;
 		}
 
+		if (path === "/api/stock-pools" && method === "POST") {
+			let body = "";
+			for await (const chunk of req) {
+				body += chunk;
+			}
+			const bodyJson = body ? JSON.parse(body) : {};
+			const name = bodyJson.name?.trim();
+			const description = bodyJson.description?.trim() || "";
+			if (!name) {
+				badRequest(res, "name is required");
+				return;
+			}
+			const store = requireStore();
+			const poolId = await store.createStockPool(name, description);
+			json(res, 200, { id: poolId, name, description });
+			return;
+		}
+
 		if (path.startsWith("/api/stock-pools/") && method === "GET") {
 			const poolId = Number(path.slice("/api/stock-pools/".length));
 			if (Number.isNaN(poolId)) {
@@ -307,11 +426,45 @@ export async function handleRequest(
 					}
 				}
 			}
-			json(res, 200, { pool, items });
+			// Enrich with latest quote data (change_pct, latest price)
+			const allCodes = items.map((i) => i.code);
+			const allMarkets = items.map((i) => i.market);
+			const quotes = await store.getLatestQuotes(allCodes, allMarkets);
+			const quoteMap = new Map(quotes.map((q) => [`${q.code}:${q.market}`, q]));
+
+			// Fallback: batch-fetch real-time quotes for items missing from DB
+			const itemsNeedingQuotes = items.filter((i) => !quoteMap.has(`${i.code}:${i.market}`));
+			if (itemsNeedingQuotes.length > 0) {
+				try {
+					const batchItems = itemsNeedingQuotes.map((i) => ({ code: i.code, market: i.market }));
+					const fetched: any[] = await runLocalDataJsonScript(
+						"batch_get_quotes.py",
+						["--items", JSON.stringify(batchItems)],
+						30_000,
+					);
+					for (const q of fetched) {
+						if (q?.code != null && q?.latest != null) {
+							quoteMap.set(`${q.code}:${q.market}`, q);
+						}
+					}
+				} catch (e) {
+					console.warn(`[Pool/${poolId}] Batch quote fetch failed:`, e);
+				}
+			}
+
+			const enrichedItems = items.map((item) => {
+				const q = quoteMap.get(`${item.code}:${item.market}`);
+				return {
+					...item,
+					change_pct: q?.change_pct ?? null,
+					latest: q?.latest ?? null,
+				};
+			});
+			json(res, 200, { pool, items: enrichedItems });
 			return;
 		}
 
-		if (path.startsWith("/api/stock-pools/") && method === "DELETE") {
+		if (path.startsWith("/api/stock-pools/") && !path.endsWith("/items") && method === "DELETE") {
 			const poolId = Number(path.slice("/api/stock-pools/".length));
 			if (Number.isNaN(poolId)) {
 				badRequest(res, "Invalid pool ID");
@@ -352,6 +505,278 @@ export async function handleRequest(
 			return;
 		}
 
+		if (path.startsWith("/api/stock-pools/") && path.endsWith("/items") && method === "DELETE") {
+			const poolId = Number(path.slice("/api/stock-pools/".length, -"/items".length));
+			if (Number.isNaN(poolId)) {
+				badRequest(res, "Invalid pool ID");
+				return;
+			}
+			let body = "";
+			for await (const chunk of req) {
+				body += chunk;
+			}
+			const bodyJson = body ? JSON.parse(body) : {};
+			const items = bodyJson.items;
+			if (!Array.isArray(items) || items.length === 0) {
+				badRequest(res, "items array required");
+				return;
+			}
+			const store = requireStore();
+			for (const item of items) {
+				await store.removeFromStockPool(poolId, String(item.code), Number(item.market));
+			}
+			json(res, 200, { success: true });
+			return;
+		}
+
+		// Backtest report save
+		// List saved backtest reports
+		if (path === "/api/backtest/reports" && method === "GET") {
+			json(res, 200, listReports());
+			return;
+		}
+
+		// Delete a saved backtest report
+		if (path.startsWith("/api/backtest/reports/") && method === "DELETE") {
+			const fileName = decodeURIComponent(path.slice("/api/backtest/reports/".length));
+			if (!fileName || fileName.includes("..")) {
+				badRequest(res, "Invalid file name");
+				return;
+			}
+			const ok = removeReport(fileName);
+			json(res, ok ? 200 : 404, ok ? { deleted: true } : { error: "Report not found" });
+			return;
+		}
+
+		// Save backtest report
+		if (path === "/api/backtest/save" && method === "POST") {
+			try {
+				const params = await readJsonBody(req, 4 * 1024 * 1024); // 4MB — large pools generate big trade lists
+				const { generatePoolBacktestReport } = await import("../report/pool-report.js");
+				const outputDir = join(homedir(), ".trading-agent", "reports");
+				const genResult = await generatePoolBacktestReport(params, outputDir, "http://localhost:3000");
+
+				// Extract fileName from URL (last segment)
+				const urlParts = genResult.url.split("/");
+				const fileName = urlParts[urlParts.length - 1];
+
+				// Save metadata to index for list/restore
+				addReport({
+					fileName,
+					title: params.title || "",
+					poolId: params.poolId ?? 0,
+					poolName: params.poolName || "",
+					strategy: params.strategy || "",
+					startDate: params.startDate || "",
+					endDate: params.endDate || "",
+					initialCapital: params.initialCapital ?? 100000,
+					createdAt: new Date().toISOString(),
+					metrics: {
+						totalReturn: params.strategyMetrics?.totalReturn ?? 0,
+						annualizedReturn: params.strategyMetrics?.annualizedReturn ?? 0,
+						maxDrawdown: params.strategyMetrics?.maxDrawdown ?? 0,
+						winRate: params.strategyMetrics?.winRate ?? 0,
+						totalTrades: params.strategyMetrics?.totalTrades ?? 0,
+						sharpeRatio: params.strategyMetrics?.sharpeRatio ?? 0,
+						profitFactor: params.strategyMetrics?.profitFactor ?? 0,
+					},
+					config: params.config || {},
+				});
+
+				json(res, 200, { url: genResult.url });
+			} catch (err) {
+				json(res, 500, { error: err instanceof Error ? err.message : String(err) });
+			}
+			return;
+		}
+
+		// Batch backtest grid — cartesian product of strategies × ranks × positions × pools
+		if (path === "/api/backtest/batch" && method === "POST") {
+			try {
+				const params = await readJsonBody(req, 4 * 1024 * 1024);
+				const strategies: string[] = Array.isArray(params.strategies) ? params.strategies : [];
+				const rankBys: string[] = Array.isArray(params.rankBys) ? params.rankBys : [];
+				const maxPositionsList: number[] = Array.isArray(params.maxPositionsList) ? params.maxPositionsList : [];
+				const poolIds: number[] = Array.isArray(params.poolIds) ? params.poolIds : [];
+
+				if (strategies.length === 0 || poolIds.length === 0) {
+					badRequest(res, "strategies and poolIds are required");
+					return;
+				}
+				const maxPositions = maxPositionsList.length > 0 ? maxPositionsList : [10];
+				const ranks = rankBys.length > 0 ? rankBys : [null];
+
+				const store = requireStore();
+				const total = strategies.length * ranks.length * maxPositions.length * poolIds.length;
+				const results: any[] = [];
+				let done = 0;
+
+				// Load pools upfront
+				const poolMap = new Map<number, { name: string; is_dynamic: boolean }>();
+				for (const pid of poolIds) {
+					const pool = await store.getStockPoolById(pid);
+					if (pool) poolMap.set(pid, { name: pool.name, is_dynamic: !!pool.is_dynamic });
+				}
+
+				// Run grid sequentially, emit progress after each combo
+				for (const strategy of strategies) {
+					for (const rankBy of ranks) {
+						for (const maxPos of maxPositions) {
+							for (const pid of poolIds) {
+								const pool = poolMap.get(pid);
+								const combo = { strategy, rankBy, maxPos, poolId: pid, poolName: pool?.name ?? String(pid) };
+								const t0 = Date.now();
+								try {
+									let result: any;
+									if (pool?.is_dynamic) {
+										result = await runDynamicPoolBacktest(pid, {
+											strategy: strategy as any,
+											rankBy: rankBy as any,
+											maxPositions: maxPos,
+											start: params.start,
+											end: params.end,
+											initialCapital: params.initialCapital ?? 100_000_000,
+											fullPosition: true,
+											skipNoVolume: true,
+										});
+									} else {
+										const items = await store.getStockPoolItems(pid);
+										const stocks = items.map((i: any) => ({
+											code: i.code,
+											market: i.market,
+											name: i.name || undefined,
+										}));
+										result = await runPoolBacktest(stocks, {
+											strategy: strategy as any,
+											rankBy: rankBy as any,
+											maxPositions: maxPos,
+											start: params.start,
+											end: params.end,
+											initialCapital: params.initialCapital ?? 100_000_000,
+											fullPosition: true,
+											skipNoVolume: true,
+										});
+									}
+									const m = result.metrics;
+									results.push({
+										...combo,
+										totalReturn: m?.totalReturn ?? null,
+										annualizedReturn: m?.annualizedReturn ?? null,
+										sharpeRatio: m?.sharpeRatio ?? null,
+										maxDrawdown: m?.maxDrawdown ?? null,
+										winRate: m?.winRate ?? null,
+										profitFactor: m?.profitFactor ?? null,
+										totalTrades: m?.totalTrades ?? 0,
+										elapsedMs: Date.now() - t0,
+										error: null,
+									});
+								} catch (e) {
+									results.push({
+										...combo,
+										totalReturn: null,
+										annualizedReturn: null,
+										sharpeRatio: null,
+										maxDrawdown: null,
+										winRate: null,
+										profitFactor: null,
+										totalTrades: 0,
+										elapsedMs: Date.now() - t0,
+										error: e instanceof Error ? e.message : String(e),
+									});
+								}
+								done++;
+								// Emit progress event for the frontend progress bar
+								if (session) {
+									session.emit("trading_event", { type: "batch_progress", done, total, current: combo });
+								}
+							}
+						}
+					}
+				}
+
+				json(res, 200, { total, results });
+			} catch (err) {
+				json(res, 500, { error: err instanceof Error ? err.message : String(err) });
+			}
+			return;
+		}
+
+		// Backtest strategies metadata
+		if (path === "/api/backtest/strategies" && method === "GET") {
+			json(res, 200, STRATEGY_META);
+			return;
+		}
+
+		// Backtest runner
+		if (path === "/api/backtest/run" && method === "POST") {
+			try {
+				const params = await readJsonBody(req);
+				const poolId = params.poolId;
+				const config = params.config || {};
+
+				if (!poolId) {
+					badRequest(res, "poolId is required");
+					return;
+				}
+
+				// Validate critical config fields
+				if (config.random_runs != null && (config.random_runs <= 0 || config.random_runs > 100)) {
+					badRequest(res, "random_runs must be 1-100");
+					return;
+				}
+				if (config.positionSize != null && (config.positionSize < 0 || config.positionSize > 1)) {
+					badRequest(res, "positionSize must be 0-1");
+					return;
+				}
+				if (config.min_lot != null && config.min_lot <= 0) {
+					badRequest(res, "min_lot must be > 0");
+					return;
+				}
+				if (config.rebalance_frequency != null && config.rebalance_frequency < 1) {
+					badRequest(res, "rebalance_frequency must be >= 1");
+					return;
+				}
+				for (const key of [
+					"stop_loss_percent",
+					"take_profit_percent",
+					"trailing_stop_percent",
+					"drawdown_limit_percent",
+				]) {
+					const v = (config as Record<string, unknown>)[key];
+					if (v != null && (typeof v !== "number" || v < 0 || v >= 1)) {
+						badRequest(res, `${key} must be a number in 0-1 (0 = disabled)`);
+						return;
+					}
+				}
+
+				const store = requireStore();
+				const pool = await store.getStockPoolById(poolId);
+				if (!pool) {
+					json(res, 404, { error: `Pool ${poolId} not found` });
+					return;
+				}
+
+				let result: any;
+				if (pool.is_dynamic) {
+					result = await runDynamicPoolBacktest(poolId, config);
+				} else {
+					const items = await store.getStockPoolItems(poolId);
+					const stocks = items.map((i: any) => ({ code: i.code, market: i.market, name: i.name || undefined }));
+					result = await runPoolBacktest(stocks, config);
+				}
+
+				json(res, 200, result);
+			} catch (err) {
+				const message = err instanceof Error ? err.message : String(err);
+				if (message.includes("too large")) {
+					json(res, 413, { error: "Request body too large (max 256KB)" });
+				} else {
+					json(res, 500, { error: message });
+				}
+			}
+			return;
+		}
+
 		// Klines
 		if (path === "/api/klines" && method === "GET") {
 			const query = parseQuery(url);
@@ -360,35 +785,131 @@ export async function handleRequest(
 				badRequest(res, "code parameter required");
 				return;
 			}
-			const market = code.startsWith("6") ? 1 : 0;
+			const market = marketFromCode(code);
 			const period = (query.period as any) || "daily";
 			const limit = query.limit ? Number(query.limit) : 100;
+			const INTRADAY_PERIODS = new Set(["1m", "5m", "15m", "30m", "60m"]);
+			const NON_DAILY_PERIODS = new Set(["week", "month", "quarter", "year"]);
 
 			let klines: any[] = [];
+			const store = requireStore();
+			const sync = requireSync();
+			const adjust = (query.adjust as any) || "bfq";
 
-			// 1. Try mootdx (TCP direct) first
-			if (mootdxDaemon) {
-				try {
-					const mootdxResult = await mootdxDaemon.request("klines", { code, market, period, limit }, 20000);
-					if (Array.isArray(mootdxResult) && mootdxResult.length > 0) {
-						klines = mootdxResult;
-						console.log(`[Klines] mootdx hit for ${code}: ${mootdxResult.length} bars`);
-					}
-				} catch (e) {
-					console.warn(`[Klines] mootdx failed for ${code}, falling back to DB:`, e);
+			// 1. DB cache first
+			klines = await store.getKlines({ code, market, period, adjust, limit });
+			console.log(`[Klines] DB cache for ${code} ${period}: ${klines.length} bars`);
+
+			// 2. Determine if data is stale and needs a fresh sync
+			let needsSync = false;
+			const latestBarDate =
+				klines.length > 0 && typeof klines[klines.length - 1]?.date === "string"
+					? klines[klines.length - 1].date.slice(0, 10)
+					: null;
+
+			if (klines.length === 0) {
+				needsSync = true;
+			} else if (INTRADAY_PERIODS.has(period)) {
+				// Intraday: stale if latest bar is before today
+				if (latestBarDate && latestBarDate < todayStr()) {
+					needsSync = true;
+				}
+			} else if (NON_DAILY_PERIODS.has(period)) {
+				// week/month/quarter/year: stale if latest bar is before last period boundary
+				const now = new Date();
+				let threshold: Date;
+				switch (period) {
+					case "week":
+						threshold = new Date(now);
+						threshold.setDate(now.getDate() - 7);
+						break;
+					case "month":
+						threshold = new Date(now);
+						threshold.setMonth(now.getMonth() - 1);
+						break;
+					case "quarter":
+						threshold = new Date(now);
+						threshold.setMonth(now.getMonth() - 3);
+						break;
+					default: // year
+						threshold = new Date(now);
+						threshold.setFullYear(now.getFullYear() - 1);
+						break;
+				}
+				const thresholdStr = threshold.toISOString().slice(0, 10);
+				if (latestBarDate && latestBarDate < thresholdStr) {
+					needsSync = true;
 				}
 			}
 
-			// 2. Fallback: DB cache
-			if (klines.length === 0) {
-				const store = requireStore();
-				klines = await store.getKlines({
-					code,
-					market,
-					period,
-					adjust: (query.adjust as any) || "bfq",
-					limit,
-				});
+			// 3. Sync if needed (covers intraday + week/month/quarter/year)
+			if (needsSync && sync) {
+				const today = todayStr();
+				const start = new Date(Date.now() - 2 * 86400000).toISOString().slice(0, 10).replace(/-/g, "");
+				// Intraday: fast direct Sina HTTP (no Python subprocess overhead)
+				if (INTRADAY_PERIODS.has(period)) {
+					console.log(`[Klines] Fetching intraday from Sina for ${code} ${period}`);
+					try {
+						const intradayRows = await fetchSinaMinuteKlines(code, market, period);
+						if (intradayRows.length > 0) {
+							await store.saveKlines(intradayRows);
+							klines = await store.getKlines({ code, market, period, adjust, limit });
+							console.log(`[Klines] Sina intraday: ${intradayRows.length} bars for ${code}`);
+						}
+					} catch (e) {
+						console.warn(`[Klines] Sina intraday failed for ${code}:`, e);
+					}
+				} else {
+					console.log(`[Klines] Syncing ${period} data for ${code} (latest bar: ${latestBarDate || "none"})`);
+					try {
+						const synced = await sync.syncKline(code, market, period, "bfq", start, today.replace(/-/g, ""));
+						console.log(`[Klines] Synced ${synced} ${period} bars for ${code}`);
+						if (synced > 0) {
+							klines = await store.getKlines({ code, market, period, adjust, limit });
+						}
+					} catch (e) {
+						console.warn(`[Klines] Sync failed for ${code} ${period}:`, e);
+					}
+				}
+			}
+
+			// 3. Fallback: mootdx (TCP direct) with a short timeout
+			if (klines.length === 0 && mootdxDaemon) {
+				console.log(`[Klines] Falling back to mootdx for ${code} ${period} (market=${market})`);
+				try {
+					const mootdxResult = await mootdxDaemon.request("klines", { code, market, period, limit }, 5000);
+					if (Array.isArray(mootdxResult) && mootdxResult.length > 0) {
+						klines = mootdxResult;
+						console.log(`[Klines] mootdx hit for ${code}: ${mootdxResult.length} bars`);
+						// Persist fallback data so next request hits DB
+						try {
+							const rows = mootdxResult.map((k: any) => ({
+								code: k.code,
+								market: k.market,
+								period: k.period,
+								adjust: k.adjust,
+								date: k.date,
+								open: k.open ?? null,
+								high: k.high ?? null,
+								low: k.low ?? null,
+								close: k.close ?? null,
+								volume: k.volume ?? null,
+								turnover: k.turnover ?? null,
+								change_pct: k.change_pct ?? null,
+								change_amount: k.change_amount ?? null,
+								amplitude: k.amplitude ?? null,
+								pre_close: k.pre_close ?? null,
+							}));
+							await store.saveKlines(rows);
+						} catch (saveErr) {
+							console.warn(`[Klines] Failed to persist mootdx fallback for ${code}:`, saveErr);
+						}
+					}
+				} catch (e) {
+					console.warn(`[Klines] mootdx failed for ${code}:`, e);
+				}
+			} else if (klines.length === 0) {
+				console.warn(`[Klines] No mootdxDaemon available for ${code} ${period}`);
 			}
 
 			json(res, 200, klines);
@@ -402,7 +923,7 @@ export async function handleRequest(
 				badRequest(res, "Stock code required");
 				return;
 			}
-			const market = code.startsWith("6") ? 1 : 0;
+			const market = marketFromCode(code);
 			let fundamentals: any = null;
 
 			// 1. Try mootdx (TCP direct) first
@@ -442,6 +963,84 @@ export async function handleRequest(
 			const store = requireStore();
 			const industries = await store.getIndustries(query.standard, query.level ? Number(query.level) : undefined);
 			json(res, 200, industries);
+			return;
+		}
+
+		// Industry indices list
+		if (path === "/api/industry/list" && method === "GET") {
+			const store = requireStore();
+			const sync = requireSync();
+			let list = await store.getIndustryList();
+			if (list.length === 0) {
+				try {
+					await sync.syncIndustryList();
+					list = await store.getIndustryList();
+				} catch (e) {
+					console.warn("[Industry/List] Sync failed:", e);
+				}
+			}
+			json(res, 200, list);
+			return;
+		}
+
+		// Industry index spot quote
+		if (path === "/api/industry/spot" && method === "GET") {
+			const query = parseQuery(url);
+			const store = requireStore();
+			const sync = requireSync();
+			const code = query.code;
+
+			if (code) {
+				let quote: any = null;
+				try {
+					quote = await sync.syncIndustryQuote(code);
+				} catch (e) {
+					console.warn(`[Industry/Spot] Real-time fetch failed for ${code}:`, e);
+					quote = await store.getIndustryQuote(code, todayStr());
+				}
+				json(res, 200, quote);
+				return;
+			}
+
+			let quotes = await store.getLatestIndustryQuotes();
+			if (quotes.length === 0) {
+				try {
+					await sync.syncAllIndustryQuotes();
+					quotes = await store.getLatestIndustryQuotes();
+				} catch (e) {
+					console.warn("[Industry/Spot] On-demand sync failed:", e);
+				}
+			}
+			json(res, 200, quotes);
+			return;
+		}
+
+		// Industry index klines
+		if (path === "/api/industry/klines" && method === "GET") {
+			const query = parseQuery(url);
+			const code = query.code;
+			if (!code) {
+				badRequest(res, "code parameter required (e.g. BK1036)");
+				return;
+			}
+			const period = query.period || "daily";
+			const limit = query.limit ? Number(query.limit) : 100;
+			const start = query.start;
+			const end = query.end;
+
+			const store = requireStore();
+			const sync = requireSync();
+
+			let klines: any[] = await store.getIndustryKlines(code, period, start, end, limit);
+			if (klines.length === 0) {
+				try {
+					await sync.syncIndustryKlines(code, period);
+					klines = await store.getIndustryKlines(code, period, start, end, limit);
+				} catch (e) {
+					console.warn(`[Industry/Klines] Sync failed for ${code}:`, e);
+				}
+			}
+			json(res, 200, klines);
 			return;
 		}
 
@@ -605,6 +1204,13 @@ export async function handleRequest(
 			const allModels = modelRegistry.getAll();
 			const availableModels = modelRegistry.getAvailable();
 			const providers = [...new Set(allModels.map((m) => m.provider))];
+
+			// Prefer active session model, then saved user config, then undefined
+			const userConfig = loadUserConfig();
+			const currentModel = session
+				? { provider: session.model.provider, modelId: session.model.id }
+				: userConfig.model;
+
 			json(res, 200, {
 				providers: providers.map((p) => ({
 					id: p,
@@ -622,7 +1228,7 @@ export async function handleRequest(
 						})),
 				})),
 				available: availableModels.map((m) => `${m.provider}/${m.id}`),
-				currentModel: session ? { provider: session.model.provider, modelId: session.model.id } : undefined,
+				currentModel,
 			});
 			return;
 		}
@@ -645,7 +1251,7 @@ export async function handleRequest(
 
 			// Update auth.json with API key if provided
 			if (apiKey) {
-				modelRegistry.authStorage.set(provider, { type: "api_key", key: apiKey });
+				await modelRegistry.setApiKey(provider, apiKey);
 			}
 
 			// Update models.json with baseUrl if provided
@@ -669,6 +1275,9 @@ export async function handleRequest(
 			// Refresh registry to pick up changes
 			modelRegistry.refresh();
 
+			// Persist selected model as user preference
+			saveUserConfig({ model: { provider, modelId } });
+
 			// Switch model in the active session if available
 			if (session) {
 				const newModel = modelRegistry.find(provider, modelId);
@@ -683,6 +1292,49 @@ export async function handleRequest(
 			}
 
 			json(res, 200, { success: true });
+			return;
+		}
+
+		// ML Stock Prediction
+		if (path === "/api/predict" && method === "POST") {
+			let body = "";
+			for await (const chunk of req) {
+				body += chunk;
+			}
+			const bodyJson = body ? JSON.parse(body) : {};
+			const model = bodyJson.model || "de";
+			const topN = bodyJson.top_n ?? 50;
+			const poolName = bodyJson.pool_name || undefined;
+
+			if (model !== "de" && model !== "de_regression" && model !== "lgb") {
+				badRequest(res, "model must be 'de', 'de_regression' or 'lgb'");
+				return;
+			}
+
+			console.log(`[API/Predict] Starting ${model} prediction (top_n=${topN}, pool=${poolName || "default"})...`);
+			const startTime = Date.now();
+			try {
+				const result = await predictStockRankingTool.execute(`api-predict-${Date.now()}`, {
+					model,
+					top_n: topN,
+					pool_name: poolName,
+					horizon: bodyJson.horizon ?? 5,
+				});
+				const elapsed = Date.now() - startTime;
+				console.log(`[API/Predict] Prediction complete in ${elapsed}ms`);
+				const firstContent = result.content?.[0];
+				const formattedText = firstContent && "text" in firstContent ? firstContent.text : "";
+				json(res, 200, {
+					success: !result.details?.error,
+					elapsed_ms: elapsed,
+					result: result.details,
+					formatted: formattedText,
+				});
+			} catch (err) {
+				const message = err instanceof Error ? err.message : String(err);
+				console.error(`[API/Predict] Prediction failed: ${message}`);
+				json(res, 500, { error: message });
+			}
 			return;
 		}
 

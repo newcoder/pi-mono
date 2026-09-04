@@ -1,43 +1,58 @@
 import type { KnownProvider } from "@mariozechner/pi-ai";
-import { AuthStorage, ModelRegistry } from "@mariozechner/pi-coding-agent";
+import { ModelRegistry, ModelRuntime } from "@mariozechner/pi-coding-agent";
 import { homedir } from "os";
 import { join } from "path";
 
 /** Default model IDs for each known provider — copied from coding-agent to avoid internal import */
 const defaultModelPerProvider: Record<KnownProvider, string> = {
 	"amazon-bedrock": "us.anthropic.claude-opus-4-6-v1",
+	"ant-ling": "claude-sonnet-4-5",
 	anthropic: "claude-opus-4-6",
+	google: "gemini-3-pro-preview",
+	"google-vertex": "gemini-3-pro-preview",
 	openai: "gpt-5.4",
 	"azure-openai-responses": "gpt-5.2",
 	"openai-codex": "gpt-5.4",
-	google: "gemini-2.5-pro",
-	"google-gemini-cli": "gemini-2.5-pro",
-	"google-antigravity": "gemini-3.1-pro-high",
-	"google-vertex": "gemini-3-pro-preview",
-	"github-copilot": "gpt-4o",
-	openrouter: "openai/gpt-5.1-codex",
-	"vercel-ai-gateway": "anthropic/claude-opus-4-6",
+	radius: "gpt-5.4",
+	nvidia: "nvidia/llama-3.3-70b-instruct",
+	deepseek: "deepseek-v4-flash",
+	"github-copilot": "gpt-5.4-codex",
 	xai: "grok-4-fast-non-reasoning",
 	groq: "openai/gpt-oss-120b",
 	cerebras: "zai-glm-4.7",
+	openrouter: "openai/gpt-5.1-codex",
+	"vercel-ai-gateway": "anthropic/claude-opus-4-6",
 	zai: "glm-5",
+	"zai-coding-cn": "glm-5",
 	mistral: "devstral-medium-latest",
 	minimax: "MiniMax-M2.7",
 	"minimax-cn": "MiniMax-M2.7",
+	moonshotai: "kimi-k2.5",
+	"moonshotai-cn": "kimi-k2.5",
 	huggingface: "moonshotai/Kimi-K2.5",
+	fireworks: "accounts/fireworks/models/llama4-maverick-instruct-basic",
+	together: "meta-llama/Meta-Llama-3.1-8B-Instruct-Turbo",
 	opencode: "claude-opus-4-6",
 	"opencode-go": "kimi-k2.5",
 	"kimi-coding": "kimi-k2-thinking",
-	deepseek: "deepseek-chat-v3-0324",
-	fireworks: "accounts/fireworks/models/llama4-maverick-instruct-basic",
 	"cloudflare-workers-ai": "@cf/meta/llama-3.3-70b-instruct-fp8-fast",
+	"cloudflare-ai-gateway": "@cf/meta/llama-3.3-70b-instruct-fp8-fast",
+	"qwen-token-plan": "qwen3-coder-plus",
+	"qwen-token-plan-cn": "qwen3-coder-plus",
+	xiaomi: "MiMo-7B-RL",
+	"xiaomi-token-plan-ams": "MiMo-7B-RL",
+	"xiaomi-token-plan-cn": "MiMo-7B-RL",
+	"xiaomi-token-plan-sgp": "MiMo-7B-RL",
 };
 
-export function loadModelRegistry(): ModelRegistry {
+export async function loadModelRegistry(): Promise<ModelRegistry> {
 	const agentDir = join(homedir(), ".pi", "agent");
-	const authStorage = AuthStorage.create(join(agentDir, "auth.json"));
-	const modelsJsonPath = join(agentDir, "models.json");
-	return ModelRegistry.create(authStorage, modelsJsonPath);
+	const runtime = await ModelRuntime.create({
+		authPath: join(agentDir, "auth.json"),
+		modelsPath: join(agentDir, "models.json"),
+		allowModelNetwork: false,
+	});
+	return new ModelRegistry(runtime);
 }
 
 export function selectDefaultModel(registry: ModelRegistry) {

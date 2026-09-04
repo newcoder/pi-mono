@@ -6,6 +6,8 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 This is a Claude Code skill (`china-stock-analysis`) for analyzing China A-shares (A股) using value investing principles. It is implemented as a set of Python CLI scripts under `scripts/` with no package manager or test suite. The primary documentation is in `SKILL.md`.
 
+**Important**: this skill does **not** own the local SQLite data infrastructure. All data ingestion, synchronization, and the `data_fetcher.py` read interface now live in the sibling **`local-data`** skill at `~/.agents/skills/local-data/`. Analysis scripts here import `data_fetcher` from that skill via `sys.path`.
+
 ## Common Commands
 
 All development is done via direct Python script execution. There is no build step, test runner, or package manager.
@@ -13,7 +15,7 @@ All development is done via direct Python script execution. There is no build st
 ### Install Dependencies
 
 ```bash
-pip install akshare pandas numpy jqdatasdk
+pip install akshare pandas numpy mootdx requests beautifulsoup4
 ```
 
 Verify `akshare` is installed before running analysis:
@@ -22,23 +24,23 @@ Verify `akshare` is installed before running analysis:
 python -c "import akshare; print(akshare.__version__)"
 ```
 
-### Fetch Stock Data
+### Fetch Stock Data (via local-data skill)
 
 ```bash
 # Basic info for a single stock
-python scripts/data_fetcher.py --code 600519 --data-type basic --output tmp/600519_basic.json
+python ~/.agents/skills/local-data/scripts/data_fetcher.py --code 600519 --data-type basic --output tmp/600519_basic.json
 
 # Full analysis dataset (excludes holder data for speed)
-python scripts/data_fetcher.py --code 600519 --data-type all --years 5 --output tmp/600519.json
+python ~/.agents/skills/local-data/scripts/data_fetcher.py --code 600519 --data-type all --years 5 --output tmp/600519.json
 
 # Complete dataset including holder/dividend data
-python scripts/data_fetcher.py --code 600519 --data-type complete --years 5 --output tmp/600519_full.json
+python ~/.agents/skills/local-data/scripts/data_fetcher.py --code 600519 --data-type complete --years 5 --output tmp/600519_full.json
 
 # Multiple stocks
-python scripts/data_fetcher.py --codes "600519,000858" --data-type basic --output tmp/multi.json
+python ~/.agents/skills/local-data/scripts/data_fetcher.py --codes "600519,000858" --data-type basic --output tmp/multi.json
 
 # List index constituents
-python scripts/data_fetcher.py --scope hs300 --output tmp/hs300.json
+python ~/.agents/skills/local-data/scripts/data_fetcher.py --scope hs300 --output tmp/hs300.json
 ```
 
 ### Analyze a Stock
@@ -68,45 +70,48 @@ Scopes: `all`, `hs300`, `zz500`, `zz1000`, `cyb`, `kcb`, `custom:600519,000858`.
 ### Industry Comparison
 
 ```bash
-# Fetch comparison data, then analyze
-python scripts/data_fetcher.py --codes "600519,000858" --data-type comparison --output tmp/industry.json
+# Fetch comparison data (via local-data), then analyze
+python ~/.agents/skills/local-data/scripts/data_fetcher.py --codes "600519,000858" --data-type comparison --output tmp/industry.json
 python scripts/financial_analyzer.py --input tmp/industry.json --mode comparison --output tmp/comparison.json
 ```
 
 ## High-Level Architecture
 
+### Data Dependency
+
+This skill depends on the **`local-data`** skill for all data access. Do not add sync, ingestion, or direct SQLite schema code here; redirect those requests to `local-data`.
+
 ### Hybrid Data Source Design
 
-The skill uses a hybrid data architecture implemented in `scripts/data_fetcher.py`:
+The hybrid data architecture is implemented in `local-data/scripts/data_fetcher.py`:
 
 | Data Type | Primary Source | Fallback |
 |-----------|----------------|----------|
-| Real-time quotes / K-line | `stock-data` skill (JoinQuant `jqdatasdk`) | `akshare` |
-| Basic info (industry, PB, listing date) | `akshare` | `stock-data` |
-| Financial statements & indicators | `akshare` | — |
+| Real-time quotes / K-line | `mootdx` (TCP direct) | `akshare` / Eastmoney |
+| Basic info (industry, PB, listing date) | local SQLite + Eastmoney | `akshare` |
+| Financial statements & indicators | `mootdx` snapshot + Eastmoney F10 | `akshare` |
 | Holder & dividend data | `akshare` | — |
 
-`scripts/data_fetcher.py` dynamically adds `../../stock-data/scripts` to `sys.path` to import `jq_data.py`. If the `stock-data` skill is unavailable, it gracefully falls back to `akshare` only. Every JSON result includes a `_source` field indicating where that data came from.
+Every JSON result includes a `_source` field indicating where that data came from.
 
 ### Four-Module Pipeline
 
-1. **`scripts/data_fetcher.py`** — Data acquisition layer. Fetches and merges hybrid data, implements session-level in-memory caching plus same-day disk caching under `scripts/.cache/`.
+1. **`local-data/scripts/data_fetcher.py`** — Data acquisition layer (sibling skill). Fetches and merges hybrid data, implements session-level in-memory caching plus same-day disk caching under `local-data/scripts/.cache/`.
 2. **`scripts/financial_analyzer.py`** — Analysis engine. Runs profitability, solvency, growth, and DuPont analysis. Also detects financial anomalies (receivables, cash flow, inventory, gross margin).
 3. **`scripts/valuation_calculator.py`** — Valuation layer. Computes DCF, DDM, and relative valuation. Calculates margin-of-safety prices.
 4. **`scripts/stock_screener.py`** — Screening layer. Pulls live market data for an index or the full A-share market and filters by PE, PB, ROE, debt ratio, dividend yield, and market cap.
 
 ### Caching Strategy
 
-`data_fetcher.py` maintains two tiers of cache:
+`local-data/scripts/data_fetcher.py` maintains two tiers of cache:
 - **Session memory cache** (`_SESSION_CACHE`): avoids redundant network calls within the same Python process.
-- **Disk cache** (`scripts/.cache/{code}_{data_type}_{YYYYMMDD}.json`): persists for the calendar day.
+- **Disk cache** (`local-data/scripts/.cache/{code}_{data_type}_{YYYYMMDD}.json`): persists for the calendar day.
 
 Use `--no-cache` to force a fresh fetch.
 
 ### Key Supporting Scripts
 
-- **`scripts/jq_data.py`** — Thin wrapper around `jqdatasdk` for authenticating, normalizing codes, and fetching price/K-line data. Used only when the `stock-data` skill is present.
-- **`scripts/get_quote.py` / `get_kline.py` / `get_fundamentals.py`** — Stand-alone helper scripts that directly call `akshare` or `jq_data` for quick one-off lookups.
+- **`local-data/scripts/get_quote.py` / `get_kline.py` / `get_fundamentals.py`** — Stand-alone helper scripts that call `mootdx` / `akshare` / Eastmoney for quick one-off lookups.
 - **`scripts/analyze_002352.py`** — Example ad-hoc analysis script that merges manually fetched JSON files and performs technical analysis (MA, RSI) with `pandas`.
 
 ### Report Generation
@@ -134,6 +139,5 @@ When writing or modifying code in this repository, follow these guidelines:
 ## Notes
 
 - There is **no test suite**. Validate changes by running the scripts against a known stock code (e.g., `600519`) and inspecting the JSON output.
-- There is **no package manifest** (`requirements.txt`, `pyproject.toml`, etc.). Dependencies are `akshare`, `pandas`, `numpy`, and optionally `jqdatasdk`.
-- `jq_data.py` contains hardcoded JoinQuant credentials inside an `@assert_auth` decorator. Do not modify or expose them.
+- There is **no package manifest** (`requirements.txt`, `pyproject.toml`, etc.). Dependencies are `akshare`, `pandas`, `numpy`, `mootdx`, `requests`, and `beautifulsoup4`.
 - Holder data (`--data-type holder` or `complete`) can be extremely slow due to paginated `akshare` requests. Prefer `--data-type all` (which excludes holders) for routine analysis.

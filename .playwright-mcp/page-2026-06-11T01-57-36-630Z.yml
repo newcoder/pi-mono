@@ -1,0 +1,213 @@
+- generic [ref=e3]:
+  - generic [ref=e4]:
+    - generic [ref=e5]:
+      - generic [ref=e6]: π
+      - generic [ref=e7]: Trading Agent
+    - generic [ref=e9]: 加载中...
+  - generic [ref=e10]:
+    - generic [ref=e11]: RESEARCH
+    - textbox "搜索股票 (代码/名称/拼音)" [ref=e13]
+  - generic [ref=e14]:
+    - generic [ref=e15]:
+      - generic [ref=e17]: 股票池
+      - generic [ref=e18]:
+        - generic [ref=e19]:
+          - generic [ref=e20] [cursor=pointer]:
+            - generic [ref=e21]:
+              - generic [ref=e22]: "[62] 最近访问"
+              - button "×" [ref=e23]
+            - generic [ref=e24]: 21 只
+          - generic [ref=e25] [cursor=pointer]:
+            - generic [ref=e26]:
+              - generic [ref=e27]: "[61] 53号股池_Alpha5D_Top20"
+              - button "×" [ref=e28]
+            - generic [ref=e29]: 20 只
+          - generic [ref=e30] [cursor=pointer]:
+            - generic [ref=e31]:
+              - generic [ref=e32]: "[60] 物理AI核心股池"
+              - button "×" [ref=e33]
+            - generic [ref=e34]: 18 只
+          - generic [ref=e35] [cursor=pointer]:
+            - generic [ref=e36]:
+              - generic [ref=e37]: "[58] 周线多头排列+日线金叉"
+              - button "×" [ref=e38]
+            - generic [ref=e39]: 25 只
+          - generic [ref=e40] [cursor=pointer]:
+            - generic [ref=e41]:
+              - generic [ref=e42]: "[57] 东方财富人气飙升榜TOP30"
+              - button "×" [ref=e43]
+            - generic [ref=e44]: 26 只
+          - generic [ref=e45] [cursor=pointer]:
+            - generic [ref=e46]:
+              - generic [ref=e47]: "[56] 东方财富人气榜TOP30"
+              - button "×" [ref=e48]
+            - generic [ref=e49]: 30 只
+          - generic [ref=e50] [cursor=pointer]:
+            - generic [ref=e51]:
+              - generic [ref=e52]: "[55] 雷达机会榜_20260609"
+              - button "×" [ref=e53]
+            - generic [ref=e54]: 20 只
+          - generic [ref=e55] [cursor=pointer]:
+            - generic [ref=e56]:
+              - generic [ref=e57]: "[54] ML_自选股"
+              - button "×" [ref=e58]
+            - generic [ref=e59]: 50 只
+          - generic [ref=e60] [cursor=pointer]:
+            - generic [ref=e61]:
+              - generic [ref=e62]: "[53] 自选股"
+              - button "×" [ref=e63]
+            - generic [ref=e64]: 276 只
+          - generic [ref=e65] [cursor=pointer]:
+            - generic [ref=e66]:
+              - generic [ref=e67]: "[51] 周线金叉股_市值TOP20"
+              - button "×" [ref=e68]
+            - generic [ref=e69]: 20 只
+          - generic [ref=e70] [cursor=pointer]:
+            - generic [ref=e71]:
+              - generic [ref=e72]: "[50] 周线多头排列_调整缩量_市值TOP9"
+              - button "×" [ref=e73]
+            - generic [ref=e74]: 9 只
+          - generic [ref=e75] [cursor=pointer]:
+            - generic [ref=e76]:
+              - generic [ref=e77]: "[49] ML_算力概念股核心池_预测排序"
+              - button "×" [ref=e78]
+            - generic [ref=e79]: 13 只
+          - generic [ref=e80] [cursor=pointer]:
+            - generic [ref=e81]:
+              - generic [ref=e82]: "[48] 算力概念股核心池"
+              - button "×" [ref=e83]
+            - generic [ref=e84]: 13 只
+          - generic [ref=e85] [cursor=pointer]:
+            - generic [ref=e86]:
+              - generic [ref=e87]: "[23] 周线多头日线缩量回调_202605"
+              - button "×" [ref=e88]
+            - generic [ref=e89]: 30 只
+        - generic [ref=e91]:
+          - generic [ref=e92]: 📂
+          - generic [ref=e93]: 选择股票池查看个股
+    - generic [ref=e95]:
+      - generic [ref=e99]:
+        - generic [ref=e100]: 工具调用
+        - button "收起" [ref=e101] [cursor=pointer]:
+          - img [ref=e102]
+      - generic [ref=e106]:
+        - button "设置" [ref=e107] [cursor=pointer]:
+          - img [ref=e108]
+        - button "附件" [ref=e111] [cursor=pointer]:
+          - img [ref=e112]
+        - button "Choose File"
+        - textbox "输入消息..." [ref=e114]
+        - button "发送" [ref=e115] [cursor=pointer]:
+          - img [ref=e116]
+    - generic [ref=e119]:
+      - generic [ref=e120]:
+        - generic [ref=e121] [cursor=pointer]:
+          - generic [ref=e122]: 📅 投资日历
+          - generic [ref=e123]:
+            - button "刷新日历数据" [ref=e124]:
+              - img [ref=e125]
+            - img [ref=e128]
+        - generic [ref=e131]:
+          - generic [ref=e132]:
+            - button "<" [ref=e133] [cursor=pointer]
+            - generic [ref=e134]: 2026年6月
+            - button ">" [ref=e135] [cursor=pointer]
+          - generic [ref=e136]:
+            - generic [ref=e137]: 日
+            - generic [ref=e138]: 一
+            - generic [ref=e139]: 二
+            - generic [ref=e140]: 三
+            - generic [ref=e141]: 四
+            - generic [ref=e142]: 五
+            - generic [ref=e143]: 六
+          - generic [ref=e144]:
+            - generic [ref=e147] [cursor=pointer]: "1"
+            - generic [ref=e153] [cursor=pointer]: "2"
+            - generic [ref=e157] [cursor=pointer]: "3"
+            - generic [ref=e159] [cursor=pointer]: "4"
+            - generic [ref=e163] [cursor=pointer]: "5"
+            - generic [ref=e165] [cursor=pointer]: "6"
+            - generic [ref=e167] [cursor=pointer]: "7"
+            - generic [ref=e169] [cursor=pointer]: "8"
+            - generic [ref=e171] [cursor=pointer]: "9"
+            - generic [ref=e175] [cursor=pointer]: "10"
+            - generic [ref=e179] [cursor=pointer]: "11"
+            - generic [ref=e181] [cursor=pointer]: "12"
+            - generic [ref=e183] [cursor=pointer]: "13"
+            - generic [ref=e185] [cursor=pointer]: "14"
+            - generic [ref=e187] [cursor=pointer]: "15"
+            - generic [ref=e191] [cursor=pointer]: "16"
+            - generic [ref=e193] [cursor=pointer]: "17"
+            - generic [ref=e195] [cursor=pointer]: "18"
+            - generic [ref=e197] [cursor=pointer]: "19"
+            - generic [ref=e199] [cursor=pointer]: "20"
+            - generic [ref=e201] [cursor=pointer]: "21"
+            - generic [ref=e203] [cursor=pointer]: "22"
+            - generic [ref=e205] [cursor=pointer]: "23"
+            - generic [ref=e207] [cursor=pointer]: "24"
+            - generic [ref=e209] [cursor=pointer]: "25"
+            - generic [ref=e211] [cursor=pointer]: "26"
+            - generic [ref=e213] [cursor=pointer]: "27"
+            - generic [ref=e215] [cursor=pointer]: "28"
+            - generic [ref=e217] [cursor=pointer]: "29"
+            - generic [ref=e219] [cursor=pointer]: "30"
+          - generic [ref=e220]:
+            - generic [ref=e221]: 本月重点关注
+            - generic [ref=e222] [cursor=pointer]:
+              - generic [ref=e223]:
+                - generic [ref=e225]: 预计
+                - generic [ref=e226]: OPEC+产量会议
+              - generic [ref=e227]: 决定下半年原油产量政策 (2026年6月1-5日)
+            - generic [ref=e228] [cursor=pointer]:
+              - generic [ref=e229]:
+                - generic [ref=e231]: 06-01
+                - generic [ref=e232]: 永大股份 业绩预告
+              - generic [ref=e233]: "公告日期: 20260601; 报告期[20260331]: 2026年一季报"
+            - generic [ref=e234] [cursor=pointer]:
+              - generic [ref=e235]:
+                - generic [ref=e237]: 预计
+                - generic [ref=e238]: 618购物节
+              - generic [ref=e239]: 年中电商大促 (2026年6月1-18日)
+            - generic [ref=e240] [cursor=pointer]:
+              - generic [ref=e241]:
+                - generic [ref=e243]: 预计
+                - generic [ref=e244]: 苹果WWDC
+              - generic [ref=e245]: 苹果年度开发者大会，iOS/macOS新系统发布 (2026年6月2-13日)
+            - generic [ref=e246] [cursor=pointer]:
+              - generic [ref=e247]:
+                - generic [ref=e249]: 预计
+                - generic [ref=e250]: Computex台北电脑展
+              - generic [ref=e251]: 全球第二大电脑展，AI PC新品发布 (2026年6月2-5日)
+            - generic [ref=e252] [cursor=pointer]:
+              - generic [ref=e253]:
+                - generic [ref=e255]: 06-04
+                - generic [ref=e256]: 臻宝科技 业绩预告
+              - generic [ref=e257]: "公告日期: 20260604; 报告期[20260331]: 2026年一季报"
+            - generic [ref=e258] [cursor=pointer]:
+              - generic [ref=e259]:
+                - generic [ref=e261]: 06-04
+                - generic [ref=e262]: 惠科股份 业绩预告
+              - generic [ref=e263]: "公告日期: 20260604; 报告期[20260331]: 2026年一季报"
+            - generic [ref=e264] [cursor=pointer]:
+              - generic [ref=e265]:
+                - generic [ref=e267]: 06-04
+                - generic [ref=e268]: 科莱瑞迪 业绩预告
+              - generic [ref=e269]: "公告日期: 20260604; 报告期[20260331]: 2026年一季报"
+            - generic [ref=e270] [cursor=pointer]:
+              - generic [ref=e271]:
+                - generic [ref=e273]: 06-09
+                - generic [ref=e274]: 环旭电子 业绩预告
+              - generic [ref=e275]: "最新价: 40.74; 最新涨跌幅: 5.054152; 公告日期: 20260609; 报告期[20260331]: 2026年一季报; 变动类型[20260331]: 不确定"
+            - generic [ref=e276] [cursor=pointer]:
+              - generic [ref=e277]:
+                - generic [ref=e279]: 预计
+                - generic [ref=e280]: SNEC光伏展
+              - generic [ref=e281]: 全球最大光伏展 (2026年6月10-12日)
+            - generic [ref=e282] [cursor=pointer]:
+              - generic [ref=e283]:
+                - generic [ref=e285]: 预计
+                - generic [ref=e286]: 迎峰度夏
+              - generic [ref=e287]: 夏季用电高峰，电力保供政策密集 (2026年6月15-30日)
+      - generic [ref=e289] [cursor=pointer]:
+        - generic [ref=e290]: 📰 财经新闻
+        - img [ref=e291]

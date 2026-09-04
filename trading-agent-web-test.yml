@@ -1,0 +1,904 @@
+- generic [ref=e3]:
+  - generic [ref=e4]:
+    - generic [ref=e5]:
+      - generic [ref=e6]: π
+      - generic [ref=e7]: Trading Agent
+    - generic [ref=e8]:
+      - generic [ref=e113] [cursor=pointer]:
+        - generic [ref=e114]: 上证指数
+        - generic [ref=e115]: "4117.85"
+        - generic [ref=e116]: ▼
+        - generic [ref=e117]: "-0.84%"
+      - generic [ref=e118] [cursor=pointer]:
+        - generic [ref=e119]: 沪深300
+        - generic [ref=e120]: "4907.69"
+        - generic [ref=e121]: ▼
+        - generic [ref=e122]: "-0.28%"
+      - generic [ref=e123] [cursor=pointer]:
+        - generic [ref=e124]: 科创50
+        - generic [ref=e125]: "1841.35"
+        - generic [ref=e126]: ▼
+        - generic [ref=e127]: "-2.88%"
+      - generic [ref=e128] [cursor=pointer]:
+        - generic [ref=e129]: 中证500
+        - generic [ref=e130]: "8566.73"
+        - generic [ref=e131]: ▼
+        - generic [ref=e132]: "-1.58%"
+      - generic [ref=e133] [cursor=pointer]:
+        - generic [ref=e134]: 深证成指
+        - generic [ref=e135]: "15718.98"
+        - generic [ref=e136]: ▼
+        - generic [ref=e137]: "-0.87%"
+      - generic [ref=e138] [cursor=pointer]:
+        - generic [ref=e139]: 创业板指
+        - generic [ref=e140]: "4000.50"
+        - generic [ref=e141]: ▼
+        - generic [ref=e142]: "-0.51%"
+  - generic [ref=e11]: "市场情绪: 加载中..."
+  - generic [ref=e12]:
+    - generic [ref=e13]: RESEARCH
+    - textbox "搜索股票 (代码/名称/拼音)" [ref=e15]
+  - generic [ref=e16]:
+    - generic [ref=e17]:
+      - generic [ref=e19]: 股票池
+      - generic [ref=e20]:
+        - generic [ref=e21] [cursor=pointer]:
+          - generic [ref=e22]:
+            - generic [ref=e23]: lgbm_40_60
+            - button "×" [ref=e24]
+          - generic [ref=e25]: 21 只
+        - generic [ref=e26] [cursor=pointer]:
+          - generic [ref=e27]:
+            - generic [ref=e28]: LGBM Rank 40-60
+            - button "×" [ref=e29]
+          - generic [ref=e30]: 21 只
+        - generic [ref=e31] [cursor=pointer]:
+          - generic [ref=e32]:
+            - generic [ref=e33]: 周线多头日线缩量回调_202605
+            - button "×" [ref=e34]
+          - generic [ref=e35]: 30 只
+        - generic [ref=e36] [cursor=pointer]:
+          - generic [ref=e37]:
+            - generic [ref=e38]: 最近访问
+            - button "×" [ref=e39]
+          - generic [ref=e40]: 103 只
+        - generic [ref=e41] [cursor=pointer]:
+          - generic [ref=e42]:
+            - generic [ref=e43]: 未来关注股池
+            - button "×" [ref=e44]
+          - generic [ref=e45]: 50 只
+        - generic [ref=e46] [cursor=pointer]:
+          - generic [ref=e47]:
+            - generic [ref=e48]: 周线多头日线回调缩量
+            - button "×" [ref=e49]
+          - generic [ref=e50]: 50 只
+        - generic [ref=e51] [cursor=pointer]:
+          - generic [ref=e52]:
+            - generic [ref=e53]: 前期强势缩量调整
+            - button "×" [ref=e54]
+          - generic [ref=e55]: 50 只
+        - generic [ref=e56] [cursor=pointer]:
+          - generic [ref=e57]:
+            - generic [ref=e58]: 营收连续两年增长超50%
+            - button "×" [ref=e59]
+          - generic [ref=e60]: 45 只
+        - generic [ref=e61] [cursor=pointer]:
+          - generic [ref=e62]:
+            - generic [ref=e63]: 日线多头排列市值TOP10
+            - button "×" [ref=e64]
+          - generic [ref=e65]: 10 只
+    - generic [ref=e66]:
+      - generic [ref=e70]:
+        - button "附件" [ref=e71] [cursor=pointer]:
+          - img [ref=e72]
+        - textbox "输入消息..." [ref=e74]
+        - button "发送" [ref=e75] [cursor=pointer]:
+          - img [ref=e76]
+      - generic [ref=e80]: 工具调用
+    - generic [ref=e82]:
+      - generic [ref=e83]:
+        - generic [ref=e84] [cursor=pointer]:
+          - generic [ref=e85]: 📈 强势股
+          - img [ref=e86]
+        - generic [ref=e89]:
+          - generic [ref=e143]: 2026-05-26 同花顺热点
+          - generic [ref=e144] [cursor=pointer]:
+            - generic [ref=e145]:
+              - generic [ref=e146]: 肯特股份
+              - generic [ref=e147]: "301591"
+              - generic [ref=e148]: +20.00%
+            - generic [ref=e149]:
+              - generic [ref=e150]: PEEK材料
+              - generic [ref=e151]: PCB覆铜板
+              - generic [ref=e152]: 高性能工程塑料
+            - generic [ref=e153]:
+              - generic [ref=e154]: 价格 58.68
+              - generic [ref=e155]: 换手 37.0%
+              - generic [ref=e156]: 市值 20.2亿
+          - generic [ref=e157] [cursor=pointer]:
+            - generic [ref=e158]:
+              - generic [ref=e159]: 复洁科技
+              - generic [ref=e160]: "688335"
+              - generic [ref=e161]: +19.98%
+            - generic [ref=e162]:
+              - generic [ref=e163]: 绿色甲醇
+              - generic [ref=e164]: 设立子公司
+              - generic [ref=e165]: 环保设备
+            - generic [ref=e166]:
+              - generic [ref=e167]: 价格 31.88
+              - generic [ref=e168]: 换手 5.6%
+              - generic [ref=e169]: 市值 47.2亿
+          - generic [ref=e170] [cursor=pointer]:
+            - generic [ref=e171]:
+              - generic [ref=e172]: 米奥会展
+              - generic [ref=e173]: "300795"
+              - generic [ref=e174]: +19.98%
+            - generic [ref=e175]:
+              - generic [ref=e176]: 拟投资阶跃星辰
+              - generic [ref=e177]: AI应用
+              - generic [ref=e178]: 境外会展
+            - generic [ref=e179]:
+              - generic [ref=e180]: 价格 12.31
+              - generic [ref=e181]: 换手 5.9%
+              - generic [ref=e182]: 市值 21.4亿
+          - generic [ref=e183] [cursor=pointer]:
+            - generic [ref=e184]:
+              - generic [ref=e185]: 新亚制程
+              - generic [ref=e186]: "002388"
+              - generic [ref=e187]: +10.09%
+            - generic [ref=e188]:
+              - generic [ref=e189]: 第一大客户华为
+              - generic [ref=e190]: 锂电材料
+              - generic [ref=e191]: 六氟磷酸锂
+              - generic [ref=e192]: 电子信息产品
+            - generic [ref=e193]:
+              - generic [ref=e194]: 价格 6.44
+              - generic [ref=e195]: 换手 2.2%
+              - generic [ref=e196]: 市值 32.6亿
+          - generic [ref=e197] [cursor=pointer]:
+            - generic [ref=e198]:
+              - generic [ref=e199]: 步步高
+              - generic [ref=e200]: "002251"
+              - generic [ref=e201]: +10.08%
+            - generic [ref=e202]:
+              - generic [ref=e203]: 零售
+              - generic [ref=e204]: 胖东来调改
+              - generic [ref=e205]: 摘帽
+            - generic [ref=e206]:
+              - generic [ref=e207]: 价格 4.15
+              - generic [ref=e208]: 换手 5.2%
+              - generic [ref=e209]: 市值 89.3亿
+          - generic [ref=e210] [cursor=pointer]:
+            - generic [ref=e211]:
+              - generic [ref=e212]: 远东传动
+              - generic [ref=e213]: "002406"
+              - generic [ref=e214]: +10.06%
+            - generic [ref=e215]:
+              - generic [ref=e216]: 机器人
+              - generic [ref=e217]: 传动轴
+              - generic [ref=e218]: 参股黄河信产
+              - generic [ref=e219]: 华为昇腾
+            - generic [ref=e220]:
+              - generic [ref=e221]: 价格 8.75
+              - generic [ref=e222]: 换手 12.5%
+              - generic [ref=e223]: 市值 52.7亿
+          - generic [ref=e224] [cursor=pointer]:
+            - generic [ref=e225]:
+              - generic [ref=e226]: 大众公用
+              - generic [ref=e227]: "600635"
+              - generic [ref=e228]: +10.04%
+            - generic [ref=e229]:
+              - generic [ref=e230]: 参股深创投
+              - generic [ref=e231]: 燃气能源
+              - generic [ref=e232]: 公用事业
+            - generic [ref=e233]:
+              - generic [ref=e234]: 价格 6.03
+              - generic [ref=e235]: 换手 5.8%
+              - generic [ref=e236]: 市值 145.8亿
+          - generic [ref=e237] [cursor=pointer]:
+            - generic [ref=e238]:
+              - generic [ref=e239]: 天创时尚
+              - generic [ref=e240]: "603608"
+              - generic [ref=e241]: +10.02%
+            - generic [ref=e242]:
+              - generic [ref=e243]: 女鞋
+              - generic [ref=e244]: 抖音爆品
+              - generic [ref=e245]: 控制权变更
+              - generic [ref=e246]: 一季报扭亏
+            - generic [ref=e247]:
+              - generic [ref=e248]: 价格 19.11
+              - generic [ref=e249]: 换手 5.2%
+              - generic [ref=e250]: 市值 80.2亿
+          - generic [ref=e251] [cursor=pointer]:
+            - generic [ref=e252]:
+              - generic [ref=e253]: 中京电子
+              - generic [ref=e254]: "002579"
+              - generic [ref=e255]: +10.02%
+            - generic [ref=e256]:
+              - generic [ref=e257]: 定增扩产
+              - generic [ref=e258]: PCB
+              - generic [ref=e259]: 高阶HDI
+            - generic [ref=e260]:
+              - generic [ref=e261]: 价格 15.04
+              - generic [ref=e262]: 换手 17.6%
+              - generic [ref=e263]: 市值 87.8亿
+          - generic [ref=e264] [cursor=pointer]:
+            - generic [ref=e265]:
+              - generic [ref=e266]: 双星新材
+              - generic [ref=e267]: "002585"
+              - generic [ref=e268]: +10.02%
+            - generic [ref=e269]:
+              - generic [ref=e270]: MLCC离型膜
+              - generic [ref=e271]: 复合铜箔
+              - generic [ref=e272]: 扭亏为盈
+            - generic [ref=e273]:
+              - generic [ref=e274]: 价格 10.87
+              - generic [ref=e275]: 换手 21.0%
+              - generic [ref=e276]: 市值 96.4亿
+          - generic [ref=e277] [cursor=pointer]:
+            - generic [ref=e278]:
+              - generic [ref=e279]: 华天科技
+              - generic [ref=e280]: "002185"
+              - generic [ref=e281]: +10.02%
+            - generic [ref=e282]:
+              - generic [ref=e283]: 先进封装
+              - generic [ref=e284]: 30亿扩产
+              - generic [ref=e285]: 存储封测
+            - generic [ref=e286]:
+              - generic [ref=e287]: 价格 18.67
+              - generic [ref=e288]: 换手 17.9%
+              - generic [ref=e289]: 市值 609.8亿
+          - generic [ref=e290] [cursor=pointer]:
+            - generic [ref=e291]:
+              - generic [ref=e292]: 嘉美包装
+              - generic [ref=e293]: "002969"
+              - generic [ref=e294]: +10.01%
+            - generic [ref=e295]:
+              - generic [ref=e296]: 要约收购
+              - generic [ref=e297]: 追觅关联
+              - generic [ref=e298]: 饮料包装
+            - generic [ref=e299]:
+              - generic [ref=e300]: 价格 20.99
+              - generic [ref=e301]: 换手 8.3%
+              - generic [ref=e302]: 市值 229.4亿
+          - generic [ref=e303] [cursor=pointer]:
+            - generic [ref=e304]:
+              - generic [ref=e305]: 甬金股份
+              - generic [ref=e306]: "603995"
+              - generic [ref=e307]: +10.01%
+            - generic [ref=e308]:
+              - generic [ref=e309]: 不锈钢
+              - generic [ref=e310]: 新材料项目
+              - generic [ref=e311]: 电池壳材料
+              - generic [ref=e312]: 高分红
+            - generic [ref=e313]:
+              - generic [ref=e314]: 价格 19.78
+              - generic [ref=e315]: 换手 3.5%
+              - generic [ref=e316]: 市值 72.3亿
+          - generic [ref=e317] [cursor=pointer]:
+            - generic [ref=e318]:
+              - generic [ref=e319]: 黄河旋风
+              - generic [ref=e320]: "600172"
+              - generic [ref=e321]: +10.01%
+            - generic [ref=e322]:
+              - generic [ref=e323]: AI芯片散热
+              - generic [ref=e324]: 培育钻石
+              - generic [ref=e325]: 超硬材料
+            - generic [ref=e326]:
+              - generic [ref=e327]: 价格 13.30
+              - generic [ref=e328]: 换手 19.8%
+              - generic [ref=e329]: 市值 169.7亿
+          - generic [ref=e330] [cursor=pointer]:
+            - generic [ref=e331]:
+              - generic [ref=e332]: 晨丰科技
+              - generic [ref=e333]: "603685"
+              - generic [ref=e334]: +10.01%
+            - generic [ref=e335]:
+              - generic [ref=e336]: 绿电算力
+              - generic [ref=e337]: 算电协同
+              - generic [ref=e338]: 股权激励
+            - generic [ref=e339]:
+              - generic [ref=e340]: 价格 35.82
+              - generic [ref=e341]: 换手 4.1%
+              - generic [ref=e342]: 市值 72.2亿
+          - generic [ref=e343] [cursor=pointer]:
+            - generic [ref=e344]:
+              - generic [ref=e345]: 红星发展
+              - generic [ref=e346]: "600367"
+              - generic [ref=e347]: +10.01%
+            - generic [ref=e348]:
+              - generic [ref=e349]: 供货康宁
+              - generic [ref=e350]: 碳酸锶涨价
+              - generic [ref=e351]: 碳酸钡龙头
+            - generic [ref=e352]:
+              - generic [ref=e353]: 价格 29.78
+              - generic [ref=e354]: 换手 9.2%
+              - generic [ref=e355]: 市值 95.9亿
+          - generic [ref=e356] [cursor=pointer]:
+            - generic [ref=e357]:
+              - generic [ref=e358]: 和顺石油
+              - generic [ref=e359]: "603353"
+              - generic [ref=e360]: +10.01%
+            - generic [ref=e361]:
+              - generic [ref=e362]: 芯片IP
+              - generic [ref=e363]: 控股奎芯科技
+              - generic [ref=e364]: 成品油
+            - generic [ref=e365]:
+              - generic [ref=e366]: 价格 55.07
+              - generic [ref=e367]: 换手 4.7%
+              - generic [ref=e368]: 市值 93.8亿
+          - generic [ref=e369] [cursor=pointer]:
+            - generic [ref=e370]:
+              - generic [ref=e371]: 恒林股份
+              - generic [ref=e372]: "603661"
+              - generic [ref=e373]: +10.01%
+            - generic [ref=e374]:
+              - generic [ref=e375]: 投资GPU公司
+              - generic [ref=e376]: 培育钻石
+              - generic [ref=e377]: 家居用品
+              - generic [ref=e378]: 出口
+            - generic [ref=e379]:
+              - generic [ref=e380]: 价格 39.36
+              - generic [ref=e381]: 换手 5.9%
+              - generic [ref=e382]: 市值 54.7亿
+          - generic [ref=e383] [cursor=pointer]:
+            - generic [ref=e384]:
+              - generic [ref=e385]: 三佳科技
+              - generic [ref=e386]: "600520"
+              - generic [ref=e387]: +10.01%
+            - generic [ref=e388]:
+              - generic [ref=e389]: 先进封装
+              - generic [ref=e390]: 半导体设备
+              - generic [ref=e391]: 合肥国资
+              - generic [ref=e392]: 一季报扭亏
+            - generic [ref=e393]:
+              - generic [ref=e394]: 价格 36.82
+              - generic [ref=e395]: 换手 4.9%
+              - generic [ref=e396]: 市值 58.3亿
+          - generic [ref=e397] [cursor=pointer]:
+            - generic [ref=e398]:
+              - generic [ref=e399]: 招金黄金
+              - generic [ref=e400]: "000506"
+              - generic [ref=e401]: +10.00%
+            - generic [ref=e402]:
+              - generic [ref=e403]: 黄金
+              - generic [ref=e404]: 业绩暴增
+              - generic [ref=e405]: 国企
+            - generic [ref=e406]:
+              - generic [ref=e407]: 价格 15.40
+              - generic [ref=e408]: 换手 5.0%
+              - generic [ref=e409]: 市值 143.0亿
+          - generic [ref=e410] [cursor=pointer]:
+            - generic [ref=e411]:
+              - generic [ref=e412]: 沃格光电
+              - generic [ref=e413]: "603773"
+              - generic [ref=e414]: +10.00%
+            - generic [ref=e415]:
+              - generic [ref=e416]: 玻璃基板
+              - generic [ref=e417]: 先进封装
+              - generic [ref=e418]: MiniLED
+            - generic [ref=e419]:
+              - generic [ref=e420]: 价格 91.54
+              - generic [ref=e421]: 换手 8.8%
+              - generic [ref=e422]: 市值 205.7亿
+          - generic [ref=e423] [cursor=pointer]:
+            - generic [ref=e424]:
+              - generic [ref=e425]: 金钼股份
+              - generic [ref=e426]: "601958"
+              - generic [ref=e427]: +9.99%
+            - generic [ref=e428]:
+              - generic [ref=e429]: 钼价新高
+              - generic [ref=e430]: 钼矿增储
+              - generic [ref=e431]: 一季报增长
+              - generic [ref=e432]: 陕西国资
+            - generic [ref=e433]:
+              - generic [ref=e434]: 价格 23.23
+              - generic [ref=e435]: 换手 2.3%
+              - generic [ref=e436]: 市值 749.5亿
+          - generic [ref=e437] [cursor=pointer]:
+            - generic [ref=e438]:
+              - generic [ref=e439]: 沃特股份
+              - generic [ref=e440]: "002886"
+              - generic [ref=e441]: +9.99%
+            - generic [ref=e442]:
+              - generic [ref=e443]: PEEK材料
+              - generic [ref=e444]: 半导体材料
+              - generic [ref=e445]: PTFE薄膜
+              - generic [ref=e446]: 季报增长
+            - generic [ref=e447]:
+              - generic [ref=e448]: 价格 31.59
+              - generic [ref=e449]: 换手 14.3%
+              - generic [ref=e450]: 市值 66.0亿
+          - generic [ref=e451] [cursor=pointer]:
+            - generic [ref=e452]:
+              - generic [ref=e453]: 播恩集团
+              - generic [ref=e454]: "001366"
+              - generic [ref=e455]: +9.99%
+            - generic [ref=e456]:
+              - generic [ref=e457]: 拟收购
+              - generic [ref=e458]: 合成生物
+              - generic [ref=e459]: 饲料
+            - generic [ref=e460]:
+              - generic [ref=e461]: 价格 18.61
+              - generic [ref=e462]: 换手 7.9%
+              - generic [ref=e463]: 市值 29.9亿
+          - generic [ref=e464] [cursor=pointer]:
+            - generic [ref=e465]:
+              - generic [ref=e466]: 真视通
+              - generic [ref=e467]: "002771"
+              - generic [ref=e468]: +9.98%
+            - generic [ref=e469]:
+              - generic [ref=e470]: 液冷算力
+              - generic [ref=e471]: 高压快充
+              - generic [ref=e472]: 多媒体视讯
+            - generic [ref=e473]:
+              - generic [ref=e474]: 价格 14.99
+              - generic [ref=e475]: 换手 14.6%
+              - generic [ref=e476]: 市值 26.2亿
+          - generic [ref=e477] [cursor=pointer]:
+            - generic [ref=e478]:
+              - generic [ref=e479]: 新金路
+              - generic [ref=e480]: "000510"
+              - generic [ref=e481]: +9.98%
+            - generic [ref=e482]:
+              - generic [ref=e483]: 石英砂
+              - generic [ref=e484]: 锡钨钽铌
+              - generic [ref=e485]: 氯碱龙头
+            - generic [ref=e486]:
+              - generic [ref=e487]: 价格 18.07
+              - generic [ref=e488]: 换手 13.1%
+              - generic [ref=e489]: 市值 109.6亿
+          - generic [ref=e490] [cursor=pointer]:
+            - generic [ref=e491]:
+              - generic [ref=e492]: 上海电力
+              - generic [ref=e493]: "600021"
+              - generic [ref=e494]: +9.98%
+            - generic [ref=e495]:
+              - generic [ref=e496]: 电力
+              - generic [ref=e497]: 海上风电
+              - generic [ref=e498]: 清洁能源
+              - generic [ref=e499]: 央企
+            - generic [ref=e500]:
+              - generic [ref=e501]: 价格 20.39
+              - generic [ref=e502]: 换手 5.3%
+              - generic [ref=e503]: 市值 575.3亿
+          - generic [ref=e504] [cursor=pointer]:
+            - generic [ref=e505]:
+              - generic [ref=e506]: 华塑控股
+              - generic [ref=e507]: "000509"
+              - generic [ref=e508]: +9.98%
+            - generic [ref=e509]:
+              - generic [ref=e510]: 拟定增
+              - generic [ref=e511]: PCB钻针
+              - generic [ref=e512]: CCER
+              - generic [ref=e513]: 湖北国资
+            - generic [ref=e514]:
+              - generic [ref=e515]: 价格 4.74
+              - generic [ref=e516]: 换手 6.6%
+              - generic [ref=e517]: 市值 50.9亿
+          - generic [ref=e518] [cursor=pointer]:
+            - generic [ref=e519]:
+              - generic [ref=e520]: 华电能源
+              - generic [ref=e521]: "600726"
+              - generic [ref=e522]: +9.97%
+            - generic [ref=e523]:
+              - generic [ref=e524]: 煤炭产销
+              - generic [ref=e525]: 热电联产
+              - generic [ref=e526]: 扭亏为盈
+              - generic [ref=e527]: 央企
+            - generic [ref=e528]:
+              - generic [ref=e529]: 价格 7.61
+              - generic [ref=e530]: 换手 2.6%
+              - generic [ref=e531]: 市值 568.9亿
+          - generic [ref=e532] [cursor=pointer]:
+            - generic [ref=e533]:
+              - generic [ref=e534]: 大业股份
+              - generic [ref=e535]: "603278"
+              - generic [ref=e536]: +9.97%
+            - generic [ref=e537]:
+              - generic [ref=e538]: 人形机器人
+              - generic [ref=e539]: 腱绳
+              - generic [ref=e540]: 胎圈钢丝
+              - generic [ref=e541]: 商业航天
+            - generic [ref=e542]:
+              - generic [ref=e543]: 价格 14.67
+              - generic [ref=e544]: 换手 5.0%
+              - generic [ref=e545]: 市值 50.1亿
+          - generic [ref=e546] [cursor=pointer]:
+            - generic [ref=e547]:
+              - generic [ref=e548]: 中百集团
+              - generic [ref=e549]: "000759"
+              - generic [ref=e550]: +9.96%
+            - generic [ref=e551]:
+              - generic [ref=e552]: 百货零售
+              - generic [ref=e553]: 新零售
+              - generic [ref=e554]: 国企改革
+            - generic [ref=e555]:
+              - generic [ref=e556]: 价格 5.52
+              - generic [ref=e557]: 换手 8.1%
+              - generic [ref=e558]: 市值 36.2亿
+          - generic [ref=e559] [cursor=pointer]:
+            - generic [ref=e560]:
+              - generic [ref=e561]: 香江控股
+              - generic [ref=e562]: "600162"
+              - generic [ref=e563]: +9.95%
+            - generic [ref=e564]:
+              - generic [ref=e565]: 广州项目
+              - generic [ref=e566]: 家居商贸
+              - generic [ref=e567]: 养老服务
+            - generic [ref=e568]:
+              - generic [ref=e569]: 价格 2.10
+              - generic [ref=e570]: 换手 0.9%
+              - generic [ref=e571]: 市值 68.6亿
+          - generic [ref=e572] [cursor=pointer]:
+            - generic [ref=e573]:
+              - generic [ref=e574]: 卧龙新能
+              - generic [ref=e575]: "600173"
+              - generic [ref=e576]: +9.94%
+            - generic [ref=e577]:
+              - generic [ref=e578]: 风光储氢
+              - generic [ref=e579]: 储能
+              - generic [ref=e580]: 机器人概念
+            - generic [ref=e581]:
+              - generic [ref=e582]: 价格 7.41
+              - generic [ref=e583]: 换手 2.4%
+              - generic [ref=e584]: 市值 51.9亿
+          - generic [ref=e585] [cursor=pointer]:
+            - generic [ref=e586]:
+              - generic [ref=e587]: "*ST皇庭"
+              - generic [ref=e588]: "000056"
+              - generic [ref=e589]: +5.30%
+            - generic [ref=e590]:
+              - generic [ref=e591]: 退市博弈
+              - generic [ref=e592]: 债务化解
+              - generic [ref=e593]: 功率半导体
+            - generic [ref=e594]:
+              - generic [ref=e595]: 价格 1.39
+              - generic [ref=e596]: 换手 3.2%
+              - generic [ref=e597]: 市值 12.6亿
+          - generic [ref=e598] [cursor=pointer]:
+            - generic [ref=e599]:
+              - generic [ref=e600]: "*ST春兴"
+              - generic [ref=e601]: "002547"
+              - generic [ref=e602]: +5.09%
+            - generic [ref=e603]:
+              - generic [ref=e604]: 诉讼进展
+              - generic [ref=e605]: 汽车零部件
+              - generic [ref=e606]: 通信
+            - generic [ref=e607]:
+              - generic [ref=e608]: 价格 3.51
+              - generic [ref=e609]: 换手 3.7%
+              - generic [ref=e610]: 市值 38.8亿
+          - generic [ref=e611] [cursor=pointer]:
+            - generic [ref=e612]:
+              - generic [ref=e613]: "*ST春天"
+              - generic [ref=e614]: "600381"
+              - generic [ref=e615]: +5.08%
+            - generic [ref=e616]:
+              - generic [ref=e617]: 申请摘帽
+              - generic [ref=e618]: 酒水高增
+              - generic [ref=e619]: 虫草业务
+            - generic [ref=e620]:
+              - generic [ref=e621]: 价格 5.17
+              - generic [ref=e622]: 换手 1.2%
+              - generic [ref=e623]: 市值 30.4亿
+          - generic [ref=e624] [cursor=pointer]:
+            - generic [ref=e625]:
+              - generic [ref=e626]: ST得润
+              - generic [ref=e627]: "002055"
+              - generic [ref=e628]: +5.05%
+            - generic [ref=e629]:
+              - generic [ref=e630]: 高速连接器
+              - generic [ref=e631]: 存储芯片
+              - generic [ref=e632]: AI算力
+            - generic [ref=e633]:
+              - generic [ref=e634]: 价格 7.91
+              - generic [ref=e635]: 换手 0.3%
+              - generic [ref=e636]: 市值 47.0亿
+          - generic [ref=e637] [cursor=pointer]:
+            - generic [ref=e638]:
+              - generic [ref=e639]: "*ST景谷"
+              - generic [ref=e640]: "600265"
+              - generic [ref=e641]: +5.02%
+            - generic [ref=e642]:
+              - generic [ref=e643]: 股份转让
+              - generic [ref=e644]: 引入战投
+              - generic [ref=e645]: 算力租赁
+              - generic [ref=e646]: 林业
+            - generic [ref=e647]:
+              - generic [ref=e648]: 价格 21.12
+              - generic [ref=e649]: 换手 0.1%
+              - generic [ref=e650]: 市值 27.4亿
+          - generic [ref=e651] [cursor=pointer]:
+            - generic [ref=e652]:
+              - generic [ref=e653]: ST东尼
+              - generic [ref=e654]: "603595"
+              - generic [ref=e655]: +5.01%
+            - generic [ref=e656]:
+              - generic [ref=e657]: 碳化硅
+              - generic [ref=e658]: 股权转让
+              - generic [ref=e659]: 一季报增长
+            - generic [ref=e660]:
+              - generic [ref=e661]: 价格 24.74
+              - generic [ref=e662]: 换手 1.1%
+              - generic [ref=e663]: 市值 57.5亿
+          - generic [ref=e664] [cursor=pointer]:
+            - generic [ref=e665]:
+              - generic [ref=e666]: "*ST联翔"
+              - generic [ref=e667]: "603272"
+              - generic [ref=e668]: +5.00%
+            - generic [ref=e669]:
+              - generic [ref=e670]: ST博弈
+              - generic [ref=e671]: 流通盘小
+              - generic [ref=e672]: 墙布
+            - generic [ref=e673]:
+              - generic [ref=e674]: 价格 36.36
+              - generic [ref=e675]: 换手 2.5%
+              - generic [ref=e676]: 市值 37.7亿
+          - generic [ref=e677] [cursor=pointer]:
+            - generic [ref=e678]:
+              - generic [ref=e679]: "*ST高斯"
+              - generic [ref=e680]: "002848"
+              - generic [ref=e681]: +4.99%
+            - generic [ref=e682]:
+              - generic [ref=e683]: 退市风险解除
+              - generic [ref=e684]: AI算力
+              - generic [ref=e685]: 覆铜板
+              - generic [ref=e686]: 潍坊国资
+            - generic [ref=e687]:
+              - generic [ref=e688]: 价格 17.46
+              - generic [ref=e689]: 换手 3.2%
+              - generic [ref=e690]: 市值 28.8亿
+          - generic [ref=e691] [cursor=pointer]:
+            - generic [ref=e692]:
+              - generic [ref=e693]: "*ST威领"
+              - generic [ref=e694]: "002667"
+              - generic [ref=e695]: +4.99%
+            - generic [ref=e696]:
+              - generic [ref=e697]: 控制权拟变更
+              - generic [ref=e698]: 锂矿
+              - generic [ref=e699]: ST反弹
+            - generic [ref=e700]:
+              - generic [ref=e701]: 价格 21.26
+              - generic [ref=e702]: 换手 0.6%
+              - generic [ref=e703]: 市值 50.3亿
+          - generic [ref=e704] [cursor=pointer]:
+            - generic [ref=e705]:
+              - generic [ref=e706]: "*ST雅博"
+              - generic [ref=e707]: "002323"
+              - generic [ref=e708]: +4.96%
+            - generic [ref=e709]:
+              - generic [ref=e710]: 股权划转
+              - generic [ref=e711]: BIPV
+              - generic [ref=e712]: 枣庄国资
+            - generic [ref=e713]:
+              - generic [ref=e714]: 价格 1.27
+              - generic [ref=e715]: 换手 0.2%
+              - generic [ref=e716]: 市值 26.9亿
+          - generic [ref=e717] [cursor=pointer]:
+            - generic [ref=e718]:
+              - generic [ref=e719]: "*ST宝馨"
+              - generic [ref=e720]: "002514"
+              - generic [ref=e721]: +4.90%
+            - generic [ref=e722]:
+              - generic [ref=e723]: 人形机器人
+              - generic [ref=e724]: 智能制造
+              - generic [ref=e725]: 亏损收窄
+            - generic [ref=e726]:
+              - generic [ref=e727]: 价格 4.71
+              - generic [ref=e728]: 换手 11.8%
+              - generic [ref=e729]: 市值 26.1亿
+      - generic [ref=e92]:
+        - generic [ref=e93] [cursor=pointer]:
+          - generic [ref=e94]: 📅 投资日历
+          - generic [ref=e95]:
+            - button "刷新日历数据" [ref=e96]:
+              - img [ref=e97]
+            - img [ref=e100]
+        - generic [ref=e103]:
+          - generic [ref=e730]:
+            - button "<" [ref=e731] [cursor=pointer]
+            - generic [ref=e732]: 2026年5月
+            - button ">" [ref=e733] [cursor=pointer]
+          - generic [ref=e734]:
+            - generic [ref=e735]: 日
+            - generic [ref=e736]: 一
+            - generic [ref=e737]: 二
+            - generic [ref=e738]: 三
+            - generic [ref=e739]: 四
+            - generic [ref=e740]: 五
+            - generic [ref=e741]: 六
+          - generic [ref=e742]:
+            - generic [ref=e749] [cursor=pointer]: "1"
+            - generic [ref=e751] [cursor=pointer]: "2"
+            - generic [ref=e753] [cursor=pointer]: "3"
+            - generic [ref=e755] [cursor=pointer]: "4"
+            - generic [ref=e757] [cursor=pointer]: "5"
+            - generic [ref=e759] [cursor=pointer]: "6"
+            - generic [ref=e761] [cursor=pointer]: "7"
+            - generic [ref=e763] [cursor=pointer]: "8"
+            - generic [ref=e765] [cursor=pointer]: "9"
+            - generic [ref=e767] [cursor=pointer]: "10"
+            - generic [ref=e769] [cursor=pointer]: "11"
+            - generic [ref=e771] [cursor=pointer]: "12"
+            - generic [ref=e773] [cursor=pointer]: "13"
+            - generic [ref=e775] [cursor=pointer]: "14"
+            - generic [ref=e779] [cursor=pointer]: "15"
+            - generic [ref=e783] [cursor=pointer]: "16"
+            - generic [ref=e785] [cursor=pointer]: "17"
+            - generic [ref=e787] [cursor=pointer]: "18"
+            - generic [ref=e791] [cursor=pointer]: "19"
+            - generic [ref=e793] [cursor=pointer]: "20"
+            - generic [ref=e795] [cursor=pointer]: "21"
+            - generic [ref=e799] [cursor=pointer]: "22"
+            - generic [ref=e801] [cursor=pointer]: "23"
+            - generic [ref=e803] [cursor=pointer]: "24"
+            - generic [ref=e805] [cursor=pointer]: "25"
+            - generic [ref=e807] [cursor=pointer]: "26"
+            - generic [ref=e809] [cursor=pointer]: "27"
+            - generic [ref=e811] [cursor=pointer]: "28"
+            - generic [ref=e813] [cursor=pointer]: "29"
+            - generic [ref=e815] [cursor=pointer]: "30"
+            - generic [ref=e817] [cursor=pointer]: "31"
+          - generic [ref=e818]:
+            - generic [ref=e819]: 本月重点关注
+            - generic [ref=e820] [cursor=pointer]:
+              - generic [ref=e821]:
+                - generic [ref=e823]: 05-14
+                - generic [ref=e824]: 维通利 业绩预告
+              - generic [ref=e825]: "最新价: 83.07; 最新涨跌幅: -9.578752999999999; 公告日期: 20260514; 报告期[20260331]: 2026年一季报; 净利润增长率上限[20260331]: -6.859999999999999"
+            - generic [ref=e826] [cursor=pointer]:
+              - generic [ref=e827]:
+                - generic [ref=e829]: 05-14
+                - generic [ref=e830]: 龙辰科技 业绩预告
+              - generic [ref=e831]: "公告日期: 20260514; 报告期[20260331]: 2026年一季报"
+            - generic [ref=e832] [cursor=pointer]:
+              - generic [ref=e833]:
+                - generic [ref=e835]: 05-15
+                - generic [ref=e836]: 天海电子 业绩预告
+              - generic [ref=e837]: "最新价: 58.7; 最新涨跌幅: -8.266917; 公告日期: 20260515; 报告期[20260331]: 2026年一季报; 净利润增长率上限[20260331]: 7.16"
+            - generic [ref=e838] [cursor=pointer]:
+              - generic [ref=e839]:
+                - generic [ref=e841]: 05-18
+                - generic [ref=e842]: 新天力 业绩预告
+              - generic [ref=e843]: "公告日期: 20260518; 报告期[20260331]: 2026年一季报"
+            - generic [ref=e844] [cursor=pointer]:
+              - generic [ref=e845]:
+                - generic [ref=e847]: 05-21
+                - generic [ref=e848]: 高特电子 业绩预告
+              - generic [ref=e849]: "公告日期: 20260521; 报告期[20260331]: 2026年一季报"
+            - generic [ref=e850] [cursor=pointer]:
+              - generic [ref=e851]:
+                - generic [ref=e853]: 05-21
+                - generic [ref=e854]: 惠康科技 业绩预告
+              - generic [ref=e855]: "最新价: 111.8; 最新涨跌幅: 109.913631; 公告日期: 20260521; 报告期[20260331]: 2026年一季报; 净利润增长率上限[20260331]: 9.8"
+            - generic [ref=e856] [cursor=pointer]:
+              - generic [ref=e857]:
+                - generic [ref=e859]: 05-21
+                - generic [ref=e860]: 新睿电子 业绩预告
+              - generic [ref=e861]: "公告日期: 20260521; 报告期[20260331]: 2026年一季报"
+      - generic [ref=e104]:
+        - generic [ref=e105] [cursor=pointer]:
+          - generic [ref=e106]: 📰 财经新闻
+          - img [ref=e107]
+        - generic [ref=e110]:
+          - generic "5月26日午间涨停分析" [ref=e862] [cursor=pointer]:
+            - generic [ref=e863]:
+              - generic [ref=e864]: 财联社
+              - generic [ref=e865]: 05-26 11:50
+            - generic [ref=e866]: 5月26日午间涨停分析
+            - generic [ref=e867]: 【5月26日午间涨停分析】财联社5月26日电，今日午盘全市场共33股涨停，连板股总数10只，15股封板未遂，封板率为69%（不含ST股、退市股）。焦点股方面，芯片产业链的恒林股份4连板，钽金属概念股新金路3连板，MLCC概念股双星新材3连板...
+          - generic "日本央行副行长强调 适当调整政策对维护市场信心至关重要" [ref=e868] [cursor=pointer]:
+            - generic [ref=e869]:
+              - generic [ref=e870]: 财联社
+              - generic [ref=e871]: 05-26 11:49
+            - generic [ref=e872]: 日本央行副行长强调 适当调整政策对维护市场信心至关重要
+            - generic [ref=e873]: 【日本央行副行长强调 适当调整政策对维护市场信心至关重要】财联社5月26日电，近期日本国债遭遇抛售，日本央行副行长冰见野良三强调，适当政策调整对维持市场参与者的信心至关重要。“关于货币政策和长期利率，我们认为重要的是要保持市场信心，即通过根...
+          - generic "日本对外净资产规模降为全球第三" [ref=e874] [cursor=pointer]:
+            - generic [ref=e875]:
+              - generic [ref=e876]: 财联社
+              - generic [ref=e877]: 05-26 11:43
+            - generic [ref=e878]: 日本对外净资产规模降为全球第三
+            - generic [ref=e879]: 【日本对外净资产规模降为全球第三】财联社5月26日电，日本财务省26日公布数据显示，截至2025年末，日本对外净资产为561.75万亿日元（1美元约合159日元），同比增长4.4%。从国家和地区排名看，日本由全球第二位降至第三位。
+          - generic "河南擎宇未来机器人科技有限公司成立 注册资本5000万" [ref=e880]:
+            - generic [ref=e881]:
+              - generic [ref=e882]: 东财7x24
+              - generic [ref=e883]: 05-26 11:42
+            - generic [ref=e884]: 河南擎宇未来机器人科技有限公司成立 注册资本5000万
+            - generic [ref=e885]: 【河南擎宇未来机器人科技有限公司成立 注册资本5000万】天眼查App显示，近日，河南擎宇未来机器人科技有限公司成立，法定代表人为张琰，注册资本5000万人民币，经营范围包括智能机器人的研发、智能机器人销售、工业机器人销售等。股东信息显示，...
+          - generic "慧谷新材：公司光电涂层材料产品可用于玻璃基板光电封装领域" [ref=e886]:
+            - generic [ref=e887]:
+              - generic [ref=e888]: 东财7x24
+              - generic [ref=e889]: 05-26 11:41
+            - generic [ref=e890]: 慧谷新材：公司光电涂层材料产品可用于玻璃基板光电封装领域
+            - generic [ref=e891]: 【慧谷新材：公司光电涂层材料产品可用于玻璃基板光电封装领域】慧谷新材在互动平台表示，目前公司应用于LED芯片封装领域的光电涂层材料产品可用于玻璃基板光电封装领域。公司相关产品在该领域暂未形成规模化销售，业务具有不确定性，请广大投资者注意投资...
+          - generic "财联社5月26日电，南方两倍做多海力士涨超15%，成交额超32亿港元；南方两倍做多三星电子涨超5%，成交额超8亿港元。" [ref=e892] [cursor=pointer]:
+            - generic [ref=e893]:
+              - generic [ref=e894]: 财联社
+              - generic [ref=e895]: 05-26 11:37
+            - generic [ref=e896]: 财联社5月26日电，南方两倍做多海力士涨超15%，成交额超32亿港元；南方两倍做多三星电子涨超5%，成交额超8亿港元。
+            - generic [ref=e897]: 财联社5月26日电，南方两倍做多海力士涨超15%，成交额超32亿港元；南方两倍做多三星电子涨超5%，成交额超8亿港元。
+          - generic "南方两倍做多海力士涨超15%" [ref=e898]:
+            - generic [ref=e899]:
+              - generic [ref=e900]: 东财7x24
+              - generic [ref=e901]: 05-26 11:37
+            - generic [ref=e902]: 南方两倍做多海力士涨超15%
+            - generic [ref=e903]: 南方两倍做多海力士涨超15%，成交额超32亿港元；南方两倍做多三星电子涨超5%，成交额超8亿港元。
+          - generic "一周腰斩！这只日本光纤股正折射全球AI热潮的“危险另一面”" [ref=e904]:
+            - generic [ref=e905]:
+              - generic [ref=e906]: 东财7x24
+              - generic [ref=e907]: 05-26 11:37
+            - generic [ref=e908]: 一周腰斩！这只日本光纤股正折射全球AI热潮的“危险另一面”
+            - generic [ref=e909]: 【一周腰斩！这只日本光纤股正折射全球AI热潮的“危险另一面”】一家拥有141年历史的日本老牌电缆公司近期遭遇了多达400亿美元的市值蒸发。行情数据显示，光纤电缆制造商藤仓株式会社(Fujikura Ltd.)在截至5月20日的一周内股价几乎...
+          - generic "半日主力资金丨加仓有色金属股 抛售电子股" [ref=e910]:
+            - generic [ref=e911]:
+              - generic [ref=e912]: 东财7x24
+              - generic [ref=e913]: 05-26 11:37
+            - generic [ref=e914]: 半日主力资金丨加仓有色金属股 抛售电子股
+            - generic [ref=e915]: 【半日主力资金丨加仓有色金属股 抛售电子股】主力资金早间净流入有色金属、公用事业、非银金融、基础化工等板块，净流出电子、通信、计算机、机械设备等板块。
+          - generic "日本对外净资产规模降为全球第三" [ref=e916]:
+            - generic [ref=e917]:
+              - generic [ref=e918]: 东财7x24
+              - generic [ref=e919]: 05-26 11:35
+            - generic [ref=e920]: 日本对外净资产规模降为全球第三
+            - generic [ref=e921]: 【日本对外净资产规模降为全球第三】日本财务省26日公布数据显示，截至2025年末，日本对外净资产为561.75万亿日元（1美元约合159日元），同比增长4.4%。从国家和地区排名看，日本由全球第二位降至第三位。
+          - generic "【大佬持仓跟踪】PCB+先进封装，高速材料已进入AMD、Intel材料库，先进封装材料对标味之素ABF，项目建设已取得备案，这家公司客户包括生益电子、联茂电子等厂商" [ref=e922] [cursor=pointer]:
+            - generic [ref=e923]:
+              - generic [ref=e924]: 财联社
+              - generic [ref=e925]: 05-26 11:34
+            - generic [ref=e926]: 【大佬持仓跟踪】PCB+先进封装，高速材料已进入AMD、Intel材料库，先进封装材料对标味之素ABF，项目建设已取得备案，这家公司客户包括生益电子、联茂电子等厂商
+            - generic [ref=e927]: PCB+先进封装，高速材料已进入AMD、Intel材料库，先进封装材料对标味之素ABF，项目建设已取得备案，客户包括生益电子、联茂电子等厂商，这家公司高速覆铜板产品已通过相关客户认证，取得小量订单生产。
+          - generic "A股午盘｜沪指跌0.84% 光伏概念股跌幅靠前" [ref=e928]:
+            - generic [ref=e929]:
+              - generic [ref=e930]: 东财7x24
+              - generic [ref=e931]: 05-26 11:33
+            - generic [ref=e932]: A股午盘｜沪指跌0.84% 光伏概念股跌幅靠前
+            - generic [ref=e933]: 【A股午盘｜沪指跌0.84% 光伏概念股跌幅靠前】沪指跌0.84%，深成指跌0.87%，创业板指跌0.51%，科创综指跌2.74%。半导体、算力硬件产业链全线下挫，光刻机、存储器方向领跌；商业航天、核聚变、AI应用、光伏概念股跌幅靠前；工业...
+          - generic "北京正试点手术机器人租赁入院 多家三甲医院已经开展相关工作" [ref=e934]:
+            - generic [ref=e935]:
+              - generic [ref=e936]: 东财7x24
+              - generic [ref=e937]: 05-26 11:33
+            - generic [ref=e938]: 北京正试点手术机器人租赁入院 多家三甲医院已经开展相关工作
+            - generic [ref=e939]: 【北京正试点手术机器人租赁入院 多家三甲医院已经开展相关工作】记者近日从北京市医院管理中心获悉，北京正在试点手术机器人租赁入院，多家三甲医院已经开展相关工作，未来将覆盖更多手术科室。据悉，北京将进行为期3年的手术机器人租赁试点工作，主要先在...
+          - generic "国内期货主力合约多数下跌 苯乙烯、SC原油跌超3%" [ref=e940] [cursor=pointer]:
+            - generic [ref=e941]:
+              - generic [ref=e942]: 财联社
+              - generic [ref=e943]: 05-26 11:31
+            - generic [ref=e944]: 国内期货主力合约多数下跌 苯乙烯、SC原油跌超3%
+            - generic [ref=e945]: 【国内期货主力合约多数下跌 苯乙烯、SC原油跌超3%】财联社5月26日电，国内期货主力合约多数下跌，苯乙烯（EB）、SC原油跌超3%，纯苯跌近3%，硅铁、合成橡胶、聚丙烯、丙烯、甲醇跌超2%。涨幅方面，焦煤涨超6%，氧化铝涨超5%，焦炭涨超...
+          - generic "午评：沪指半日跌0.84% 全市场超4500只个股下挫" [ref=e946] [cursor=pointer]:
+            - generic [ref=e947]:
+              - generic [ref=e948]: 财联社
+              - generic [ref=e949]: 05-26 11:31
+            - generic [ref=e950]: 午评：沪指半日跌0.84% 全市场超4500只个股下挫
+            - generic [ref=e951]: 【午评：沪指半日跌0.84% 全市场超4500只个股下挫】财联社5月26日电，市场早盘震荡调整，深成指一度跌超1%，科创50指数跌超2%。黄白线分化明显，中小盘股表现较弱。沪深两市半日成交额2.16万亿，较上个交易日放量819亿。盘面上热点...
+          - generic "我国主持的1项IEC铁路国际标准正式发布实施" [ref=e952] [cursor=pointer]:
+            - generic [ref=e953]:
+              - generic [ref=e954]: 财联社
+              - generic [ref=e955]: 05-26 11:31
+            - generic [ref=e956]: 我国主持的1项IEC铁路国际标准正式发布实施
+            - generic [ref=e957]: 【我国主持的1项IEC铁路国际标准正式发布实施】财联社5月26日电，据国家铁路局消息，近日，国际电工委员会（IEC）正式发布IEC 60310:2026《轨道交通 机车车辆变压器和电抗器》国际标准。该标准由国家铁路局统筹组织、我国主持制定，...
+          - generic "沪指下跌0.84% 科创50指数下跌2.88% 贵金属板块逆势走强" [ref=e958]:
+            - generic [ref=e959]:
+              - generic [ref=e960]: 东财7x24
+              - generic [ref=e961]: 05-26 11:30
+            - generic [ref=e962]: 沪指下跌0.84% 科创50指数下跌2.88% 贵金属板块逆势走强
+            - generic [ref=e963]: 【午盘播报】沪指下跌0.84%，报4117.85点；深成指下跌0.87%，报15718.98点；创业板指下跌0.51%，报4000.50点；科创50指数下跌2.88%，报1841.35点，两市半日合计成交21594亿。盘面上，贵金属、培育钻...
+          - generic "阿里云面向海外发布Qwen Cloud及MuleRun" [ref=e964] [cursor=pointer]:
+            - generic [ref=e965]:
+              - generic [ref=e966]: 财联社
+              - generic [ref=e967]: 05-26 11:30
+            - generic [ref=e968]: 阿里云面向海外发布Qwen Cloud及MuleRun
+            - generic [ref=e969]: 【阿里云面向海外发布Qwen Cloud及MuleRun】财联社5月26日电，阿里云5月26日在新加坡面向海外市场发布全新AI产品官网Qwen Cloud、Agent产品MuleRun，以及智能体编程平台Qoder、通用桌面智能体 Qode...
+          - generic "阿里云面向海外发布Qwen Cloud及MuleRun" [ref=e970]:
+            - generic [ref=e971]:
+              - generic [ref=e972]: 东财7x24
+              - generic [ref=e973]: 05-26 11:30
+            - generic [ref=e974]: 阿里云面向海外发布Qwen Cloud及MuleRun
+            - generic [ref=e975]: 【阿里云面向海外发布Qwen Cloud及MuleRun】阿里云5月26日在新加坡面向海外市场发布全新AI产品官网QwenCloud、Agent产品MuleRun，以及智能体编程平台Qoder、通用桌面智能体QoderWork的一系列更新，...
+          - generic "北京正试点手术机器人租赁入院 多家三甲医院已经开展相关工作" [ref=e976] [cursor=pointer]:
+            - generic [ref=e977]:
+              - generic [ref=e978]: 财联社
+              - generic [ref=e979]: 05-26 11:29
+            - generic [ref=e980]: 北京正试点手术机器人租赁入院 多家三甲医院已经开展相关工作
+            - generic [ref=e981]: 【北京正试点手术机器人租赁入院 多家三甲医院已经开展相关工作】财联社5月26日电，记者近日从北京市医院管理中心获悉，北京正在试点手术机器人租赁入院，多家三甲医院已经开展相关工作，未来将覆盖更多手术科室。据悉，北京将进行为期3年的手术机器人租...

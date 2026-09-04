@@ -11,6 +11,7 @@ export default defineConfig({
 		port: 5173,
 		proxy: {
 			"/api": "http://localhost:3000",
+			"/reports": "http://localhost:3000",
 			"/ws": {
 				target: "ws://localhost:3000",
 				ws: true,

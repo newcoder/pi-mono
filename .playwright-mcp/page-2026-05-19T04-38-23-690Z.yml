@@ -1,0 +1,20 @@
+- generic [ref=e3]:
+  - generic [ref=e4]:
+    - generic [ref=e5]:
+      - generic [ref=e6]: π
+      - generic [ref=e7]: Trading Agent
+    - generic [ref=e9]: 加载中...
+  - generic [ref=e11]: "市场情绪: 加载中..."
+  - generic [ref=e12]:
+    - generic [ref=e13]: 休市
+    - generic [ref=e16]: 已连接
+  - generic [ref=e17]:
+    - generic [ref=e20]: 股票池
+    - generic [ref=e25]:
+      - textbox "输入消息..." [ref=e26]
+      - button "发送" [ref=e27] [cursor=pointer]:
+        - img [ref=e28]
+    - generic [ref=e32]:
+      - generic [ref=e33]: 投资日历
+      - button "刷新日历数据" [ref=e35] [cursor=pointer]:
+        - img [ref=e36]

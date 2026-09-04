@@ -1,0 +1,346 @@
+{
+  "ssbk": [
+    {
+      "SECUCODE": "600519.SH",
+      "SECURITY_CODE": "600519",
+      "SECURITY_NAME_ABBR": "贵州茅台",
+      "BOARD_CODE": "438",
+      "BOARD_NAME": "食品饮料",
+      "IS_PRECISE": "0",
+      "BOARD_RANK": 1
+    },
+    {
+      "SECUCODE": "600519.SH",
+      "SECURITY_CODE": "600519",
+      "SECURITY_NAME_ABBR": "贵州茅台",
+      "BOARD_CODE": "1277",
+      "BOARD_NAME": "白酒Ⅱ",
+      "IS_PRECISE": null,
+      "BOARD_RANK": 2
+    },
+    {
+      "SECUCODE": "600519.SH",
+      "SECURITY_CODE": "600519",
+      "SECURITY_NAME_ABBR": "贵州茅台",
+      "BOARD_CODE": "1575",
+      "BOARD_NAME": "白酒Ⅲ",
+      "IS_PRECISE": null,
+      "BOARD_RANK": 3
+    },
+    {
+      "SECUCODE": "600519.SH",
+      "SECURITY_CODE": "600519",
+      "SECURITY_NAME_ABBR": "贵州茅台",
+      "BOARD_CODE": "173",
+      "BOARD_NAME": "贵州板块",
+      "IS_PRECISE": "0",
+      "BOARD_RANK": 4
+    },
+    {
+      "SECUCODE": "600519.SH",
+      "SECURITY_CODE": "600519",
+      "SECURITY_NAME_ABBR": "贵州茅台",
+      "BOARD_CODE": "1663",
+      "BOARD_NAME": "大盘股",
+      "IS_PRECISE": null,
+      "BOARD_RANK": 5
+    },
+    {
+      "SECUCODE": "600519.SH",
+      "SECURITY_CODE": "600519",
+      "SECURITY_NAME_ABBR": "贵州茅台",
+      "BOARD_CODE": "1662",
+      "BOARD_NAME": "权重股",
+      "IS_PRECISE": null,
+      "BOARD_RANK": 6
+    },
+    {
+      "SECUCODE": "600519.SH",
+      "SECURITY_CODE": "600519",
+      "SECURITY_NAME_ABBR": "贵州茅台",
+      "BOARD_CODE": "1661",
+      "BOARD_NAME": "行业龙头",
+      "IS_PRECISE": null,
+      "BOARD_RANK": 7
+    },
+    {
+      "SECUCODE": "600519.SH",
+      "SECURITY_CODE": "600519",
+      "SECURITY_NAME_ABBR": "贵州茅台",
+      "BOARD_CODE": "1637",
+      "BOARD_NAME": "东方财富热股",
+      "IS_PRECISE": "0",
+      "BOARD_RANK": 8
+    },
+    {
+      "SECUCODE": "600519.SH",
+      "SECURITY_CODE": "600519",
+      "SECURITY_NAME_ABBR": "贵州茅台",
+      "BOARD_CODE": "1059",
+      "BOARD_NAME": "百元股",
+      "IS_PRECISE": "0",
+      "BOARD_RANK": 9
+    },
+    {
+      "SECUCODE": "600519.SH",
+      "SECURITY_CODE": "600519",
+      "SECURITY_NAME_ABBR": "贵州茅台",
+      "BOARD_CODE": "999",
+      "BOARD_NAME": "茅指数",
+      "IS_PRECISE": "0",
+      "BOARD_RANK": 10
+    },
+    {
+      "SECUCODE": "600519.SH",
+      "SECURITY_CODE": "600519",
+      "SECURITY_NAME_ABBR": "贵州茅台",
+      "BOARD_CODE": "879",
+      "BOARD_NAME": "标准普尔",
+      "IS_PRECISE": "0",
+      "BOARD_RANK": 11
+    },
+    {
+      "SECUCODE": "600519.SH",
+      "SECURITY_CODE": "600519",
+      "SECURITY_NAME_ABBR": "贵州茅台",
+      "BOARD_CODE": "867",
+      "BOARD_NAME": "富时罗素",
+      "IS_PRECISE": "0",
+      "BOARD_RANK": 12
+    },
+    {
+      "SECUCODE": "600519.SH",
+      "SECURITY_CODE": "600519",
+      "SECURITY_NAME_ABBR": "贵州茅台",
+      "BOARD_CODE": "821",
+      "BOARD_NAME": "MSCI中国",
+      "IS_PRECISE": "0",
+      "BOARD_RANK": 13
+    },
+    {
+      "SECUCODE": "600519.SH",
+      "SECURITY_CODE": "600519",
+      "SECURITY_NAME_ABBR": "贵州茅台",
+      "BOARD_CODE": "718",
+      "BOARD_NAME": "证金持股",
+      "IS_PRECISE": "0",
+      "BOARD_RANK": 14
+    },
+    {
+      "SECUCODE": "600519.SH",
+      "SECURITY_CODE": "600519",
+      "SECURITY_NAME_ABBR": "贵州茅台",
+      "BOARD_CODE": "707",
+      "BOARD_NAME": "沪股通",
+      "IS_PRECISE": "0",
+      "BOARD_RANK": 15
+    },
+    {
+      "SECUCODE": "600519.SH",
+      "SECURITY_CODE": "600519",
+      "SECURITY_NAME_ABBR": "贵州茅台",
+      "BOARD_CODE": "612",
+      "BOARD_NAME": "上证180_",
+      "IS_PRECISE": "0",
+      "BOARD_RANK": 16
+    },
+    {
+      "SECUCODE": "600519.SH",
+      "SECURITY_CODE": "600519",
+      "SECURITY_NAME_ABBR": "贵州茅台",
+      "BOARD_CODE": "611",
+      "BOARD_NAME": "上证50_",
+      "IS_PRECISE": "0",
+      "BOARD_RANK": 17
+    },
+    {
+      "SECUCODE": "600519.SH",
+      "SECURITY_CODE": "600519",
+      "SECURITY_NAME_ABBR": "贵州茅台",
+      "BOARD_CODE": "610",
+      "BOARD_NAME": "央视50_",
+      "IS_PRECISE": "0",
+      "BOARD_RANK": 18
+    },
+    {
+      "SECUCODE": "600519.SH",
+      "SECURITY_CODE": "600519",
+      "SECURITY_NAME_ABBR": "贵州茅台",
+      "BOARD_CODE": "596",
+      "BOARD_NAME": "融资融券",
+      "IS_PRECISE": "0",
+      "BOARD_RANK": 19
+    },
+    {
+      "SECUCODE": "600519.SH",
+      "SECURITY_CODE": "600519",
+      "SECURITY_NAME_ABBR": "贵州茅台",
+      "BOARD_CODE": "552",
+      "BOARD_NAME": "机构重仓",
+      "IS_PRECISE": "0",
+      "BOARD_RANK": 20
+    },
+    {
+      "SECUCODE": "600519.SH",
+      "SECURITY_CODE": "600519",
+      "SECURITY_NAME_ABBR": "贵州茅台",
+      "BOARD_CODE": "500",
+      "BOARD_NAME": "HS300_",
+      "IS_PRECISE": "0",
+      "BOARD_RANK": 21
+    },
+    {
+      "SECUCODE": "600519.SH",
+      "SECURITY_CODE": "600519",
+      "SECURITY_NAME_ABBR": "贵州茅台",
+      "BOARD_CODE": "1653",
+      "BOARD_NAME": "味蕾经济",
+      "IS_PRECISE": null,
+      "BOARD_RANK": 22
+    },
+    {
+      "SECUCODE": "600519.SH",
+      "SECURITY_CODE": "600519",
+      "SECURITY_NAME_ABBR": "贵州茅台",
+      "BOARD_CODE": "477",
+      "BOARD_NAME": "酿酒概念",
+      "IS_PRECISE": "0",
+      "BOARD_RANK": 23
+    },
+    {
+      "SECUCODE": "600519.SH",
+      "SECURITY_CODE": "600519",
+      "SECURITY_NAME_ABBR": "贵州茅台",
+      "BOARD_CODE": "896",
+      "BOARD_NAME": "白酒",
+      "IS_PRECISE": "1",
+      "BOARD_RANK": 24
+    },
+    {
+      "SECUCODE": "600519.SH",
+      "SECURITY_CODE": "600519",
+      "SECURITY_NAME_ABBR": "贵州茅台",
+      "BOARD_CODE": "811",
+      "BOARD_NAME": "超级品牌",
+      "IS_PRECISE": "1",
+      "BOARD_RANK": 25
+    },
+    {
+      "SECUCODE": "600519.SH",
+      "SECURITY_CODE": "600519",
+      "SECURITY_NAME_ABBR": "贵州茅台",
+      "BOARD_CODE": "683",
+      "BOARD_NAME": "央国企改革",
+      "IS_PRECISE": "1",
+      "BOARD_RANK": 26
+    },
+    {
+      "SECUCODE": "600519.SH",
+      "SECURITY_CODE": "600519",
+      "SECURITY_NAME_ABBR": "贵州茅台",
+      "BOARD_CODE": "665",
+      "BOARD_NAME": "电商概念",
+      "IS_PRECISE": "1",
+      "BOARD_RANK": 27
+    },
+    {
+      "SECUCODE": "600519.SH",
+      "SECURITY_CODE": "600519",
+      "SECURITY_NAME_ABBR": "贵州茅台",
+      "BOARD_CODE": "590",
+      "BOARD_NAME": "西部大开发",
+      "IS_PRECISE": "1",
+      "BOARD_RANK": 28
+    }
+  ],
+  "hxtc": [
+    {
+      "SECUCODE": "600519.SH",
+      "SECURITY_CODE": "600519",
+      "SECURITY_NAME_ABBR": "贵州茅台",
+      "KEYWORD": "经营范围",
+      "MAINPOINT": 2,
+      "MAINPOINT_CONTENT": "茅台酒及系列酒的生产与销售;饮料、食品、包装材料的生产、销售;防伪技术开发、信息产业相关产品的研制、开发;酒店经营管理、住宿、餐饮、娱乐、洗浴及停车场管理服务;车辆运输、维修保养;第二类增值电信业务。(具体内容以工商核定登记为准)",
+      "KEY_CLASSIF": "经营范围",
+      "KEY_CLASSIF_CODE": "002",
+      "IS_POINT": "0"
+    },
+    {
+      "SECUCODE": "600519.SH",
+      "SECURITY_CODE": "600519",
+      "SECURITY_NAME_ABBR": "贵州茅台",
+      "KEYWORD": "茅台酒及系列酒的生产与销售",
+      "MAINPOINT": 3,
+      "MAINPOINT_CONTENT": "公司主要业务是茅台酒及系列酒的生产与销售。主导产品“贵州茅台酒”是我国大曲酱香型白酒的鼻祖和典型代表，集国家地理标志产品、有机食品和国家非物质文化遗产于一身，公司营销网络覆盖国内市场及五大洲66个国家和地区。",
+      "KEY_CLASSIF": "主营业务",
+      "KEY_CLASSIF_CODE": "003",
+      "IS_POINT": "0"
+    },
+    {
+      "SECUCODE": "600519.SH",
+      "SECURITY_CODE": "600519",
+      "SECURITY_NAME_ABBR": "贵州茅台",
+      "KEYWORD": "白酒行业",
+      "MAINPOINT": 4,
+      "MAINPOINT_CONTENT": "从宏观经济看，国家经济政策带来了巨大的市场机遇。中央经济工作会议指出，我国经济长期向好的支撑条件和基本趋势没有改变，2026 年要坚持内需主导，建设强大国内市场，提出了“深入实施提振消费专项行动”“扩大优质商品和服务供给”“清理消费领域不合理限制措施，释放文旅等服务消费潜力”等措施，释放了积极有利刺激消费的信号。同时，国家“十五五”规划提出，到 2035 年，人均 GDP 达到中等发达国家水平。随着这一目标的实现，全国经济发展和居民收入增加，消费水平进一步提升，公司将在国家经济发展浪潮中迎来新机遇，获得更广阔的发展空间。从行业形势看，一方面，白酒具有长期生命力，消费潜能依然有挖掘空间。作为历史经典产业，酒文化贯穿了人们高兴、欢庆、休闲、纪念等各个重要时刻，我国也成了世界上最大的白酒消费国，市场还大有潜力可挖。另一方面，行业马太效应愈发凸显，进入行业调整期，行业会通过“优胜劣汰”的自然法则进行系统性自我调节，资源将进一步向优势企业、优势品牌、优势产品集中。",
+      "KEY_CLASSIF": "行业背景",
+      "KEY_CLASSIF_CODE": "004",
+      "IS_POINT": "1"
+    },
+    {
+      "SECUCODE": "600519.SH",
+      "SECURITY_CODE": "600519",
+      "SECURITY_NAME_ABBR": "贵州茅台",
+      "KEYWORD": "产品品质卓越",
+      "MAINPOINT": 5,
+      "MAINPOINT_CONTENT": "公司坚守“质量是生命之魂”，实施全域、全链、全员质量管控，大力维护平衡、独特的产区生态。传承“料精、艺好、器美”传统生产工艺，每一批次产品都利用长期贮存的基酒资源、应用高超精湛的勾兑技艺，打造基酒多样性风格，形成贵州茅台酒典型风味品质表达。坚持 30 道工序 165 个环节精益求精、精雕细琢，永葆卓越品质，树牢在变局中谋发展的根本优势。",
+      "KEY_CLASSIF": "核心竞争力",
+      "KEY_CLASSIF_CODE": "005",
+      "IS_POINT": "1"
+    },
+    {
+      "SECUCODE": "600519.SH",
+      "SECURITY_CODE": "600519",
+      "SECURITY_NAME_ABBR": "贵州茅台",
+      "KEYWORD": "品牌美誉度高",
+      "MAINPOINT": 6,
+      "MAINPOINT_CONTENT": "历经百年，茅台酒已跃升为“世界蒸馏酒第一品牌”。公司坚持“品价匹配”和“大单品”策略，已成长为“单品营收过千亿、市值上万亿”的全球烈性酒第一品牌。长期以来，公司努力讲好品牌故事，积极践行社会责任，持续增强品牌竞争力，不断擦亮民族品牌荣光，着力彰显“中国茅台，香飘世界”品牌张力，品牌影响力和美誉度大大提升，品牌价值持续攀升。",
+      "KEY_CLASSIF": "核心竞争力",
+      "KEY_CLASSIF_CODE": "005",
+      "IS_POINT": "1"
+    },
+    {
+      "SECUCODE": "600519.SH",
+      "SECURITY_CODE": "600519",
+      "SECURITY_NAME_ABBR": "贵州茅台",
+      "KEYWORD": "生产工艺独特",
+      "MAINPOINT": 7,
+      "MAINPOINT_CONTENT": "公司拥有传承千年的独特酿造工艺，坚持顺天应时、因地制宜、循法而成，以对自然生态、微生态和人文生态和谐平衡的不懈追求，持续增强工艺核心竞争力。坚持“料精”，全面构建酿造原料品质评价体系，从产地、品质指标等方面保障高粱、小麦高质量供给；“艺好”，遵循一年一个生产周期、端午踩曲、重阳下沙、纯粮酿造、开放式固态化发酵、陶坛长期贮存、以酒勾酒传统工法；“器美”，坚守三合土晾堂、小青瓦发酵仓、窖条石、紫红泥等传统元素供给。持续增强创新能力，深入解析传统技艺科学内涵，永葆传统工艺生命活力。",
+      "KEY_CLASSIF": "核心竞争力",
+      "KEY_CLASSIF_CODE": "005",
+      "IS_POINT": "1"
+    },
+    {
+      "SECUCODE": "600519.SH",
+      "SECURITY_CODE": "600519",
+      "SECURITY_NAME_ABBR": "贵州茅台",
+      "KEYWORD": "文化辐射力强",
+      "MAINPOINT": 8,
+      "MAINPOINT_CONTENT": "茅台文化从“濮人善酿”的农耕文明中走来，于现代文明中赓续发展，引领中国白酒文化发展潮流，成为中国酒文化极致。在不断的发展中，公司持续优化茅台文化体系，形成了“酿造高品质生活”的企业使命，“让世界爱上茅台，让茅台香飘世界”的企业愿景，“爱我茅台，为国争光”的企业精神，“顺天敬人、明理厚德”的企业价值观，“品质、品牌、工艺、文化、环境”的五大核心竞争力。",
+      "KEY_CLASSIF": "核心竞争力",
+      "KEY_CLASSIF_CODE": "005",
+      "IS_POINT": "1"
+    },
+    {
+      "SECUCODE": "600519.SH",
+      "SECURITY_CODE": "600519",
+      "SECURITY_NAME_ABBR": "贵州茅台",
+      "KEYWORD": "环境不可复制",
+      "MAINPOINT": 9,
+      "MAINPOINT_CONTENT": "特殊的地形地貌、气候环境，优质的酿酒水源，独一无二的原产地保护和不可复制的微生物菌落群是贵州茅台酒核心产区的独特特征。公司坚持“生态优先、绿色发展”，坚持走好科技创新驱动发展的绿色发展道路，引领打造赤水河生态名片，用更先进方法和技术永葆环境竞争力。建立生态环保制度地图，加大新技术新工艺引进研发，完善生态环境一体化监控网络，走出了国家级“绿色工厂”科技创新驱动的“双碳”路径。持续开展流域微生物、水生物、植物植被的科学研究，全力守护流域生物多样性和稳定性，全力维护茅台酒赖以生存的生态系统平衡。",
+      "KEY_CLASSIF": "核心竞争力",
+      "KEY_CLASSIF_CODE": "005",
+      "IS_POINT": "1"
+    }
+  ]
+}

@@ -1,5 +1,5 @@
 import "@mariozechner/mini-lit/dist/ThemeToggle.js";
-import { apiClient } from "./api/client.js";
+import { apiClient, type SessionMeta } from "./api/client.js";
 import { createChart, CandlestickSeries, HistogramSeries, AreaSeries } from "lightweight-charts";
 import { pinyin } from "pinyin-pro";
 
@@ -9,6 +9,7 @@ interface ChatMessage {
 	role: "user" | "assistant" | "tool" | "system";
 	content: string;
 	isStreaming?: boolean;
+	images?: string[];
 }
 
 interface IndexQuote {
@@ -37,6 +38,8 @@ interface StockPool {
 interface PoolItem {
 	code: string;
 	name: string;
+	change_pct?: number | null;
+	latest?: number | null;
 }
 
 interface CalendarEvent {
@@ -75,6 +78,9 @@ interface KlineData {
 
 const state = {
 	messages: [] as ChatMessage[],
+	sessions: [] as SessionMeta[],
+	currentSession: null as SessionMeta | null,
+	sessionDropdownOpen: false,
 	indices: [] as IndexQuote[],
 	indicesLoaded: false,
 	marketPhase: "closed" as string,
@@ -155,7 +161,7 @@ function getTodayStr(): string {
 // ─── Real-time polling ──────────────────────────────────────
 
 let intradayPollTimer: number | null = null;
-const INTRADAY_POLL_INTERVAL = 30000; // 30 seconds
+const INTRADAY_POLL_INTERVAL = 5000; // 5 seconds
 
 /** Check if current time is within A-share trading hours */
 function isTradingTime(): boolean {
@@ -406,18 +412,21 @@ function buildAttachmentHTML(files: Array<{ name: string; mimeType: string }>): 
 function buildMessageHTML(msg: ChatMessage): string {
 	if (msg.role === "user") {
 		const attachments = (msg as any).attachments ? buildAttachmentHTML((msg as any).attachments) : "";
+		const imgs = ((msg as any).images || [])
+			.map((src: string) => `<img class="message-image" src="${escapeHtmlAttr(src)}" alt="图片">`)
+			.join("");
 		return `<div class="message-wrapper user">
 			<div class="message-avatar user">你</div>
-			<div class="message-bubble user">${attachments}${escapeHtml(msg.content)}</div>
+			<div class="message-bubble user">${imgs}${attachments}${formatMarkdown(msg.content)}</div>
 		</div>`;
 	}
 	if (msg.role === "assistant") {
 		return `<div class="message-wrapper assistant">
 			<div class="message-avatar assistant">AI</div>
-			<div class="message-bubble assistant">${formatMarkdown(msg.content)}${msg.isStreaming ? '<span class="animate-pulse">▌</span>' : ""}</div>
+			<div class="message-bubble assistant">${formatMessageContent(msg.content)}${msg.isStreaming ? '<span class="animate-pulse">▌</span>' : ""}</div>
 		</div>`;
 	}
-	return `<div class="message-wrapper system"><div class="message-bubble system">${escapeHtml(msg.content)}</div></div>`;
+	return `<div class="message-wrapper system"><div class="message-bubble system">${formatMessageContent(msg.content)}</div></div>`;
 }
 
 function renderMessages() {
@@ -443,7 +452,7 @@ function renderMessages() {
 		if (lastEl && lastMsg.role === "assistant") {
 			const bubble = lastEl.querySelector(".message-bubble.assistant") as HTMLElement | null;
 			if (bubble) {
-				bubble.innerHTML = formatMarkdown(lastMsg.content) + (lastMsg.isStreaming ? '<span class="animate-pulse">▌</span>' : "");
+				bubble.innerHTML = formatMessageContent(lastMsg.content) + (lastMsg.isStreaming ? '<span class="animate-pulse">▌</span>' : "");
 			}
 		}
 	} else if (messages.length < existing.length || messages.length === 0) {
@@ -487,12 +496,30 @@ function renderWatchlist() {
 	// Render pool items into right column
 	if (state.selectedPool && state.poolItems.length > 0) {
 		let itemsHtml = `<div class="pool-items-header">${escapeHtml(state.selectedPool.name)}</div>`;
-		for (const item of state.poolItems) {
+		// 最近访问：最新的放在最前面（数据库按 added_at 升序，这里反转）
+		const displayItems = state.selectedPool.name === "最近访问" ? [...state.poolItems].reverse() : state.poolItems;
+		for (const item of displayItems) {
 			const isSelected = state.selectedSymbol === item.code;
+			const changePct = item.change_pct;
+			const latest = item.latest;
+			let priceHtml = "";
+			let changeHtml = "";
+			if (latest != null) {
+				priceHtml = `<span class="stock-item-price">${latest.toFixed(2)}</span>`;
+			}
+			if (changePct != null) {
+				const isUp = changePct > 0;
+				const isDown = changePct < 0;
+				const sign = isUp ? "+" : "";
+				const colorClass = isUp ? "stock-item-up" : isDown ? "stock-item-down" : "";
+				changeHtml = `<span class="stock-item-change ${colorClass}">${sign}${changePct.toFixed(2)}%</span>`;
+			}
 			itemsHtml += `
 				<div class="stock-item ${isSelected ? 'active' : ''}" data-stock-code="${item.code}" data-stock-name="${escapeHtml(item.name)}">
 					<span class="stock-item-code">${item.code}</span>
 					<span class="stock-item-name">${escapeHtml(item.name)}</span>
+					${priceHtml}
+					${changeHtml}
 				</div>
 			`;
 		}
@@ -615,7 +642,7 @@ function renderStockChartPanel() {
 			if (period !== state.selectedPeriod) {
 				state.selectedPeriod = period;
 				renderStockChartPanel();
-				loadKlineData(code, period);
+				loadKlineData(code, period, type);
 			}
 		});
 	});
@@ -662,8 +689,13 @@ function renderIntradayChart() {
 	if (!container) return;
 
 	if (state.selectedIntraday.length === 0) {
-		container.innerHTML = `<div class="chart-empty">暂无分时数据</div>`;
+		container.innerHTML = `<div class="chart-loading">加载中...</div>`;
 		return;
+	}
+
+	// Clear any placeholder from a previous render before creating the chart
+	if (!intradayChart) {
+		container.innerHTML = "";
 	}
 
 	initIntradayChart(container);
@@ -723,10 +755,12 @@ function renderKlineChart() {
 	}
 }
 
-async function loadKlineData(code: string, period: "daily" | "week" | "month") {
+async function loadKlineData(code: string, period: "daily" | "week" | "month", type: "stock" | "index" = state.selectedType) {
 	const limit = 10000;
 	try {
-		const klines = await apiClient.getKlines(code, { period, limit });
+		const klines = type === "index"
+			? await apiClient.getIndustryKlines(code, { period, limit })
+			: await apiClient.getKlines(code, { period, limit });
 		state.selectedKlines = klines.map((k: any) => ({
 			date: k.date,
 			open: k.open,
@@ -758,7 +792,8 @@ async function loadIntradayData(code: string) {
 				close: k.close,
 				volume: k.volume,
 			}));
-		renderIntradayChart();
+		// Use rAF to ensure DOM layout is complete before creating chart
+		requestAnimationFrame(() => renderIntradayChart());
 	} catch (err) {
 		console.error("Failed to fetch intraday:", err);
 		state.selectedIntraday = [];
@@ -1086,13 +1121,101 @@ function escapeHtml(text: string): string {
 	return div.innerHTML;
 }
 
+/** Attribute-context escape: escapeHtml does not encode double quotes. */
+function escapeHtmlAttr(text: string): string {
+	return escapeHtml(text).replace(/"/g, "&quot;");
+}
+
 function formatMarkdown(text: string): string {
 	// Very simple markdown formatter
 	return escapeHtml(text)
 		.replace(/\n/g, "<br>")
 		.replace(/```([\s\S]*?)```/g, '<pre><code>$1</code></pre>')
 		.replace(/`([^`]+)`/g, '<code>$1</code>')
-		.replace(/\*\*(.*?)\*\*/g, "<strong>$1</strong>");
+		.replace(/\*\*(.*?)\*\*/g, "<strong>$1</strong>")
+		.replace(/\[([^\]]+)\]\(([^)]+)\)/g, '<a href="$2" target="_blank" rel="noopener" class="md-link">$1</a>');
+}
+
+/** Turn known stock codes and names inside HTML into clickable <span class="stock-link"> elements.
+ *  Operates on text nodes only, skipping <pre>/<code> and already-linkified spans. */
+function linkifyStocksInHTML(html: string): string {
+	if (!state.allStocksLoaded || state.allStocks.length === 0) return html;
+
+	const codeMap = new Map<string, { code: string; name: string; market: number }>();
+	const nameMap = new Map<string, { code: string; name: string; market: number }>();
+	for (const s of state.allStocks) {
+		codeMap.set(s.code, s);
+		nameMap.set(s.name, s);
+	}
+	const sortedNames = Array.from(nameMap.keys()).sort((a, b) => b.length - a.length);
+
+	const container = document.createElement("div");
+	container.innerHTML = html;
+
+	const walker = document.createTreeWalker(container, NodeFilter.SHOW_TEXT);
+	const nodes: Text[] = [];
+	let node: Node | null;
+	while ((node = walker.nextNode())) {
+		const parent = node.parentElement;
+		if (parent && (parent.tagName === "PRE" || parent.tagName === "CODE" || parent.closest(".stock-link"))) continue;
+		nodes.push(node as Text);
+	}
+
+	for (const textNode of nodes) {
+		const text = textNode.textContent || "";
+		let result = "";
+		let i = 0;
+		while (i < text.length) {
+			let matched = false;
+
+			// Try 6-digit stock code (not part of a longer number)
+			if (i + 6 <= text.length && /^\d{6}$/.test(text.slice(i, i + 6))) {
+				const prev = i > 0 ? text[i - 1] : "";
+				const next = i + 6 < text.length ? text[i + 6] : "";
+				if (!/\d/.test(prev) && !/\d/.test(next)) {
+					const code = text.slice(i, i + 6);
+					const stock = codeMap.get(code);
+					if (stock) {
+						result += `<span class="stock-link" data-code="${stock.code}" data-market="${stock.market}" data-name="${escapeHtml(stock.name)}">${code}</span>`;
+						i += 6;
+						matched = true;
+					}
+				}
+			}
+
+			// Try longest stock name match
+			if (!matched) {
+				for (const name of sortedNames) {
+					if (text.substr(i, name.length) === name) {
+						const stock = nameMap.get(name)!;
+						result += `<span class="stock-link" data-code="${stock.code}" data-market="${stock.market}" data-name="${escapeHtml(stock.name)}">${name}</span>`;
+						i += name.length;
+						matched = true;
+						break;
+					}
+				}
+			}
+
+			if (!matched) {
+				result += text[i];
+				i++;
+			}
+		}
+
+		if (result !== text) {
+			const wrapper = document.createElement("span");
+			wrapper.innerHTML = result;
+			if (textNode.parentNode) {
+				textNode.parentNode.replaceChild(wrapper, textNode);
+			}
+		}
+	}
+
+	return container.innerHTML;
+}
+
+function formatMessageContent(text: string): string {
+	return linkifyStocksInHTML(formatMarkdown(text));
 }
 
 // ─── API / WebSocket handlers ───────────────────────────────
@@ -1165,7 +1288,7 @@ async function selectPool(poolId: number) {
 
 	try {
 		const result = await apiClient.getStockPool(poolId);
-		state.poolItems = result.items.map((s: any) => ({ code: s.code, name: s.name }));
+		state.poolItems = result.items.map((s: any) => ({ code: s.code, name: s.name, change_pct: s.change_pct, latest: s.latest }));
 		renderWatchlist();
 	} catch (err) {
 		console.error("Failed to fetch pool items:", err);
@@ -1173,9 +1296,8 @@ async function selectPool(poolId: number) {
 }
 
 async function selectSymbol(code: string, type: "stock" | "index" = "stock", knownName?: string) {
-	// Dispose old charts and stop polling before re-rendering
-	disposeCharts();
-
+	// Keep previous chart DOM until new data arrives — avoid blank-panel flash.
+	// Only show loading indicator in the chart containers.
 	state.selectedSymbol = code;
 	state.selectedType = type;
 	state.selectedName = knownName || null;
@@ -1184,15 +1306,23 @@ async function selectSymbol(code: string, type: "stock" | "index" = "stock", kno
 	state.selectedIntraday = [];
 	state.chartPanelCollapsed = false;
 
+	// Show loading indicator in chart area immediately
+	const intradayCtr = document.getElementById("intraday-chart-container");
+	if (intradayCtr) intradayCtr.innerHTML = `<div class="chart-loading">加载中...</div>`;
+	const klineCtr = document.getElementById("kline-chart-container");
+	if (klineCtr) klineCtr.innerHTML = `<div class="chart-loading">加载中...</div>`;
+
 	renderWatchlist();
-	renderStockChartPanel();
 	renderIndices();
 
-	// Fetch quote, klines, and intraday in parallel
-	const [quoteResult, klinesResult, intradayResult] = await Promise.allSettled([
+	// Fetch quote + klines first, render panel as soon as they arrive.
+	// Intraday (1m) is fetched separately to avoid blocking the panel
+	// on a slow Python subprocess + Sina API round-trip.
+	const [quoteResult, klinesResult] = await Promise.allSettled([
 		apiClient.getQuote(code),
-		apiClient.getKlines(code, { period: state.selectedPeriod, limit: 10000 }),
-		apiClient.getKlines(code, { period: "1m", limit: 240 }),
+		state.selectedType === "index"
+			? apiClient.getIndustryKlines(code, { period: state.selectedPeriod, limit: 10000 })
+			: apiClient.getKlines(code, { period: state.selectedPeriod, limit: 10000 }),
 	]);
 
 	// Fetch news in background (fire-and-forget)
@@ -1220,25 +1350,10 @@ async function selectSymbol(code: string, type: "stock" | "index" = "stock", kno
 		console.error("Failed to fetch klines:", klinesResult.reason);
 	}
 
-	if (intradayResult.status === "fulfilled") {
-		const today = getTodayStr();
-		state.selectedIntraday = intradayResult.value
-			.filter((k: any) => typeof k.date === "string" && k.date.startsWith(today))
-			.map((k: any) => ({
-				date: k.date,
-				open: k.open,
-				high: k.high,
-				low: k.low,
-				close: k.close,
-				volume: k.volume,
-			}));
-	} else {
-		console.error("Failed to fetch intraday:", intradayResult.reason);
-	}
-
+	// Render panel immediately with quote + klines; intraday loads async below
 	renderStockChartPanel();
 
-	// Add to recent pool (fire-and-forget) - use knownName if provided, else from quote
+	// Add to recent pool (fire-and-forget)
 	if (type === "stock") {
 		const name = knownName || (quoteResult.status === "fulfilled" ? quoteResult.value?.name : null);
 		if (name) {
@@ -1246,6 +1361,9 @@ async function selectSymbol(code: string, type: "stock" | "index" = "stock", kno
 			addToRecentPool(code, name, market).catch((err) => console.error("[RecentPool] add failed:", err));
 		}
 	}
+
+	// Fetch intraday in background — does not block the main panel
+	loadIntradayData(code);
 
 	// Start real-time polling for intraday data during trading hours
 	startIntradayPolling(code);
@@ -1340,11 +1458,20 @@ function handleAgentEvent(ev: any) {
 	}
 	if (needRenderMessages) renderMessages();
 	if (needRenderToolLogs) renderToolLogs();
+	// 流式状态变化时同步会话栏（标题、新建按钮/下拉项的 disabled 状态）
+	renderSessionBar();
 }
 
 function handleTradingEvent(ev: any) {
 	if (ev.type === "mode_change") {
 		state.marketPhase = ev.mode;
+	}
+	if (ev.type === "navigate" && ev.url) {
+		if (ev.newTab) {
+			window.open(ev.url, "_blank");
+		} else {
+			window.location.href = ev.url;
+		}
 	}
 }
 
@@ -1353,11 +1480,14 @@ function handleTradingEvent(ev: any) {
 function setupWebSocket() {
 	apiClient.addEventListener("connected", () => {
 		state.connected = true;
-		apiClient.getState();
+		restoreCurrentSession();
 	});
 
 	apiClient.addEventListener("disconnected", () => {
 		state.connected = false;
+		// 流式事件随连接丢失；复位标记，避免重连后 restore/发送被永久禁用
+		state.isStreaming = false;
+		renderSessionBar();
 	});
 
 	apiClient.addEventListener("agent_event", (e: any) => {
@@ -1366,6 +1496,26 @@ function setupWebSocket() {
 
 	apiClient.addEventListener("trading_event", (e: any) => {
 		handleTradingEvent(e.detail.event);
+	});
+
+	apiClient.addEventListener("session_updated", (e: any) => {
+		const meta: SessionMeta | undefined = e.detail?.session;
+		if (!meta) return;
+		upsertSessionMeta(meta);
+		if (state.currentSession?.id === meta.id) state.currentSession = meta;
+		renderSessionBar();
+	});
+
+	apiClient.addEventListener("session_deleted", (e: any) => {
+		const id: string | undefined = e.detail?.sessionId;
+		if (!id) return;
+		state.sessions = state.sessions.filter((s) => s.id !== id);
+		if (state.currentSession?.id === id) {
+			// 当前会话被删除（本连接或其它标签页发起）：服务端已把绑定退回默认会话
+			handleCurrentSessionDeleted();
+		} else {
+			renderSessionBar();
+		}
 	});
 
 	apiClient.addEventListener("state", (e: any) => {
@@ -1437,7 +1587,7 @@ function setupInput() {
 
 	const send = () => {
 		const text = input.value.trim();
-		if ((!text && state.attachedFiles.length === 0) || state.isStreaming) return;
+		if ((!text && state.attachedFiles.length === 0) || state.isStreaming || !state.currentSession) return;
 
 		const attachments = state.attachedFiles.slice();
 		state.messages.push({ role: "user", content: text || "(file)", attachments: attachments.map((a) => ({ name: a.name, mimeType: a.mimeType })) } as any);
@@ -1790,41 +1940,53 @@ async function selectSearchResult(code: string, name: string, market: number) {
 }
 
 async function addToRecentPool(code: string, name: string, market: number) {
-	// Ensure we have the recent pool ID
+	// Ensure we have the recent pool ID (create if missing)
 	if (!state.recentPoolId) {
-		const recentPool = state.stockPools.find((p) => p.name === "最近访问");
-		if (recentPool) {
-			state.recentPoolId = recentPool.id;
-		} else {
+		let recentPool = state.stockPools.find((p) => p.name === "最近访问");
+		if (!recentPool) {
 			// Try fetching pools fresh
 			try {
 				const pools = await apiClient.getStockPools();
 				state.stockPools = pools;
-				const freshRecent = pools.find((p: any) => p.name === "最近访问");
-				if (freshRecent) {
-					state.recentPoolId = freshRecent.id;
-				} else {
-					console.warn("[RecentPool] '最近访问' pool not found");
-					return;
-				}
+				recentPool = pools.find((p: any) => p.name === "最近访问");
 			} catch {
 				return;
 			}
 		}
+		if (!recentPool) {
+			// Create the pool
+			try {
+				const created = await apiClient.createStockPool("最近访问", "自动记录最近查看的股票");
+				recentPool = { id: created.id, name: created.name, description: created.description, item_count: 0, created_at: new Date().toISOString() };
+				state.stockPools.unshift(recentPool);
+				renderWatchlist();
+			} catch (err) {
+				console.error("[RecentPool] Failed to create pool:", err);
+				return;
+			}
+		}
+		state.recentPoolId = recentPool!.id;
 	}
 	try {
+		// Remove existing entry first so re-adding bumps it to the front (newest added_at)
+		try {
+			await apiClient.removeFromStockPool(state.recentPoolId, [{ code, market }]);
+		} catch {
+			// Ignore errors if item didn't exist
+		}
 		await apiClient.addToStockPool(state.recentPoolId, [{ code, market, name }]);
 		console.log(`[RecentPool] Added ${code} ${name}`);
-		// Update the item_count for the recent pool in state
-		const pool = state.stockPools.find((p) => p.id === state.recentPoolId);
-		if (pool) {
-			pool.item_count += 1;
+		// Refresh pool list to get accurate item_count
+		try {
+			state.stockPools = await apiClient.getStockPools();
+			renderWatchlist();
+		} catch {
+			// ignore
 		}
-		renderWatchlist();
 		// Refresh pool items if the recent pool is currently selected
 		if (state.selectedPool?.id === state.recentPoolId) {
 			const result = await apiClient.getStockPool(state.recentPoolId);
-			state.poolItems = result.items.map((s: any) => ({ code: s.code, name: s.name }));
+			state.poolItems = result.items.map((s: any) => ({ code: s.code, name: s.name, change_pct: s.change_pct, latest: s.latest }));
 			renderWatchlist();
 		}
 	} catch (err) {
@@ -1923,6 +2085,231 @@ async function lookupStockViaIwencai(query: string) {
 	}
 }
 
+// ─── Chat Session Bar ───────────────────────────────────────
+
+const SESSION_STORAGE_KEY = "trading-agent.lastSessionId";
+
+function relativeDay(iso: string): string {
+	const d = new Date(iso);
+	const today = new Date();
+	const diff = Math.floor(
+		(today.setHours(0, 0, 0, 0) - new Date(d.getFullYear(), d.getMonth(), d.getDate()).getTime()) / 86400000,
+	);
+	if (diff <= 0) return "今天";
+	if (diff === 1) return "昨天";
+	return `${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
+}
+
+/** Insert/update a session meta in the list, keeping server order (updatedAt desc). */
+function upsertSessionMeta(meta: SessionMeta) {
+	const idx = state.sessions.findIndex((s) => s.id === meta.id);
+	if (idx >= 0) state.sessions[idx] = meta;
+	else state.sessions.push(meta);
+	state.sessions.sort((a, b) => b.updatedAt.localeCompare(a.updatedAt));
+}
+
+function renderSessionBar() {
+	const titleEl = $("session-title");
+	titleEl.textContent = state.currentSession?.title ?? "无会话";
+	// 与下拉开合同步 .open（app.css 用 .session-current.open .session-chevron 旋转箭头）
+	const currentEl = $("session-current");
+	currentEl.classList.toggle("open", state.sessionDropdownOpen);
+	const newBtn = $("session-new-btn") as HTMLButtonElement;
+	newBtn.disabled = state.isStreaming;
+	const dd = $("session-dropdown");
+	if (!state.sessionDropdownOpen) {
+		dd.classList.add("hidden");
+		dd.innerHTML = "";
+		return;
+	}
+	dd.classList.remove("hidden");
+	const disabledClass = state.isStreaming ? " disabled" : "";
+	dd.innerHTML = `
+		<div class="session-dropdown-header">会话列表</div>
+		${state.sessions
+			.map((s) => {
+				const active = s.id === state.currentSession?.id;
+				return `<div class="session-dropdown-item ${active ? "active" : ""}${disabledClass}" data-session-id="${s.id}" title="${escapeHtmlAttr(s.title)}">
+				<span class="session-item-title">${escapeHtml(s.title)}</span>
+				<span class="session-item-meta">${relativeDay(s.updatedAt)} · ${s.messageCount}条</span>
+				${s.system ? "" : `<button class="session-item-delete" data-delete-id="${s.id}" title="删除会话">×</button>`}
+			</div>`;
+			})
+			.join("")}
+	`;
+	// 事件绑定
+	dd.querySelectorAll(".session-dropdown-item").forEach((el) => {
+		el.addEventListener("click", (e) => {
+			if ((e.target as HTMLElement).closest(".session-item-delete")) return;
+			if ((el as HTMLElement).classList.contains("disabled")) return;
+			const id = (el as HTMLElement).dataset.sessionId!;
+			if (id !== state.currentSession?.id) {
+				switchSession(id).catch((err) => console.error("[Session] switch failed:", err));
+			}
+			state.sessionDropdownOpen = false;
+			renderSessionBar();
+		});
+	});
+	dd.querySelectorAll(".session-item-delete").forEach((btn) => {
+		btn.addEventListener("click", (e) => {
+			e.stopPropagation();
+			const id = (btn as HTMLElement).dataset.deleteId!;
+			const s = state.sessions.find((x) => x.id === id);
+			if (!s || !confirm(`确认删除会话 "${s.title}"？`)) return;
+			deleteSession(id).catch((err) => console.error("[Session] delete failed:", err));
+		});
+	});
+}
+
+async function refreshSessionList() {
+	state.sessions = await apiClient.listSessions();
+	renderSessionBar();
+}
+
+async function applySession(session: SessionMeta, messages: unknown[]) {
+	state.currentSession = session;
+	state.messages = agentMessagesToChat(messages);
+	state.toolLogs = [];
+	state.nextToolLogId = 0;
+	localStorage.setItem(SESSION_STORAGE_KEY, session.id);
+	upsertSessionMeta(session);
+	renderSessionBar();
+	// 强制清空后全量重建：目标会话与当前会话消息数相同时，
+	// renderMessages 的增量分支会留下上一会话的残留气泡。
+	$("message-list").innerHTML = "";
+	renderMessages();
+	renderToolLogs();
+}
+
+async function switchSession(id: string) {
+	if (state.isStreaming) return;
+	const { session, messages } = await apiClient.switchSession(id);
+	await applySession(session, messages);
+	state.sessionDropdownOpen = false;
+	renderSessionBar();
+}
+
+async function newSession() {
+	if (state.isStreaming) return;
+	const { session, messages } = await apiClient.newSession();
+	await applySession(session, messages);
+	state.sessionDropdownOpen = false;
+	renderSessionBar();
+}
+
+/** 当前绑定会话已被删除：服务端已把绑定退回默认会话，本地清空并新建一个干净会话。 */
+function handleCurrentSessionDeleted() {
+	// 事件流随会话删除而终止；复位标记，避免 UI 永久处于禁用/流式状态
+	state.isStreaming = false;
+	state.currentSession = null;
+	state.messages = [];
+	state.toolLogs = [];
+	state.nextToolLogId = 0;
+	renderSessionBar();
+	renderMessages();
+	renderToolLogs();
+	newSession().catch((err) => console.error("[Session] recreate after delete failed:", err));
+}
+
+async function deleteSession(id: string) {
+	if (state.isStreaming) return;
+	await apiClient.deleteSession(id);
+	state.sessions = state.sessions.filter((s) => s.id !== id);
+	if (state.currentSession?.id === id) {
+		// 服务端已把绑定退回默认会话；这里同步本地并新建一个干净会话。
+		// 正常情况下 session_deleted 推送会先行触发 handleCurrentSessionDeleted，
+		// 此分支仅作兜底。
+		handleCurrentSessionDeleted();
+	} else {
+		renderSessionBar();
+	}
+}
+
+/** 把 agent 会话的消息恢复成聊天气泡消息。toolResult 角色跳过。 */
+function agentMessagesToChat(messages: unknown[]): ChatMessage[] {
+	const out: ChatMessage[] = [];
+	for (const raw of messages) {
+		const m = raw as any;
+		if (!m || typeof m !== "object") continue;
+		if (m.role === "user") {
+			const { text, images } = extractTextAndImages(m.content);
+			out.push({ role: "user", content: text || "(file)", images } as any);
+		} else if (m.role === "assistant") {
+			const parts = Array.isArray(m.content) ? m.content : [];
+			const text = parts
+				.filter((p: any) => p?.type === "text")
+				.map((p: any) => p.text)
+				.join("");
+			if (text) out.push({ role: "assistant", content: text });
+		}
+	}
+	return out;
+}
+
+function extractTextAndImages(content: unknown): { text: string; images: string[] } {
+	if (typeof content === "string") return { text: content, images: [] };
+	if (!Array.isArray(content)) return { text: "", images: [] };
+	const images: string[] = [];
+	const text = content
+		.filter((p: any) => {
+			if (p?.type === "image") {
+				if (p.data && p.mimeType?.startsWith("image/")) {
+					const data = String(p.data).startsWith("data:") ? p.data : `data:${p.mimeType};base64,${p.data}`;
+					images.push(data);
+				}
+				return false;
+			}
+			return p?.type === "text";
+		})
+		.map((p: any) => p.text)
+		.join("");
+	return { text, images };
+}
+
+async function restoreCurrentSession() {
+	try {
+		const sessions = await apiClient.listSessions();
+		state.sessions = sessions;
+		if (sessions.length === 0) {
+			await newSession();
+			return;
+		}
+		const lastId = localStorage.getItem(SESSION_STORAGE_KEY);
+		const target = sessions.find((s) => s.id === lastId) ?? sessions[0];
+		await switchSession(target.id);
+	} catch (err) {
+		console.error("[Session] restore failed:", err);
+	}
+}
+
+function setupSessionBar() {
+	$("session-current").addEventListener("click", () => {
+		state.sessionDropdownOpen = !state.sessionDropdownOpen;
+		renderSessionBar();
+	});
+
+	$("session-new-btn").addEventListener("click", () => {
+		newSession().catch((err) => console.error("[Session] create failed:", err));
+	});
+
+	// 点击会话栏外部关闭下拉
+	document.addEventListener("click", (e) => {
+		if ((e.target as HTMLElement).closest(".session-bar")) return;
+		if (state.sessionDropdownOpen) {
+			state.sessionDropdownOpen = false;
+			renderSessionBar();
+		}
+	});
+
+	// Escape 关闭下拉
+	document.addEventListener("keydown", (e) => {
+		if (e.key === "Escape" && state.sessionDropdownOpen) {
+			state.sessionDropdownOpen = false;
+			renderSessionBar();
+		}
+	});
+}
+
 // ─── App HTML ───────────────────────────────────────────────
 
 function renderApp() {
@@ -1958,6 +2345,7 @@ function renderApp() {
 				<!-- Search bar -->
 			<div class="search-bar">
 				<span class="search-bar-label">RESEARCH</span>
+				<a href="/public/backtest.html" target="_blank" class="backtest-nav-link" title="回测策略">📊 回测</a> <a href="/public/batch-backtest.html" target="_blank" class="backtest-nav-link" title="批量回测">📊 批量回测</a>
 				<div class="search-input-wrapper">
 					<input type="text" id="stock-search-input" placeholder="搜索股票 (代码/名称/拼音)" autocomplete="off" />
 					<div id="search-dropdown" class="search-dropdown hidden"></div>
@@ -1989,6 +2377,15 @@ function renderApp() {
 				<!-- Center: Chat area -->
 				<div class="chat-area">
 					<div class="chat-main">
+						<!-- Chat Session Bar -->
+						<div class="session-bar">
+							<div class="session-current" id="session-current" title="切换会话">
+								<span class="session-chevron">▾</span>
+								<span class="session-title" id="session-title">新会话</span>
+							</div>
+							<button id="session-new-btn" class="session-new-btn" title="新建会话">＋ 新建</button>
+							<div id="session-dropdown" class="session-dropdown hidden"></div>
+						</div>
 						<!-- Stock Chart Panel -->
 						<div id="stock-chart-panel" class="stock-chart-panel hidden"></div>
 						<div class="chat-output-wrapper">
@@ -2123,13 +2520,31 @@ function renderApp() {
 
 // ─── Init ───────────────────────────────────────────────────
 
+function setupMessageLinks() {
+	const messageList = $("message-list");
+	messageList.addEventListener("click", (e) => {
+		const target = (e.target as HTMLElement).closest(".stock-link") as HTMLElement | null;
+		if (!target) return;
+		const code = target.dataset.code;
+		const market = target.dataset.market ? Number(target.dataset.market) : NaN;
+		const name = target.dataset.name;
+		if (code && !Number.isNaN(market)) {
+			e.preventDefault();
+			e.stopPropagation();
+			selectSymbol(code, "stock", name);
+		}
+	});
+}
+
 function init() {
 	renderApp();
+	setupSessionBar();
 	setupWebSocket();
 	setupInput();
 	setupSettingsModal();
 	setupMobileDrawers();
 	setupSearch();
+	setupMessageLinks();
 	fetchIndices();
 	fetchStockPools();
 	loadAllStocks();

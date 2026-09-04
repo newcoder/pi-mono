@@ -1,0 +1,73 @@
+- generic [ref=e3]:
+  - generic [ref=e5]: 暂无指数数据
+  - generic [ref=e7]: "市场情绪: 加载中..."
+  - generic [ref=e8]:
+    - generic [ref=e9]: research
+    - generic [ref=e10]: 已连接
+  - generic [ref=e11]:
+    - generic [ref=e13]:
+      - generic [ref=e28]: 股票池
+      - generic [ref=e29]:
+        - generic [ref=e30] [cursor=pointer]:
+          - generic [ref=e31]: 2025年报营收利润双增长Top10
+          - generic [ref=e32]: 10 只
+        - generic [ref=e33] [cursor=pointer]:
+          - generic [ref=e34]: PE小于20且市值大于100亿
+          - generic [ref=e35]: 50 只
+      - generic [ref=e36]: PE小于20且市值大于100亿
+      - generic [ref=e37]:
+        - generic [ref=e38] [cursor=pointer]: 601688 华泰证券
+        - generic [ref=e39] [cursor=pointer]: 600989 宝丰能源
+        - generic [ref=e40] [cursor=pointer]: 600030 中信证券
+        - generic [ref=e41] [cursor=pointer]: 601898 中煤能源
+        - generic [ref=e42] [cursor=pointer]: 603259 药明康德
+        - generic [ref=e43] [cursor=pointer]: 600019 宝钢股份
+        - generic [ref=e44] [cursor=pointer]: 601211 国泰海通
+        - generic [ref=e45] [cursor=pointer]: 601066 中信建投
+        - generic [ref=e46] [cursor=pointer]: 000651 格力电器
+        - generic [ref=e47] [cursor=pointer]: 600809 山西汾酒
+        - generic [ref=e48] [cursor=pointer]: 601318 中国平安
+        - generic [ref=e49] [cursor=pointer]: 601601 中国太保
+        - generic [ref=e50] [cursor=pointer]: 601668 中国建筑
+        - generic [ref=e51] [cursor=pointer]: 601818 光大银行
+        - generic [ref=e52] [cursor=pointer]: 600104 上汽集团
+        - generic [ref=e53] [cursor=pointer]: 601225 陕西煤业
+        - generic [ref=e54] [cursor=pointer]: 601319 中国人保
+        - generic [ref=e55] [cursor=pointer]: 601857 中国石油
+        - generic [ref=e56] [cursor=pointer]: 601009 南京银行
+        - generic [ref=e57] [cursor=pointer]: 002352 顺丰控股
+        - generic [ref=e58] [cursor=pointer]: 601088 中国神华
+        - generic [ref=e59] [cursor=pointer]: 000333 美的集团
+        - generic [ref=e60] [cursor=pointer]: 600036 招商银行
+        - generic [ref=e61] [cursor=pointer]: 601899 紫金矿业
+        - generic [ref=e62] [cursor=pointer]: 601336 新华保险
+        - generic [ref=e63] [cursor=pointer]: 000568 泸州老窖
+        - generic [ref=e64] [cursor=pointer]: 601229 上海银行
+        - generic [ref=e65] [cursor=pointer]: 000858 五粮液
+        - generic [ref=e66] [cursor=pointer]: 600919 江苏银行
+        - generic [ref=e67] [cursor=pointer]: 601600 中国铝业
+        - generic [ref=e68] [cursor=pointer]: 601328 交通银行
+        - generic [ref=e69] [cursor=pointer]: 601628 中国人寿
+        - generic [ref=e70] [cursor=pointer]: 000001 平安银行
+        - generic [ref=e71] [cursor=pointer]: 601998 中信银行
+        - generic [ref=e72] [cursor=pointer]: 601658 邮储银行
+        - generic [ref=e73] [cursor=pointer]: 600900 长江电力
+        - generic [ref=e74] [cursor=pointer]: 600887 伊利股份
+        - generic [ref=e75] [cursor=pointer]: 601166 兴业银行
+        - generic [ref=e76] [cursor=pointer]: 601919 中远海控
+        - generic [ref=e77] [cursor=pointer]: 600000 浦发银行
+        - generic [ref=e78] [cursor=pointer]: 601766 中国中车
+        - generic [ref=e79] [cursor=pointer]: 601728 中国电信
+        - generic [ref=e80] [cursor=pointer]: 601398 工商银行
+        - generic [ref=e81] [cursor=pointer]: 002142 宁波银行
+        - generic [ref=e82] [cursor=pointer]: 601816 京沪高铁
+        - generic [ref=e83] [cursor=pointer]: 601988 中国银行
+        - generic [ref=e84] [cursor=pointer]: 601288 农业银行
+        - generic [ref=e85] [cursor=pointer]: 000792 盐湖股份
+        - generic [ref=e86] [cursor=pointer]: 600346 恒力石化
+        - generic [ref=e87] [cursor=pointer]: 600050 中国联通
+    - generic [ref=e22]:
+      - generic [ref=e89]: 你好
+      - generic [ref=e25]:
+        - textbox "输入消息..." [active] [ref=e26]
+        - button "发送" [ref=e27]

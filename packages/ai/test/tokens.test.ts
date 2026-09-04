@@ -152,7 +152,7 @@ describe("Token Statistics on Abort", () => {
 	});
 
 	describe.skipIf(!process.env.CEREBRAS_API_KEY)("Cerebras Provider", () => {
-		const llm = getModel("cerebras", "qwen-3-235b-a22b-instruct-2507");
+		const llm = getModel("cerebras", "qwen-3-235b-a22b-instruct-2507" as any);
 
 		it("should include token stats when aborted mid-stream", { retry: 3, timeout: 30000 }, async () => {
 			await testTokensOnAbort(llm);
@@ -239,7 +239,7 @@ describe("Token Statistics on Abort", () => {
 			"gpt-4o - should include token stats when aborted mid-stream",
 			{ retry: 3, timeout: 30000 },
 			async () => {
-				const llm = getModel("github-copilot", "gpt-4o");
+				const llm = getModel("github-copilot", "gpt-4o" as any);
 				await testTokensOnAbort(llm, { apiKey: githubCopilotToken });
 			},
 		);

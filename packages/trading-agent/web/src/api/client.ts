@@ -1,10 +1,22 @@
 const WS_URL = import.meta.env.DEV ? `ws://${window.location.host}/ws` : `ws://${window.location.host}/ws`;
 const API_BASE = import.meta.env.DEV ? "" : "";
 
+export interface SessionMeta {
+	id: string;
+	title: string;
+	titleSource?: string;
+	createdAt: string;
+	updatedAt: string;
+	messageCount: number;
+	system?: boolean;
+}
+
 export class TradingApiClient extends EventTarget {
 	private ws: WebSocket | null = null;
 	private reconnectTimer: number | null = null;
 	private _connected = false;
+	private reqCounter = 0;
+	private pendingReqs = new Map<number, { resolve: (v: any) => void; reject: (e: Error) => void }>();
 
 	get connected() {
 		return this._connected;
@@ -24,6 +36,13 @@ export class TradingApiClient extends EventTarget {
 		this.ws.onmessage = (event) => {
 			try {
 				const msg = JSON.parse(event.data);
+				const pending = this.pendingReqs.get(msg.reqId);
+				if (pending) {
+					this.pendingReqs.delete(msg.reqId);
+					if (msg.type === "error") pending.reject(new Error(msg.message || "WS error"));
+					else pending.resolve(msg);
+					return; // reqId 回复不再 dispatch 事件（session_list/state 等由 promise 消费）
+				}
 				this.dispatchEvent(new CustomEvent(msg.type, { detail: msg }));
 			} catch {
 				console.warn("[WS] Invalid message:", event.data);
@@ -34,6 +53,10 @@ export class TradingApiClient extends EventTarget {
 			console.log("[WS] Disconnected");
 			this._connected = false;
 			this.ws = null;
+			for (const { reject } of this.pendingReqs.values()) {
+				reject(new Error("WebSocket disconnected"));
+			}
+			this.pendingReqs.clear();
 			this.dispatchEvent(new CustomEvent("disconnected"));
 			// Auto reconnect
 			this.reconnectTimer = window.setTimeout(() => this.connect(), 3000);
@@ -70,12 +93,40 @@ export class TradingApiClient extends EventTarget {
 		this.send({ type: "abort" });
 	}
 
+	async listSessions(): Promise<SessionMeta[]> {
+		const msg = await this.request<{ sessions: SessionMeta[] }>("session_list");
+		return msg.sessions;
+	}
+
+	async switchSession(sessionId: string) {
+		return this.request<{ session: SessionMeta; messages: unknown[] }>("session_switch", { sessionId });
+	}
+
+	async newSession() {
+		return this.request<{ session: SessionMeta; messages: unknown[] }>("session_new");
+	}
+
+	async deleteSession(sessionId: string) {
+		await this.request("session_delete", { sessionId });
+	}
+
 	private send(data: unknown) {
 		if (this.ws?.readyState === WebSocket.OPEN) {
 			this.ws.send(JSON.stringify(data));
 		} else {
 			console.warn("[WS] Not connected, message dropped");
 		}
+	}
+
+	private request<T = any>(type: string, payload: Record<string, unknown> = {}): Promise<T> {
+		if (this.ws?.readyState !== WebSocket.OPEN) {
+			return Promise.reject(new Error("Not connected"));
+		}
+		return new Promise((resolve, reject) => {
+			const reqId = ++this.reqCounter;
+			this.pendingReqs.set(reqId, { resolve, reject });
+			this.send({ type, reqId, ...payload });
+		});
 	}
 
 	// ─── HTTP API helpers ───────────────────────────────────────
@@ -98,6 +149,13 @@ export class TradingApiClient extends EventTarget {
 		return this.httpGet(`/api/klines?${query}`);
 	}
 
+	async getIndustryKlines(code: string, options?: { period?: string; limit?: number }) {
+		const params = new URLSearchParams({ code });
+		if (options?.period) params.set("period", options.period);
+		if (options?.limit != null) params.set("limit", String(options.limit));
+		return this.httpGet(`/api/industry/klines?${params.toString()}`);
+	}
+
 	async getStockPools() {
 		return this.httpGet("/api/stock-pools");
 	}
@@ -106,12 +164,20 @@ export class TradingApiClient extends EventTarget {
 		return this.httpGet(`/api/stock-pools/${poolId}`);
 	}
 
+	async createStockPool(name: string, description?: string) {
+		return this.httpPost("/api/stock-pools", { name, description });
+	}
+
 	async deleteStockPool(poolId: number) {
 		return this.httpDelete(`/api/stock-pools/${poolId}`);
 	}
 
 	async addToStockPool(poolId: number, items: Array<{ code: string; market: number; name?: string }>) {
 		return this.httpPost(`/api/stock-pools/${poolId}/items`, { items });
+	}
+
+	async removeFromStockPool(poolId: number, items: Array<{ code: string; market: number }>) {
+		return this.httpDelete(`/api/stock-pools/${poolId}/items`, { items });
 	}
 
 	async getAllStocks() {
@@ -177,8 +243,13 @@ export class TradingApiClient extends EventTarget {
 		return res.json();
 	}
 
-	private async httpDelete(path: string) {
-		const res = await fetch(`${API_BASE}${path}`, { method: "DELETE" });
+	private async httpDelete(path: string, body?: unknown) {
+		const init: RequestInit = { method: "DELETE" };
+		if (body !== undefined) {
+			init.headers = { "Content-Type": "application/json" };
+			init.body = JSON.stringify(body);
+		}
+		const res = await fetch(`${API_BASE}${path}`, init);
 		if (!res.ok) throw new Error(`HTTP ${res.status}: ${res.statusText}`);
 		return res.json();
 	}

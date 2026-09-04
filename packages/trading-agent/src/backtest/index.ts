@@ -1,4 +1,5 @@
-export { runBacktest } from "./engine.js";
+export { runBacktest, runDynamicPoolBacktest, runPoolBacktest } from "./engine.js";
+export { computeMetrics } from "./metrics.js";
 export { formatBacktestResult, formatTradeList } from "./report.js";
 export type {
 	BacktestConfig,

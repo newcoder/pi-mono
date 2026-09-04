@@ -1,4 +1,5 @@
 import type { Component } from "@mariozechner/pi-tui";
+import { truncateToWidth } from "@mariozechner/pi-tui";
 import chalk from "chalk";
 
 export interface SectorData {
@@ -27,7 +28,7 @@ export class SentimentBar implements Component {
 
 	render(width: number): string[] {
 		if (!this.data) {
-			return [chalk.gray("  市场情绪: 加载中...".slice(0, width))];
+			return [truncateToWidth(chalk.gray("  市场情绪: 加载中..."), width)];
 		}
 
 		const { sentimentIndex, advance, decline, limitUp, limitDown, northboundFlow } = this.data;
@@ -73,7 +74,7 @@ export class SentimentBar implements Component {
 			chalk.green(String(limitDown)) +
 			chalk.gray(`  |  北向 ${nbSign}${northboundFlow}亿`);
 
-		const lines: string[] = [line1.slice(0, width)];
+		const lines: string[] = [truncateToWidth(line1, width)];
 
 		// Show top/bottom sectors if available
 		if (this.data.topSectors && this.data.topSectors.length > 0) {
@@ -87,7 +88,7 @@ export class SentimentBar implements Component {
 				.join(" ");
 			const sectorLine =
 				chalk.gray("  板块  强: ") + chalk.red(top) + (bottom ? chalk.gray("  弱: ") + chalk.green(bottom) : "");
-			lines.push(sectorLine.slice(0, width));
+			lines.push(truncateToWidth(sectorLine, width));
 		}
 
 		return lines;
