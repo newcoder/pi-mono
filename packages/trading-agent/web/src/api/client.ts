@@ -53,6 +53,10 @@ export class TradingApiClient extends EventTarget {
 			console.log("[WS] Disconnected");
 			this._connected = false;
 			this.ws = null;
+			for (const { reject } of this.pendingReqs.values()) {
+				reject(new Error("WebSocket disconnected"));
+			}
+			this.pendingReqs.clear();
 			this.dispatchEvent(new CustomEvent("disconnected"));
 			// Auto reconnect
 			this.reconnectTimer = window.setTimeout(() => this.connect(), 3000);
@@ -115,6 +119,9 @@ export class TradingApiClient extends EventTarget {
 	}
 
 	private request<T = any>(type: string, payload: Record<string, unknown> = {}): Promise<T> {
+		if (this.ws?.readyState !== WebSocket.OPEN) {
+			return Promise.reject(new Error("Not connected"));
+		}
 		return new Promise((resolve, reject) => {
 			const reqId = ++this.reqCounter;
 			this.pendingReqs.set(reqId, { resolve, reject });
