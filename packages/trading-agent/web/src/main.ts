@@ -413,10 +413,7 @@ function buildMessageHTML(msg: ChatMessage): string {
 	if (msg.role === "user") {
 		const attachments = (msg as any).attachments ? buildAttachmentHTML((msg as any).attachments) : "";
 		const imgs = ((msg as any).images || [])
-			.map(
-				(src: string) =>
-					`<img class="message-image" src="${escapeHtml(src).replace(/"/g, "&quot;")}" alt="图片">`,
-			)
+			.map((src: string) => `<img class="message-image" src="${escapeHtmlAttr(src)}" alt="图片">`)
 			.join("");
 		return `<div class="message-wrapper user">
 			<div class="message-avatar user">你</div>
@@ -1122,6 +1119,11 @@ function escapeHtml(text: string): string {
 	const div = document.createElement("div");
 	div.textContent = text;
 	return div.innerHTML;
+}
+
+/** Attribute-context escape: escapeHtml does not encode double quotes. */
+function escapeHtmlAttr(text: string): string {
+	return escapeHtml(text).replace(/"/g, "&quot;");
 }
 
 function formatMarkdown(text: string): string {
@@ -2124,7 +2126,7 @@ function renderSessionBar() {
 		${state.sessions
 			.map((s) => {
 				const active = s.id === state.currentSession?.id;
-				return `<div class="session-dropdown-item ${active ? "active" : ""}${disabledClass}" data-session-id="${s.id}" title="${escapeHtml(s.title)}">
+				return `<div class="session-dropdown-item ${active ? "active" : ""}${disabledClass}" data-session-id="${s.id}" title="${escapeHtmlAttr(s.title)}">
 				<span class="session-item-title">${escapeHtml(s.title)}</span>
 				<span class="session-item-meta">${relativeDay(s.updatedAt)} · ${s.messageCount}条</span>
 				${s.system ? "" : `<button class="session-item-delete" data-delete-id="${s.id}" title="删除会话">×</button>`}
