@@ -1,5 +1,5 @@
 import "@mariozechner/mini-lit/dist/ThemeToggle.js";
-import { apiClient } from "./api/client.js";
+import { apiClient, type SessionMeta } from "./api/client.js";
 import { createChart, CandlestickSeries, HistogramSeries, AreaSeries } from "lightweight-charts";
 import { pinyin } from "pinyin-pro";
 
@@ -9,6 +9,7 @@ interface ChatMessage {
 	role: "user" | "assistant" | "tool" | "system";
 	content: string;
 	isStreaming?: boolean;
+	images?: string[];
 }
 
 interface IndexQuote {
@@ -77,6 +78,9 @@ interface KlineData {
 
 const state = {
 	messages: [] as ChatMessage[],
+	sessions: [] as SessionMeta[],
+	currentSession: null as SessionMeta | null,
+	sessionDropdownOpen: false,
 	indices: [] as IndexQuote[],
 	indicesLoaded: false,
 	marketPhase: "closed" as string,
@@ -408,9 +412,12 @@ function buildAttachmentHTML(files: Array<{ name: string; mimeType: string }>): 
 function buildMessageHTML(msg: ChatMessage): string {
 	if (msg.role === "user") {
 		const attachments = (msg as any).attachments ? buildAttachmentHTML((msg as any).attachments) : "";
+		const imgs = ((msg as any).images || [])
+			.map((src: string) => `<img class="message-image" src="${src}" alt="图片">`)
+			.join("");
 		return `<div class="message-wrapper user">
 			<div class="message-avatar user">你</div>
-			<div class="message-bubble user">${attachments}${formatMarkdown(msg.content)}</div>
+			<div class="message-bubble user">${imgs}${attachments}${formatMarkdown(msg.content)}</div>
 		</div>`;
 	}
 	if (msg.role === "assistant") {
@@ -1446,6 +1453,8 @@ function handleAgentEvent(ev: any) {
 	}
 	if (needRenderMessages) renderMessages();
 	if (needRenderToolLogs) renderToolLogs();
+	// 流式状态变化时同步会话栏（标题、新建按钮/下拉项的 disabled 状态）
+	renderSessionBar();
 }
 
 function handleTradingEvent(ev: any) {
@@ -1466,11 +1475,14 @@ function handleTradingEvent(ev: any) {
 function setupWebSocket() {
 	apiClient.addEventListener("connected", () => {
 		state.connected = true;
-		apiClient.getState();
+		restoreCurrentSession();
 	});
 
 	apiClient.addEventListener("disconnected", () => {
 		state.connected = false;
+		// 流式事件随连接丢失；复位标记，避免重连后 restore/发送被永久禁用
+		state.isStreaming = false;
+		renderSessionBar();
 	});
 
 	apiClient.addEventListener("agent_event", (e: any) => {
@@ -1479,6 +1491,26 @@ function setupWebSocket() {
 
 	apiClient.addEventListener("trading_event", (e: any) => {
 		handleTradingEvent(e.detail.event);
+	});
+
+	apiClient.addEventListener("session_updated", (e: any) => {
+		const meta: SessionMeta | undefined = e.detail?.session;
+		if (!meta) return;
+		upsertSessionMeta(meta);
+		if (state.currentSession?.id === meta.id) state.currentSession = meta;
+		renderSessionBar();
+	});
+
+	apiClient.addEventListener("session_deleted", (e: any) => {
+		const id: string | undefined = e.detail?.sessionId;
+		if (!id) return;
+		state.sessions = state.sessions.filter((s) => s.id !== id);
+		if (state.currentSession?.id === id) {
+			// 当前会话被删除（本连接或其它标签页发起）：服务端已把绑定退回默认会话
+			handleCurrentSessionDeleted();
+		} else {
+			renderSessionBar();
+		}
 	});
 
 	apiClient.addEventListener("state", (e: any) => {
@@ -1550,7 +1582,7 @@ function setupInput() {
 
 	const send = () => {
 		const text = input.value.trim();
-		if ((!text && state.attachedFiles.length === 0) || state.isStreaming) return;
+		if ((!text && state.attachedFiles.length === 0) || state.isStreaming || !state.currentSession) return;
 
 		const attachments = state.attachedFiles.slice();
 		state.messages.push({ role: "user", content: text || "(file)", attachments: attachments.map((a) => ({ name: a.name, mimeType: a.mimeType })) } as any);
@@ -2048,6 +2080,228 @@ async function lookupStockViaIwencai(query: string) {
 	}
 }
 
+// ─── Chat Session Bar ───────────────────────────────────────
+
+const SESSION_STORAGE_KEY = "trading-agent.lastSessionId";
+
+function relativeDay(iso: string): string {
+	const d = new Date(iso);
+	const today = new Date();
+	const diff = Math.floor(
+		(today.setHours(0, 0, 0, 0) - new Date(d.getFullYear(), d.getMonth(), d.getDate()).getTime()) / 86400000,
+	);
+	if (diff <= 0) return "今天";
+	if (diff === 1) return "昨天";
+	return `${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
+}
+
+/** Insert/update a session meta in the list, keeping server order (updatedAt desc). */
+function upsertSessionMeta(meta: SessionMeta) {
+	const idx = state.sessions.findIndex((s) => s.id === meta.id);
+	if (idx >= 0) state.sessions[idx] = meta;
+	else state.sessions.push(meta);
+	state.sessions.sort((a, b) => b.updatedAt.localeCompare(a.updatedAt));
+}
+
+function renderSessionBar() {
+	const titleEl = $("session-title");
+	titleEl.textContent = state.currentSession?.title ?? "无会话";
+	const newBtn = $("session-new-btn") as HTMLButtonElement;
+	newBtn.disabled = state.isStreaming;
+	const dd = $("session-dropdown");
+	if (!state.sessionDropdownOpen) {
+		dd.classList.add("hidden");
+		dd.innerHTML = "";
+		return;
+	}
+	dd.classList.remove("hidden");
+	const disabledClass = state.isStreaming ? " disabled" : "";
+	dd.innerHTML = `
+		<div class="session-dropdown-header">会话列表</div>
+		${state.sessions
+			.map((s) => {
+				const active = s.id === state.currentSession?.id;
+				return `<div class="session-dropdown-item ${active ? "active" : ""}${disabledClass}" data-session-id="${s.id}" title="${escapeHtml(s.title)}">
+				<span class="session-item-title">${escapeHtml(s.title)}</span>
+				<span class="session-item-meta">${relativeDay(s.updatedAt)} · ${s.messageCount}条</span>
+				${s.system ? "" : `<button class="session-item-delete" data-delete-id="${s.id}" title="删除会话">×</button>`}
+			</div>`;
+			})
+			.join("")}
+	`;
+	// 事件绑定
+	dd.querySelectorAll(".session-dropdown-item").forEach((el) => {
+		el.addEventListener("click", (e) => {
+			if ((e.target as HTMLElement).closest(".session-item-delete")) return;
+			if ((el as HTMLElement).classList.contains("disabled")) return;
+			const id = (el as HTMLElement).dataset.sessionId!;
+			if (id !== state.currentSession?.id) {
+				switchSession(id).catch((err) => console.error("[Session] switch failed:", err));
+			}
+			state.sessionDropdownOpen = false;
+			renderSessionBar();
+		});
+	});
+	dd.querySelectorAll(".session-item-delete").forEach((btn) => {
+		btn.addEventListener("click", (e) => {
+			e.stopPropagation();
+			const id = (btn as HTMLElement).dataset.deleteId!;
+			const s = state.sessions.find((x) => x.id === id);
+			if (!s || !confirm(`确认删除会话 "${s.title}"？`)) return;
+			deleteSession(id).catch((err) => console.error("[Session] delete failed:", err));
+		});
+	});
+}
+
+async function refreshSessionList() {
+	state.sessions = await apiClient.listSessions();
+	renderSessionBar();
+}
+
+async function applySession(session: SessionMeta, messages: unknown[]) {
+	state.currentSession = session;
+	state.messages = agentMessagesToChat(messages);
+	state.toolLogs = [];
+	state.nextToolLogId = 0;
+	localStorage.setItem(SESSION_STORAGE_KEY, session.id);
+	upsertSessionMeta(session);
+	renderSessionBar();
+	// 强制清空后全量重建：目标会话与当前会话消息数相同时，
+	// renderMessages 的增量分支会留下上一会话的残留气泡。
+	$("message-list").innerHTML = "";
+	renderMessages();
+	renderToolLogs();
+}
+
+async function switchSession(id: string) {
+	if (state.isStreaming) return;
+	const { session, messages } = await apiClient.switchSession(id);
+	await applySession(session, messages);
+	state.sessionDropdownOpen = false;
+	renderSessionBar();
+}
+
+async function newSession() {
+	if (state.isStreaming) return;
+	const { session, messages } = await apiClient.newSession();
+	await applySession(session, messages);
+	state.sessionDropdownOpen = false;
+	renderSessionBar();
+}
+
+/** 当前绑定会话已被删除：服务端已把绑定退回默认会话，本地清空并新建一个干净会话。 */
+function handleCurrentSessionDeleted() {
+	// 事件流随会话删除而终止；复位标记，避免 UI 永久处于禁用/流式状态
+	state.isStreaming = false;
+	state.currentSession = null;
+	state.messages = [];
+	state.toolLogs = [];
+	state.nextToolLogId = 0;
+	renderSessionBar();
+	renderMessages();
+	renderToolLogs();
+	newSession().catch((err) => console.error("[Session] recreate after delete failed:", err));
+}
+
+async function deleteSession(id: string) {
+	if (state.isStreaming) return;
+	await apiClient.deleteSession(id);
+	state.sessions = state.sessions.filter((s) => s.id !== id);
+	if (state.currentSession?.id === id) {
+		// 服务端已把绑定退回默认会话；这里同步本地并新建一个干净会话。
+		// 正常情况下 session_deleted 推送会先行触发 handleCurrentSessionDeleted，
+		// 此分支仅作兜底。
+		handleCurrentSessionDeleted();
+	} else {
+		renderSessionBar();
+	}
+}
+
+/** 把 agent 会话的消息恢复成聊天气泡消息。toolResult 角色跳过。 */
+function agentMessagesToChat(messages: unknown[]): ChatMessage[] {
+	const out: ChatMessage[] = [];
+	for (const raw of messages) {
+		const m = raw as any;
+		if (!m || typeof m !== "object") continue;
+		if (m.role === "user") {
+			const { text, images } = extractTextAndImages(m.content);
+			out.push({ role: "user", content: text || "(file)", images } as any);
+		} else if (m.role === "assistant") {
+			const parts = Array.isArray(m.content) ? m.content : [];
+			const text = parts
+				.filter((p: any) => p?.type === "text")
+				.map((p: any) => p.text)
+				.join("");
+			if (text) out.push({ role: "assistant", content: text });
+		}
+	}
+	return out;
+}
+
+function extractTextAndImages(content: unknown): { text: string; images: string[] } {
+	if (typeof content === "string") return { text: content, images: [] };
+	if (!Array.isArray(content)) return { text: "", images: [] };
+	const images: string[] = [];
+	const text = content
+		.filter((p: any) => {
+			if (p?.type === "image") {
+				if (p.data && p.mimeType?.startsWith("image/")) {
+					const data = String(p.data).startsWith("data:") ? p.data : `data:${p.mimeType};base64,${p.data}`;
+					images.push(data);
+				}
+				return false;
+			}
+			return p?.type === "text";
+		})
+		.map((p: any) => p.text)
+		.join("");
+	return { text, images };
+}
+
+async function restoreCurrentSession() {
+	try {
+		const sessions = await apiClient.listSessions();
+		state.sessions = sessions;
+		if (sessions.length === 0) {
+			await newSession();
+			return;
+		}
+		const lastId = localStorage.getItem(SESSION_STORAGE_KEY);
+		const target = sessions.find((s) => s.id === lastId) ?? sessions[0];
+		await switchSession(target.id);
+	} catch (err) {
+		console.error("[Session] restore failed:", err);
+	}
+}
+
+function setupSessionBar() {
+	$("session-current").addEventListener("click", () => {
+		state.sessionDropdownOpen = !state.sessionDropdownOpen;
+		renderSessionBar();
+	});
+
+	$("session-new-btn").addEventListener("click", () => {
+		newSession().catch((err) => console.error("[Session] create failed:", err));
+	});
+
+	// 点击会话栏外部关闭下拉
+	document.addEventListener("click", (e) => {
+		if ((e.target as HTMLElement).closest(".session-bar")) return;
+		if (state.sessionDropdownOpen) {
+			state.sessionDropdownOpen = false;
+			renderSessionBar();
+		}
+	});
+
+	// Escape 关闭下拉
+	document.addEventListener("keydown", (e) => {
+		if (e.key === "Escape" && state.sessionDropdownOpen) {
+			state.sessionDropdownOpen = false;
+			renderSessionBar();
+		}
+	});
+}
+
 // ─── App HTML ───────────────────────────────────────────────
 
 function renderApp() {
@@ -2115,6 +2369,15 @@ function renderApp() {
 				<!-- Center: Chat area -->
 				<div class="chat-area">
 					<div class="chat-main">
+						<!-- Chat Session Bar -->
+						<div class="session-bar">
+							<div class="session-current" id="session-current" title="切换会话">
+								<span class="session-chevron">▾</span>
+								<span class="session-title" id="session-title">新会话</span>
+							</div>
+							<button id="session-new-btn" class="session-new-btn" title="新建会话">＋ 新建</button>
+							<div id="session-dropdown" class="session-dropdown hidden"></div>
+						</div>
 						<!-- Stock Chart Panel -->
 						<div id="stock-chart-panel" class="stock-chart-panel hidden"></div>
 						<div class="chat-output-wrapper">
@@ -2267,6 +2530,7 @@ function setupMessageLinks() {
 
 function init() {
 	renderApp();
+	setupSessionBar();
 	setupWebSocket();
 	setupInput();
 	setupSettingsModal();
