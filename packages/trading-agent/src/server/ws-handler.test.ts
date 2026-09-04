@@ -61,6 +61,9 @@ describe("setupWsHandler session binding", () => {
 
 		await ws.receive({ type: "prompt", message: "你好" });
 		expect(defaultS.prompt).toHaveBeenCalledWith("你好", expect.anything());
+		// 回归：连接初始即绑定默认会话，其 agent 事件应被转发
+		defaultS.emit("agent_event", { type: "message_end" });
+		expect(ws.sent.some((m) => m.type === "agent_event")).toBe(true);
 	});
 
 	it("session_switch rebinds agent events to the new session", async () => {

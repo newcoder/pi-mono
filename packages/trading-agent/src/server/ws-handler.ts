@@ -53,6 +53,10 @@ export function setupWsHandler(
 		}
 	}
 
+	// 初始绑定：连接默认绑定 defaultSession，转发其 agent_event
+	// （trading_event 由下方全局订阅广播；bind 对默认会话不会重复订阅 trading）
+	bind(defaultSession);
+
 	// ---- 默认会话 trading_event 广播 ----
 	const onDefaultTrading = (ev: any) => send({ type: "trading_event", event: ev });
 	defaultSession.on("trading_event", onDefaultTrading);
