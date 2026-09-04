@@ -1,5 +1,5 @@
 import { EventEmitter } from "node:events";
-import { existsSync, mkdirSync, readdirSync, readFileSync, rmSync, writeFileSync } from "node:fs";
+import { existsSync, mkdirSync, readdirSync, readFileSync, renameSync, rmSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
 import type { AgentMessage } from "@mariozechner/pi-agent-core";
 import type { TradingSession } from "./trading-session.js";
@@ -92,7 +92,11 @@ export class SessionManager extends EventEmitter {
 			}
 			try {
 				const file = JSON.parse(readFileSync(join(this.opts.sessionsDir, name), "utf8")) as SessionFile;
-				if (!file || typeof file.id !== "string") continue;
+				// id 会流向 web 的 data-session-id/data-delete-id 属性，必须与 filePath 同一校验
+				if (!file || typeof file.id !== "string" || !/^[A-Za-z0-9_-]+$/.test(file.id)) {
+					console.warn(`[SessionManager] Skipping session file with invalid id: ${name}`);
+					continue;
+				}
 				const meta = this.toMeta(file);
 				this.metas.set(file.id, meta);
 				result.push(meta);
@@ -142,8 +146,19 @@ export class SessionManager extends EventEmitter {
 
 	async create(id?: string, system = false): Promise<{ session: TradingSession; meta: SessionMeta }> {
 		if (id) {
-			if (this.sessions.has(id) || existsSync(this.filePath(id))) {
+			if (this.sessions.has(id)) {
 				throw new Error(`Session "${id}" already exists`);
+			}
+			if (existsSync(this.filePath(id))) {
+				try {
+					JSON.parse(readFileSync(this.filePath(id), "utf8"));
+				} catch {
+					// 磁盘上的文件已损坏（get() 解析失败曾让 ensureDefault 直接抛"已存在"）。
+					// 改名备份后继续创建，损坏文件本就不可读，无数据丢失。
+					const backupPath = join(this.opts.sessionsDir, `${id}.corrupt-${Date.now()}.json`);
+					renameSync(this.filePath(id), backupPath);
+					console.warn(`[SessionManager] Backed up corrupt session file to ${backupPath}`);
+				}
 			}
 		}
 		const sessionId = id ?? crypto.randomUUID();
@@ -252,14 +267,14 @@ export class SessionManager extends EventEmitter {
 				clearTimeout(timer);
 				this.saveTimers.delete(id);
 			}
-			await this.save(id).catch(() => {});
+			await this.save(id).catch((err) => console.error(`[SessionManager] Save failed for ${id}:`, err));
 			return;
 		}
 		for (const sid of [...this.saveTimers.keys()]) {
 			const timer = this.saveTimers.get(sid);
 			if (timer) clearTimeout(timer);
 			this.saveTimers.delete(sid);
-			await this.save(sid).catch(() => {});
+			await this.save(sid).catch((err) => console.error(`[SessionManager] Save failed for ${sid}:`, err));
 		}
 	}
 

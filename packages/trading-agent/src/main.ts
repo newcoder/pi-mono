@@ -637,8 +637,8 @@ async function main() {
 	if (useWeb) {
 		// File-backed multi-session: a single SessionManager owns all chat sessions.
 		// The system "default" session is the shared target of scheduler/sentiment,
-		// and is passed to the HTTP server (Task 4 switches startServer to consume
-		// the manager directly).
+		// and both the manager and the default session are passed to startServer
+		// via { sessionManager, defaultSession }.
 		const sessionsDir = join(dataDir, "..", "sessions");
 		const manager = new SessionManager({
 			sessionsDir,

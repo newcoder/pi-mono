@@ -39,4 +39,16 @@ describe("TradingSession resume + first-prompt hook", () => {
 		session.prompt("新问题").catch(() => {});
 		expect(onFirstPrompt).not.toHaveBeenCalled();
 	});
+
+	it("dispose() rejects queued prompts so awaiting handlers do not hang", async () => {
+		// streamFn 永不结束 → 第一个 prompt 持续 in-flight，第二个留在队列中
+		const session = makeSession({
+			streamFn: (() => new Promise(() => {})) as any,
+		});
+		session.prompt("第一个").catch(() => {});
+		const queued = session.prompt("第二个");
+		const rejected = expect(queued).rejects.toThrow("Session disposed");
+		session.dispose();
+		await rejected;
+	});
 });

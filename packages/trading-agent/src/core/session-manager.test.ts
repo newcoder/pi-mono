@@ -1,5 +1,5 @@
 import { EventEmitter } from "node:events";
-import { mkdtempSync, rmSync, writeFileSync } from "node:fs";
+import { mkdtempSync, readdirSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { afterEach, describe, expect, it, vi } from "vitest";
@@ -100,6 +100,23 @@ describe("SessionManager", () => {
 		expect(meta.system).toBe(true);
 		expect(meta.title).toBe("默认会话");
 		await expect(m.delete(DEFAULT_SESSION_ID)).rejects.toThrow(/不可删除/);
+	});
+
+	it("ensureDefault() backs up a corrupt default.json and creates a healthy session", async () => {
+		dir = mkdtempSync(join(tmpdir(), "sessions-"));
+		// 预置一个无法解析的 default.json（模拟写坏/中断的落盘）
+		writeFileSync(join(dir, "default.json"), "{not json");
+		const m = makeManager();
+		await m.init();
+		const { meta } = await m.ensureDefault();
+		expect(meta.id).toBe(DEFAULT_SESSION_ID);
+		expect(meta.system).toBe(true);
+		const listed = await m.list();
+		expect(listed.map((x) => x.id)).toContain(DEFAULT_SESSION_ID);
+		expect(listed).toHaveLength(1);
+		// 坏文件被改名备份，而非原地覆盖
+		const backups = readdirSync(dir).filter((name) => /^default\.corrupt-\d+\.json$/.test(name));
+		expect(backups).toHaveLength(1);
 	});
 
 	it("skips corrupt files in list()", async () => {

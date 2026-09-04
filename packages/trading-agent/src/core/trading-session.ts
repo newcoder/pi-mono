@@ -179,6 +179,10 @@ export class TradingSession extends EventEmitter {
 	dispose(): void {
 		this.unsubAgent?.();
 		this.removeAllListeners();
+		// 拒绝所有排队中的 prompt，否则 ws-handler 等待这些 promise 会永久挂起
+		for (const { reject } of this.promptQueue) {
+			reject(new Error("Session disposed"));
+		}
 		this.promptQueue = [];
 	}
 }
