@@ -34,9 +34,9 @@ import { iwencaiScreenTool } from "./tools/iwencai-screening.js";
 import { getMacroTool } from "./tools/macro-data.js";
 import { getFundamentalsTool, getKlineTool, getQuoteTool } from "./tools/market-data.js";
 import { predictStockRankingTool } from "./tools/ml-prediction.js";
+import { navigateToTool } from "./tools/navigate-to.js";
 import { getMarketNewsTool, getStockNewsTool, screenByNewsTool } from "./tools/news-analysis.js";
 import { managePortfolioTool } from "./tools/portfolio.js";
-import { navigateToTool } from "./tools/navigate-to.js";
 import { generateReportTool } from "./tools/report.js";
 import { saveHotStocksAsPoolTool } from "./tools/save-hot-stocks-as-pool.js";
 import { screenStocksTool } from "./tools/screening.js";
@@ -49,6 +49,9 @@ import { TradingApp } from "./ui/trading-app.js";
 let globalStore: ReturnType<typeof createDataStore> | null = null;
 let globalBgSync: BackgroundSyncService | null = null;
 
+/** Optional async flush hook registered by a mode (e.g. web session flush on shutdown). */
+let shutdownFlush: (() => Promise<void>) | undefined;
+
 function cleanup() {
 	if (globalBgSync) {
 		globalBgSync.stop();
@@ -60,14 +63,23 @@ function cleanup() {
 	}
 }
 
+// Flush-aware shutdown: run the registered flush hook first so pending
+// session writes survive SIGINT/SIGTERM, then clean up global resources.
+async function shutdown() {
+	try {
+		await shutdownFlush?.();
+	} catch (err) {
+		console.error("[Shutdown] Flush hook failed:", err);
+	}
+	cleanup();
+}
+
 process.on("exit", cleanup);
 process.on("SIGINT", () => {
-	cleanup();
-	process.exit(0);
+	void shutdown().finally(() => process.exit(0));
 });
 process.on("SIGTERM", () => {
-	cleanup();
-	process.exit(0);
+	void shutdown().finally(() => process.exit(0));
 });
 
 function getDataDir(): string {
@@ -667,8 +679,8 @@ async function main() {
 		await manager.init();
 		const { session: defaultSession } = await manager.ensureDefault();
 		scheduler.start(defaultSession, memory);
-		const manualTrigger = makeManualTrigger(defaultSession);
-		await initSentiment(defaultSession);
+		// Start sentiment fetch in background (don't block server startup)
+		initSentiment(defaultSession).catch(() => {});
 		const sentimentTimer = startSentimentTimer(defaultSession);
 
 		// Preload session metadata so persisted chat sessions show up immediately;
@@ -711,16 +723,15 @@ async function main() {
 			manager.flush().catch(() => {});
 		});
 
-		// SIGINT: flush pending session writes before exiting
-		process.on("SIGINT", async () => {
-			console.log("[Server] Shutting down, flushing sessions...");
-			await manager.flush();
-			process.exit(0);
-		});
+		// SIGINT/SIGTERM shutdown flushes pending session writes (see shutdown())
+		shutdownFlush = () => manager.flush();
 	} else if (useRepl) {
 		const session = createTradingSession();
 		scheduler.start(session, memory);
 		const manualTrigger = makeManualTrigger(session);
+		// Periodic sentiment refresh ran in REPL mode pre-refactor; keep it (no initSentiment).
+		// The timer intentionally outlives the REPL loop (process.exit in runRepl clears it).
+		const _sentimentTimer = startSentimentTimer(session);
 		await runRepl(session, scheduler, manualTrigger, tools);
 	} else {
 		const session = createTradingSession();
