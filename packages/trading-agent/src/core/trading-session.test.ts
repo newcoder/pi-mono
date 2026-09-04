@@ -1,5 +1,4 @@
 import { describe, expect, it, vi } from "vitest";
-import { EventEmitter } from "node:events";
 import { TradingSession, type TradingSessionOptions } from "./trading-session.js";
 
 function makeSession(opts: Partial<TradingSessionOptions> = {}): TradingSession {
