@@ -1,10 +1,11 @@
 #!/usr/bin/env node
 import { join, resolve } from "node:path";
 import { createInterface } from "node:readline";
-import type { AgentTool } from "@mariozechner/pi-agent-core";
+import type { AgentMessage, AgentTool } from "@mariozechner/pi-agent-core";
 import { streamSimple } from "@mariozechner/pi-ai/compat";
 import { loadUserConfig } from "./config/user-config.js";
 import { loadModelRegistry, selectDefaultModel } from "./core/model-config.js";
+import { SessionManager } from "./core/session-manager.js";
 import { SessionMemory } from "./core/session-memory.js";
 import { discoverAllSkillDirs, loadSkillFromFile, loadSystemPromptFromFile } from "./core/skill-loader.js";
 import { SkillRegistry } from "./core/skill-registry.js";
@@ -420,65 +421,78 @@ async function main() {
 		});
 	};
 
-	const session = new TradingSession({
-		model,
-		baseSystemPrompt: systemPrompt,
-		tools,
-		getApiKey: (provider) => modelRegistry.getApiKeyForProvider(provider),
-		streamFn,
-		beforeToolCall: (context) => {
-			const { toolCall } = context;
-			const timestamp = new Date().toISOString().slice(11, 23);
-			console.log(`\n[${timestamp}] [ToolCall ] ${toolCall.name} args=${JSON.stringify(toolCall.arguments)}`);
-			return Promise.resolve(undefined);
-		},
-		afterToolCall: (context) => {
-			const { toolCall, result, isError } = context;
-			const timestamp = new Date().toISOString().slice(11, 23);
-			const status = isError ? "ERROR" : "OK";
-			const firstContent = result.content?.[0];
-			const text = firstContent && "text" in firstContent ? firstContent.text : "";
-			const preview = text.slice(0, 120).replace(/\n/g, "\\n");
-			console.log(
-				`[${timestamp}] [ToolResult] ${toolCall.name} status=${status} preview=${preview}${text.length > 120 ? "..." : ""}`,
-			);
+	// ─── Session factory ─────────────────────────────────────────
+	// Each mode (and in web mode, each chat session) gets its own TradingSession.
+	// The `let ts` indirection lets the afterToolCall closure emit events on the
+	// instance being created; the closure only runs after construction returns.
+	const createTradingSession = (
+		initialMessages?: AgentMessage[],
+		hooks?: { onFirstPrompt?: (input: string) => void },
+	): TradingSession => {
+		let ts: TradingSession;
+		ts = new TradingSession({
+			model,
+			baseSystemPrompt: systemPrompt,
+			tools,
+			getApiKey: (provider) => modelRegistry.getApiKeyForProvider(provider),
+			streamFn,
+			initialMessages,
+			onFirstPrompt: hooks?.onFirstPrompt,
+			beforeToolCall: (context) => {
+				const { toolCall } = context;
+				const timestamp = new Date().toISOString().slice(11, 23);
+				console.log(`\n[${timestamp}] [ToolCall ] ${toolCall.name} args=${JSON.stringify(toolCall.arguments)}`);
+				return Promise.resolve(undefined);
+			},
+			afterToolCall: (context) => {
+				const { toolCall, result, isError } = context;
+				const timestamp = new Date().toISOString().slice(11, 23);
+				const status = isError ? "ERROR" : "OK";
+				const firstContent = result.content?.[0];
+				const text = firstContent && "text" in firstContent ? firstContent.text : "";
+				const preview = text.slice(0, 120).replace(/\n/g, "\\n");
+				console.log(
+					`[${timestamp}] [ToolResult] ${toolCall.name} status=${status} preview=${preview}${text.length > 120 ? "..." : ""}`,
+				);
 
-			// Emit sentiment update event for TUI when analyze_sentiment succeeds
-			if (!isError && toolCall.name === "analyze_sentiment" && result.details) {
-				const d = result.details;
-				session.emit("trading_event", {
-					type: "sentiment_update",
-					data: {
-						advance: d.advance ?? 0,
-						decline: d.decline ?? 0,
-						flat: d.flat ?? 0,
-						limitUp: d.limit_up ?? 0,
-						limitDown: d.limit_down ?? 0,
-						northboundFlow: d.northbound_flow ?? 0,
-						sentimentIndex: d.sentiment_index ?? 50,
-						topSectors: d.top_sectors ?? [],
-						bottomSectors: d.bottom_sectors ?? [],
-					},
-				});
-			}
-
-			// Emit navigate event for web frontend when navigate_to succeeds
-			if (!isError && toolCall.name === "navigate_to" && result.details) {
-				const d = result.details;
-				if (d.action === "navigate" && d.url) {
-					session.emit("trading_event", {
-						type: "navigate",
-						target: d.target as string,
-						url: d.url as string,
-						label: d.label as string | undefined,
-						newTab: d.newTab as boolean | undefined,
+				// Emit sentiment update event for TUI when analyze_sentiment succeeds
+				if (!isError && toolCall.name === "analyze_sentiment" && result.details) {
+					const d = result.details;
+					ts.emit("trading_event", {
+						type: "sentiment_update",
+						data: {
+							advance: d.advance ?? 0,
+							decline: d.decline ?? 0,
+							flat: d.flat ?? 0,
+							limitUp: d.limit_up ?? 0,
+							limitDown: d.limit_down ?? 0,
+							northboundFlow: d.northbound_flow ?? 0,
+							sentimentIndex: d.sentiment_index ?? 50,
+							topSectors: d.top_sectors ?? [],
+							bottomSectors: d.bottom_sectors ?? [],
+						},
 					});
 				}
-			}
 
-			return Promise.resolve(undefined);
-		},
-	});
+				// Emit navigate event for web frontend when navigate_to succeeds
+				if (!isError && toolCall.name === "navigate_to" && result.details) {
+					const d = result.details;
+					if (d.action === "navigate" && d.url) {
+						ts.emit("trading_event", {
+							type: "navigate",
+							target: d.target as string,
+							url: d.url as string,
+							label: d.label as string | undefined,
+							newTab: d.newTab as boolean | undefined,
+						});
+					}
+				}
+
+				return Promise.resolve(undefined);
+			},
+		});
+		return ts;
+	};
 
 	// Setup scheduler with routines from skills
 	const scheduler = new TaskScheduler();
@@ -498,28 +512,28 @@ async function main() {
 			timezone: routine.timezone || config.timezone || "Asia/Shanghai",
 		});
 	}
-	scheduler.start(session, memory);
 
-	// Manual trigger commands
-	const manualTrigger = async (cmd: string) => {
+	// Manual trigger commands (bound to the session of the active mode)
+	const makeManualTrigger = (target: TradingSession) => async (cmd: string) => {
 		if (cmd === "/pre-market") {
-			await scheduler.runNow("pre-market", session, memory);
+			await scheduler.runNow("pre-market", target, memory);
 			return true;
 		}
 		if (cmd === "/post-market") {
-			await scheduler.runNow("post-market", session, memory);
+			await scheduler.runNow("post-market", target, memory);
 			return true;
 		}
 		return false;
 	};
 
 	// ─── Shared sentiment initialization ────────────────────────
-	async function initSentiment() {
+	// Emits the sentiment update on the given session (each mode wires its own).
+	async function initSentiment(target: TradingSession) {
 		try {
 			const sentimentResult = await analyzeSentimentTool.execute("init-sentiment", {});
 			if (sentimentResult.details) {
 				const d = sentimentResult.details;
-				session.emit("trading_event", {
+				target.emit("trading_event", {
 					type: "sentiment_update",
 					data: {
 						advance: d.advance ?? 0,
@@ -539,42 +553,127 @@ async function main() {
 		}
 	}
 
-	// Start periodic sentiment refresh
-	const sentimentTimer = setInterval(
-		async () => {
-			try {
-				const result = await analyzeSentimentTool.execute("periodic-sentiment", {});
-				if (result.details) {
-					const d = result.details;
-					session.emit("trading_event", {
-						type: "sentiment_update",
-						data: {
-							advance: d.advance ?? 0,
-							decline: d.decline ?? 0,
-							flat: d.flat ?? 0,
-							limitUp: d.limit_up ?? 0,
-							limitDown: d.limit_down ?? 0,
-							northboundFlow: d.northbound_flow ?? 0,
-							sentimentIndex: d.sentiment_index ?? 50,
-							topSectors: d.top_sectors ?? [],
-							bottomSectors: d.bottom_sectors ?? [],
-						},
-					});
+	// Start periodic sentiment refresh (per session; each mode branch starts its own timer)
+	function startSentimentTimer(target: TradingSession): NodeJS.Timeout {
+		return setInterval(
+			async () => {
+				try {
+					const result = await analyzeSentimentTool.execute("periodic-sentiment", {});
+					if (result.details) {
+						const d = result.details;
+						target.emit("trading_event", {
+							type: "sentiment_update",
+							data: {
+								advance: d.advance ?? 0,
+								decline: d.decline ?? 0,
+								flat: d.flat ?? 0,
+								limitUp: d.limit_up ?? 0,
+								limitDown: d.limit_down ?? 0,
+								northboundFlow: d.northbound_flow ?? 0,
+								sentimentIndex: d.sentiment_index ?? 50,
+								topSectors: d.top_sectors ?? [],
+								bottomSectors: d.bottom_sectors ?? [],
+							},
+						});
+					}
+				} catch (_e) {
+					// Ignore periodic refresh failures
 				}
-			} catch (_e) {
-				// Ignore periodic refresh failures
+			},
+			5 * 60 * 1000,
+		);
+	}
+
+	// ─── Title refinement helpers (web mode) ────────────────────
+	// First user text message (string content or text parts), up to 500 chars
+	function firstUserText(messages: AgentMessage[]): string | undefined {
+		for (const m of messages) {
+			if (m.role !== "user") continue;
+			const c = (m as any).content;
+			if (typeof c === "string") return c;
+			if (Array.isArray(c)) {
+				const text = c
+					.filter((p: any) => p?.type === "text")
+					.map((p: any) => p.text)
+					.join("");
+				if (text) return text;
 			}
-		},
-		5 * 60 * 1000,
-	);
+		}
+		return undefined;
+	}
+
+	// Last assistant text message (text parts only), up to 1000 chars
+	function lastAssistantText(messages: AgentMessage[]): string | undefined {
+		for (let i = messages.length - 1; i >= 0; i--) {
+			const m = messages[i];
+			if (m.role !== "assistant") continue;
+			const c = (m as any).content;
+			if (!Array.isArray(c)) continue;
+			const text = c
+				.filter((p: any) => p?.type === "text")
+				.map((p: any) => p.text)
+				.join("");
+			if (text) return text;
+		}
+		return undefined;
+	}
 
 	// ─── Mode selection ─────────────────────────────────────────
 	const useWeb = process.argv.includes("--web");
 	const useRepl = process.argv.includes("--repl");
 
 	if (useWeb) {
-		// Start sentiment fetch in background (don't block server startup)
-		initSentiment().catch(() => {});
+		// File-backed multi-session: a single SessionManager owns all chat sessions.
+		// The system "default" session is the shared target of scheduler/sentiment,
+		// and is passed to the HTTP server (Task 4 switches startServer to consume
+		// the manager directly).
+		const sessionsDir = join(dataDir, "..", "sessions");
+		const manager = new SessionManager({
+			sessionsDir,
+			createSession: createTradingSession,
+			refineTitle: async (messages) => {
+				try {
+					// Use the first user text plus the last assistant text to refine the title
+					const userText = firstUserText(messages);
+					const asstText = lastAssistantText(messages);
+					if (!userText) return null;
+					const auth = await modelRegistry.getApiKeyAndHeaders(model);
+					if (!auth.ok) return null;
+					const stream = await streamSimple(
+						model as any,
+						{
+							messages: [
+								{
+									role: "user",
+									content: `为下面这段投资对话生成一个不超过 12 个汉字的中文标题，只输出标题本身，不要引号或解释：\n\n用户：${userText.slice(0, 500)}\n助手：${(asstText ?? "").slice(0, 1000)}`,
+									timestamp: Date.now(),
+								},
+							],
+						},
+						{ apiKey: auth.apiKey, headers: auth.headers },
+					);
+					let text = "";
+					for await (const ev of stream as AsyncIterable<{ type: string; delta?: string }>) {
+						if (ev.type === "text_delta" && ev.delta) text += ev.delta;
+						if (ev.type === "error") return null;
+					}
+					const title = text.trim().split("\n")[0].slice(0, 30);
+					return title || null;
+				} catch {
+					return null; // refinement failure: keep the truncated title
+				}
+			},
+		});
+		await manager.init();
+		const { session: defaultSession } = await manager.ensureDefault();
+		scheduler.start(defaultSession, memory);
+		const manualTrigger = makeManualTrigger(defaultSession);
+		await initSentiment(defaultSession);
+		const sentimentTimer = startSentimentTimer(defaultSession);
+
+		// Preload session metadata so persisted chat sessions show up immediately;
+		// the sessions themselves are lazily loaded by SessionManager on demand.
+		await manager.list();
 
 		const portIdx = process.argv.indexOf("--port");
 		const port = portIdx >= 0 ? Number(process.argv[portIdx + 1]) || 3000 : 3000;
@@ -603,19 +702,33 @@ async function main() {
 			console.warn("[RecentPool] Failed to ensure recent pool exists:", e);
 		}
 
-		const { httpServer } = startServer(session, { port, staticDir, reportsDir, bgSync, modelRegistry });
+		const { httpServer } = startServer(defaultSession, { port, staticDir, reportsDir, bgSync, modelRegistry });
 
 		httpServer.on("close", () => {
 			bgSync.stop();
 			clearInterval(sentimentTimer);
 			scheduler.stop();
-			session.dispose();
+			manager.flush().catch(() => {});
+		});
+
+		// SIGINT: flush pending session writes before exiting
+		process.on("SIGINT", async () => {
+			console.log("[Server] Shutting down, flushing sessions...");
+			await manager.flush();
+			process.exit(0);
 		});
 	} else if (useRepl) {
+		const session = createTradingSession();
+		scheduler.start(session, memory);
+		const manualTrigger = makeManualTrigger(session);
 		await runRepl(session, scheduler, manualTrigger, tools);
 	} else {
+		const session = createTradingSession();
+		scheduler.start(session, memory);
+		const manualTrigger = makeManualTrigger(session);
 		const app = new TradingApp(session, manualTrigger);
-		await initSentiment();
+		await initSentiment(session);
+		const sentimentTimer = startSentimentTimer(session);
 
 		// Clean up timer on exit
 		session.on("agent_event", (ev: any) => {
