@@ -2141,6 +2141,11 @@
 .session-chevron {
 	font-size: 0.6875rem;
 	color: var(--muted-foreground);
+	transition: transform 0.15s ease;
+}
+
+.session-current.open .session-chevron {
+	transform: rotate(180deg);
 }
 
 .session-title {
@@ -2214,6 +2219,10 @@
 	background: color-mix(in oklch, var(--primary) 10%, transparent);
 }
 
+.session-dropdown-item.active {
+	background: color-mix(in oklch, var(--primary) 12%, transparent);
+}
+
 .session-dropdown-item.active .session-item-title {
 	color: var(--primary);
 	font-weight: 600;
@@ -2256,8 +2265,8 @@
 }
 
 .session-item-delete:hover {
-	background: color-mix(in oklch, var(--color-down) 15%, transparent);
-	color: var(--foreground);
+	background: rgba(239, 68, 68, 0.1);
+	color: #ef4444;
 }
 
 .message-image {
