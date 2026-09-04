@@ -714,7 +714,10 @@ async function main() {
 			console.warn("[RecentPool] Failed to ensure recent pool exists:", e);
 		}
 
-		const { httpServer } = startServer(defaultSession, { port, staticDir, reportsDir, bgSync, modelRegistry });
+		const { httpServer } = startServer(
+			{ sessionManager: manager, defaultSession },
+			{ port, staticDir, reportsDir, bgSync, modelRegistry },
+		);
 
 		httpServer.on("close", () => {
 			bgSync.stop();

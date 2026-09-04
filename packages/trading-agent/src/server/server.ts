@@ -3,6 +3,7 @@ import { createServer, type IncomingMessage, type ServerResponse } from "node:ht
 import { join, resolve } from "node:path";
 import type { ModelRegistry } from "@mariozechner/pi-coding-agent";
 import { WebSocketServer } from "ws";
+import type { SessionManager } from "../core/session-manager.js";
 import type { TradingSession } from "../core/trading-session.js";
 import type { BackgroundSyncService } from "./background-sync.js";
 import { MootdxDaemon } from "./mootdx-daemon.js";
@@ -67,7 +68,7 @@ export interface ServerOptions {
 }
 
 export function startServer(
-	session: TradingSession,
+	ctx: { sessionManager: SessionManager; defaultSession: TradingSession },
 	options: ServerOptions = {},
 ): { httpServer: ReturnType<typeof createServer>; wsServer: WebSocketServer; mootdxDaemon: MootdxDaemon } {
 	const port = options.port || 3000;
@@ -115,14 +116,14 @@ export function startServer(
 			if (served) return;
 		}
 
-		handleRequest(req, res, session, options.bgSync, mootdxDaemon, options.modelRegistry);
+		handleRequest(req, res, ctx.defaultSession, options.bgSync, mootdxDaemon, options.modelRegistry);
 	});
 
 	const wsServer = new WebSocketServer({ server: httpServer });
 
 	wsServer.on("connection", (ws) => {
 		console.log("[WS] Client connected");
-		setupWsHandler(ws, session);
+		setupWsHandler(ws, { sessionManager: ctx.sessionManager, defaultSession: ctx.defaultSession });
 	});
 
 	wsServer.on("error", (err) => {
