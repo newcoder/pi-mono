@@ -77,13 +77,14 @@ describe("SessionManager", () => {
 		dir = mkdtempSync(join(tmpdir(), "sessions-"));
 		const m = makeManager();
 		await m.init();
-		await m.create();
-		// 工厂第 2 次调用（get 恢复）之外：create 时 hooks 立即注册
+		const { meta: created } = await m.create();
+		// create 时 hooks 立即注册
 		const { hooks } = sessions[0];
-		// 先取 id 再触发钩子：list() 按磁盘回读并覆写内存 meta，若夹在钩子与 flush 之间会丢失标题截断
-		const id = (await m.list())[0].id;
 		hooks!.onFirstPrompt!("请分析 600519 贵州茅台的基本面情况，以及行业趋势和估值水平");
-		await m.flush(id);
+		// list() 不得用磁盘旧值回滚未落盘的标题更新
+		await m.list();
+		expect(m.getMeta(created.id)!.title).toContain("请分析 600519");
+		await m.flush(created.id);
 		const meta = (await m.list())[0];
 		expect(meta.title).toContain("请分析 600519");
 		expect(meta.titleSource).toBe("truncated");

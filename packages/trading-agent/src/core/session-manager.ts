@@ -77,16 +77,31 @@ export class SessionManager extends EventEmitter {
 	async list(): Promise<SessionMeta[]> {
 		const result: SessionMeta[] = [];
 		if (!existsSync(this.opts.sessionsDir)) return result;
+		const diskIds = new Set<string>();
 		for (const name of readdirSync(this.opts.sessionsDir)) {
 			if (!name.endsWith(".json")) continue;
+			const id = name.slice(0, -5);
+			diskIds.add(id);
+			// 内存 meta 是权威（落盘为防抖滞后）：已注册会话直接返回内存，
+			// 避免磁盘旧值覆盖尚未落盘的标题/updatedAt 更新。
+			const mem = this.metas.get(id);
+			if (mem) {
+				result.push(mem);
+				continue;
+			}
 			try {
 				const file = JSON.parse(readFileSync(join(this.opts.sessionsDir, name), "utf8")) as SessionFile;
 				if (!file || typeof file.id !== "string") continue;
-				result.push(this.toMeta(file));
-				this.metas.set(file.id, this.toMeta(file));
+				const meta = this.toMeta(file);
+				this.metas.set(file.id, meta);
+				result.push(meta);
 			} catch (err) {
 				console.warn(`[SessionManager] Skipping corrupt session file ${name}:`, err);
 			}
+		}
+		// 内存中存在但磁盘尚无文件（新建未落盘）的会话也要出现在列表
+		for (const [id, meta] of this.metas) {
+			if (!diskIds.has(id)) result.push(meta);
 		}
 		return result.sort((a, b) => b.updatedAt.localeCompare(a.updatedAt));
 	}
