@@ -1,7 +1,0 @@
-- generic [ref=e3]:
-  - generic [ref=e15]: 加载中...
-  - generic [ref=e7]: "市场情绪: 加载中..."
-  - generic [ref=e8]: research
-  - generic [ref=e11]:
-    - textbox "输入消息..." [ref=e12]
-    - button "发送" [ref=e13]
