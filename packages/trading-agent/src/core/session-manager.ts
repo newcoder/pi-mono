@@ -59,6 +59,7 @@ export class SessionManager extends EventEmitter {
 	}
 
 	private filePath(id: string): string {
+		if (!/^[A-Za-z0-9_-]+$/.test(id)) throw new Error(`Invalid session id: ${id}`);
 		return join(this.opts.sessionsDir, `${id}.json`);
 	}
 

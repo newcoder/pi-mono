@@ -112,4 +112,13 @@ describe("SessionManager", () => {
 		const listed = await m.list();
 		expect(listed.length).toBe(1);
 	});
+
+	it("rejects path-traversal session ids", async () => {
+		dir = mkdtempSync(join(tmpdir(), "sessions-"));
+		const m = makeManager();
+		await m.init();
+		// filePath 单一咽喉点校验：非法 id（穿越路径）直接抛错
+		await expect(m.get("../../outside")).rejects.toThrow(/Invalid session id/);
+		await expect(m.delete("../../outside")).rejects.toThrow(/Invalid session id/);
+	});
 });
