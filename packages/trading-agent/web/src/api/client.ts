@@ -1,10 +1,22 @@
 const WS_URL = import.meta.env.DEV ? `ws://${window.location.host}/ws` : `ws://${window.location.host}/ws`;
 const API_BASE = import.meta.env.DEV ? "" : "";
 
+export interface SessionMeta {
+	id: string;
+	title: string;
+	titleSource?: string;
+	createdAt: string;
+	updatedAt: string;
+	messageCount: number;
+	system?: boolean;
+}
+
 export class TradingApiClient extends EventTarget {
 	private ws: WebSocket | null = null;
 	private reconnectTimer: number | null = null;
 	private _connected = false;
+	private reqCounter = 0;
+	private pendingReqs = new Map<number, { resolve: (v: any) => void; reject: (e: Error) => void }>();
 
 	get connected() {
 		return this._connected;
@@ -24,6 +36,13 @@ export class TradingApiClient extends EventTarget {
 		this.ws.onmessage = (event) => {
 			try {
 				const msg = JSON.parse(event.data);
+				const pending = this.pendingReqs.get(msg.reqId);
+				if (pending) {
+					this.pendingReqs.delete(msg.reqId);
+					if (msg.type === "error") pending.reject(new Error(msg.message || "WS error"));
+					else pending.resolve(msg);
+					return; // reqId 回复不再 dispatch 事件（session_list/state 等由 promise 消费）
+				}
 				this.dispatchEvent(new CustomEvent(msg.type, { detail: msg }));
 			} catch {
 				console.warn("[WS] Invalid message:", event.data);
@@ -70,12 +89,37 @@ export class TradingApiClient extends EventTarget {
 		this.send({ type: "abort" });
 	}
 
+	async listSessions(): Promise<SessionMeta[]> {
+		const msg = await this.request<{ sessions: SessionMeta[] }>("session_list");
+		return msg.sessions;
+	}
+
+	async switchSession(sessionId: string) {
+		return this.request<{ session: SessionMeta; messages: unknown[] }>("session_switch", { sessionId });
+	}
+
+	async newSession() {
+		return this.request<{ session: SessionMeta; messages: unknown[] }>("session_new");
+	}
+
+	async deleteSession(sessionId: string) {
+		await this.request("session_delete", { sessionId });
+	}
+
 	private send(data: unknown) {
 		if (this.ws?.readyState === WebSocket.OPEN) {
 			this.ws.send(JSON.stringify(data));
 		} else {
 			console.warn("[WS] Not connected, message dropped");
 		}
+	}
+
+	private request<T = any>(type: string, payload: Record<string, unknown> = {}): Promise<T> {
+		return new Promise((resolve, reject) => {
+			const reqId = ++this.reqCounter;
+			this.pendingReqs.set(reqId, { resolve, reject });
+			this.send({ type, reqId, ...payload });
+		});
 	}
 
 	// ─── HTTP API helpers ───────────────────────────────────────
