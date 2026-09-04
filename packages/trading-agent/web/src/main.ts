@@ -2111,6 +2111,9 @@ function upsertSessionMeta(meta: SessionMeta) {
 function renderSessionBar() {
 	const titleEl = $("session-title");
 	titleEl.textContent = state.currentSession?.title ?? "无会话";
+	// 与下拉开合同步 .open（app.css 用 .session-current.open .session-chevron 旋转箭头）
+	const currentEl = $("session-current");
+	currentEl.classList.toggle("open", state.sessionDropdownOpen);
 	const newBtn = $("session-new-btn") as HTMLButtonElement;
 	newBtn.disabled = state.isStreaming;
 	const dd = $("session-dropdown");
