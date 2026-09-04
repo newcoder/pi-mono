@@ -413,7 +413,10 @@ function buildMessageHTML(msg: ChatMessage): string {
 	if (msg.role === "user") {
 		const attachments = (msg as any).attachments ? buildAttachmentHTML((msg as any).attachments) : "";
 		const imgs = ((msg as any).images || [])
-			.map((src: string) => `<img class="message-image" src="${src}" alt="图片">`)
+			.map(
+				(src: string) =>
+					`<img class="message-image" src="${escapeHtml(src).replace(/"/g, "&quot;")}" alt="图片">`,
+			)
 			.join("");
 		return `<div class="message-wrapper user">
 			<div class="message-avatar user">你</div>
