@@ -2377,6 +2377,8 @@ function renderApp() {
 				<!-- Center: Chat area -->
 				<div class="chat-area">
 					<div class="chat-main">
+						<!-- Stock Chart Panel -->
+						<div id="stock-chart-panel" class="stock-chart-panel hidden"></div>
 						<!-- Chat Session Bar -->
 						<div class="session-bar">
 							<div class="session-current" id="session-current" title="切换会话">
@@ -2386,8 +2388,6 @@ function renderApp() {
 							<button id="session-new-btn" class="session-new-btn" title="新建会话">＋ 新建</button>
 							<div id="session-dropdown" class="session-dropdown hidden"></div>
 						</div>
-						<!-- Stock Chart Panel -->
-						<div id="stock-chart-panel" class="stock-chart-panel hidden"></div>
 						<div class="chat-output-wrapper">
 							<div id="message-list" class="message-list"></div>
 								<div id="tool-log-panel" class="tool-log-panel">
